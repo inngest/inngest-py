@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass
 import hashlib
 import http.client
@@ -25,13 +26,26 @@ T = TypeVar("T")
 
 
 @dataclass
-class Response:
+class CommResponse:
     headers: dict[str, str]
-    status_code: int
-    body: str = ""
+    _body: object | None = None
+    status_code: int = 200
+
+    @property
+    def body(self) -> object:
+        return self._body or {}
+
+    @body.setter
+    def body(self, body: object) -> None:
+        self._body = body
+
+        if isinstance(body, (dict, list)):
+            self.headers["Content-Type"] = "application/json"
+        else:
+            self.headers["Content-Type"] = "text/plain"
 
 
-class InngestCommHandler:
+class CommHandler:
     def __init__(
         self,
         *,
@@ -60,64 +74,116 @@ class InngestCommHandler:
         *,
         call: FunctionCall,
         fn_id: str,
-    ) -> Response:
+    ) -> CommResponse:
         if fn_id not in self._fns:
             raise Exception(f"function {fn_id} not found")
 
-        body: str
-        status_code: int
-        headers: dict[str, str] = {}
-        res = self._fns[fn_id].call(call)
-        if isinstance(res, list):
+        comm_res = self._create_internal_response()
+        comm_res.headers["Server-Timing"] = "handler"
+
+        action_res = self._fns[fn_id].call(call)
+        if isinstance(action_res, list):
             out: list[dict[str, object]] = []
-            for item in res:
+            for item in action_res:
                 if not isinstance(item, ActionResponse):
                     raise Exception("expected ActionResponse")
 
                 out.append(item.to_dict())
 
-            body = json.dumps(_remove_none_deep(out))
-            status_code = 206
-        elif isinstance(res, ActionError):
-            body = json.dumps(_remove_none_deep(res.to_dict()))
-            status_code = 500
+            comm_res.body = _remove_none_deep(out)
+            comm_res.status_code = 206
+        elif isinstance(action_res, ActionError):
+            comm_res.body = _remove_none_deep(action_res.to_dict())
+            comm_res.status_code = 500
 
-            if res.is_retriable is False:
-                headers["x-inngest-no-retry"] = "true"
+            if action_res.is_retriable is False:
+                comm_res.headers["x-inngest-no-retry"] = "true"
         else:
-            body = res
-            status_code = 200
+            comm_res.body = action_res
 
-        return Response(
-            body=body,
-            headers=headers,
-            status_code=status_code,
+        return comm_res
+
+    def _create_external_response(self) -> CommResponse:
+        return CommResponse(
+            headers={
+                "Content-Type": "application/json",
+                "Server-Timing": "handler",
+                "User-Agent": f"inngest-{LANGUAGE}:v{VERSION}",
+                "x-inngest-framework": self._framework,
+                "x-inngest-sdk": f"inngest-{LANGUAGE}:v{VERSION}",
+            }
         )
+
+    def _create_internal_response(self) -> CommResponse:
+        comm_res = self._create_external_response()
+
+        if self._signing_key:
+            comm_res.headers["Authorization"] = f"Bearer {_hash_signing(self._signing_key)}"
+
+        return comm_res
 
     def _get_function_configs(self, app_url: str) -> list[FunctionConfig]:
         return [fn.get_config(app_url) for fn in self._fns.values()]
 
-    def handle_action(self) -> None:
-        return None
+    def _parse_registration_response(
+        self,
+        server_res: http.client.HTTPResponse,
+    ) -> CommResponse:
+        comm_res = self._create_external_response()
+        body: dict[str, object] = {}
 
-    def register(self, app_url: str) -> Response:
+        server_res_body: dict[str, object] | None = None
+        try:
+            raw_body = json.loads(server_res.read().decode("utf-8"))
+            if isinstance(raw_body, dict):
+                server_res_body = raw_body
+        except Exception as err:
+            self._logger.error(
+                "registration response body is not JSON",
+                extra={"err": str(err)},
+            )
+
+        if server_res_body is None:
+            self._logger.error(
+                "registration response body is not an object",
+                extra={"body": server_res_body},
+            )
+
+        if server_res.status < 400:
+            if server_res_body:
+                message = server_res_body.get("message")
+                if isinstance(message, str):
+                    body["message"] = message
+
+                modified = server_res_body.get("modified")
+                if isinstance(modified, bool):
+                    body["modified"] = modified
+        else:
+            extra: dict[str, object] = {"status": server_res.status}
+
+            if server_res_body:
+                error = server_res_body.get("error")
+                if isinstance(error, str):
+                    body["message"] = error
+                    extra["error"] = server_res_body.get("error")
+
+            self._logger.error(
+                "registration response failed",
+                extra=extra,
+            )
+
+            comm_res.status_code = server_res.status
+
+        comm_res.body = body
+        return comm_res
+
+    def register(self, app_url: str) -> CommResponse:
         parsed_url = urlparse(self._base_url)
 
         if parsed_url.scheme == "https":
             conn = http.client.HTTPSConnection(parsed_url.netloc)
         else:
             conn = http.client.HTTPConnection(parsed_url.netloc)
-
-        headers = {
-            "Content-Type": "application/json",
-            "Server-Timing": "handler",
-            "User-Agent": f"inngest-{LANGUAGE}:v{VERSION}",
-            "x-inngest-framework": self._framework,
-            "x-inngest-sdk": f"inngest-{LANGUAGE}:v{VERSION}",
-        }
-
-        if self._signing_key:
-            headers["Authorization"] = f"Bearer {_hash_signing(self._signing_key)}"
 
         req_body = json.dumps(
             _remove_none_deep(
@@ -137,66 +203,12 @@ class InngestCommHandler:
             "POST",
             parsed_url.path,
             body=req_body,
-            headers=headers,
+            headers=self._create_internal_response().headers,
         )
         res = conn.getresponse()
-
-        out = Response(
-            headers={
-                "Content-Type": "application/json",
-            },
-            status_code=0,
-        )
-        out_body: dict[str, object] = {}
-
-        res_body: dict[str, object] | None = None
-        try:
-            raw_body = json.loads(res.read().decode("utf-8"))
-            if isinstance(raw_body, dict):
-                res_body = raw_body
-        except Exception as err:
-            self._logger.error(
-                "registration response body is not JSON",
-                extra={"err": str(err)},
-            )
-
-        if res_body is None:
-            self._logger.error(
-                "registration response body is not an object",
-                extra={"body": res_body},
-            )
-
-        if res.status < 400:
-            if res_body:
-                message = res_body.get("message")
-                if isinstance(message, str):
-                    out_body["message"] = message
-
-                modified = res_body.get("modified")
-                if isinstance(modified, bool):
-                    out_body["modified"] = modified
-
-            out.status_code = 200
-        else:
-            extra: dict[str, object] = {"status": res.status}
-
-            if res_body:
-                error = res_body.get("error")
-                if isinstance(error, str):
-                    out_body["message"] = error
-                    extra["error"] = res_body.get("error")
-
-            self._logger.error(
-                "registration response failed",
-                extra=extra,
-            )
-
-            out.status_code = res.status
-
-        out.body = json.dumps(out_body)
-
         conn.close()
-        return out
+
+        return self._parse_registration_response(res)
 
 
 def _hash_signing(key: str) -> str:

@@ -3,7 +3,7 @@ import json
 from flask import Flask, make_response, request, Response
 
 from .client import Inngest
-from .comm import InngestCommHandler
+from .comm import CommResponse, CommHandler
 from .function import Function
 from .types import FunctionCall
 
@@ -16,7 +16,7 @@ def serve(
     base_url: str | None = None,
     signing_key: str | None = None,
 ) -> None:
-    comm = InngestCommHandler(
+    comm = CommHandler(
         base_url=base_url,
         client=client,
         framework="flask",
@@ -32,24 +32,24 @@ def serve(
             if fn_id is None:
                 raise Exception("missing fnId")
 
-            res = comm.call_function(
-                call=FunctionCall.from_raw(json.loads(request.data)),
-                fn_id=fn_id,
+            _to_response(
+                comm.call_function(
+                    call=FunctionCall.from_raw(json.loads(request.data)),
+                    fn_id=fn_id,
+                )
             )
-
-            response = make_response()
-
-            for k, v in res.headers.items():
-                response.headers.add_header(k, v)
-
-            response.set_data(res.body)
-            response.status_code = res.status_code
-            return response
         elif request.method == "PUT":
-            res = comm.register(request.url)
-            response = make_response()
-            response.set_data(res.body)
-            response.status_code = res.status_code
-            return response
+            _to_response(comm.register(request.url))
 
         return ""
+
+
+def _to_response(comm_res: CommResponse) -> Response:
+    res = make_response()
+
+    for k, v in comm_res.headers.items():
+        res.headers.add_header(k, v)
+
+    res.set_data(json.dumps(comm_res.body))
+    res.status_code = comm_res.status_code
+    return res
