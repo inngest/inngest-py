@@ -1,5 +1,6 @@
 [MAIN]
 
 disable=
+    broad-exception-caught,
     broad-exception-raised,
     missing-docstring

@@ -1,8 +1,7 @@
 from flask import Flask
 import inngest
 
-from src.client import inngest_client
-from src.functions import functions
+from src.inngest import functions, inngest_client
 
 
 app = Flask(__name__)
