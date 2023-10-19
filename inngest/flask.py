@@ -8,11 +8,21 @@ from .function import Function
 from .types import FunctionCall
 
 
-def serve(app: Flask, client: Inngest, functions: list[Function]) -> None:
+def serve(
+    app: Flask,
+    client: Inngest,
+    functions: list[Function],
+    *,
+    base_url: str | None = None,
+    signing_key: str | None = None,
+) -> None:
     comm = InngestCommHandler(
+        base_url=base_url,
         client=client,
         framework="flask",
         functions=functions,
+        logger=app.logger,
+        signing_key=signing_key,
     )
 
     @app.route("/api/inngest", methods=["POST", "PUT"])
@@ -36,6 +46,10 @@ def serve(app: Flask, client: Inngest, functions: list[Function]) -> None:
             response.status_code = res.status_code
             return response
         elif request.method == "PUT":
-            comm.register()
+            res = comm.register(request.url)
+            response = make_response()
+            response.set_data(res.body)
+            response.status_code = res.status_code
+            return response
 
         return ""

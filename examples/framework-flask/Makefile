@@ -1,2 +1,5 @@
+.EXPORT_ALL_VARIABLES:
+PYTHONPATH=$${PYTHONPATH}:../..
+
 dev:
-	@export PYTHONPATH=$${PYTHONPATH}:../.. && python ./app.py
+	@export $(shell cat ../../.env | grep -v ^# | xargs) && python ./app.py

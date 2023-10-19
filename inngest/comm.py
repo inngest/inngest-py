@@ -1,10 +1,16 @@
 from dataclasses import dataclass
+import hashlib
 import http.client
 import json
+from logging import Logger
+import os
+import re
 from typing import TypeVar
+from urllib.parse import urlparse
 
 from .client import Inngest
-from .const import language, version
+from .const import DEFAULT_INNGEST_BASE_URL, EnvKey, LANGUAGE, VERSION
+from .errors import InvalidBaseURL
 from .function import Function
 from .types import (
     ActionError,
@@ -20,22 +26,34 @@ T = TypeVar("T")
 
 @dataclass
 class Response:
-    body: str
     headers: dict[str, str]
     status_code: int
+    body: str = ""
 
 
 class InngestCommHandler:
     def __init__(
         self,
         *,
+        base_url: str | None = None,
         client: Inngest,
         framework: str,
         functions: list[Function],
+        logger: Logger,
+        signing_key: str | None = None,
     ) -> None:
+        try:
+            self._base_url = _parse_url(
+                base_url or os.getenv(EnvKey.BASE_URL.value) or DEFAULT_INNGEST_BASE_URL
+            )
+        except Exception as err:
+            raise InvalidBaseURL("invalid base_url") from err
+
         self._client = client
         self._fns: dict[str, Function] = {fn.get_id(): fn for fn in functions}
         self._framework = framework
+        self._logger = logger
+        self._signing_key = signing_key or os.getenv(EnvKey.SIGNING_KEY.value)
 
     def call_function(
         self,
@@ -58,10 +76,10 @@ class InngestCommHandler:
 
                 out.append(item.to_dict())
 
-            body = json.dumps(remove_none_deep(out))
+            body = json.dumps(_remove_none_deep(out))
             status_code = 206
         elif isinstance(res, ActionError):
-            body = json.dumps(remove_none_deep(res.to_dict()))
+            body = json.dumps(_remove_none_deep(res.to_dict()))
             status_code = 500
 
             if res.is_retriable is False:
@@ -76,32 +94,40 @@ class InngestCommHandler:
             status_code=status_code,
         )
 
-    def _get_function_configs(self) -> list[FunctionConfig]:
-        return [fn.get_config() for fn in self._fns.values()]
+    def _get_function_configs(self, app_url: str) -> list[FunctionConfig]:
+        return [fn.get_config(app_url) for fn in self._fns.values()]
 
     def handle_action(self) -> None:
         return None
 
-    def register(self) -> None:
-        conn = http.client.HTTPConnection("127.0.0.1:8288")
+    def register(self, app_url: str) -> Response:
+        parsed_url = urlparse(self._base_url)
+
+        if parsed_url.scheme == "https":
+            conn = http.client.HTTPSConnection(parsed_url.netloc)
+        else:
+            conn = http.client.HTTPConnection(parsed_url.netloc)
+
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": f"inngest-{language}:v{version}",
-            "x-inngest-sdk": f"inngest-{language}:v{version}",
-            "x-inngest-framework": self._framework,
             "Server-Timing": "handler",
-            "Authorization": "Bearer ",
+            "User-Agent": f"inngest-{LANGUAGE}:v{VERSION}",
+            "x-inngest-framework": self._framework,
+            "x-inngest-sdk": f"inngest-{LANGUAGE}:v{VERSION}",
         }
 
-        body = json.dumps(
-            remove_none_deep(
+        if self._signing_key:
+            headers["Authorization"] = f"Bearer {_hash_signing(self._signing_key)}"
+
+        req_body = json.dumps(
+            _remove_none_deep(
                 RegisterRequest(
                     app_name=self._client.id,
                     framework=self._framework,
-                    functions=self._get_function_configs(),
+                    functions=self._get_function_configs(app_url),
                     hash="094cd50f64aadfec073d184bedd7b7d077f919b3d5a19248bb9a68edbc66597c",
-                    sdk=f"{language}:v{version}",
-                    url="http://localhost:8000/api/inngest",
+                    sdk=f"{LANGUAGE}:v{VERSION}",
+                    url=app_url,
                     v="0.1",
                 ).to_dict()
             )
@@ -109,18 +135,95 @@ class InngestCommHandler:
 
         conn.request(
             "POST",
-            "/fn/register",
-            body=body,
+            parsed_url.path,
+            body=req_body,
             headers=headers,
         )
-        conn.getresponse()
+        res = conn.getresponse()
+
+        out = Response(
+            headers={
+                "Content-Type": "application/json",
+            },
+            status_code=0,
+        )
+        out_body: dict[str, object] = {}
+
+        res_body: dict[str, object] | None = None
+        try:
+            raw_body = json.loads(res.read().decode("utf-8"))
+            if isinstance(raw_body, dict):
+                res_body = raw_body
+        except Exception as err:
+            self._logger.error(
+                "registration response body is not JSON",
+                extra={"err": str(err)},
+            )
+
+        if res_body is None:
+            self._logger.error(
+                "registration response body is not an object",
+                extra={"body": res_body},
+            )
+
+        if res.status < 400:
+            if res_body:
+                message = res_body.get("message")
+                if isinstance(message, str):
+                    out_body["message"] = message
+
+                modified = res_body.get("modified")
+                if isinstance(modified, bool):
+                    out_body["modified"] = modified
+
+            out.status_code = 200
+        else:
+            extra: dict[str, object] = {"status": res.status}
+
+            if res_body:
+                error = res_body.get("error")
+                if isinstance(error, str):
+                    out_body["message"] = error
+                    extra["error"] = res_body.get("error")
+
+            self._logger.error(
+                "registration response failed",
+                extra=extra,
+            )
+
+            out.status_code = res.status
+
+        out.body = json.dumps(out_body)
+
         conn.close()
+        return out
 
 
-def remove_none_deep(obj: T) -> T:
+def _hash_signing(key: str) -> str:
+    prefix_match = re.match(r"^signkey-[\w]+-", key)
+    prefix = ""
+    if prefix_match:
+        prefix = prefix_match.group(0)
+
+    key_without_prefix = key[len(prefix) :]
+    hasher = hashlib.sha256()
+    hasher.update(bytearray.fromhex(key_without_prefix))
+    return hasher.hexdigest()
+
+
+def _parse_url(url: str) -> str:
+    parsed = urlparse(url)
+
+    if parsed.scheme == "":
+        parsed._replace(scheme="https")
+
+    return parsed.geturl()
+
+
+def _remove_none_deep(obj: T) -> T:
     if isinstance(obj, dict):
-        return {k: remove_none_deep(v) for k, v in obj.items() if v is not None}  # type: ignore
+        return {k: _remove_none_deep(v) for k, v in obj.items() if v is not None}  # type: ignore
     elif isinstance(obj, list):
-        return [remove_none_deep(v) for v in obj if v is not None]  # type: ignore
+        return [_remove_none_deep(v) for v in obj if v is not None]  # type: ignore
     else:
         return obj

@@ -91,7 +91,7 @@ class Function:
                 stack=traceback.format_exc(),
             )
 
-    def get_config(self) -> FunctionConfig:
+    def get_config(self, app_url: str) -> FunctionConfig:
         fn_id = self._opts.id
 
         name = fn_id
@@ -114,7 +114,7 @@ class Function:
                     retries=retries,
                     runtime=Runtime(
                         type="http",
-                        url=f"http://localhost:8000/api/inngest?fnId={fn_id}&stepId=step",
+                        url=f"{app_url}?fnId={fn_id}&stepId=step",
                     ),
                 ),
             },

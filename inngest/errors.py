@@ -1,0 +1,2 @@
+class InvalidBaseURL(Exception):
+    pass
