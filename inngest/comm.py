@@ -78,7 +78,7 @@ class CommHandler:
         if fn_id not in self._fns:
             raise Exception(f"function {fn_id} not found")
 
-        comm_res = self._create_internal_response()
+        comm_res = self._create_response()
         comm_res.headers["Server-Timing"] = "handler"
 
         action_res = self._fns[fn_id].call(call)
@@ -103,7 +103,7 @@ class CommHandler:
 
         return comm_res
 
-    def _create_external_response(self) -> CommResponse:
+    def _create_response(self) -> CommResponse:
         return CommResponse(
             headers={
                 "Content-Type": "application/json",
@@ -114,14 +114,6 @@ class CommHandler:
             }
         )
 
-    def _create_internal_response(self) -> CommResponse:
-        comm_res = self._create_external_response()
-
-        if self._signing_key:
-            comm_res.headers["Authorization"] = f"Bearer {_hash_signing(self._signing_key)}"
-
-        return comm_res
-
     def _get_function_configs(self, app_url: str) -> list[FunctionConfig]:
         return [fn.get_config(app_url) for fn in self._fns.values()]
 
@@ -129,7 +121,7 @@ class CommHandler:
         self,
         server_res: http.client.HTTPResponse,
     ) -> CommResponse:
-        comm_res = self._create_external_response()
+        comm_res = self._create_response()
         body: dict[str, object] = {}
 
         server_res_body: dict[str, object] | None = None
@@ -199,11 +191,15 @@ class CommHandler:
             )
         )
 
+        headers = self._create_response().headers
+        if self._signing_key:
+            headers["Authorization"] = f"Bearer {_hash_signing(self._signing_key)}"
+
         conn.request(
             "POST",
             parsed_url.path,
             body=req_body,
-            headers=self._create_internal_response().headers,
+            headers=headers,
         )
         res = conn.getresponse()
         conn.close()

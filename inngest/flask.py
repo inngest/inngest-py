@@ -32,14 +32,14 @@ def serve(
             if fn_id is None:
                 raise Exception("missing fnId")
 
-            _to_response(
+            return _to_response(
                 comm.call_function(
                     call=FunctionCall.from_raw(json.loads(request.data)),
                     fn_id=fn_id,
                 )
             )
         elif request.method == "PUT":
-            _to_response(comm.register(request.url))
+            return _to_response(comm.register(request.url))
 
         return ""
 
