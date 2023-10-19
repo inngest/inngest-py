@@ -10,7 +10,14 @@ from typing import TypeVar
 from urllib.parse import urlparse
 
 from .client import Inngest
-from .const import DEFAULT_INNGEST_BASE_URL, EnvKey, LANGUAGE, VERSION
+from .const import (
+    DEFAULT_DEV_SERVER_HOST,
+    DEFAULT_INNGEST_BASE_URL,
+    EnvKey,
+    LANGUAGE,
+    VERSION,
+)
+from .env import allow_dev_server
 from .errors import InvalidBaseURL
 from .function import Function
 from .types import (
@@ -56,10 +63,16 @@ class CommHandler:
         logger: Logger,
         signing_key: str | None = None,
     ) -> None:
+        base_url = base_url or os.getenv(EnvKey.BASE_URL.value)
+        if base_url is None:
+            if allow_dev_server():
+                base_url = f"{DEFAULT_DEV_SERVER_HOST}fn/register"
+            else:
+                base_url = DEFAULT_INNGEST_BASE_URL
+
+        print(base_url)
         try:
-            self._base_url = _parse_url(
-                base_url or os.getenv(EnvKey.BASE_URL.value) or DEFAULT_INNGEST_BASE_URL
-            )
+            self._base_url = _parse_url(base_url)
         except Exception as err:
             raise InvalidBaseURL("invalid base_url") from err
 
@@ -129,17 +142,8 @@ class CommHandler:
             raw_body = json.loads(server_res.read().decode("utf-8"))
             if isinstance(raw_body, dict):
                 server_res_body = raw_body
-        except Exception as err:
-            self._logger.error(
-                "registration response body is not JSON",
-                extra={"err": str(err)},
-            )
-
-        if server_res_body is None:
-            self._logger.error(
-                "registration response body is not an object",
-                extra={"body": server_res_body},
-            )
+        except Exception:
+            pass
 
         if server_res.status < 400:
             if server_res_body:
