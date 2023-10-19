@@ -7,18 +7,20 @@ from logging import Logger
 import os
 import re
 from typing import TypeVar
-from urllib.parse import urlparse
+from urllib.parse import urljoin
 
 from .client import Inngest
 from .const import (
     DEFAULT_DEV_SERVER_HOST,
     DEFAULT_INNGEST_BASE_URL,
     EnvKey,
+    ErrorCode,
     LANGUAGE,
     VERSION,
 )
 from .env import allow_dev_server
 from .errors import InvalidBaseURL
+from .net import Fetch, parse_url
 from .function import Function
 from .types import (
     ActionError,
@@ -63,16 +65,20 @@ class CommHandler:
         logger: Logger,
         signing_key: str | None = None,
     ) -> None:
+        if allow_dev_server():
+            logger.info("Dev Server mode enabled")
+
         base_url = base_url or os.getenv(EnvKey.BASE_URL.value)
+
         if base_url is None:
             if allow_dev_server():
-                base_url = f"{DEFAULT_DEV_SERVER_HOST}fn/register"
+                logger.info("Defaulting to Dev Server host")
+                base_url = DEFAULT_DEV_SERVER_HOST
             else:
                 base_url = DEFAULT_INNGEST_BASE_URL
 
-        print(base_url)
         try:
-            self._base_url = _parse_url(base_url)
+            self._base_url = parse_url(base_url)
         except Exception as err:
             raise InvalidBaseURL("invalid base_url") from err
 
@@ -88,11 +94,19 @@ class CommHandler:
         call: FunctionCall,
         fn_id: str,
     ) -> CommResponse:
+        """
+        Handles a function call from the Executor.
+        """
+
         if fn_id not in self._fns:
             raise Exception(f"function {fn_id} not found")
 
-        comm_res = self._create_response()
-        comm_res.headers["Server-Timing"] = "handler"
+        comm_res = CommResponse(
+            headers={
+                **self._create_headers(),
+                "Server-Timing": "handler",
+            }
+        )
 
         action_res = self._fns[fn_id].call(call)
         if isinstance(action_res, list):
@@ -116,16 +130,14 @@ class CommHandler:
 
         return comm_res
 
-    def _create_response(self) -> CommResponse:
-        return CommResponse(
-            headers={
-                "Content-Type": "application/json",
-                "Server-Timing": "handler",
-                "User-Agent": f"inngest-{LANGUAGE}:v{VERSION}",
-                "x-inngest-framework": self._framework,
-                "x-inngest-sdk": f"inngest-{LANGUAGE}:v{VERSION}",
-            }
-        )
+    def _create_headers(self) -> dict[str, str]:
+        return {
+            "Content-Type": "application/json",
+            "Server-Timing": "handler",
+            "User-Agent": f"inngest-{LANGUAGE}:v{VERSION}",
+            "x-inngest-framework": self._framework,
+            "x-inngest-sdk": f"inngest-{LANGUAGE}:v{VERSION}",
+        }
 
     def _get_function_configs(self, app_url: str) -> list[FunctionConfig]:
         return [fn.get_config(app_url) for fn in self._fns.values()]
@@ -134,7 +146,7 @@ class CommHandler:
         self,
         server_res: http.client.HTTPResponse,
     ) -> CommResponse:
-        comm_res = self._create_response()
+        comm_res = CommResponse(headers=self._create_headers())
         body: dict[str, object] = {}
 
         server_res_body: dict[str, object] | None = None
@@ -173,42 +185,51 @@ class CommHandler:
         comm_res.body = body
         return comm_res
 
-    def register(self, app_url: str) -> CommResponse:
-        parsed_url = urlparse(self._base_url)
+    def register(
+        self,
+        *,
+        app_url: str,
+        is_from_dev_server: bool,
+    ) -> CommResponse:
+        """
+        Handles a registration call.
+        """
 
-        if parsed_url.scheme == "https":
-            conn = http.client.HTTPSConnection(parsed_url.netloc)
-        else:
-            conn = http.client.HTTPConnection(parsed_url.netloc)
+        if is_from_dev_server and not allow_dev_server():
+            self._logger.error("Dev Server registration not allowed in production mode")
 
-        req_body = json.dumps(
-            _remove_none_deep(
-                RegisterRequest(
-                    app_name=self._client.id,
-                    framework=self._framework,
-                    functions=self._get_function_configs(app_url),
-                    hash="094cd50f64aadfec073d184bedd7b7d077f919b3d5a19248bb9a68edbc66597c",
-                    sdk=f"{LANGUAGE}:v{VERSION}",
-                    url=app_url,
-                    v="0.1",
-                ).to_dict()
+            comm_res = CommResponse(
+                headers={},
+                status_code=400,
             )
+            comm_res.body = {
+                "code": ErrorCode.DEV_SERVER_REGISTRATION_NOT_ALLOWED.value,
+                "message": "dev server not allowed",
+            }
+            return comm_res
+
+        registration_url = urljoin(self._base_url, "/fn/register")
+
+        body = _remove_none_deep(
+            RegisterRequest(
+                app_name=self._client.id,
+                framework=self._framework,
+                functions=self._get_function_configs(app_url),
+                # TODO: Do this for real.
+                hash="094cd50f64aadfec073d184bedd7b7d077f919b3d5a19248bb9a68edbc66597c",
+                sdk=f"{LANGUAGE}:v{VERSION}",
+                url=app_url,
+                # TODO: Do this for real.
+                v="0.1",
+            ).to_dict()
         )
 
-        headers = self._create_response().headers
+        headers = self._create_headers()
         if self._signing_key:
             headers["Authorization"] = f"Bearer {_hash_signing(self._signing_key)}"
 
-        conn.request(
-            "POST",
-            parsed_url.path,
-            body=req_body,
-            headers=headers,
-        )
-        res = conn.getresponse()
-        conn.close()
-
-        return self._parse_registration_response(res)
+        with Fetch.post(registration_url, body, headers) as res:
+            return self._parse_registration_response(res)
 
 
 def _hash_signing(key: str) -> str:
@@ -221,15 +242,6 @@ def _hash_signing(key: str) -> str:
     hasher = hashlib.sha256()
     hasher.update(bytearray.fromhex(key_without_prefix))
     return hasher.hexdigest()
-
-
-def _parse_url(url: str) -> str:
-    parsed = urlparse(url)
-
-    if parsed.scheme == "":
-        parsed._replace(scheme="https")
-
-    return parsed.geturl()
 
 
 def _remove_none_deep(obj: T) -> T:

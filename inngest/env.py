@@ -39,13 +39,13 @@ def allow_dev_server() -> bool:
             continue
 
         if check.operator == "equals":
-            if value != check.value:
+            if value == check.value:
                 return False
         elif check.operator == "is_truthy":
-            if not value:
+            if value:
                 return False
         elif check.operator == "starts_with" and isinstance(check.value, str):
-            if not value.startswith(check.value):
+            if value.startswith(check.value):
                 return False
 
     return True

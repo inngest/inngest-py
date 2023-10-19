@@ -1,5 +1,5 @@
-.EXPORT_ALL_VARIABLES:
-PYTHONPATH=$${PYTHONPATH}:../..
-
 dev:
-	@export $(shell cat ../../.env | grep -v ^# | xargs) && python ./app.py
+	@export FLASK_DEBUG=true && ./scripts/start.sh
+
+prod:
+	@export FLASK_ENV=production && ./scripts/start.sh
