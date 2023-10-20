@@ -120,7 +120,7 @@ class CommHandler:
             comm_res.body = _remove_none_deep(out)
             comm_res.status_code = 206
         elif isinstance(action_res, ActionError):
-            comm_res.body = _remove_none_deep(action_res.to_dict())
+            comm_res.body = _remove_none_deep(action_res.model_dump())
             comm_res.status_code = 500
 
             if action_res.is_retriable is False:

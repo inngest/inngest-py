@@ -1,65 +1,52 @@
 from __future__ import annotations
-from dataclasses import asdict, dataclass
 import datetime
-import enum
+from enum import Enum
 from typing import Callable, Literal, Protocol, TypeVar
+
+from pydantic import BaseModel as _BaseModel, Field
+
 
 T = TypeVar("T")
 
-Json = None | bool | float | int | str | dict[str, "Json"] | list["Json"]
-TJson = TypeVar("TJson", bound=Json)
+
+class BaseModel(_BaseModel):
+    def to_dict(self) -> dict[str, object]:
+        dump = self.model_dump(
+            # Enable since we want to serialize to aliases.
+            by_alias=True,
+        )
+
+        for k, v in dump.items():
+            # Pydantic doesn't serialize enums.
+            if isinstance(v, Enum):
+                dump[k] = v.value
+
+        return dump
 
 
-@dataclass
-class ActionError:
+class ActionError(BaseModel):
     is_retriable: bool
     message: str
     name: str
     stack: str
 
-    def to_dict(self) -> dict[str, object]:
-        return asdict(self)
 
+class ActionResponse(BaseModel):
+    data: object
 
-@dataclass
-class ActionResponse:
-    data: Json
-    display_name: str
+    # Executor expects camelCase.
+    display_name: str = Field(
+        ...,
+        alias="displayName",
+        validation_alias="display_name",
+    )
     id: str
     name: str
     op: Opcode
 
-    def __post_init__(self) -> None:
-        if not isinstance(self.display_name, str):
-            raise TypeError("display_name must be a string")
 
-        if not isinstance(self.id, str):
-            raise TypeError("id must be a string")
-
-        if not isinstance(self.name, str):
-            raise TypeError("name must be a string")
-
-        if not isinstance(self.op, Opcode):
-            raise ValueError("invalid op")
-
-    def to_dict(self) -> dict[str, object]:
-        data = asdict(self)
-
-        data["op"] = data["op"].value
-
-        data["displayName"] = data["display_name"]
-        del data["display_name"]
-
-        return data
-
-
-@dataclass
-class CallContext:
+class CallContext(BaseModel):
     stack: CallStack
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.stack, CallStack):
-            raise TypeError("stack must be CallStack")
 
     @staticmethod
     def from_raw(raw: dict) -> CallContext:
@@ -70,38 +57,21 @@ class CallContext:
         )
 
 
-@dataclass
-class CallStack:
+class CallStack(BaseModel):
     stack: list[str]
 
-    def __post_init__(self) -> None:
-        if not isinstance(self.stack, list):
-            raise TypeError("stack must be a list")
 
-
-@dataclass
-class FunctionConfig:
+class FunctionConfig(BaseModel):
     id: str
+    name: str | None = None
     steps: dict[str, StepConfig]
     triggers: list[TriggerCron | TriggerEvent]
-    name: str | None = None
 
 
-@dataclass
-class FunctionCall:
+class FunctionCall(BaseModel):
     ctx: CallContext
     event: Event
     steps: dict[str, MemoizedStep]
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.ctx, CallContext):
-            raise TypeError("ctx must be CallContext")
-
-        if not isinstance(self.event, Event):
-            raise TypeError("event must be Event")
-
-        if not isinstance(self.steps, dict):
-            raise TypeError("steps must be a dict")
 
     @staticmethod
     def from_raw(raw: dict) -> FunctionCall:
@@ -119,29 +89,12 @@ class FunctionCall:
         )
 
 
-@dataclass
-class Event:
+class Event(BaseModel):
     data: dict[str, object]
     id: str
     name: str
     ts: int
     user: dict[str, object]
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.data, dict):
-            raise TypeError("data must be a dict")
-
-        if not isinstance(self.id, str):
-            raise TypeError("id must be a string")
-
-        if not isinstance(self.name, str):
-            raise TypeError("name must be a string")
-
-        if not isinstance(self.ts, int):
-            raise TypeError("ts must be an int")
-
-        if not isinstance(self.user, dict):
-            raise TypeError("user must be a dict")
 
     @staticmethod
     def from_raw(raw: dict) -> Event:
@@ -159,8 +112,7 @@ class FunctionHandler(Protocol):
         ...
 
 
-@dataclass
-class MemoizedStep:
+class MemoizedStep(BaseModel):
     data: object
 
     @staticmethod
@@ -171,13 +123,12 @@ class MemoizedStep:
 
 
 # Opcode = Literal["Sleep", "Step"]
-class Opcode(enum.Enum):
+class Opcode(Enum):
     Sleep = "Sleep"
     Step = "Step"
 
 
-@dataclass
-class RegisterRequest:
+class RegisterRequest(BaseModel):
     app_name: str
     framework: str
     functions: list[FunctionConfig]
@@ -186,15 +137,8 @@ class RegisterRequest:
     url: str
     v: str
 
-    def to_dict(self) -> dict[str, object]:
-        data = asdict(self)
-        data["appName"] = data["app_name"]
-        del data["app_name"]
-        return data
 
-
-@dataclass
-class Runtime:
+class Runtime(BaseModel):
     type: Literal["http"]
     url: str
 
@@ -203,8 +147,8 @@ class Step(Protocol):
     def run(
         self,
         id: str,  # pylint: disable=redefined-builtin
-        handler: Callable[[], TJson],
-    ) -> TJson:
+        handler: Callable[[], T],
+    ) -> T:
         ...
 
     def sleep_until(
@@ -215,25 +159,21 @@ class Step(Protocol):
         ...
 
 
-@dataclass
-class StepConfig:
+class StepConfig(BaseModel):
     id: str
     name: str
-    runtime: Runtime
     retries: StepConfigRetries | None = None
+    runtime: Runtime
 
 
-@dataclass
-class StepConfigRetries:
+class StepConfigRetries(BaseModel):
     attempts: int
 
 
-@dataclass
-class TriggerCron:
+class TriggerCron(BaseModel):
     cron: str
 
 
-@dataclass
-class TriggerEvent:
+class TriggerEvent(BaseModel):
     event: str
     expression: str | None = None
