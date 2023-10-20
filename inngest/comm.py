@@ -1,11 +1,9 @@
 from __future__ import annotations
 from dataclasses import dataclass
-import hashlib
 import http.client
 import json
 from logging import Logger
 import os
-import re
 from urllib.parse import urljoin
 
 from .client import Inngest
@@ -24,7 +22,7 @@ from .net import create_headers, Fetch, parse_url
 from .function import Function
 from .function_config import FunctionConfig
 from .registration import RegisterRequest
-from .types import T
+from .transforms import hash_signing_key, remove_none_deep
 
 
 @dataclass
@@ -111,10 +109,10 @@ class CommHandler:
 
                 out.append(item.to_dict())
 
-            comm_res.body = _remove_none_deep(out)
+            comm_res.body = remove_none_deep(out)
             comm_res.status_code = 206
         elif isinstance(action_res, CallError):
-            comm_res.body = _remove_none_deep(action_res.model_dump())
+            comm_res.body = remove_none_deep(action_res.model_dump())
             comm_res.status_code = 500
 
             if action_res.is_retriable is False:
@@ -195,7 +193,7 @@ class CommHandler:
 
         registration_url = urljoin(self._base_url, "/fn/register")
 
-        body = _remove_none_deep(
+        body = remove_none_deep(
             RegisterRequest(
                 app_name=self._client.id,
                 framework=self._framework,
@@ -211,27 +209,7 @@ class CommHandler:
 
         headers = create_headers(framework=self._framework)
         if self._signing_key:
-            headers["Authorization"] = f"Bearer {_hash_signing(self._signing_key)}"
+            headers["Authorization"] = f"Bearer {hash_signing_key(self._signing_key)}"
 
         with Fetch.post(registration_url, body, headers) as res:
             return self._parse_registration_response(res)
-
-
-def _hash_signing(key: str) -> str:
-    prefix_match = re.match(r"^signkey-[\w]+-", key)
-    prefix = ""
-    if prefix_match:
-        prefix = prefix_match.group(0)
-
-    key_without_prefix = key[len(prefix) :]
-    hasher = hashlib.sha256()
-    hasher.update(bytearray.fromhex(key_without_prefix))
-    return hasher.hexdigest()
-
-
-def _remove_none_deep(obj: T) -> T:
-    if isinstance(obj, dict):
-        return {k: _remove_none_deep(v) for k, v in obj.items() if v is not None}  # type: ignore
-    if isinstance(obj, list):
-        return [_remove_none_deep(v) for v in obj if v is not None]  # type: ignore
-    return obj
