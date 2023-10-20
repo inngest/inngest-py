@@ -2,12 +2,11 @@ import inngest
 
 
 @inngest.create_function(
-    inngest.FunctionOpts(id="duplicate-step-name", name="Duplicate step name"),
-    inngest.TriggerEvent(event="app/duplicate-step-name"),
+    inngest.FunctionOpts(id="duplicate_step_name", name="Duplicate step name"),
+    inngest.TriggerEvent(event="app/duplicate_step_name"),
 )
-def fn(*, step: inngest.Step, **_: object) -> str:
-    for _i in range(3):
-        i = _i
-        step.run("foo", lambda: i)
+def fn(*, step: inngest.Step, **_kwargs: object) -> str:
+    for _ in range(3):
+        step.run("foo", lambda: None)
 
     return "done"

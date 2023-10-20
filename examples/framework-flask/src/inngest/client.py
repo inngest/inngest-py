@@ -1,3 +1,3 @@
 import inngest
 
-inngest_client = inngest.Inngest(id="my-app")
+inngest_client = inngest.Inngest(id="my_app")
