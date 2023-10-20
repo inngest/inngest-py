@@ -9,7 +9,7 @@ class MyError(Exception):
     inngest.FunctionOpts(id="error-step", name="Error step", retries=0),
     inngest.TriggerEvent(event="app/error-step"),
 )
-def error_step(*, event: inngest.Event, step: inngest.Step) -> None:
+def fn(*, step: inngest.Step, **_: object) -> None:
     def _first_step() -> None:
         pass
 

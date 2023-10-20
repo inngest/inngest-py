@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 import json
 import traceback
 from typing import Callable, TypeVar
 import uuid
 
+from .client import Inngest
+from .time import to_iso_utc
 from .types import (
     ActionError,
     ActionResponse,
+    Event,
     FunctionCall,
     FunctionConfig,
     FunctionHandler,
@@ -61,12 +64,13 @@ class Function:
     def call(
         self,
         call: FunctionCall,
+        client: Inngest,
     ) -> list[ActionResponse] | str | ActionError:
         memoized_stack = [
             call.steps.get(step_run_id) for step_run_id in call.ctx.stack.stack
         ]
 
-        step = Step(memoized_stack)
+        step = _Step(client, memoized_stack)
 
         try:
             res = self._handler(event=call.event, step=step)
@@ -148,8 +152,13 @@ class EarlyReturn(BaseException):
 EmptySentinel = object()
 
 
-class Step:
-    def __init__(self, memoized_stack: list[MemoizedStep | None]) -> None:
+class _Step:
+    def __init__(
+        self,
+        client: Inngest,
+        memoized_stack: list[MemoizedStep | None],
+    ) -> None:
+        self._client = client
         self._memoized_stack = memoized_stack
         self._stack_index = -1
 
@@ -181,6 +190,13 @@ class Step:
             name=id,
         )
 
+    def send_event(
+        self,
+        id: str,  # pylint: disable=redefined-builtin
+        events: Event | list[Event],
+    ) -> list[str]:
+        return self.run(id, lambda: self._client.send(events))
+
     def sleep_until(
         self,
         id: str,  # pylint: disable=redefined-builtin
@@ -198,7 +214,3 @@ class Step:
             name=to_iso_utc(time),
             op=Opcode.Sleep,
         )
-
-
-def to_iso_utc(value: datetime) -> str:
-    return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"

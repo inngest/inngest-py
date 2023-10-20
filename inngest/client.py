@@ -1,3 +1,4 @@
+import json
 from logging import getLogger, Logger
 import os
 from time import time
@@ -7,7 +8,11 @@ from .const import DEFAULT_EVENT_ORIGIN, DEV_SERVER_ORIGIN, EnvKey
 from .env import allow_dev_server
 from .errors import MissingEventKey
 from .net import create_headers, Fetch
-from .types import Event
+from .types import BaseModel, Event
+
+
+class _SendEventResponseBody(BaseModel):
+    ids: list[str]
 
 
 class Inngest:
@@ -41,22 +46,24 @@ class Inngest:
                 event_origin = DEFAULT_EVENT_ORIGIN
         self._event_origin = event_origin
 
-    def send(self, data: Event | list[Event]) -> None:
+    def send(self, events: Event | list[Event]) -> list[str]:
         url = urljoin(self._event_origin, f"/e/{self._event_key}")
         headers = create_headers()
 
-        if not isinstance(data, list):
-            data = [data]
+        if not isinstance(events, list):
+            events = [events]
 
-        events = []
-        for d in data:
-            event = d.to_dict()
-            if event.get("id") == "":
-                del event["id"]
-            if event.get("ts") == 0:
-                event["ts"] = int(time() * 1000)
-            events.append(event)
+        body = []
+        for event in events:
+            d = event.to_dict()
+            if d.get("id") == "":
+                del d["id"]
+            if d.get("ts") == 0:
+                d["ts"] = int(time() * 1000)
+            body.append(d)
 
-        print(url)
-        with Fetch.post(url, events, headers) as res:
-            print(res.status)
+        with Fetch.post(url, body, headers) as res:
+            body = _SendEventResponseBody.model_validate(
+                json.loads(res.read().decode("utf-8"))
+            )
+            return body.ids

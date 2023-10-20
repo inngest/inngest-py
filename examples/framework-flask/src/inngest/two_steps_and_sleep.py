@@ -7,7 +7,7 @@ import inngest
     inngest.FunctionOpts(id="two-steps-and-sleep", name="Two steps and sleep"),
     inngest.TriggerEvent(event="app/two-steps-and-sleep"),
 )
-def two_steps_and_sleep(*, event: inngest.Event, step: inngest.Step) -> str:
+def fn(*, step: inngest.Step, **_: object) -> str:
     def _get_user_id() -> int:
         return 1
 

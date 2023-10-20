@@ -109,7 +109,7 @@ class CommHandler:
             }
         )
 
-        action_res = self._fns[fn_id].call(call)
+        action_res = self._fns[fn_id].call(call, self._client)
         if isinstance(action_res, list):
             out: list[dict[str, object]] = []
             for item in action_res:

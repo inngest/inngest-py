@@ -5,5 +5,5 @@ import inngest
     inngest.FunctionOpts(id="no-steps", name="No steps"),
     inngest.TriggerEvent(event="app/no-steps"),
 )
-def no_steps(*, event: inngest.Event, step: inngest.Step) -> int:
+def fn(*, event: inngest.Event, step: inngest.Step) -> int:
     return 1

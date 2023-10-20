@@ -3,6 +3,7 @@
 Supported features:
 
 - ✅ `step.run`
+- ✅ `step.send_event`
 - ✅ `step.sleep_until`
 - ✅ Config:
   - `retries`
@@ -12,7 +13,6 @@ Supported features:
 
 Unsupported features:
 
-- 🚫 `step.send_event`
 - 🚫 `step.sleep`
 - 🚫 `step.wait_for_event`
 - 🚫 Async/await syntax

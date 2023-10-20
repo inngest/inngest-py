@@ -37,8 +37,7 @@ class ActionResponse(BaseModel):
     # Executor expects camelCase.
     display_name: str = Field(
         ...,
-        alias="displayName",
-        validation_alias="display_name",
+        serialization_alias="displayName",
     )
     id: str
     name: str
@@ -149,6 +148,13 @@ class Step(Protocol):
         id: str,  # pylint: disable=redefined-builtin
         handler: Callable[[], T],
     ) -> T:
+        ...
+
+    def send_event(
+        self,
+        id: str,  # pylint: disable=redefined-builtin
+        events: Event | list[Event],
+    ) -> list[str]:
         ...
 
     def sleep_until(
