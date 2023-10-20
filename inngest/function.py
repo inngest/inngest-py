@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 import json
+import threading
 import traceback
 from typing import Callable, Protocol
 
@@ -65,7 +66,7 @@ class Function:
         try:
             res = self._handler(
                 event=call.event,
-                step=_Step(client, call.steps),
+                step=_Step(client, call.steps, _StepIDCounter()),
             )
             return json.dumps(res)
         except EarlyReturn as out:
@@ -147,9 +148,11 @@ class _Step:
         self,
         client: Inngest,
         memos: dict[str, MemoizedStep],
+        step_id_counter: _StepIDCounter,
     ) -> None:
         self._client = client
         self._memos = memos
+        self._step_id_counter = step_id_counter
 
     def _get_memo(self, hashed_id: str) -> object:
         if hashed_id in self._memos:
@@ -162,8 +165,10 @@ class _Step:
         id: str,  # pylint: disable=redefined-builtin
         handler: Callable[[], T],
     ) -> T:
-        # TODO: Don't hardcode the count.
-        hashed_id = hash_step_id(id, 1)
+        id_count = self._step_id_counter.increment(id)
+        if id_count > 1:
+            id = f"{id}:{id_count - 1}"
+        hashed_id = hash_step_id(id)
 
         memo = self._get_memo(hashed_id)
         if memo is not EmptySentinel:
@@ -189,8 +194,10 @@ class _Step:
         id: str,  # pylint: disable=redefined-builtin
         time: datetime,
     ) -> None:
-        # TODO: Don't hardcode the count.
-        hashed_id = hash_step_id(id, 1)
+        id_count = self._step_id_counter.increment(id)
+        if id_count > 1:
+            id = f"{id}:{id_count - 1}"
+        hashed_id = hash_step_id(id)
 
         memo = self._get_memo(hashed_id)
         if memo is not EmptySentinel:
@@ -230,3 +237,17 @@ class Step(Protocol):
         time: datetime,
     ) -> None:
         ...
+
+
+class _StepIDCounter:
+    def __init__(self):
+        self._counts: dict[str, int] = {}
+        self._mutex = threading.Lock()
+
+    def increment(self, hashed_id: str) -> int:
+        with self._mutex:
+            if hashed_id not in self._counts:
+                self._counts[hashed_id] = 0
+
+            self._counts[hashed_id] += 1
+            return self._counts[hashed_id]

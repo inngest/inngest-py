@@ -1,5 +1,6 @@
 from .client import inngest_client
 from . import (
+    duplicate_step_name,
     error_step,
     no_steps,
     print_event,
@@ -8,6 +9,7 @@ from . import (
 )
 
 functions = [
+    duplicate_step_name.fn,
     error_step.fn,
     no_steps.fn,
     print_event.fn,
