@@ -44,7 +44,7 @@ class _Request:
         exc_type: Type[BaseException] | None,
         exc_value: BaseException | None,
         traceback: TracebackType | None,
-    ):
+    ) -> None:
         self._conn.close()
 
 

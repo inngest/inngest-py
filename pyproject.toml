@@ -1,0 +1,40 @@
+[project]
+name = "inngest"
+version = "0.1.0"
+description = "Python SDK for Inngest"
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+requires-python = ">=3.10"
+
+dependencies = [
+  "pydantic>=2",
+]
+
+[project.optional-dependencies]
+extra = [
+    "Flask==3.0.0",
+    "black==23.10.0",
+    "mypy==1.6.1",
+    "pylint==3.0.1",
+    "python-json-logger==2.0.7",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/inngest/inngest-py"
+"Bug Tracker" = "https://github.com/inngest/inngest-py/issues"
+
+[tool.mypy]
+disallow_untyped_defs = true
+
+[tool.pylint.'MESSAGES CONTROL']
+disable = [
+    'broad-exception-caught',
+    'broad-exception-raised',
+    'fixme',
+    'invalid-envvar-value',
+    'missing-docstring',
+    'too-few-public-methods',
+    'too-many-arguments',
+]

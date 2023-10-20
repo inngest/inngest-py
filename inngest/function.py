@@ -182,7 +182,7 @@ class _Step:
             action_id=uuid.uuid4().hex,
             data=handler(),
             display_name=id,
-            op=Opcode.Step,
+            op=Opcode.STEP,
             name=id,
         )
 
@@ -208,7 +208,7 @@ class _Step:
             action_id=uuid.uuid4().hex,
             display_name=id,
             name=to_iso_utc(time),
-            op=Opcode.Sleep,
+            op=Opcode.SLEEP,
         )
 
 

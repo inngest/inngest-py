@@ -38,7 +38,8 @@ def serve(
                     fn_id=fn_id,
                 )
             )
-        elif request.method == "PUT":
+
+        if request.method == "PUT":
             return _to_response(
                 comm.register(
                     app_url=request.url,

@@ -232,7 +232,6 @@ def _hash_signing(key: str) -> str:
 def _remove_none_deep(obj: T) -> T:
     if isinstance(obj, dict):
         return {k: _remove_none_deep(v) for k, v in obj.items() if v is not None}  # type: ignore
-    elif isinstance(obj, list):
+    if isinstance(obj, list):
         return [_remove_none_deep(v) for v in obj if v is not None]  # type: ignore
-    else:
-        return obj
+    return obj

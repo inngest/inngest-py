@@ -1,7 +1,0 @@
-[MAIN]
-
-disable=
-    broad-exception-caught,
-    broad-exception-raised,
-    invalid-envvar-value,
-    missing-docstring

@@ -1,4 +1,6 @@
+*.egg-info
 .env
 .mypy_cache
 .venv
 __pycache__
+build

@@ -65,8 +65,8 @@ class CallResponse(BaseModel):
 
 
 class Opcode(Enum):
-    Sleep = "Sleep"
-    Step = "Step"
+    SLEEP = "Sleep"
+    STEP = "Step"
 
 
 class MemoizedStep(BaseModel):

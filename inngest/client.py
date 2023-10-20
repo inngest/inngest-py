@@ -64,7 +64,7 @@ class Inngest:
             body.append(d)
 
         with Fetch.post(url, body, headers) as res:
-            body = _SendEventResponseBody.model_validate(
+            res_body = _SendEventResponseBody.model_validate(
                 json.loads(res.read().decode("utf-8"))
             )
-            return body.ids
+            return res_body.ids
