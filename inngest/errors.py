@@ -4,3 +4,7 @@ class InvalidBaseURL(Exception):
 
 class MissingEventKey(Exception):
     pass
+
+
+class NonRetriableError(Exception):
+    pass

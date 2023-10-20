@@ -6,7 +6,6 @@ import json
 from logging import Logger
 import os
 import re
-from typing import TypeVar
 from urllib.parse import urljoin
 
 from .client import Inngest
@@ -20,18 +19,12 @@ from .const import (
 )
 from .env import allow_dev_server
 from .errors import InvalidBaseURL
+from .execution import Call, CallError, CallResponse
 from .net import create_headers, Fetch, parse_url
 from .function import Function
-from .types import (
-    ActionError,
-    ActionResponse,
-    FunctionCall,
-    FunctionConfig,
-    RegisterRequest,
-)
-
-
-T = TypeVar("T")
+from .function_config import FunctionConfig
+from .registration import RegisterRequest
+from .types import T
 
 
 @dataclass
@@ -92,7 +85,7 @@ class CommHandler:
     def call_function(
         self,
         *,
-        call: FunctionCall,
+        call: Call,
         fn_id: str,
     ) -> CommResponse:
         """
@@ -113,14 +106,14 @@ class CommHandler:
         if isinstance(action_res, list):
             out: list[dict[str, object]] = []
             for item in action_res:
-                if not isinstance(item, ActionResponse):
-                    raise Exception("expected ActionResponse")
+                if not isinstance(item, CallResponse):
+                    raise Exception("expected CallResponse")
 
                 out.append(item.to_dict())
 
             comm_res.body = _remove_none_deep(out)
             comm_res.status_code = 206
-        elif isinstance(action_res, ActionError):
+        elif isinstance(action_res, CallError):
             comm_res.body = _remove_none_deep(action_res.model_dump())
             comm_res.status_code = 500
 

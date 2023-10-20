@@ -7,8 +7,9 @@ from urllib.parse import urljoin
 from .const import DEFAULT_EVENT_ORIGIN, DEV_SERVER_ORIGIN, EnvKey
 from .env import allow_dev_server
 from .errors import MissingEventKey
+from .event import Event
 from .net import create_headers, Fetch
-from .types import BaseModel, Event
+from .types import BaseModel
 
 
 class _SendEventResponseBody(BaseModel):

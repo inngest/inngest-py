@@ -2,10 +2,10 @@ import json
 
 from flask import Flask, make_response, request, Response
 
-from .client import Inngest
-from .comm import CommResponse, CommHandler
-from .function import Function
-from .types import FunctionCall
+from inngest.client import Inngest
+from inngest.comm import CommResponse, CommHandler
+from inngest.function import Function
+from inngest.execution import Call
 
 
 def serve(
@@ -34,7 +34,7 @@ def serve(
 
             return _to_response(
                 comm.call_function(
-                    call=FunctionCall.from_raw(json.loads(request.data)),
+                    call=Call.from_raw(json.loads(request.data)),
                     fn_id=fn_id,
                 )
             )

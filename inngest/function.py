@@ -4,40 +4,39 @@ from dataclasses import dataclass
 from datetime import datetime
 import json
 import traceback
-from typing import Callable, TypeVar
+from typing import Callable, Protocol, TypeVar
 import uuid
 
 from .client import Inngest
-from .time import to_iso_utc
-from .types import (
-    ActionError,
-    ActionResponse,
-    Event,
-    FunctionCall,
-    FunctionConfig,
-    FunctionHandler,
+from .errors import NonRetriableError
+from .event import Event
+from .execution import (
+    Call,
+    CallError,
+    CallResponse,
     MemoizedStep,
     Opcode,
+)
+from .function_config import (
+    FunctionConfig,
     Runtime,
     StepConfig,
     StepConfigRetries,
     TriggerCron,
     TriggerEvent,
 )
+from .time import to_iso_utc
+from .types import EmptySentinel
 
 
 T = TypeVar("T")
 
 
-class NonRetriableError(Exception):
-    pass
-
-
 def create_function(
     opts: FunctionOpts,
     trigger: TriggerCron | TriggerEvent,
-) -> Callable[[FunctionHandler], Function]:
-    def decorator(func: FunctionHandler) -> Function:
+) -> Callable[[_FunctionHandler], Function]:
+    def decorator(func: _FunctionHandler) -> Function:
         return Function(opts, trigger, func)
 
     return decorator
@@ -55,7 +54,7 @@ class Function:
         self,
         opts: FunctionOpts,
         trigger: TriggerCron | TriggerEvent,
-        handler: FunctionHandler,
+        handler: _FunctionHandler,
     ) -> None:
         self._handler = handler
         self._opts = opts
@@ -63,9 +62,9 @@ class Function:
 
     def call(
         self,
-        call: FunctionCall,
+        call: Call,
         client: Inngest,
-    ) -> list[ActionResponse] | str | ActionError:
+    ) -> list[CallResponse] | str | CallError:
         memoized_stack = [
             call.steps.get(step_run_id) for step_run_id in call.ctx.stack.stack
         ]
@@ -77,7 +76,7 @@ class Function:
             return json.dumps(res)
         except EarlyReturn as out:
             return [
-                ActionResponse(
+                CallResponse(
                     data=out.data,  # type: ignore
                     display_name=out.display_name,
                     id=out.action_id,
@@ -88,7 +87,7 @@ class Function:
         except Exception as err:
             is_retriable = isinstance(err, NonRetriableError) is False
 
-            return ActionError(
+            return CallError(
                 is_retriable=is_retriable,
                 message=str(err),
                 name=type(err).__name__,
@@ -147,9 +146,6 @@ class EarlyReturn(BaseException):
         self.display_name = display_name
         self.name = name
         self.op = op
-
-
-EmptySentinel = object()
 
 
 class _Step:
@@ -214,3 +210,31 @@ class _Step:
             name=to_iso_utc(time),
             op=Opcode.Sleep,
         )
+
+
+class _FunctionHandler(Protocol):
+    def __call__(self, *, event: Event, step: Step) -> object:
+        ...
+
+
+class Step(Protocol):
+    def run(
+        self,
+        id: str,  # pylint: disable=redefined-builtin
+        handler: Callable[[], T],
+    ) -> T:
+        ...
+
+    def send_event(
+        self,
+        id: str,  # pylint: disable=redefined-builtin
+        events: Event | list[Event],
+    ) -> list[str]:
+        ...
+
+    def sleep_until(
+        self,
+        id: str,  # pylint: disable=redefined-builtin
+        time: datetime,
+    ) -> None:
+        ...
