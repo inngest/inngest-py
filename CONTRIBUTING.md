@@ -9,7 +9,10 @@ make install
 
 ```sh
 # Flask
-(cd examples/framework-flask && make dev)
+(cd examples/flask && make dev)
+
+# Tornado
+(cd examples/tornado && make dev)
 ```
 
 ## Test

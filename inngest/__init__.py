@@ -1,6 +1,6 @@
 from .client import Inngest
 from .event import Event
-from .frameworks import flask
+from .frameworks import flask, tornado
 from .function import create_function, Function, FunctionOpts, NonRetriableError, Step
 from .function_config import TriggerCron, TriggerEvent
 

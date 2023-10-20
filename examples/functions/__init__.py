@@ -1,4 +1,3 @@
-from .client import inngest_client
 from . import (
     duplicate_step_name,
     error_step,
@@ -17,4 +16,4 @@ functions = [
     two_steps_and_sleep.fn,
 ]
 
-__all__ = ["functions", "inngest_client"]
+__all__ = ["functions"]

@@ -9,6 +9,7 @@ Supported features:
   - `retries`
 - ✅ Frameworks:
   - Flask
+  - Tornado
 - ✅ Registration
 
 Unsupported features:
@@ -25,7 +26,6 @@ Unsupported features:
   - `rate_limit`
 - 🚫 Frameworks:
   - Django
-  - Tornado
   - FastAPI
 - 🚫 Logger
 - 🚫 Middleware

@@ -20,7 +20,7 @@ class Inngest:
         logger: Logger | None = None,
     ) -> None:
         self.id = id
-        self._logger = logger or getLogger(__name__)
+        self.logger = logger or getLogger(__name__)
 
         if event_key is None:
             if allow_dev_server():
@@ -28,14 +28,14 @@ class Inngest:
             else:
                 event_key = os.getenv(EnvKey.EVENT_KEY.value)
         if event_key is None:
-            self._logger.error("missing event key")
+            self.logger.error("missing event key")
             raise MissingEventKey("missing event key")
         self._event_key = event_key
 
         event_origin = base_url
         if event_origin is None:
             if allow_dev_server():
-                self._logger.info("Defaulting event origin to Dev Server")
+                self.logger.info("Defaulting event origin to Dev Server")
                 event_origin = DEV_SERVER_ORIGIN
             else:
                 event_origin = DEFAULT_EVENT_ORIGIN
@@ -60,12 +60,12 @@ class Inngest:
         res = requests_session.post(url, json=body, headers=headers, timeout=30)
         res_body: object = res.json()
         if not isinstance(res_body, dict) or "ids" not in res_body:
-            self._logger.error("unexpected response when sending events")
+            self.logger.error("unexpected response when sending events")
             raise InvalidResponseShape("unexpected response when sending events")
 
         ids = res_body["ids"]
         if not isinstance(ids, list):
-            self._logger.error("unexpected response when sending events")
+            self.logger.error("unexpected response when sending events")
             raise InvalidResponseShape("unexpected response when sending events")
 
         return ids
