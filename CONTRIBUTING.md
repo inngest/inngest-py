@@ -1,7 +1,8 @@
 ## Setup
 
-1. `python -m venv .venv && source .venv/bin/activate`
-1. `pip install '.[extra]' -c constraints.txt`
+```sh
+make install
+```
 
 ## Start Example Servers
 

@@ -1,0 +1,10 @@
+[project]
+name = "flask-example"
+version = "0.0.0"
+description = "Flask example"
+
+dependencies = [
+    "Flask==3.0.0",
+    "inngest",
+    "python-json-logger==2.0.7",
+]

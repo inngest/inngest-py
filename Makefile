@@ -1,16 +1,19 @@
 format:
-	black inngest
+	@black inngest
 
 format-check:
-	black --check inngest
+	@black --check inngest
+
+install:
+	@sh ./scripts/install.sh
 
 precommit: format-check lint test type-check
 
 lint:
-	pylint inngest
+	@pylint inngest
 
 test:
-	pytest inngest
+	@pytest inngest
 
 type-check:
-	mypy inngest
+	@mypy inngest
