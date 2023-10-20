@@ -11,8 +11,8 @@ from urllib.parse import urljoin
 
 from .client import Inngest
 from .const import (
-    DEFAULT_DEV_SERVER_HOST,
-    DEFAULT_INNGEST_BASE_URL,
+    DEFAULT_API_ORIGIN,
+    DEV_SERVER_ORIGIN,
     EnvKey,
     ErrorCode,
     LANGUAGE,
@@ -20,7 +20,7 @@ from .const import (
 )
 from .env import allow_dev_server
 from .errors import InvalidBaseURL
-from .net import Fetch, parse_url
+from .net import create_headers, Fetch, parse_url
 from .function import Function
 from .types import (
     ActionError,
@@ -58,34 +58,35 @@ class CommHandler:
     def __init__(
         self,
         *,
-        base_url: str | None = None,
+        api_origin: str | None = None,
         client: Inngest,
         framework: str,
         functions: list[Function],
         logger: Logger,
         signing_key: str | None = None,
     ) -> None:
+        self._logger = logger
+
         if allow_dev_server():
-            logger.info("Dev Server mode enabled")
+            self._logger.info("Dev Server mode enabled")
 
-        base_url = base_url or os.getenv(EnvKey.BASE_URL.value)
+        api_origin = api_origin or os.getenv(EnvKey.BASE_URL.value)
 
-        if base_url is None:
+        if api_origin is None:
             if allow_dev_server():
-                logger.info("Defaulting to Dev Server host")
-                base_url = DEFAULT_DEV_SERVER_HOST
+                self._logger.info("Defaulting API origin to Dev Server")
+                api_origin = DEV_SERVER_ORIGIN
             else:
-                base_url = DEFAULT_INNGEST_BASE_URL
+                api_origin = DEFAULT_API_ORIGIN
 
         try:
-            self._base_url = parse_url(base_url)
+            self._base_url = parse_url(api_origin)
         except Exception as err:
             raise InvalidBaseURL("invalid base_url") from err
 
         self._client = client
         self._fns: dict[str, Function] = {fn.get_id(): fn for fn in functions}
         self._framework = framework
-        self._logger = logger
         self._signing_key = signing_key or os.getenv(EnvKey.SIGNING_KEY.value)
 
     def call_function(
@@ -103,7 +104,7 @@ class CommHandler:
 
         comm_res = CommResponse(
             headers={
-                **self._create_headers(),
+                **create_headers(framework=self._framework),
                 "Server-Timing": "handler",
             }
         )
@@ -130,15 +131,6 @@ class CommHandler:
 
         return comm_res
 
-    def _create_headers(self) -> dict[str, str]:
-        return {
-            "Content-Type": "application/json",
-            "Server-Timing": "handler",
-            "User-Agent": f"inngest-{LANGUAGE}:v{VERSION}",
-            "x-inngest-framework": self._framework,
-            "x-inngest-sdk": f"inngest-{LANGUAGE}:v{VERSION}",
-        }
-
     def _get_function_configs(self, app_url: str) -> list[FunctionConfig]:
         return [fn.get_config(app_url) for fn in self._fns.values()]
 
@@ -146,7 +138,7 @@ class CommHandler:
         self,
         server_res: http.client.HTTPResponse,
     ) -> CommResponse:
-        comm_res = CommResponse(headers=self._create_headers())
+        comm_res = CommResponse(headers=create_headers(framework=self._framework))
         body: dict[str, object] = {}
 
         server_res_body: dict[str, object] | None = None
@@ -224,7 +216,7 @@ class CommHandler:
             ).to_dict()
         )
 
-        headers = self._create_headers()
+        headers = create_headers(framework=self._framework)
         if self._signing_key:
             headers["Authorization"] = f"Bearer {_hash_signing(self._signing_key)}"
 

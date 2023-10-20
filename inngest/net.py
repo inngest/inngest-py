@@ -4,6 +4,8 @@ from types import TracebackType
 from typing import Literal, Type
 from urllib.parse import urlparse
 
+from .const import LANGUAGE, VERSION
+
 Method = Literal["GET", "POST"]
 
 
@@ -55,6 +57,21 @@ class Fetch:
             method="POST",
             url=url,
         )
+
+
+def create_headers(
+    *,
+    framework: str | None = None,
+) -> dict[str, str]:
+    headers = {
+        "User-Agent": f"inngest-{LANGUAGE}:v{VERSION}",
+        "x-inngest-sdk": f"inngest-{LANGUAGE}:v{VERSION}",
+    }
+
+    if framework is not None:
+        headers["x-inngest-framework"] = framework
+
+    return headers
 
 
 def parse_url(url: str) -> str:

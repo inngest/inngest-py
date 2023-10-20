@@ -90,11 +90,11 @@ class FunctionCall(BaseModel):
 
 
 class Event(BaseModel):
-    data: dict[str, object]
-    id: str
+    data: dict[str, object] = {}
+    id: str = ""
     name: str
-    ts: int
-    user: dict[str, object]
+    ts: int = 0
+    user: dict[str, object] = {}
 
     @staticmethod
     def from_raw(raw: dict) -> Event:

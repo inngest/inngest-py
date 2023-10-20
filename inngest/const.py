@@ -1,9 +1,9 @@
 from enum import Enum
 from typing import Final
 
-DEFAULT_INNGEST_BASE_URL: Final = "https://api.inngest.com/"
-DEFAULT_INNGEST_EVENT_BASE_URL: Final = "https://inn.gs/"
-DEFAULT_DEV_SERVER_HOST: Final = "http://127.0.0.1:8288/"
+DEFAULT_API_ORIGIN: Final = "https://api.inngest.com/"
+DEFAULT_EVENT_ORIGIN: Final = "https://inn.gs/"
+DEV_SERVER_ORIGIN: Final = "http://127.0.0.1:8288/"
 LANGUAGE: Final = "py"
 VERSION: Final = "0.0.1"
 

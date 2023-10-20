@@ -20,7 +20,7 @@ def two_steps_and_sleep(*, event: inngest.Event, step: inngest.Step) -> str:
 
     step.sleep_until(
         "zzzzz",
-        (datetime.datetime.now() + datetime.timedelta(seconds=10)),
+        (datetime.datetime.now() + datetime.timedelta(seconds=3)),
     )
 
     return "done"
