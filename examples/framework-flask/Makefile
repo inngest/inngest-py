@@ -5,12 +5,10 @@ check-venv:
 	fi
 
 dev: check-venv
-	@export FLASK_DEBUG=true
-	@sh ./scripts/start.sh
+	@export FLASK_DEBUG=true && ./scripts/start.sh
 
 install: check-venv
 	@pip install .
 
 prod: check-venv
-	@export FLASK_ENV=production
-	@sh ./scripts/start.sh
+	@export FLASK_ENV=production && ./scripts/start.sh

@@ -4,8 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 import json
 import traceback
-from typing import Callable, Protocol, TypeVar
-import uuid
+from typing import Callable, Protocol
 
 from .client import Inngest
 from .errors import NonRetriableError
@@ -26,10 +25,8 @@ from .function_config import (
     TriggerEvent,
 )
 from .time import to_iso_utc
-from .types import EmptySentinel
-
-
-T = TypeVar("T")
+from .transforms import hash_step_id
+from .types import EmptySentinel, T
 
 
 def create_function(
@@ -65,21 +62,18 @@ class Function:
         call: Call,
         client: Inngest,
     ) -> list[CallResponse] | str | CallError:
-        memoized_stack = [
-            call.steps.get(step_run_id) for step_run_id in call.ctx.stack.stack
-        ]
-
-        step = _Step(client, memoized_stack)
-
         try:
-            res = self._handler(event=call.event, step=step)
+            res = self._handler(
+                event=call.event,
+                step=_Step(client, call.steps),
+            )
             return json.dumps(res)
         except EarlyReturn as out:
             return [
                 CallResponse(
                     data=out.data,  # type: ignore
                     display_name=out.display_name,
-                    id=out.action_id,
+                    id=out.hashed_id,
                     name=out.name,
                     op=out.op,
                 )
@@ -135,15 +129,15 @@ class EarlyReturn(BaseException):
     def __init__(
         self,
         *,
-        action_id: str,
         data: object = None,
         display_name: str,
+        hashed_id: str,
         name: str,
         op: Opcode,
     ) -> None:
-        self.action_id = action_id
         self.data = data
         self.display_name = display_name
+        self.hashed_id = hashed_id
         self.name = name
         self.op = op
 
@@ -152,18 +146,14 @@ class _Step:
     def __init__(
         self,
         client: Inngest,
-        memoized_stack: list[MemoizedStep | None],
+        memos: dict[str, MemoizedStep],
     ) -> None:
         self._client = client
-        self._memoized_stack = memoized_stack
-        self._stack_index = -1
+        self._memos = memos
 
-    def _get_memo(self) -> object:
-        if (
-            self._stack_index < len(self._memoized_stack)
-            and self._memoized_stack[self._stack_index] is not None
-        ):
-            return self._memoized_stack[self._stack_index].data  # type: ignore
+    def _get_memo(self, hashed_id: str) -> object:
+        if hashed_id in self._memos:
+            return self._memos[hashed_id].data
 
         return EmptySentinel
 
@@ -172,14 +162,15 @@ class _Step:
         id: str,  # pylint: disable=redefined-builtin
         handler: Callable[[], T],
     ) -> T:
-        self._stack_index += 1
+        # TODO: Don't hardcode the count.
+        hashed_id = hash_step_id(id, 1)
 
-        memo = self._get_memo()
+        memo = self._get_memo(hashed_id)
         if memo is not EmptySentinel:
             return memo  # type: ignore
 
         raise EarlyReturn(
-            action_id=uuid.uuid4().hex,
+            hashed_id=hashed_id,
             data=handler(),
             display_name=id,
             op=Opcode.STEP,
@@ -198,14 +189,15 @@ class _Step:
         id: str,  # pylint: disable=redefined-builtin
         time: datetime,
     ) -> None:
-        self._stack_index += 1
+        # TODO: Don't hardcode the count.
+        hashed_id = hash_step_id(id, 1)
 
-        memo = self._get_memo()
+        memo = self._get_memo(hashed_id)
         if memo is not EmptySentinel:
             return memo  # type: ignore
 
         raise EarlyReturn(
-            action_id=uuid.uuid4().hex,
+            hashed_id=hashed_id,
             display_name=id,
             name=to_iso_utc(time),
             op=Opcode.SLEEP,

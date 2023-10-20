@@ -4,7 +4,7 @@ import inngest
 
 
 @inngest.create_function(
-    inngest.FunctionOpts(id="two-steps-and-sleep", name="Two steps and sleep"),
+    inngest.FunctionOpts(id="two-steps-and-sleep", name="Two steps and sleep", retries=0),
     inngest.TriggerEvent(event="app/two-steps-and-sleep"),
 )
 def fn(*, step: inngest.Step, **_: object) -> str:
