@@ -1,10 +1,10 @@
 from __future__ import annotations
 from dataclasses import dataclass
-import http.client
-import json
 from logging import Logger
 import os
 from urllib.parse import urljoin
+
+import requests
 
 from .client import Inngest
 from .const import (
@@ -18,7 +18,7 @@ from .const import (
 from .env import allow_dev_server
 from .errors import InvalidBaseURL
 from .execution import Call, CallError, CallResponse
-from .net import create_headers, Fetch, parse_url
+from .net import create_headers, parse_url, requests_session
 from .function import Function
 from .function_config import FunctionConfig
 from .registration import RegisterRequest
@@ -127,20 +127,20 @@ class CommHandler:
 
     def _parse_registration_response(
         self,
-        server_res: http.client.HTTPResponse,
+        server_res: requests.Response,
     ) -> CommResponse:
         comm_res = CommResponse(headers=create_headers(framework=self._framework))
         body: dict[str, object] = {}
 
         server_res_body: dict[str, object] | None = None
         try:
-            raw_body = json.loads(server_res.read().decode("utf-8"))
+            raw_body: object = server_res.json()
             if isinstance(raw_body, dict):
                 server_res_body = raw_body
         except Exception:
             pass
 
-        if server_res.status < 400:
+        if server_res.status_code < 400:
             if server_res_body:
                 message = server_res_body.get("message")
                 if isinstance(message, str):
@@ -150,7 +150,7 @@ class CommHandler:
                 if isinstance(modified, bool):
                     body["modified"] = modified
         else:
-            extra: dict[str, object] = {"status": server_res.status}
+            extra: dict[str, object] = {"status_code": server_res.status_code}
 
             if server_res_body:
                 error = server_res_body.get("error")
@@ -163,7 +163,7 @@ class CommHandler:
                 extra=extra,
             )
 
-            comm_res.status_code = server_res.status
+            comm_res.status_code = server_res.status_code
 
         comm_res.body = body
         return comm_res
@@ -211,5 +211,11 @@ class CommHandler:
         if self._signing_key:
             headers["Authorization"] = f"Bearer {hash_signing_key(self._signing_key)}"
 
-        with Fetch.post(registration_url, body, headers) as res:
-            return self._parse_registration_response(res)
+        res = requests_session.post(
+            registration_url,
+            json=body,
+            headers=headers,
+            timeout=30,
+        )
+
+        return self._parse_registration_response(res)

@@ -1,4 +1,3 @@
-import json
 from logging import getLogger, Logger
 import os
 from time import time
@@ -6,14 +5,9 @@ from urllib.parse import urljoin
 
 from .const import DEFAULT_EVENT_ORIGIN, DEV_SERVER_ORIGIN, EnvKey
 from .env import allow_dev_server
-from .errors import MissingEventKey
+from .errors import InvalidResponseShape, MissingEventKey
 from .event import Event
-from .net import create_headers, Fetch
-from .types import BaseModel
-
-
-class _SendEventResponseBody(BaseModel):
-    ids: list[str]
+from .net import create_headers, requests_session
 
 
 class Inngest:
@@ -63,8 +57,15 @@ class Inngest:
                 d["ts"] = int(time() * 1000)
             body.append(d)
 
-        with Fetch.post(url, body, headers) as res:
-            res_body = _SendEventResponseBody.model_validate(
-                json.loads(res.read().decode("utf-8"))
-            )
-            return res_body.ids
+        res = requests_session.post(url, json=body, headers=headers, timeout=30)
+        res_body: object = res.json()
+        if not isinstance(res_body, dict) or "ids" not in res_body:
+            self._logger.error("unexpected response when sending events")
+            raise InvalidResponseShape("unexpected response when sending events")
+
+        ids = res_body["ids"]
+        if not isinstance(ids, list):
+            self._logger.error("unexpected response when sending events")
+            raise InvalidResponseShape("unexpected response when sending events")
+
+        return ids

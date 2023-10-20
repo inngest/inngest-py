@@ -1,19 +1,25 @@
-format:
+check-venv:
+	@if [ -z "$$VIRTUAL_ENV" ]; then \
+		echo "virtual environment is not activated"; \
+		exit 1; \
+	fi
+
+format: check-venv
 	@black inngest
 
-format-check:
+format-check: check-venv
 	@black --check inngest
 
-install:
-	@sh ./scripts/install.sh
+install: check-venv
+	@pip install '.[extra]' -c constraints.txt
 
 precommit: format-check lint test type-check
 
-lint:
+lint: check-venv
 	@pylint inngest
 
-test:
+test: check-venv
 	@pytest inngest
 
-type-check:
+type-check: check-venv
 	@mypy inngest

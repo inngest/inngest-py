@@ -1,6 +1,7 @@
 *.egg-info
 .env
 .mypy_cache
+.pytest_cache
 .venv
 __pycache__
 build

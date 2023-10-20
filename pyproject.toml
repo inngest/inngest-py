@@ -10,6 +10,7 @@ requires-python = ">=3.10"
 
 dependencies = [
   "pydantic>=2",
+  "requests>=2.27.0",
 ]
 
 [project.optional-dependencies]
@@ -20,6 +21,7 @@ extra = [
     "pylint==3.0.1",
     "pytest==7.4.2",
     "python-json-logger==2.0.7",
+    "types-requests==2.27.31",
 ]
 
 [project.urls]

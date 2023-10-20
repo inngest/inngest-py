@@ -1,6 +1,7 @@
 ## Setup
 
 ```sh
+python -m venv .venv && source .venv/bin/activate
 make install
 ```
 
@@ -24,5 +25,6 @@ Run things individually:
 ```sh
 make format
 make lint
+make test
 make type-check
 ```
