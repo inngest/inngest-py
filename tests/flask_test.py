@@ -1,96 +1,67 @@
-import asyncio
-import threading
-import time
-from typing import Callable
-from unittest import IsolatedAsyncioTestCase
-
-
 from flask import Flask
 from flask.testing import FlaskClient
-import requests
 import inngest
 
-from .http_proxy import HTTPProxy
+from .base import BaseState, FrameworkTestCase
 
 
-foo = 0
+class _NoStepsState(BaseState):
+    counter = 0
+
+    def is_done(self) -> bool:
+        return self.counter == 1
+
+
+class _States:
+    no_steps = _NoStepsState()
 
 
 @inngest.create_function(
-    inngest.FunctionOpts(id="foo"),
-    inngest.TriggerEvent(event="app/foo"),
+    inngest.FunctionOpts(id="no_steps"),
+    inngest.TriggerEvent(event="no_steps"),
 )
-def _foo(**_kwargs: object) -> None:
-    global foo
-    foo += 1
+def _no_steps(**_kwargs: object) -> None:
+    _States.no_steps.counter += 1
 
 
-_app = Flask(__name__)
-_client = inngest.Inngest(id="test")
-inngest.flask.serve(
-    _app,
-    _client,
-    [_foo],
-)
-
-
-class TestFlask(IsolatedAsyncioTestCase):
+class TestFlask(FrameworkTestCase):
     _app: FlaskClient
-    _client: inngest.Inngest
-    _http_proxy: HTTPProxy
-    _server_thread: threading.Thread
 
     @classmethod
     def setUpClass(cls) -> None:
+        super().setUpClass()
+
+        _app = Flask(__name__)
+        _app.logger.disabled = True
+        inngest.flask.serve(
+            _app,
+            cls._client,
+            [_no_steps],
+        )
+
         cls._app = _app.test_client()
-        cls._client = _client
-
-        def on_request(
-            *,
-            body: bytes | None,
-            headers: dict[str, list[str]],
-            method: str,
-            path: str,
-        ) -> None:
-            cls._app.open(
-                method=method,
-                path=path,
-                headers=headers,
-                data=body,
-            )
-
-        cls._http_proxy = HTTPProxy(on_request).start()
-
-        # Register
-        res = requests.put("http://localhost:9000/api/inngest", timeout=5)
-        assert res.status_code == 200
+        cls.register()
 
     @classmethod
-    def tearDownClass(cls) -> None:
-        print("bye")
-        cls._http_proxy.stop()
-
-    async def wait_for(
-        self,
-        assertion: Callable[[], None],
-        timeout=5,
+    def on_request(
+        cls,
+        *,
+        body: bytes | None,
+        headers: dict[str, list[str]],
+        method: str,
+        path: str,
     ) -> None:
-        start = time.time()
-        while True:
-            try:
-                assertion()
-                return
-            except Exception as err:
-                timed_out = time.time() - start > timeout
-                if timed_out:
-                    raise err
+        cls._app.open(
+            method=method,
+            path=path,
+            headers=headers,
+            data=body,
+        )
 
-            await asyncio.sleep(0.1)
-
-    async def test_foo(self) -> None:
-        self._client.send(inngest.Event(name="app/foo"))
+    async def test_no_steps(self) -> None:
+        self._client.send(inngest.Event(name="no_steps"))
 
         def assertion() -> None:
-            assert foo == 1
+            assert _States.no_steps.is_done()
 
         await self.wait_for(assertion)

@@ -17,7 +17,7 @@ def serve(
     signing_key: str | None = None,
 ) -> None:
     comm = CommHandler(
-        api_origin=base_url,
+        api_origin=base_url or client.base_url,
         client=client,
         framework="flask",
         functions=functions,
