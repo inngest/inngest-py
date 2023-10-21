@@ -1,9 +1,9 @@
-import asyncio
+import os
 import time
-from typing import Callable
-from unittest import IsolatedAsyncioTestCase
+from typing import Callable, Protocol, Type
 
 import requests
+
 import inngest
 
 from .dev_server import dev_server
@@ -16,58 +16,59 @@ class BaseState:
         raise NotImplementedError()
 
 
-class FrameworkTestCase(IsolatedAsyncioTestCase):
-    _client: inngest.Inngest
-    _dev_server_port: int
-    _http_proxy: HTTPProxy
+class FrameworkTestCase(Protocol):
+    client: inngest.Inngest
+    dev_server_port: int
+    http_proxy: HTTPProxy
 
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls._dev_server_port = dev_server.port
-
-        cls._client = inngest.Inngest(
-            base_url=f"http://{HOST}:{cls._dev_server_port}",
-            id="test",
-        )
-
-        cls._http_proxy = HTTPProxy(cls.on_request).start()
-
-    @classmethod
-    def tearDownClass(cls) -> None:
-        cls._http_proxy.stop()
-
-    @classmethod
-    def on_request(
-        cls,
+    def on_proxy_request(
+        self,
         *,
         body: bytes | None,
         headers: dict[str, list[str]],
         method: str,
         path: str,
     ) -> None:
-        raise NotImplementedError()
+        ...
 
-    @classmethod
-    def register(cls) -> None:
-        res = requests.put(
-            f"http://{cls._http_proxy.host}:{cls._http_proxy.port}/api/inngest",
-            timeout=5,
-        )
-        assert res.status_code == 200
 
-    async def wait_for(
-        self,
-        assertion: Callable[[], None],
-        timeout: int = 5,
-    ) -> None:
-        start = time.time()
-        while True:
-            try:
-                assertion()
-                return
-            except Exception as err:
-                timed_out = time.time() - start > timeout
-                if timed_out:
-                    raise err
+def register(app_port: int) -> None:
+    res = requests.put(
+        f"http://{HOST}:{app_port}/api/inngest",
+        timeout=5,
+    )
+    assert res.status_code == 200
 
-            await asyncio.sleep(0.2)
+
+def set_up(case: FrameworkTestCase) -> None:
+    case.http_proxy = HTTPProxy(case.on_proxy_request).start()
+
+
+def set_up_class(case: Type[FrameworkTestCase]) -> None:
+    case.dev_server_port = int(os.getenv("DEV_SERVER_PORT") or dev_server.port)
+
+    case.client = inngest.Inngest(
+        base_url=f"http://{HOST}:{case.dev_server_port}",
+        id=case.__name__,
+    )
+
+
+def tear_down(case: FrameworkTestCase) -> None:
+    case.http_proxy.stop()
+
+
+def wait_for(
+    assertion: Callable[[], None],
+    timeout: int = 5,
+) -> None:
+    start = time.time()
+    while True:
+        try:
+            assertion()
+            return
+        except Exception as err:
+            timed_out = time.time() - start > timeout
+            if timed_out:
+                raise err
+
+        time.sleep(0.2)

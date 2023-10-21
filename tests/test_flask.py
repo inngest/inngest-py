@@ -1,8 +1,20 @@
+from unittest import TestCase
+
 from flask import Flask
 from flask.testing import FlaskClient
+
 import inngest
 
-from .base import BaseState, FrameworkTestCase
+from .base import (
+    BaseState,
+    FrameworkTestCase,
+    register,
+    set_up,
+    set_up_class,
+    tear_down,
+    wait_for,
+)
+from .http_proxy import HTTPProxy
 
 
 class _NoStepsState(BaseState):
@@ -24,44 +36,55 @@ def _no_steps(**_kwargs: object) -> None:
     _States.no_steps.counter += 1
 
 
-class TestFlask(FrameworkTestCase):
-    _app: FlaskClient
+class TestFlask(TestCase, FrameworkTestCase):
+    app: FlaskClient
+    client: inngest.Inngest
+    dev_server_port: int
+    http_proxy: HTTPProxy
 
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
+        set_up_class(cls)
 
-        _app = Flask(__name__)
-        _app.logger.disabled = True
+        app = Flask(__name__)
+        app.logger.disabled = True
         inngest.flask.serve(
-            _app,
-            cls._client,
+            app,
+            cls.client,
             [_no_steps],
         )
 
-        cls._app = _app.test_client()
-        cls.register()
+        cls.app = app.test_client()
 
-    @classmethod
-    def on_request(
-        cls,
+    def setUp(self) -> None:
+        super().setUp()
+        set_up(self)
+        register(self.http_proxy.port)
+
+    def tearDown(self) -> None:
+        super().tearDown()
+        tear_down(self)
+
+    def on_proxy_request(
+        self,
         *,
         body: bytes | None,
         headers: dict[str, list[str]],
         method: str,
         path: str,
     ) -> None:
-        cls._app.open(
+        self.app.open(
             method=method,
             path=path,
             headers=headers,
             data=body,
         )
 
-    async def test_no_steps(self) -> None:
-        self._client.send(inngest.Event(name="no_steps"))
+    def test_no_steps(self) -> None:
+        self.client.send(inngest.Event(name="no_steps"))
 
         def assertion() -> None:
             assert _States.no_steps.is_done()
 
-        await self.wait_for(assertion)
+        wait_for(assertion)

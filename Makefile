@@ -5,12 +5,12 @@ check-venv:
 	fi
 
 format: check-venv
-	@black inngest
-	@isort inngest
+	@black inngest tests
+	@isort inngest tests
 
 format-check: check-venv
-	@black --check inngest
-	@isort --check-only inngest
+	@black --check inngest tests
+	@isort --check-only inngest tests
 
 install: check-venv
 	@pip install '.[extra]' -c constraints.txt

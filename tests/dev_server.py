@@ -1,22 +1,34 @@
+import os
 import subprocess
 import threading
 
 from .net import get_available_port
 
 
+_DEFAULT_DEV_SERVER_PORT = 8288
+
+
 class _DevServer:
-    _port: int | None = None
     _process: subprocess.Popen | None = None
     _thread: threading.Thread | None = None
 
-    @property
-    def port(self) -> int:
-        if self._port is None:
-            raise Exception("not running")
-        return self._port
+    def __init__(self) -> None:
+        self._enabled = os.getenv("DEV_SERVER_ENABLED") != "0"
+        dev_server_port_env_var = os.getenv("DEV_SERVER_PORT")
+
+        port: int
+        if dev_server_port_env_var:
+            port = int(dev_server_port_env_var)
+        elif self._enabled:
+            port = get_available_port()
+        else:
+            port = _DEFAULT_DEV_SERVER_PORT
+
+        self.port = port
 
     def start(self) -> None:
-        self._port = get_available_port()
+        if not self._enabled:
+            return
 
         def _run() -> None:
             self._process = subprocess.Popen(
@@ -27,10 +39,8 @@ class _DevServer:
                     "--no-discovery",
                     "--no-poll",
                     "--port",
-                    f"{self._port}",
+                    f"{self.port}",
                 ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
             )
             self._process.communicate()
 
@@ -39,6 +49,9 @@ class _DevServer:
         self._thread.join(timeout=10)
 
     def stop(self) -> None:
+        if not self._enabled:
+            return
+
         if self._process is None:
             raise Exception("missing process")
         if self._thread is None:

@@ -1,10 +1,11 @@
 from __future__ import annotations
-from http.server import SimpleHTTPRequestHandler
+
 import socketserver
 import threading
+from http.server import SimpleHTTPRequestHandler
 from typing import Protocol
 
-from .net import get_available_port, HOST
+from .net import HOST, get_available_port
 
 
 class HTTPProxy:

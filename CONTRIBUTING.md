@@ -15,9 +15,9 @@ make install
 (cd examples/tornado && make dev)
 ```
 
-## Test
+## Testing
 
-Run all the things:
+Run before committing:
 
 ```sh
 make precommit
@@ -26,8 +26,23 @@ make precommit
 Run things individually:
 
 ```sh
-make format
+make format-check
 make lint
-make test
 make type-check
+make utest
+
+# Changes code
+make format
+
+# Unit tests
+make utest
+
+# Integration tests
+make itest
+
+# Integration tests (don't start Dev Server)
+(export DEV_SERVER_ENABLED=0 && make itest)
+
+# Integration tests (start Dev Server on a specific port)
+(export DEV_SERVER_PORT=9123 && make itest)
 ```
