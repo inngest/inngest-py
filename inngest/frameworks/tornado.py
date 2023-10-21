@@ -1,4 +1,5 @@
 import json
+from typing import Awaitable
 
 from tornado.web import Application, RequestHandler
 
@@ -26,6 +27,9 @@ def serve(
     )
 
     class InngestHandler(RequestHandler):
+        def data_received(self, chunk: bytes) -> Awaitable[None] | None:
+            return None
+
         def post(self) -> None:
             fn_id: str | None
             raw_fn_id = self.request.query_arguments.get("fnId")

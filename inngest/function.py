@@ -240,7 +240,7 @@ class Step(Protocol):
 
 
 class _StepIDCounter:
-    def __init__(self):
+    def __init__(self) -> None:
         self._counts: dict[str, int] = {}
         self._mutex = threading.Lock()
 
