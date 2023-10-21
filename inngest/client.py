@@ -1,5 +1,5 @@
-from logging import getLogger, Logger
 import os
+from logging import Logger, getLogger
 from time import time
 from urllib.parse import urljoin
 
@@ -19,6 +19,7 @@ class Inngest:
         id: str,  # pylint: disable=redefined-builtin
         logger: Logger | None = None,
     ) -> None:
+        self.base_url = base_url
         self.id = id
         self.logger = logger or getLogger(__name__)
 

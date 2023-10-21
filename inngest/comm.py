@@ -1,7 +1,8 @@
 from __future__ import annotations
+
+import os
 from dataclasses import dataclass
 from logging import Logger
-import os
 from urllib.parse import urljoin
 
 import requests
@@ -10,17 +11,17 @@ from .client import Inngest
 from .const import (
     DEFAULT_API_ORIGIN,
     DEV_SERVER_ORIGIN,
-    EnvKey,
-    ErrorCode,
     LANGUAGE,
     VERSION,
+    EnvKey,
+    ErrorCode,
 )
 from .env import allow_dev_server
 from .errors import InvalidBaseURL
 from .execution import Call, CallError, CallResponse
-from .net import create_headers, parse_url, requests_session
 from .function import Function
 from .function_config import FunctionConfig
+from .net import create_headers, parse_url, requests_session
 from .registration import RegisterRequest
 from .transforms import hash_signing_key, remove_none_deep
 

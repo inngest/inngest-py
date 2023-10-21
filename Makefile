@@ -6,20 +6,26 @@ check-venv:
 
 format: check-venv
 	@black inngest
+	@isort inngest
 
 format-check: check-venv
 	@black --check inngest
+	@isort --check-only inngest
 
 install: check-venv
 	@pip install '.[extra]' -c constraints.txt
 
-precommit: format-check lint test type-check
+
+itest: check-venv
+	@pytest tests
+
+precommit: format-check lint type-check utest
 
 lint: check-venv
 	@pylint inngest
 
-test: check-venv
-	@pytest inngest
-
 type-check: check-venv
 	@mypy inngest
+
+utest: check-venv
+	@pytest inngest

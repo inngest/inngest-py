@@ -1,11 +1,11 @@
 import json
 
-from flask import Flask, make_response, request, Response
+from flask import Flask, Response, make_response, request
 
 from inngest.client import Inngest
-from inngest.comm import CommResponse, CommHandler
-from inngest.function import Function
+from inngest.comm import CommHandler, CommResponse
 from inngest.execution import Call
+from inngest.function import Function
 
 
 def serve(
@@ -17,7 +17,7 @@ def serve(
     signing_key: str | None = None,
 ) -> None:
     comm = CommHandler(
-        api_origin=base_url,
+        api_origin=base_url or client.base_url,
         client=client,
         framework="flask",
         functions=functions,
@@ -40,6 +40,7 @@ def serve(
             )
 
         if request.method == "PUT":
+            print(request.url)
             return _to_response(
                 comm.register(
                     app_url=request.url,
