@@ -6,9 +6,11 @@ check-venv:
 
 format: check-venv
 	@black inngest
+	@isort inngest
 
 format-check: check-venv
 	@black --check inngest
+	@isort --check-only inngest
 
 install: check-venv
 	@pip install '.[extra]' -c constraints.txt

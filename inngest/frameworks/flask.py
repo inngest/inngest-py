@@ -1,11 +1,11 @@
 import json
 
-from flask import Flask, make_response, request, Response
+from flask import Flask, Response, make_response, request
 
 from inngest.client import Inngest
-from inngest.comm import CommResponse, CommHandler
-from inngest.function import Function
+from inngest.comm import CommHandler, CommResponse
 from inngest.execution import Call
+from inngest.function import Function
 
 
 def serve(

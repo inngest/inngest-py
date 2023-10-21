@@ -1,22 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime
 import json
 import threading
 import traceback
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Callable, Protocol
 
 from .client import Inngest
 from .errors import NonRetriableError
 from .event import Event
-from .execution import (
-    Call,
-    CallError,
-    CallResponse,
-    MemoizedStep,
-    Opcode,
-)
+from .execution import Call, CallError, CallResponse, MemoizedStep, Opcode
 from .function_config import (
     FunctionConfig,
     Runtime,

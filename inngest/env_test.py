@@ -1,6 +1,6 @@
 import os
 
-from .env import allow_dev_server, EnvKey
+from .env import EnvKey, allow_dev_server
 
 
 def test_allow_dev_server() -> None:

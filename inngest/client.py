@@ -1,5 +1,5 @@
-from logging import getLogger, Logger
 import os
+from logging import Logger, getLogger
 from time import time
 from urllib.parse import urljoin
 

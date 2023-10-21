@@ -5,8 +5,8 @@ from tornado.web import Application, RequestHandler
 
 from inngest.client import Inngest
 from inngest.comm import CommHandler
-from inngest.function import Function
 from inngest.execution import Call
+from inngest.function import Function
 
 
 def serve(

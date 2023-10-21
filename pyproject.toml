@@ -17,18 +17,22 @@ dependencies = [
 extra = [
     "Flask==3.0.0",
     "black==23.10.0",
+    "isort==5.12.0",
     "mypy==1.6.1",
     "pylint==3.0.1",
     "pytest==7.4.2",
     "python-json-logger==2.0.7",
     "tornado==6.3.3",
-    "types-tornado==2.27.31",
+    "types-tornado==5.1.1",
     "types-requests==2.27.31",
 ]
 
 [project.urls]
 "Homepage" = "https://github.com/inngest/inngest-py"
 "Bug Tracker" = "https://github.com/inngest/inngest-py/issues"
+
+[tool.isort]
+profile = "black"
 
 [tool.mypy]
 disallow_untyped_defs = true

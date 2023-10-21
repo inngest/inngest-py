@@ -1,7 +1,7 @@
+import os
 from dataclasses import dataclass
 from enum import Enum
 from typing import Final, Literal
-import os
 
 
 class EnvKey(Enum):
