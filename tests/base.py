@@ -1,23 +1,13 @@
-import os
 import time
-from typing import Callable, Protocol, Type
+from typing import Callable, Protocol
 
 import requests
 
-import inngest
-
-from .dev_server import dev_server
-from .http_proxy import HTTPProxy
+from .http_proxy import HTTPProxy, Response
 from .net import HOST
 
 
-class BaseState:
-    def is_done(self) -> bool:
-        raise NotImplementedError()
-
-
 class FrameworkTestCase(Protocol):
-    client: inngest.Inngest
     dev_server_port: int
     http_proxy: HTTPProxy
 
@@ -28,7 +18,7 @@ class FrameworkTestCase(Protocol):
         headers: dict[str, list[str]],
         method: str,
         path: str,
-    ) -> None:
+    ) -> Response:
         ...
 
 
@@ -42,15 +32,6 @@ def register(app_port: int) -> None:
 
 def set_up(case: FrameworkTestCase) -> None:
     case.http_proxy = HTTPProxy(case.on_proxy_request).start()
-
-
-def set_up_class(case: Type[FrameworkTestCase]) -> None:
-    case.dev_server_port = int(os.getenv("DEV_SERVER_PORT") or dev_server.port)
-
-    case.client = inngest.Inngest(
-        base_url=f"http://{HOST}:{case.dev_server_port}",
-        id=case.__name__,
-    )
 
 
 def tear_down(case: FrameworkTestCase) -> None:

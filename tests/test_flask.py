@@ -1,60 +1,40 @@
-from unittest import TestCase
+import unittest
 
 from flask import Flask
 from flask.testing import FlaskClient
 
 import inngest
 
-from .base import (
-    BaseState,
-    FrameworkTestCase,
-    register,
-    set_up,
-    set_up_class,
-    tear_down,
-    wait_for,
+from .base import FrameworkTestCase, register, set_up, tear_down
+from .cases import create_cases
+from .dev_server import dev_server_port
+from .http_proxy import HTTPProxy, Response
+from .net import HOST
+
+_client = inngest.Inngest(
+    base_url=f"http://{HOST}:{dev_server_port}",
+    id="flask",
 )
-from .http_proxy import HTTPProxy
+
+_cases = create_cases(_client, "flask")
 
 
-class _NoStepsState(BaseState):
-    counter = 0
-
-    def is_done(self) -> bool:
-        return self.counter == 1
-
-
-class _States:
-    no_steps = _NoStepsState()
-
-
-@inngest.create_function(
-    inngest.FunctionOpts(id="no_steps"),
-    inngest.TriggerEvent(event="no_steps"),
-)
-def _no_steps(**_kwargs: object) -> None:
-    _States.no_steps.counter += 1
-
-
-class TestFlask(TestCase, FrameworkTestCase):
+class TestFlask(unittest.TestCase, FrameworkTestCase):
     app: FlaskClient
-    client: inngest.Inngest
     dev_server_port: int
     http_proxy: HTTPProxy
 
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
-        set_up_class(cls)
 
         app = Flask(__name__)
         app.logger.disabled = True
         inngest.flask.serve(
             app,
-            cls.client,
-            [_no_steps],
+            _client,
+            [case.fn for case in _cases],
         )
-
         cls.app = app.test_client()
 
     def setUp(self) -> None:
@@ -73,18 +53,24 @@ class TestFlask(TestCase, FrameworkTestCase):
         headers: dict[str, list[str]],
         method: str,
         path: str,
-    ) -> None:
-        self.app.open(
+    ) -> Response:
+        res = self.app.open(
             method=method,
             path=path,
             headers=headers,
             data=body,
         )
 
-    def test_no_steps(self) -> None:
-        self.client.send(inngest.Event(name="no_steps"))
+        return Response(
+            body=res.data,
+            headers={k: v for k, v in res.headers},
+            status_code=res.status_code,
+        )
 
-        def assertion() -> None:
-            assert _States.no_steps.is_done()
 
-        wait_for(assertion)
+for case in _cases:
+    test_name = f"test_{case.name}"
+    setattr(TestFlask, test_name, case.run_test)
+
+if __name__ == "__main__":
+    unittest.main()

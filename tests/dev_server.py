@@ -4,8 +4,18 @@ import threading
 
 from .net import get_available_port
 
-
 _DEFAULT_DEV_SERVER_PORT = 8288
+
+_enabled = os.getenv("DEV_SERVER_ENABLED") != "0"
+
+dev_server_port: int
+dev_server_port_env_var = os.getenv("DEV_SERVER_PORT")
+if dev_server_port_env_var:
+    dev_server_port = int(dev_server_port_env_var)
+elif _enabled:
+    dev_server_port = get_available_port()
+else:
+    dev_server_port = _DEFAULT_DEV_SERVER_PORT
 
 
 class _DevServer:
@@ -14,17 +24,6 @@ class _DevServer:
 
     def __init__(self) -> None:
         self._enabled = os.getenv("DEV_SERVER_ENABLED") != "0"
-        dev_server_port_env_var = os.getenv("DEV_SERVER_PORT")
-
-        port: int
-        if dev_server_port_env_var:
-            port = int(dev_server_port_env_var)
-        elif self._enabled:
-            port = get_available_port()
-        else:
-            port = _DEFAULT_DEV_SERVER_PORT
-
-        self.port = port
 
     def start(self) -> None:
         if not self._enabled:
@@ -39,7 +38,7 @@ class _DevServer:
                     "--no-discovery",
                     "--no-poll",
                     "--port",
-                    f"{self.port}",
+                    f"{dev_server_port}",
                 ],
             )
             self._process.communicate()
