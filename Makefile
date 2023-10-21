@@ -13,13 +13,17 @@ format-check: check-venv
 install: check-venv
 	@pip install '.[extra]' -c constraints.txt
 
-precommit: format-check lint test type-check
+
+itest: check-venv
+	@pytest tests
+
+precommit: format-check lint type-check utest
 
 lint: check-venv
 	@pylint inngest
 
-test: check-venv
-	@pytest inngest
-
 type-check: check-venv
 	@mypy inngest
+
+utest: check-venv
+	@pytest inngest

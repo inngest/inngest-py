@@ -40,6 +40,7 @@ def serve(
             )
 
         if request.method == "PUT":
+            print(request.url)
             return _to_response(
                 comm.register(
                     app_url=request.url,
