@@ -1,5 +1,7 @@
 # Inngest Python SDK
 
+## 🚧 Currently in Alpha! Not guaranteed to be production ready! 🚧
+
 Supported features:
 
 - ✅ `step.run`
@@ -10,7 +12,6 @@ Supported features:
 - ✅ Frameworks:
   - Flask
   - Tornado
-- ✅ Registration
 
 Unsupported features:
 
@@ -24,10 +25,6 @@ Unsupported features:
   - `debounce`
   - `on_failure`
   - `rate_limit`
-- 🚫 Frameworks:
-  - Django
-  - FastAPI
 - 🚫 Logger
 - 🚫 Middleware
 - 🚫 Parallel steps
-- 🚫 Request signing and verification
