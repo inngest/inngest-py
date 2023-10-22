@@ -199,8 +199,6 @@ class CommHandler:
                 app_name=self._client.id,
                 framework=self._framework,
                 functions=self._get_function_configs(app_url),
-                # TODO: Do this for real.
-                hash="094cd50f64aadfec073d184bedd7b7d077f919b3d5a19248bb9a68edbc66597c",
                 sdk=f"{LANGUAGE}:v{VERSION}",
                 url=app_url,
                 # TODO: Do this for real.
