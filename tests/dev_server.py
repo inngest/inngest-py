@@ -63,8 +63,11 @@ class _DevServer:
         if not self._thread.is_alive():
             raise Exception("thread is not alive")
 
+        print(5)
         self._process.terminate()
+        print(6)
         self._thread.join(timeout=10)
+        print(7)
 
 
 dev_server = _DevServer()
