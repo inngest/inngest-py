@@ -4,21 +4,21 @@ from tornado.web import Application
 
 import inngest
 
-from .base import FrameworkTestCase, register, set_up, tear_down
+from .base import register, set_up, tear_down
 from .cases import create_cases
-from .dev_server import dev_server_port
+from .dev_server import DEV_SERVER_PORT
 from .http_proxy import HTTPProxy, Response
 from .net import HOST
 
 _client = inngest.Inngest(
-    base_url=f"http://{HOST}:{dev_server_port}",
+    base_url=f"http://{HOST}:{DEV_SERVER_PORT}",
     id="tornado",
 )
 
 _cases = create_cases(_client, "tornado")
 
 
-class TestTornado(tornado.testing.AsyncHTTPTestCase, FrameworkTestCase):
+class TestTornado(tornado.testing.AsyncHTTPTestCase):
     app: Application
     dev_server_port: int
     http_proxy: HTTPProxy
@@ -63,7 +63,7 @@ class TestTornado(tornado.testing.AsyncHTTPTestCase, FrameworkTestCase):
 
         return Response(
             body=res.body,
-            headers={k: v for k, v in res.headers.items()},
+            headers=dict(res.headers.items()),
             status_code=res.code,
         )
 

@@ -21,10 +21,10 @@ itest: check-venv
 precommit: format-check lint type-check utest
 
 lint: check-venv
-	@pylint inngest
+	@pylint inngest tests
 
 type-check: check-venv
-	@mypy inngest
+	@mypy inngest tests
 
 utest: check-venv
 	@pytest inngest

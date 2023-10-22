@@ -7,7 +7,7 @@ from .http_proxy import HTTPProxy, Response
 from .net import HOST
 
 
-class FrameworkTestCase(Protocol):
+class _FrameworkTestCase(Protocol):
     dev_server_port: int
     http_proxy: HTTPProxy
 
@@ -30,11 +30,11 @@ def register(app_port: int) -> None:
     assert res.status_code == 200
 
 
-def set_up(case: FrameworkTestCase) -> None:
+def set_up(case: _FrameworkTestCase) -> None:
     case.http_proxy = HTTPProxy(case.on_proxy_request).start()
 
 
-def tear_down(case: FrameworkTestCase) -> None:
+def tear_down(case: _FrameworkTestCase) -> None:
     case.http_proxy.stop()
 
 

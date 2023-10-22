@@ -9,14 +9,14 @@ _DEFAULT_DEV_SERVER_PORT = 8288
 
 _enabled = os.getenv("DEV_SERVER_ENABLED") != "0"
 
-dev_server_port: int
+DEV_SERVER_PORT: int
 dev_server_port_env_var = os.getenv("DEV_SERVER_PORT")
 if dev_server_port_env_var:
-    dev_server_port = int(dev_server_port_env_var)
+    DEV_SERVER_PORT = int(dev_server_port_env_var)
 elif _enabled:
-    dev_server_port = get_available_port()
+    DEV_SERVER_PORT = get_available_port()
 else:
-    dev_server_port = _DEFAULT_DEV_SERVER_PORT
+    DEV_SERVER_PORT = _DEFAULT_DEV_SERVER_PORT
 
 
 class _DevServer:
@@ -31,7 +31,7 @@ class _DevServer:
             return
 
         def _run() -> None:
-            self._process = subprocess.Popen(
+            self._process = subprocess.Popen(  # pylint: disable=consider-using-with
                 [
                     "npx",
                     "inngest-cli@latest",
@@ -39,7 +39,7 @@ class _DevServer:
                     "--no-discovery",
                     "--no-poll",
                     "--port",
-                    f"{dev_server_port}",
+                    f"{DEV_SERVER_PORT}",
                 ],
             )
             self._process.communicate()

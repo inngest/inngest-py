@@ -5,21 +5,21 @@ from flask.testing import FlaskClient
 
 import inngest
 
-from .base import FrameworkTestCase, register, set_up, tear_down
+from .base import register, set_up, tear_down
 from .cases import create_cases
-from .dev_server import dev_server_port
+from .dev_server import DEV_SERVER_PORT
 from .http_proxy import HTTPProxy, Response
 from .net import HOST
 
 _client = inngest.Inngest(
-    base_url=f"http://{HOST}:{dev_server_port}",
+    base_url=f"http://{HOST}:{DEV_SERVER_PORT}",
     id="flask",
 )
 
 _cases = create_cases(_client, "flask")
 
 
-class TestFlask(unittest.TestCase, FrameworkTestCase):
+class TestFlask(unittest.TestCase):
     app: FlaskClient
     dev_server_port: int
     http_proxy: HTTPProxy
@@ -63,7 +63,7 @@ class TestFlask(unittest.TestCase, FrameworkTestCase):
 
         return Response(
             body=res.data,
-            headers={k: v for k, v in res.headers},
+            headers=dict(res.headers),
             status_code=res.status_code,
         )
 
