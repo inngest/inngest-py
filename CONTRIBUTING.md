@@ -39,10 +39,17 @@ make utest
 
 # Integration tests
 make itest
+```
 
-# Integration tests (don't start Dev Server)
-(export DEV_SERVER_ENABLED=0 && make itest)
+When running `make itest`, there are some optional env vars:
 
-# Integration tests (start Dev Server on a specific port)
-(export DEV_SERVER_PORT=9123 && make itest)
+```sh
+# Disable (when you want to use an already-running Dev Server)
+DEV_SERVER_ENABLED=0
+
+# Specify port (uses a random available port by default)
+DEV_SERVER_PORT=9000
+
+# Show Dev Server stdout and stderr
+DEV_SERVER_VERBOSE=1
 ```
