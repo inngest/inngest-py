@@ -37,6 +37,7 @@ extra = [
 line-length = 80
 
 [tool.isort]
+line_length = 80
 profile = "black"
 
 [tool.mypy]
@@ -51,6 +52,7 @@ disable = [
     'duplicate-code',
     'fixme',
     'invalid-envvar-value',
+    'line-too-long',
     'missing-docstring',
     'too-few-public-methods',
     'too-many-arguments',

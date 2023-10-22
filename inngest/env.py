@@ -42,7 +42,7 @@ _PROD_CHECKS: Final[list[_EnvCheck]] = [
 ]
 
 
-def allow_dev_server() -> bool:
+def is_prod() -> bool:
     for check in _PROD_CHECKS:
         value = os.getenv(check.key.value)
         operator = check.operator
@@ -53,12 +53,12 @@ def allow_dev_server() -> bool:
 
         if operator == "equals":
             if value == expected:
-                return False
+                return True
         elif operator == "is_truthy":
             if value:
-                return False
+                return True
         elif operator == "starts_with" and isinstance(expected, str):
             if value.startswith(expected):
-                return False
+                return True
 
-    return True
+    return False

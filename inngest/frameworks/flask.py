@@ -3,7 +3,7 @@ import json
 from flask import Flask, Response, make_response, request
 
 from inngest.client import Inngest
-from inngest.comm import CommHandler, CommResponse
+from inngest.comm import CommHandler, CommResponse, RequestSignature
 from inngest.execution import Call
 from inngest.function import Function
 
@@ -36,6 +36,10 @@ def serve(
                 comm.call_function(
                     call=Call.from_dict(json.loads(request.data)),
                     fn_id=fn_id,
+                    req_sig=RequestSignature(
+                        body=request.data,
+                        headers=dict(request.headers.items()),
+                    ),
                 )
             )
 

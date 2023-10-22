@@ -4,7 +4,7 @@ from typing import Awaitable
 from tornado.web import Application, RequestHandler
 
 from inngest.client import Inngest
-from inngest.comm import CommHandler
+from inngest.comm import CommHandler, RequestSignature
 from inngest.execution import Call
 from inngest.function import Function
 
@@ -37,9 +37,19 @@ def serve(
                 raise Exception("missing fnId")
             fn_id = raw_fn_id[0].decode("utf-8")
 
+            headers: dict[str, str] = {}
+
+            for k, v in self.request.headers.items():
+                if isinstance(k, str) and isinstance(v[0], str):
+                    headers[k] = v[0]
+
             comm_res = comm.call_function(
                 call=Call.from_dict(json.loads(self.request.body)),
                 fn_id=fn_id,
+                req_sig=RequestSignature(
+                    body=self.request.body,
+                    headers=headers,
+                ),
             )
 
             self.write(json.dumps(comm_res.body))

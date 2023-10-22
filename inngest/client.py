@@ -4,7 +4,7 @@ from time import time
 from urllib.parse import urljoin
 
 from .const import DEFAULT_EVENT_ORIGIN, DEV_SERVER_ORIGIN, EnvKey
-from .env import allow_dev_server
+from .env import is_prod
 from .errors import InvalidResponseShape, MissingEventKey
 from .event import Event
 from .net import create_headers, requests_session
@@ -24,7 +24,7 @@ class Inngest:
         self.logger = logger or getLogger(__name__)
 
         if event_key is None:
-            if allow_dev_server():
+            if not is_prod():
                 event_key = "NO_EVENT_KEY_SET"
             else:
                 event_key = os.getenv(EnvKey.EVENT_KEY.value)
@@ -35,7 +35,7 @@ class Inngest:
 
         event_origin = base_url
         if event_origin is None:
-            if allow_dev_server():
+            if not is_prod():
                 self.logger.info("Defaulting event origin to Dev Server")
                 event_origin = DEV_SERVER_ORIGIN
             else:

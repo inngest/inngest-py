@@ -1,33 +1,33 @@
 import os
 
-from .env import EnvKey, allow_dev_server
+from .env import EnvKey, is_prod
 
 
 def test_allow_dev_server() -> None:
-    assert allow_dev_server() is True
+    assert is_prod() is False
 
     os.environ["CF_PAGES"] = "1"
-    assert allow_dev_server() is False
+    assert is_prod() is True
     _clear()
 
     os.environ["CONTEXT"] = "production"
-    assert allow_dev_server() is False
+    assert is_prod() is True
     _clear()
 
     os.environ["DENO_DEPLOYMENT_ID"] = "1"
-    assert allow_dev_server() is False
+    assert is_prod() is True
     _clear()
 
     os.environ["ENVIRONMENT"] = "production"
-    assert allow_dev_server() is False
+    assert is_prod() is True
     _clear()
 
     os.environ["FLASK_ENV"] = "production"
-    assert allow_dev_server() is False
+    assert is_prod() is True
     _clear()
 
     os.environ["VERCEL_ENV"] = "production"
-    assert allow_dev_server() is False
+    assert is_prod() is True
     _clear()
 
 

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
 import os
 from dataclasses import dataclass
 from logging import Logger
-from urllib.parse import urljoin
+from urllib.parse import parse_qs, urljoin
 
 import requests
 
@@ -15,15 +17,25 @@ from .const import (
     VERSION,
     EnvKey,
     ErrorCode,
+    HeaderKey,
 )
-from .env import allow_dev_server
-from .errors import InvalidBaseURL
+from .env import is_prod
+from .errors import (
+    InvalidBaseURL,
+    InvalidRequestSignature,
+    MissingHeader,
+    MissingSigningKey,
+)
 from .execution import Call, CallError, CallResponse
 from .function import Function
 from .function_config import FunctionConfig
 from .net import create_headers, parse_url, requests_session
 from .registration import DeployType, RegisterRequest
-from .transforms import hash_signing_key, remove_none_deep
+from .transforms import (
+    hash_signing_key,
+    remove_none_deep,
+    remove_signing_key_prefix,
+)
 
 
 @dataclass
@@ -59,13 +71,13 @@ class CommHandler:
     ) -> None:
         self._logger = logger
 
-        if allow_dev_server():
+        if not is_prod():
             self._logger.info("Dev Server mode enabled")
 
         api_origin = api_origin or os.getenv(EnvKey.BASE_URL.value)
 
         if api_origin is None:
-            if allow_dev_server():
+            if not is_prod():
                 self._logger.info("Defaulting API origin to Dev Server")
                 api_origin = DEV_SERVER_ORIGIN
             else:
@@ -86,10 +98,13 @@ class CommHandler:
         *,
         call: Call,
         fn_id: str,
+        req_sig: RequestSignature,
     ) -> CommResponse:
         """
         Handles a function call from the Executor.
         """
+
+        req_sig.validate(self._signing_key)
 
         if fn_id not in self._fns:
             raise Exception(f"function {fn_id} not found")
@@ -181,7 +196,7 @@ class CommHandler:
         Handles a registration call.
         """
 
-        if is_from_dev_server and not allow_dev_server():
+        if is_from_dev_server and is_prod():
             self._logger.error(
                 "Dev Server registration not allowed in production mode"
             )
@@ -225,3 +240,46 @@ class CommHandler:
         )
 
         return self._parse_registration_response(res)
+
+
+class RequestSignature:
+    _signature: str | None = None
+    _timestamp: int | None = None
+
+    def __init__(
+        self,
+        body: bytes,
+        headers: dict[str, str],
+    ) -> None:
+        self._body = body
+
+        sig_header = headers.get(HeaderKey.SIGNATURE.value)
+        if sig_header is not None:
+            parsed = parse_qs(sig_header)
+            if "t" in parsed:
+                self._timestamp = int(parsed["t"][0])
+            if "s" in parsed:
+                self._signature = parsed["s"][0]
+
+    def validate(self, signing_key: str | None) -> None:
+        if not is_prod():
+            return
+
+        if signing_key is None:
+            raise MissingSigningKey(
+                "cannot validate signature in production mode without a signing key"
+            )
+
+        if self._signature is None:
+            raise MissingHeader(
+                f"cannot validate signature in production mode without a {HeaderKey.SIGNATURE.value} header"
+            )
+
+        mac = hmac.new(
+            remove_signing_key_prefix(signing_key).encode("utf-8"),
+            self._body,
+            hashlib.sha256,
+        )
+        mac.update(str(self._timestamp).encode())
+        if not hmac.compare_digest(self._signature, mac.hexdigest()):
+            raise InvalidRequestSignature()

@@ -16,3 +16,7 @@ class EnvKey(Enum):
 
 class ErrorCode(Enum):
     DEV_SERVER_REGISTRATION_NOT_ALLOWED = "DEV_SERVER_REGISTRATION_NOT_ALLOWED"
+
+
+class HeaderKey(Enum):
+    SIGNATURE = "X-Inngest-Signature"

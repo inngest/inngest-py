@@ -5,17 +5,22 @@ from .types import T
 
 
 def hash_signing_key(key: str) -> str:
+    return hashlib.sha256(
+        bytearray.fromhex(remove_signing_key_prefix(key))
+    ).hexdigest()
+
+
+def hash_step_id(step_id: str) -> str:
+    return hashlib.sha1(step_id.encode("utf-8")).hexdigest()
+
+
+def remove_signing_key_prefix(key: str) -> str:
     prefix_match = re.match(r"^signkey-[\w]+-", key)
     prefix = ""
     if prefix_match:
         prefix = prefix_match.group(0)
 
-    key_without_prefix = key[len(prefix) :]
-    return hashlib.sha256(bytearray.fromhex(key_without_prefix)).hexdigest()
-
-
-def hash_step_id(step_id: str) -> str:
-    return hashlib.sha1(step_id.encode("utf-8")).hexdigest()
+    return key[len(prefix) :]
 
 
 def remove_none_deep(obj: T) -> T:
