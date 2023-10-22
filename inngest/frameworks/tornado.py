@@ -6,6 +6,7 @@ from tornado.web import Application, RequestHandler
 from inngest.client import Inngest
 from inngest.comm import CommHandler, RequestSignature
 from inngest.const import HeaderKey
+from inngest.errors import MissingParam
 from inngest.execution import Call
 from inngest.function import Function
 
@@ -35,7 +36,7 @@ def serve(
             fn_id: str | None
             raw_fn_id = self.request.query_arguments.get("fnId")
             if raw_fn_id is None or len(raw_fn_id) == 0:
-                raise Exception("missing fnId")
+                raise MissingParam("fnId")
             fn_id = raw_fn_id[0].decode("utf-8")
 
             headers: dict[str, str] = {}

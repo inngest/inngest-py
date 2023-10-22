@@ -23,10 +23,11 @@ from .env import is_prod
 from .errors import (
     InvalidBaseURL,
     InvalidRequestSignature,
+    MissingFunction,
     MissingHeader,
     MissingSigningKey,
 )
-from .execution import Call, CallError, CallResponse
+from .execution import Call, CallError
 from .function import Function
 from .function_config import FunctionConfig
 from .net import create_headers, parse_url, requests_session
@@ -86,7 +87,7 @@ class CommHandler:
         try:
             self._base_url = parse_url(api_origin)
         except Exception as err:
-            raise InvalidBaseURL("invalid base_url") from err
+            raise InvalidBaseURL() from err
 
         self._client = client
         self._fns: dict[str, Function] = {fn.get_id(): fn for fn in functions}
@@ -107,7 +108,7 @@ class CommHandler:
         req_sig.validate(self._signing_key)
 
         if fn_id not in self._fns:
-            raise Exception(f"function {fn_id} not found")
+            raise MissingFunction(f"function {fn_id} not found")
 
         comm_res = CommResponse(
             headers={
@@ -120,9 +121,6 @@ class CommHandler:
         if isinstance(action_res, list):
             out: list[dict[str, object]] = []
             for item in action_res:
-                if not isinstance(item, CallResponse):
-                    raise Exception("expected CallResponse")
-
                 out.append(item.to_dict())
 
             comm_res.body = remove_none_deep(out)

@@ -5,6 +5,7 @@ from flask import Flask, Response, make_response, request
 from inngest.client import Inngest
 from inngest.comm import CommHandler, CommResponse, RequestSignature
 from inngest.const import HeaderKey
+from inngest.errors import MissingParam
 from inngest.execution import Call
 from inngest.function import Function
 
@@ -31,7 +32,7 @@ def serve(
         if request.method == "POST":
             fn_id = request.args.get("fnId")
             if fn_id is None:
-                raise Exception("missing fnId")
+                raise MissingParam("fnId")
 
             return _to_response(
                 comm.call_function(
