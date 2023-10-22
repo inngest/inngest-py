@@ -24,14 +24,15 @@ class ErrorCode(Enum):
     MISSING_HEADER = "missing_header"
     MISSING_PARAM = "missing_param"
     MISSING_SIGNING_KEY = "missing_signing_key"
-    NON_RETRIABLE_ERROR = "non_retriable_error"
 
 
 class HeaderKey(Enum):
+    CONTENT_TYPE = "Content-Type"
     FORWARDED_FOR = "X-Forwarded-For"
     FRAMEWORK = "X-Inngest-Framework"
     NO_RETRY = "X-Inngest-No-Retry"
     REAL_IP = "X-Real-IP"
     SDK = "X-Inngest-SDK"
+    SERVER_TIMING = "Server-Timing"
     SIGNATURE = "X-Inngest-Signature"
     USER_AGENT = "User-Agent"

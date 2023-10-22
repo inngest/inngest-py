@@ -1,15 +1,18 @@
 from .const import ErrorCode
 
 
-class InngestError(Exception):
+class InternalError(Exception):
     code: ErrorCode
+    status_code: int = 500
 
     def __init__(self, *, code: ErrorCode, message: str | None = None) -> None:
         super().__init__(message)
         self.code = code
 
 
-class InvalidBaseURL(InngestError):
+class InvalidBaseURL(InternalError):
+    status_code: int = 500
+
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
             code=ErrorCode.INVALID_BASE_URL,
@@ -17,7 +20,9 @@ class InvalidBaseURL(InngestError):
         )
 
 
-class InvalidRequestSignature(InngestError):
+class InvalidRequestSignature(InternalError):
+    status_code: int = 401
+
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
             code=ErrorCode.INVALID_REQUEST_SIGNATURE,
@@ -25,7 +30,9 @@ class InvalidRequestSignature(InngestError):
         )
 
 
-class InvalidResponseShape(InngestError):
+class InvalidResponseShape(InternalError):
+    status_code: int = 500
+
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
             code=ErrorCode.INVALID_RESPONSE_SHAPE,
@@ -33,7 +40,9 @@ class InvalidResponseShape(InngestError):
         )
 
 
-class MissingEventKey(InngestError):
+class MissingEventKey(InternalError):
+    status_code: int = 500
+
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
             code=ErrorCode.MISSING_EVENT_KEY,
@@ -41,7 +50,9 @@ class MissingEventKey(InngestError):
         )
 
 
-class MissingFunction(InngestError):
+class MissingFunction(InternalError):
+    status_code: int = 400
+
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
             code=ErrorCode.MISSING_FUNCTION,
@@ -49,7 +60,9 @@ class MissingFunction(InngestError):
         )
 
 
-class MissingHeader(InngestError):
+class MissingHeader(InternalError):
+    status_code: int = 400
+
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
             code=ErrorCode.MISSING_HEADER,
@@ -57,7 +70,9 @@ class MissingHeader(InngestError):
         )
 
 
-class MissingParam(InngestError):
+class MissingParam(InternalError):
+    status_code: int = 400
+
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
             code=ErrorCode.MISSING_HEADER,
@@ -65,7 +80,9 @@ class MissingParam(InngestError):
         )
 
 
-class MissingSigningKey(InngestError):
+class MissingSigningKey(InternalError):
+    status_code: int = 500
+
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
             code=ErrorCode.MISSING_SIGNING_KEY,
@@ -73,9 +90,11 @@ class MissingSigningKey(InngestError):
         )
 
 
-class NonRetriableError(InngestError):
-    def __init__(self, message: str | None = None) -> None:
-        super().__init__(
-            code=ErrorCode.NON_RETRIABLE_ERROR,
-            message=message,
-        )
+class ExternalError(Exception):
+    pass
+
+
+class NonRetriableError(ExternalError):
+    """
+    End users can raise this error to prevent retries.
+    """
