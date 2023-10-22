@@ -30,16 +30,12 @@ jobs:
 
       # - name: "Format check"
       #   run: "make format-check"
-
       # - name: "Lint"
       #   run: "make lint"
-
       # - name: "Type check"
       #   run: "make type-check"
-
       # - name: "Unit test"
       #   run: "make utest"
-
       - name: "Integration test"
-        # run: "make itest"
-        run: "npx --help"
+        run: "make itest"
+        # run: "npx --help"
