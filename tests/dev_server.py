@@ -1,4 +1,5 @@
 import os
+import signal
 import subprocess
 import threading
 
@@ -64,9 +65,11 @@ class _DevServer:
             raise Exception("thread is not alive")
 
         print(5)
-        self._process.terminate()
+        # self._process.terminate()
+        # self._process.send_signal(signal.SIGTERM)
+        os.kill(self._process.pid, signal.SIGKILL)
         print(6)
-        self._thread.join(timeout=10)
+        # self._thread.join(timeout=10)
         print(7)
 
 
