@@ -44,7 +44,8 @@ def serve(
                 comm.register(
                     app_url=request.url,
                     # TODO: Find a better way to figure this out.
-                    is_from_dev_server=request.environ["REMOTE_ADDR"] == "127.0.0.1",
+                    is_from_dev_server=request.environ["REMOTE_ADDR"]
+                    == "127.0.0.1",
                 )
             )
 

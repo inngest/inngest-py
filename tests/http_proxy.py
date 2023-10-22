@@ -94,7 +94,10 @@ class HTTPProxy:
         return self._port
 
     def start(self) -> HTTPProxy:
-        self._thread = threading.Thread(daemon=True, target=self._server.serve_forever)
+        self._thread = threading.Thread(
+            daemon=True,
+            target=self._server.serve_forever,
+        )
         self._thread.start()
         return self
 

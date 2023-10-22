@@ -45,18 +45,20 @@ class _DevServer:
             stdout = None
 
         def _run() -> None:
-            self._process = subprocess.Popen(  # pylint: disable=consider-using-with
-                [
-                    "npx",
-                    "inngest-cli@latest",
-                    "dev",
-                    "--no-discovery",
-                    "--no-poll",
-                    "--port",
-                    f"{DEV_SERVER_PORT}",
-                ],
-                stderr=stderr,
-                stdout=stdout,
+            self._process = (
+                subprocess.Popen(  # pylint: disable=consider-using-with
+                    [
+                        "npx",
+                        "inngest-cli@latest",
+                        "dev",
+                        "--no-discovery",
+                        "--no-poll",
+                        "--port",
+                        f"{DEV_SERVER_PORT}",
+                    ],
+                    stderr=stderr,
+                    stdout=stdout,
+                )
             )
             self._process.communicate()
 

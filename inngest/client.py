@@ -62,11 +62,15 @@ class Inngest:
         res_body: object = res.json()
         if not isinstance(res_body, dict) or "ids" not in res_body:
             self.logger.error("unexpected response when sending events")
-            raise InvalidResponseShape("unexpected response when sending events")
+            raise InvalidResponseShape(
+                "unexpected response when sending events"
+            )
 
         ids = res_body["ids"]
         if not isinstance(ids, list):
             self.logger.error("unexpected response when sending events")
-            raise InvalidResponseShape("unexpected response when sending events")
+            raise InvalidResponseShape(
+                "unexpected response when sending events"
+            )
 
         return ids

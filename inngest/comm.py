@@ -130,7 +130,9 @@ class CommHandler:
         self,
         server_res: requests.Response,
     ) -> CommResponse:
-        comm_res = CommResponse(headers=create_headers(framework=self._framework))
+        comm_res = CommResponse(
+            headers=create_headers(framework=self._framework)
+        )
         body: dict[str, object] = {}
 
         server_res_body: dict[str, object] | None = None
@@ -180,7 +182,9 @@ class CommHandler:
         """
 
         if is_from_dev_server and not allow_dev_server():
-            self._logger.error("Dev Server registration not allowed in production mode")
+            self._logger.error(
+                "Dev Server registration not allowed in production mode"
+            )
 
             comm_res = CommResponse(
                 headers={},
@@ -209,7 +213,9 @@ class CommHandler:
 
         headers = create_headers(framework=self._framework)
         if self._signing_key:
-            headers["Authorization"] = f"Bearer {hash_signing_key(self._signing_key)}"
+            headers[
+                "Authorization"
+            ] = f"Bearer {hash_signing_key(self._signing_key)}"
 
         res = requests_session.post(
             registration_url,

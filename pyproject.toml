@@ -28,6 +28,9 @@ extra = [
 "Homepage" = "https://github.com/inngest/inngest-py"
 "Bug Tracker" = "https://github.com/inngest/inngest-py/issues"
 
+[tool.black]
+line-length = 80
+
 [tool.isort]
 profile = "black"
 

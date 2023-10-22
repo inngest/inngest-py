@@ -32,4 +32,6 @@ class BaseModel(_BaseModel):
         return dump
 
 
-TBaseModel = TypeVar("TBaseModel", bound=BaseModel)  # pylint: disable=invalid-name
+TBaseModel = TypeVar(  # pylint: disable=invalid-name
+    "TBaseModel", bound=BaseModel
+)
