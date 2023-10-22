@@ -22,7 +22,7 @@ from .execution import Call, CallError, CallResponse
 from .function import Function
 from .function_config import FunctionConfig
 from .net import create_headers, parse_url, requests_session
-from .registration import RegisterRequest
+from .registration import DeployType, RegisterRequest
 from .transforms import hash_signing_key, remove_none_deep
 
 
@@ -197,6 +197,7 @@ class CommHandler:
         body = remove_none_deep(
             RegisterRequest(
                 app_name=self._client.id,
+                deploy_type=DeployType.PING,
                 framework=self._framework,
                 functions=self._get_function_configs(app_url),
                 sdk=f"{LANGUAGE}:v{VERSION}",

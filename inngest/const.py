@@ -5,7 +5,7 @@ DEFAULT_API_ORIGIN: Final = "https://api.inngest.com/"
 DEFAULT_EVENT_ORIGIN: Final = "https://inn.gs/"
 DEV_SERVER_ORIGIN: Final = "http://127.0.0.1:8288/"
 LANGUAGE: Final = "py"
-VERSION: Final = "0.0.1"
+VERSION: Final = "0.1.0"
 
 
 class EnvKey(Enum):
