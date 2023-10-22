@@ -1,5 +1,5 @@
 check-venv:
-	@if [ -z "$$VIRTUAL_ENV" ]; then \
+	@if [ -z "$${CI}" ] && [ -z "$${VIRTUAL_ENV}" ]; then \
 		echo "virtual environment is not activated"; \
 		exit 1; \
 	fi
@@ -14,7 +14,6 @@ format-check: check-venv
 
 install: check-venv
 	@pip install '.[extra]' -c constraints.txt
-
 
 itest: check-venv
 	@pytest tests

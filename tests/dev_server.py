@@ -1,4 +1,5 @@
 import os
+import signal
 import subprocess
 import threading
 
@@ -59,8 +60,9 @@ class _DevServer:
         if not self._thread.is_alive():
             raise Exception("thread is not alive")
 
-        self._process.terminate()
-        self._thread.join()
+        # Would rather use `self._process.terminate()` but sometimes Dev Server
+        # takes too long to shutdown.
+        os.kill(self._process.pid, signal.SIGKILL)
 
 
 dev_server = _DevServer()
