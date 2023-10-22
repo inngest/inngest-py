@@ -44,13 +44,9 @@ class _DevServer:
             )
             self._process.communicate()
 
-        print(1)
         self._thread = threading.Thread(target=_run)
-        print(2)
         self._thread.start()
-        print(3)
         self._thread.join(timeout=10)
-        print(4)
 
     def stop(self) -> None:
         if not self._enabled:
@@ -64,13 +60,9 @@ class _DevServer:
         if not self._thread.is_alive():
             raise Exception("thread is not alive")
 
-        print(5)
-        # self._process.terminate()
-        # self._process.send_signal(signal.SIGTERM)
+        # Would rather use `self._process.terminate()` but sometimes Dev Server
+        # takes too long to shutdown.
         os.kill(self._process.pid, signal.SIGKILL)
-        print(6)
-        # self._thread.join(timeout=10)
-        print(7)
 
 
 dev_server = _DevServer()
