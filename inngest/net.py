@@ -3,7 +3,7 @@ from urllib.parse import urlparse
 
 from requests import session
 
-from .const import LANGUAGE, VERSION
+from .const import LANGUAGE, VERSION, HeaderKey
 
 Method = Literal["GET", "POST"]
 
@@ -13,12 +13,12 @@ def create_headers(
     framework: str | None = None,
 ) -> dict[str, str]:
     headers = {
-        "User-Agent": f"inngest-{LANGUAGE}:v{VERSION}",
-        "x-inngest-sdk": f"inngest-{LANGUAGE}:v{VERSION}",
+        HeaderKey.USER_AGENT.value: f"inngest-{LANGUAGE}:v{VERSION}",
+        HeaderKey.SDK.value: f"inngest-{LANGUAGE}:v{VERSION}",
     }
 
     if framework is not None:
-        headers["x-inngest-framework"] = framework
+        headers[HeaderKey.FRAMEWORK.value] = framework
 
     return headers
 

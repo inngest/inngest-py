@@ -132,7 +132,7 @@ class CommHandler:
             comm_res.status_code = 500
 
             if action_res.is_retriable is False:
-                comm_res.headers["x-inngest-no-retry"] = "true"
+                comm_res.headers[HeaderKey.NO_RETRY.value] = "true"
         else:
             comm_res.body = action_res
 

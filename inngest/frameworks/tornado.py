@@ -5,6 +5,7 @@ from tornado.web import Application, RequestHandler
 
 from inngest.client import Inngest
 from inngest.comm import CommHandler, RequestSignature
+from inngest.const import HeaderKey
 from inngest.execution import Call
 from inngest.function import Function
 
@@ -61,8 +62,8 @@ def serve(
 
         def put(self) -> None:
             remote_ip = (
-                self.request.headers.get("X-Real-IP")
-                or self.request.headers.get("X-Forwarded-For")
+                self.request.headers.get(HeaderKey.REAL_IP.value)
+                or self.request.headers.get(HeaderKey.FORWARDED_FOR.value)
                 or self.request.remote_ip
             )
 

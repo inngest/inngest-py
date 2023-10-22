@@ -92,9 +92,7 @@ class Function:
 
         retries: StepConfigRetries | None = None
         if self._opts.retries is not None:
-            retries = StepConfigRetries(
-                attempts=self._opts.retries + 1,
-            )
+            retries = StepConfigRetries(attempts=self._opts.retries)
 
         return FunctionConfig(
             id=fn_id,

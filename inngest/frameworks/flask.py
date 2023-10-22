@@ -4,6 +4,7 @@ from flask import Flask, Response, make_response, request
 
 from inngest.client import Inngest
 from inngest.comm import CommHandler, CommResponse, RequestSignature
+from inngest.const import HeaderKey
 from inngest.execution import Call
 from inngest.function import Function
 
@@ -44,12 +45,17 @@ def serve(
             )
 
         if request.method == "PUT":
+            remote_ip = (
+                request.headers.get(HeaderKey.REAL_IP.value)
+                or request.headers.get(HeaderKey.FORWARDED_FOR.value)
+                or request.environ["REMOTE_ADDR"]
+            )
+
             return _to_response(
                 comm.register(
                     app_url=request.url,
                     # TODO: Find a better way to figure this out.
-                    is_from_dev_server=request.environ["REMOTE_ADDR"]
-                    == "127.0.0.1",
+                    is_from_dev_server=remote_ip == "127.0.0.1",
                 )
             )
 

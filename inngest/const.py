@@ -19,4 +19,10 @@ class ErrorCode(Enum):
 
 
 class HeaderKey(Enum):
+    FORWARDED_FOR = "X-Forwarded-For"
+    FRAMEWORK = "X-Inngest-Framework"
+    NO_RETRY = "X-Inngest-No-Retry"
+    REAL_IP = "X-Real-IP"
+    SDK = "X-Inngest-SDK"
     SIGNATURE = "X-Inngest-Signature"
+    USER_AGENT = "User-Agent"
