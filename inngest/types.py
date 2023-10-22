@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TypeVar
+from typing import Type, TypeVar
 
 from pydantic import BaseModel as _BaseModel
 
@@ -11,6 +11,13 @@ EmptySentinel = object()
 
 
 class BaseModel(_BaseModel):
+    @classmethod
+    def from_dict(
+        cls: Type[TBaseModel],
+        raw: dict[str, object],
+    ) -> TBaseModel:
+        return cls.model_validate(raw)
+
     def to_dict(self) -> dict[str, object]:
         dump = self.model_dump(
             # Enable since we want to serialize to aliases.
@@ -23,3 +30,6 @@ class BaseModel(_BaseModel):
                 dump[k] = v.value
 
         return dump
+
+
+TBaseModel = TypeVar("TBaseModel", bound=BaseModel)  # pylint: disable=invalid-name

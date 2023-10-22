@@ -33,6 +33,8 @@ profile = "black"
 
 [tool.mypy]
 disallow_untyped_defs = true
+incremental = false
+strict = true
 
 [tool.pylint.'MESSAGES CONTROL']
 disable = [

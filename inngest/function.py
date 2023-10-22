@@ -10,7 +10,7 @@ from typing import Callable, Protocol
 from .client import Inngest
 from .errors import NonRetriableError
 from .event import Event
-from .execution import Call, CallError, CallResponse, MemoizedStep, Opcode
+from .execution import Call, CallError, CallResponse, Opcode
 from .function_config import (
     FunctionConfig,
     Runtime,
@@ -66,7 +66,7 @@ class Function:
         except EarlyReturn as out:
             return [
                 CallResponse(
-                    data=out.data,  # type: ignore
+                    data=out.data,
                     display_name=out.display_name,
                     id=out.hashed_id,
                     name=out.name,
@@ -141,7 +141,7 @@ class _Step:
     def __init__(
         self,
         client: Inngest,
-        memos: dict[str, MemoizedStep],
+        memos: dict[str, object],
         step_id_counter: _StepIDCounter,
     ) -> None:
         self._client = client
@@ -150,7 +150,7 @@ class _Step:
 
     def _get_memo(self, hashed_id: str) -> object:
         if hashed_id in self._memos:
-            return self._memos[hashed_id].data
+            return self._memos[hashed_id]
 
         return EmptySentinel
 

@@ -34,7 +34,7 @@ def serve(
 
             return _to_response(
                 comm.call_function(
-                    call=Call.from_raw(json.loads(request.data)),
+                    call=Call.from_dict(json.loads(request.data)),
                     fn_id=fn_id,
                 )
             )

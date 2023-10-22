@@ -38,7 +38,7 @@ def serve(
             fn_id = raw_fn_id[0].decode("utf-8")
 
             comm_res = comm.call_function(
-                call=Call.from_raw(json.loads(self.request.body)),
+                call=Call.from_dict(json.loads(self.request.body)),
                 fn_id=fn_id,
             )
 

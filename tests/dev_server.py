@@ -20,7 +20,7 @@ else:
 
 
 class _DevServer:
-    _process: subprocess.Popen | None = None
+    _process: subprocess.Popen[bytes] | None = None
     _thread: threading.Thread | None = None
 
     def __init__(self) -> None:
