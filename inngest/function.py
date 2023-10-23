@@ -3,24 +3,27 @@ from __future__ import annotations
 import json
 import threading
 import traceback
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Callable, Protocol
 
+from pydantic import ValidationError
+
 from .client import Inngest
-from .errors import NonRetriableError
+from .errors import InvalidFunctionConfig, NonRetriableError
 from .event import Event
 from .execution import Call, CallError, CallResponse, Opcode
 from .function_config import (
+    BatchConfig,
+    CancelConfig,
     FunctionConfig,
     Runtime,
     StepConfig,
-    StepConfigRetries,
+    ThrottleConfig,
     TriggerCron,
     TriggerEvent,
 )
 from .transforms import hash_step_id, to_iso_utc
-from .types import EmptySentinel, T
+from .types import BaseModel, EmptySentinel, T
 
 
 def create_function(
@@ -33,11 +36,13 @@ def create_function(
     return decorator
 
 
-@dataclass
-class FunctionOpts:
+class FunctionOpts(BaseModel):
+    batch_events: BatchConfig | None = None
+    cancel: CancelConfig | None = None
     id: str
     name: str | None = None
     retries: int | None = None
+    throttle: ThrottleConfig | None = None
 
 
 class Function:
@@ -83,32 +88,34 @@ class Function:
             )
 
     def get_config(self, app_url: str) -> FunctionConfig:
-        fn_id = self._opts.id
+        try:
+            fn_id = self._opts.id
 
-        name = fn_id
-        if self._opts.name is not None:
-            name = self._opts.name
+            name = fn_id
+            if self._opts.name is not None:
+                name = self._opts.name
 
-        retries: StepConfigRetries | None = None
-        if self._opts.retries is not None:
-            retries = StepConfigRetries(attempts=self._opts.retries)
-
-        return FunctionConfig(
-            id=fn_id,
-            name=name,
-            steps={
-                "step": StepConfig(
-                    id="step",
-                    name="step",
-                    retries=retries,
-                    runtime=Runtime(
-                        type="http",
-                        url=f"{app_url}?fnId={fn_id}&stepId=step",
+            return FunctionConfig(
+                batch_events=self._opts.batch_events,
+                cancel=self._opts.cancel,
+                id=fn_id,
+                name=name,
+                steps={
+                    "step": StepConfig(
+                        id="step",
+                        name="step",
+                        retries=self._opts.retries,
+                        runtime=Runtime(
+                            type="http",
+                            url=f"{app_url}?fnId={fn_id}&stepId=step",
+                        ),
                     ),
-                ),
-            },
-            triggers=[self._trigger],
-        )
+                },
+                throttle=self._opts.throttle,
+                triggers=[self._trigger],
+            )
+        except ValidationError as err:
+            raise InvalidFunctionConfig.from_validation_error(err) from err
 
     def get_id(self) -> str:
         return self._opts.id

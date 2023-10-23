@@ -146,7 +146,7 @@ class CommHandler:
                 status_code=err.status_code,
             )
 
-    def _get_function_configs(self, app_url: str) -> list[FunctionConfig]:
+    def get_function_configs(self, app_url: str) -> list[FunctionConfig]:
         return [fn.get_config(app_url) for fn in self._fns.values()]
 
     def _parse_registration_response(
@@ -226,7 +226,7 @@ class CommHandler:
                     app_name=self._client.id,
                     deploy_type=DeployType.PING,
                     framework=self._framework,
-                    functions=self._get_function_configs(app_url),
+                    functions=self.get_function_configs(app_url),
                     sdk=f"{LANGUAGE}:v{VERSION}",
                     url=app_url,
                     # TODO: Do this for real.
@@ -252,14 +252,14 @@ class CommHandler:
             self._logger.error(
                 "registration failed",
                 extra={
-                    "error_code": err.code.value,
+                    "error_code": err.code,
                     "error_message": str(err),
                 },
             )
 
             return CommResponse(
                 body={
-                    "code": err.code.value,
+                    "code": err.code,
                     "message": str(err),
                 },
                 headers=create_headers(framework=self._framework),
