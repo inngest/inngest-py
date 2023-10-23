@@ -18,7 +18,7 @@ install: check-venv
 itest: check-venv
 	@pytest tests
 
-precommit: format-check lint type-check utest
+pre-commit: format-check lint type-check utest
 
 lint: check-venv
 	@pylint inngest tests

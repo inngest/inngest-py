@@ -20,7 +20,7 @@ make install
 Run before committing:
 
 ```sh
-make precommit
+make pre-commit
 ```
 
 Run things individually:
