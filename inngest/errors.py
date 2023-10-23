@@ -38,6 +38,11 @@ class InvalidFunctionConfig(InternalError):
         cls,
         err: ValidationError,
     ) -> InvalidFunctionConfig:
+        """
+        Extract info from Pydantic's ValidationError and return our internal
+        InvalidFunctionConfig error.
+        """
+
         default = cls(str(err))
 
         errors = err.errors()

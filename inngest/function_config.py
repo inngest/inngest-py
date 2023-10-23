@@ -2,26 +2,35 @@ from __future__ import annotations
 
 from typing import Final, Literal
 
-from pydantic import Field
+from pydantic import Field, ValidationError
 
+from .errors import InvalidFunctionConfig
 from .types import BaseModel
 
 # A number > 0 followed by a time unit (s, m, h, d, w)
 TIME_PERIOD_REGEX: Final = r"^[1-9][0-9]*[s|m|h|d|w]$"
 
 
-class CancelConfig(BaseModel):
+class _BaseConfig(BaseModel):
+    def convert_validation_error(
+        self,
+        err: ValidationError,
+    ) -> BaseException:
+        return InvalidFunctionConfig.from_validation_error(err)
+
+
+class CancelConfig(_BaseConfig):
     event: str
     if_expression: str | None = None
     timeout: str | None = Field(default=None, pattern=TIME_PERIOD_REGEX)
 
 
-class BatchConfig(BaseModel):
+class BatchConfig(_BaseConfig):
     max_size: int
     timeout: str = Field(pattern=TIME_PERIOD_REGEX)
 
 
-class FunctionConfig(BaseModel):
+class FunctionConfig(_BaseConfig):
     batch_events: BatchConfig | None = None
     cancel: CancelConfig | None = None
     id: str
@@ -31,12 +40,12 @@ class FunctionConfig(BaseModel):
     triggers: list[TriggerCron | TriggerEvent]
 
 
-class Runtime(BaseModel):
+class Runtime(_BaseConfig):
     type: Literal["http"]
     url: str
 
 
-class StepConfig(BaseModel):
+class StepConfig(_BaseConfig):
     id: str
     name: str
     retries: int | None = Field(default=None, gt=0)
@@ -53,16 +62,16 @@ class StepConfig(BaseModel):
         return dump
 
 
-class ThrottleConfig(BaseModel):
+class ThrottleConfig(_BaseConfig):
     key: str | None = None
     count: int
     period: str = Field(pattern=TIME_PERIOD_REGEX)
 
 
-class TriggerCron(BaseModel):
+class TriggerCron(_BaseConfig):
     cron: str
 
 
-class TriggerEvent(BaseModel):
+class TriggerEvent(_BaseConfig):
     event: str
     expression: str | None = None

@@ -44,6 +44,12 @@ class FunctionOpts(BaseModel):
     retries: int | None = None
     throttle: ThrottleConfig | None = None
 
+    def convert_validation_error(
+        self,
+        err: ValidationError,
+    ) -> BaseException:
+        return InvalidFunctionConfig.from_validation_error(err)
+
 
 class Function:
     def __init__(
@@ -88,34 +94,31 @@ class Function:
             )
 
     def get_config(self, app_url: str) -> FunctionConfig:
-        try:
-            fn_id = self._opts.id
+        fn_id = self._opts.id
 
-            name = fn_id
-            if self._opts.name is not None:
-                name = self._opts.name
+        name = fn_id
+        if self._opts.name is not None:
+            name = self._opts.name
 
-            return FunctionConfig(
-                batch_events=self._opts.batch_events,
-                cancel=self._opts.cancel,
-                id=fn_id,
-                name=name,
-                steps={
-                    "step": StepConfig(
-                        id="step",
-                        name="step",
-                        retries=self._opts.retries,
-                        runtime=Runtime(
-                            type="http",
-                            url=f"{app_url}?fnId={fn_id}&stepId=step",
-                        ),
+        return FunctionConfig(
+            batch_events=self._opts.batch_events,
+            cancel=self._opts.cancel,
+            id=fn_id,
+            name=name,
+            steps={
+                "step": StepConfig(
+                    id="step",
+                    name="step",
+                    retries=self._opts.retries,
+                    runtime=Runtime(
+                        type="http",
+                        url=f"{app_url}?fnId={fn_id}&stepId=step",
                     ),
-                },
-                throttle=self._opts.throttle,
-                triggers=[self._trigger],
-            )
-        except ValidationError as err:
-            raise InvalidFunctionConfig.from_validation_error(err) from err
+                ),
+            },
+            throttle=self._opts.throttle,
+            triggers=[self._trigger],
+        )
 
     def get_id(self) -> str:
         return self._opts.id

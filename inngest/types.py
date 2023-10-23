@@ -4,6 +4,7 @@ from enum import Enum
 from typing import Type, TypeVar
 
 from pydantic import BaseModel as _BaseModel
+from pydantic import ValidationError
 
 T = TypeVar("T")
 
@@ -11,6 +12,27 @@ EmptySentinel = object()
 
 
 class BaseModel(_BaseModel):
+    def __init__(  # pylint: disable=no-self-argument
+        __pydantic_self__,
+        *args: object,
+        **kwargs: object,
+    ) -> None:
+        try:
+            super().__init__(*args, **kwargs)
+        except ValidationError as err:
+            raise __pydantic_self__.convert_validation_error(err) from None
+
+    def convert_validation_error(
+        self,
+        err: ValidationError,
+    ) -> BaseException:
+        """
+        Subclasses can override this method to convert Pydantic's
+        ValidationError into a different error.
+        """
+
+        return err
+
     @classmethod
     def from_dict(
         cls: Type[TBaseModel],
