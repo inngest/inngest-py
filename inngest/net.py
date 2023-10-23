@@ -1,11 +1,19 @@
+import hashlib
+import hmac
 from typing import Literal
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from requests import session
 
 from .const import LANGUAGE, VERSION, HeaderKey
+from .env import is_prod
+from .errors import InvalidRequestSignature, MissingHeader, MissingSigningKey
+from .transforms import remove_signing_key_prefix
 
 Method = Literal["GET", "POST"]
+
+
+requests_session = session()
 
 
 def create_headers(
@@ -32,4 +40,44 @@ def parse_url(url: str) -> str:
     return parsed.geturl()
 
 
-requests_session = session()
+class RequestSignature:
+    _signature: str | None = None
+    _timestamp: int | None = None
+
+    def __init__(
+        self,
+        body: bytes,
+        headers: dict[str, str],
+    ) -> None:
+        self._body = body
+
+        sig_header = headers.get(HeaderKey.SIGNATURE.value)
+        if sig_header is not None:
+            parsed = parse_qs(sig_header)
+            if "t" in parsed:
+                self._timestamp = int(parsed["t"][0])
+            if "s" in parsed:
+                self._signature = parsed["s"][0]
+
+    def validate(self, signing_key: str | None) -> None:
+        if not is_prod():
+            return
+
+        if signing_key is None:
+            raise MissingSigningKey(
+                "cannot validate signature in production mode without a signing key"
+            )
+
+        if self._signature is None:
+            raise MissingHeader(
+                f"cannot validate signature in production mode without a {HeaderKey.SIGNATURE.value} header"
+            )
+
+        mac = hmac.new(
+            remove_signing_key_prefix(signing_key).encode("utf-8"),
+            self._body,
+            hashlib.sha256,
+        )
+        mac.update(str(self._timestamp).encode())
+        if not hmac.compare_digest(self._signature, mac.hexdigest()):
+            raise InvalidRequestSignature()

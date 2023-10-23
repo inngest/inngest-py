@@ -5,6 +5,6 @@
     }
   },
   "editor.formatOnSave": true,
-  "isort.args": ["--profile", "black", "--config", "pyproject.toml"],
+  "isort.args": ["--profile", "black"],
   "isort.check": true
 }

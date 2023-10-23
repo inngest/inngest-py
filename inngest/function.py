@@ -19,8 +19,7 @@ from .function_config import (
     TriggerCron,
     TriggerEvent,
 )
-from .time import to_iso_utc
-from .transforms import hash_step_id
+from .transforms import hash_step_id, to_iso_utc
 from .types import EmptySentinel, T
 
 

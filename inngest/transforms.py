@@ -1,5 +1,6 @@
 import hashlib
 import re
+from datetime import datetime, timezone
 
 from .types import T
 
@@ -29,3 +30,10 @@ def remove_none_deep(obj: T) -> T:
     if isinstance(obj, list):
         return [remove_none_deep(v) for v in obj if v is not None]  # type: ignore
     return obj
+
+
+def to_iso_utc(value: datetime) -> str:
+    return (
+        value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3]
+        + "Z"
+    )

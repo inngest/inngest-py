@@ -3,11 +3,12 @@ import json
 from flask import Flask, Response, make_response, request
 
 from inngest.client import Inngest
-from inngest.comm import CommHandler, CommResponse, RequestSignature
+from inngest.comm import CommHandler, CommResponse
 from inngest.const import HeaderKey
 from inngest.errors import MissingParam
 from inngest.execution import Call
 from inngest.function import Function
+from inngest.net import RequestSignature
 
 
 def serve(
