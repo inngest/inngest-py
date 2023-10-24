@@ -137,6 +137,16 @@ class MissingSigningKey(InternalError):
         )
 
 
+class UnserializableOutput(InternalError):
+    status_code: int = 500
+
+    def __init__(self, message: str | None = None) -> None:
+        super().__init__(
+            code=ErrorCode.UNSERIALIZABLE_OUTPUT,
+            message=message,
+        )
+
+
 class ExternalError(Exception):
     pass
 

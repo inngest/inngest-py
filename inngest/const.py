@@ -25,6 +25,7 @@ class ErrorCode(Enum):
     MISSING_HEADER = "missing_header"
     MISSING_PARAM = "missing_param"
     MISSING_SIGNING_KEY = "missing_signing_key"
+    UNSERIALIZABLE_OUTPUT = "unserializable_output"
 
 
 class HeaderKey(Enum):

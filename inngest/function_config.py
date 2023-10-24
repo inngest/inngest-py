@@ -48,18 +48,12 @@ class Runtime(_BaseConfig):
 class StepConfig(_BaseConfig):
     id: str
     name: str
-    retries: int | None = Field(default=None, gt=0)
+    retries: RetriesConfig | None = None
     runtime: Runtime
 
-    def to_dict(self) -> dict[str, object]:
-        dump = super().to_dict()
 
-        if dump.get("retries") is not None:
-            dump["retries"] = {
-                "attempts": dump["retries"],
-            }
-
-        return dump
+class RetriesConfig(_BaseConfig):
+    attempts: int = Field(ge=0)
 
 
 class ThrottleConfig(_BaseConfig):

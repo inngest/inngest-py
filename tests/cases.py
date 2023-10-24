@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 import inngest
+from inngest.errors import UnserializableOutput
 
 from .base import wait_for
 
@@ -155,9 +156,64 @@ def _two_steps(client: inngest.Inngest, framework: str) -> Case:
     )
 
 
+def _unserializable_step_output(
+    client: inngest.Inngest,
+    framework: str,
+) -> Case:
+    name = "unserializable_step_output"
+    event_name = f"{framework}/{name}"
+
+    class State(_BaseState):
+        error: BaseException | None = None
+
+        def is_done(self) -> bool:
+            return self.error is not None
+
+    state = State()
+
+    @inngest.create_function(
+        inngest.FunctionOpts(id=name, retries=0),
+        inngest.TriggerEvent(event=event_name),
+    )
+    def fn(*, step: inngest.Step, **_kwargs: object) -> None:
+        class Foo:
+            pass
+
+        def step_1() -> Foo:
+            return Foo()
+
+        try:
+            step.run("step_1", step_1)
+        except BaseException as err:
+            state.error = err
+            raise
+
+    def run_test(_self: object) -> None:
+        client.send(inngest.Event(name=event_name))
+
+        def assertion() -> None:
+            assert state.is_done()
+            assert isinstance(state.error, UnserializableOutput)
+            assert (
+                str(state.error)
+                == "Object of type Foo is not JSON serializable"
+            )
+
+        wait_for(assertion)
+
+    return Case(
+        event_name=event_name,
+        fn=fn,
+        run_test=run_test,
+        state=state,
+        name=name,
+    )
+
+
 def create_cases(client: inngest.Inngest, framework: str) -> list[Case]:
     return [
         _event_payload(client, framework),
         _no_steps(client, framework),
         _two_steps(client, framework),
+        _unserializable_step_output(client, framework),
     ]

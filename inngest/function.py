@@ -9,13 +9,18 @@ from typing import Callable, Protocol
 from pydantic import ValidationError
 
 from .client import Inngest
-from .errors import InvalidFunctionConfig, NonRetriableError
+from .errors import (
+    InvalidFunctionConfig,
+    NonRetriableError,
+    UnserializableOutput,
+)
 from .event import Event
 from .execution import Call, CallError, CallResponse, Opcode
 from .function_config import (
     BatchConfig,
     CancelConfig,
     FunctionConfig,
+    RetriesConfig,
     Runtime,
     StepConfig,
     ThrottleConfig,
@@ -100,6 +105,11 @@ class Function:
         if self._opts.name is not None:
             name = self._opts.name
 
+        if self._opts.retries is not None:
+            retries = RetriesConfig(attempts=self._opts.retries)
+        else:
+            retries = None
+
         return FunctionConfig(
             batch_events=self._opts.batch_events,
             cancel=self._opts.cancel,
@@ -109,7 +119,7 @@ class Function:
                 "step": StepConfig(
                     id="step",
                     name="step",
-                    retries=self._opts.retries,
+                    retries=retries,
                     runtime=Runtime(
                         type="http",
                         url=f"{app_url}?fnId={fn_id}&stepId=step",
@@ -175,9 +185,16 @@ class _Step:
         if memo is not EmptySentinel:
             return memo  # type: ignore
 
+        output = handler()
+
+        try:
+            json.dumps(output)
+        except TypeError as err:
+            raise UnserializableOutput(str(err)) from None
+
         raise EarlyReturn(
             hashed_id=hashed_id,
-            data=handler(),
+            data=output,
             display_name=id,
             op=Opcode.STEP,
             name=id,
