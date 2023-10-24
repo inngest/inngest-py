@@ -1,11 +1,11 @@
 import logging
 
 from flask import Flask
-from src.inngest import inngest_client
 from pythonjsonlogger import jsonlogger
-from examples.functions import functions
-import inngest
+from src.inngest import inngest_client
 
+import inngest
+from examples.functions import functions
 
 app = Flask(__name__)
 

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 import inngest
-from inngest.errors import UnserializableOutput
+from inngest._internal.errors import UnserializableOutput
 
 from .base import wait_for
 
