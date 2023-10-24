@@ -3,9 +3,12 @@ from __future__ import annotations
 import logging
 from unittest import TestCase
 
+import pytest
+
 import inngest
 
 from .comm import CommHandler
+from .errors import InvalidFunctionConfig
 
 
 class Test_get_function_configs(TestCase):  # pylint: disable=invalid-name
@@ -47,3 +50,15 @@ class Test_get_function_configs(TestCase):  # pylint: disable=invalid-name
             logger=self.client.logger,
         )
         comm.get_function_configs("http://foo.bar")
+
+    def test_no_functions(self) -> None:
+        comm = CommHandler(
+            api_origin="http://foo.bar",
+            client=self.client,
+            framework="test",
+            functions=[],
+            logger=self.client.logger,
+        )
+
+        with pytest.raises(InvalidFunctionConfig, match="no functions found"):
+            comm.get_function_configs("http://foo.bar")

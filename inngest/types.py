@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Type, TypeVar
 
 from pydantic import BaseModel as _BaseModel
-from pydantic import ValidationError
+from pydantic import ConfigDict, ValidationError
 
 T = TypeVar("T")
 
@@ -12,6 +12,8 @@ EmptySentinel = object()
 
 
 class BaseModel(_BaseModel):
+    model_config = ConfigDict(strict=True)
+
     def __init__(  # pylint: disable=no-self-argument
         __pydantic_self__,
         *args: object,

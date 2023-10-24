@@ -14,7 +14,7 @@ class RegisterRequest(BaseModel):
     app_name: str = Field(..., serialization_alias="appName")
     deploy_type: DeployType = Field(..., serialization_alias="deployType")
     framework: str
-    functions: list[FunctionConfig]
+    functions: list[FunctionConfig] = Field(min_length=1)
     sdk: str
     url: str
     v: str
