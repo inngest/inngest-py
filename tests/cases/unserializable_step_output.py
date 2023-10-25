@@ -1,16 +1,14 @@
 import inngest
 from inngest._internal.errors import UnserializableOutput
+from tests import helper
 
-from .base import BaseState, Case, wait_for
+from .base import BaseState, Case
 
 _TEST_NAME = "unserializable_step_output"
 
 
 class _State(BaseState):
     error: BaseException | None = None
-
-    def is_done(self) -> bool:
-        return self.error is not None
 
 
 def create(
@@ -24,7 +22,9 @@ def create(
         inngest.FunctionOpts(id=_TEST_NAME, retries=0),
         inngest.TriggerEvent(event=event_name),
     )
-    def fn(*, step: inngest.Step, **_kwargs: object) -> None:
+    def fn(*, run_id: str, step: inngest.Step, **_kwargs: object) -> None:
+        state.run_id = run_id
+
         class Foo:
             pass
 
@@ -39,16 +39,11 @@ def create(
 
     def run_test(_self: object) -> None:
         client.send(inngest.Event(name=event_name))
+        run_id = state.wait_for_run_id()
+        helper.client.wait_for_run_status(run_id, helper.RunStatus.FAILED)
 
-        def assertion() -> None:
-            assert state.is_done()
-            assert isinstance(state.error, UnserializableOutput)
-            assert (
-                str(state.error)
-                == "Object of type Foo is not JSON serializable"
-            )
-
-        wait_for(assertion)
+        assert isinstance(state.error, UnserializableOutput)
+        assert str(state.error) == "Object of type Foo is not JSON serializable"
 
     return Case(
         event_name=event_name,

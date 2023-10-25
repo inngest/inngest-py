@@ -1,35 +1,26 @@
 import inngest
+from tests import helper
 
-from .base import BaseState, Case, wait_for
+from .base import BaseState, Case
 
 _TEST_NAME = "no_steps"
 
 
-class _State(BaseState):
-    counter = 0
-
-    def is_done(self) -> bool:
-        return self.counter == 1
-
-
 def create(client: inngest.Inngest, framework: str) -> Case:
     event_name = f"{framework}/{_TEST_NAME}"
-    state = _State()
+    state = BaseState()
 
     @inngest.create_function(
         inngest.FunctionOpts(id=_TEST_NAME),
         inngest.TriggerEvent(event=event_name),
     )
-    def fn(**_kwargs: object) -> None:
-        state.counter += 1
+    def fn(*, run_id: str, **_kwargs: object) -> None:
+        state.run_id = run_id
 
     def run_test(_self: object) -> None:
         client.send(inngest.Event(name=event_name))
-
-        def assertion() -> None:
-            assert state.is_done()
-
-        wait_for(assertion)
+        run_id = state.wait_for_run_id()
+        helper.client.wait_for_run_status(run_id, helper.RunStatus.COMPLETED)
 
     return Case(
         event_name=event_name,

@@ -1,16 +1,13 @@
 import inngest
+from tests import helper
 
-from .base import BaseState, Case, wait_for
+from .base import BaseState, Case
 
 _TEST_NAME = "wait_for_event_timeout"
 
 
 class _State(BaseState):
     result: inngest.Event | None | str = "not_set"
-
-    def is_done(self) -> bool:
-        print(self.result)
-        return self.result is None
 
 
 def create(
@@ -24,7 +21,9 @@ def create(
         inngest.FunctionOpts(id=_TEST_NAME, retries=0),
         inngest.TriggerEvent(event=event_name),
     )
-    def fn(*, step: inngest.Step, **_kwargs: object) -> None:
+    def fn(*, run_id: str, step: inngest.Step, **_kwargs: object) -> None:
+        state.run_id = run_id
+
         state.result = step.wait_for_event(
             "wait",
             event=f"{event_name}.fulfill",
@@ -33,11 +32,8 @@ def create(
 
     def run_test(_self: object) -> None:
         client.send(inngest.Event(name=event_name))
-
-        def assertion() -> None:
-            assert state.is_done()
-
-        wait_for(assertion)
+        run_id = state.wait_for_run_id()
+        helper.client.wait_for_run_status(run_id, helper.RunStatus.COMPLETED)
 
     return Case(
         event_name=event_name,

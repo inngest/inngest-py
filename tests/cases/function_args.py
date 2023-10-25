@@ -1,6 +1,7 @@
 import inngest
+from tests import helper
 
-from .base import BaseState, Case, wait_for
+from .base import BaseState, Case
 
 _TEST_NAME = "function_args"
 
@@ -9,11 +10,7 @@ class _State(BaseState):
     attempt: int | None = None
     event: inngest.Event | None = None
     events: list[inngest.Event] | None = None
-    run_id: str | None = None
     step: inngest.Step | None = None
-
-    def is_done(self) -> bool:
-        return self.attempt is not None
 
 
 def create(client: inngest.Inngest, framework: str) -> Case:
@@ -40,16 +37,13 @@ def create(client: inngest.Inngest, framework: str) -> Case:
 
     def run_test(_self: object) -> None:
         client.send(inngest.Event(name=event_name))
+        run_id = state.wait_for_run_id()
+        helper.client.wait_for_run_status(run_id, helper.RunStatus.COMPLETED)
 
-        def assertion() -> None:
-            assert state.is_done()
-            assert state.attempt == 0
-            assert isinstance(state.event, inngest.Event)
-            assert isinstance(state.events, list) and len(state.events) == 1
-            assert state.run_id != ""
-            assert isinstance(state.step, inngest.Step)
-
-        wait_for(assertion)
+        assert state.attempt == 0
+        assert isinstance(state.event, inngest.Event)
+        assert isinstance(state.events, list) and len(state.events) == 1
+        assert isinstance(state.step, inngest.Step)
 
     return Case(
         event_name=event_name,

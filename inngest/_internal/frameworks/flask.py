@@ -2,13 +2,13 @@ import json
 
 from flask import Flask, Response, make_response, request
 
-from ..client import Inngest
-from ..comm import CommHandler, CommResponse
-from ..const import HeaderKey
-from ..errors import MissingParam
-from ..execution import Call
-from ..function import Function
-from ..net import RequestSignature
+from inngest._internal.client import Inngest
+from inngest._internal.comm import CommHandler, CommResponse
+from inngest._internal.const import HeaderKey
+from inngest._internal.errors import MissingParam
+from inngest._internal.execution import Call
+from inngest._internal.function import Function
+from inngest._internal.net import RequestSignature
 
 
 def serve(

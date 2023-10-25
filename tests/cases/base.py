@@ -6,8 +6,15 @@ import inngest
 
 
 class BaseState:
-    def is_done(self) -> bool:
-        raise NotImplementedError()
+    run_id: str | None = None
+
+    def wait_for_run_id(self) -> str:
+        def assertion() -> None:
+            assert self.run_id is not None
+
+        wait_for(assertion)
+        assert self.run_id is not None
+        return self.run_id
 
 
 @dataclass

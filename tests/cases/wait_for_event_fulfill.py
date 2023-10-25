@@ -1,18 +1,15 @@
 import time
 
 import inngest
+from tests import helper
 
-from .base import BaseState, Case, wait_for
+from .base import BaseState, Case
 
 _TEST_NAME = "wait_for_event_fulfill"
 
 
 class _State(BaseState):
-    is_started = False
     result: inngest.Event | None = None
-
-    def is_done(self) -> bool:
-        return self.result is not None
 
 
 def create(
@@ -26,8 +23,8 @@ def create(
         inngest.FunctionOpts(id=_TEST_NAME, retries=0),
         inngest.TriggerEvent(event=event_name),
     )
-    def fn(*, step: inngest.Step, **_kwargs: object) -> None:
-        state.is_started = True
+    def fn(*, run_id: str, step: inngest.Step, **_kwargs: object) -> None:
+        state.run_id = run_id
 
         state.result = step.wait_for_event(
             "wait",
@@ -37,23 +34,18 @@ def create(
 
     def run_test(_self: object) -> None:
         client.send(inngest.Event(name=event_name))
+        run_id = state.wait_for_run_id()
 
-        def assert_started() -> None:
-            assert state.is_started is True
-            time.sleep(0.5)
-
-        wait_for(assert_started)
+        # Sleep long enough for the wait_for_event to register.
+        time.sleep(0.5)
 
         client.send(inngest.Event(name=f"{event_name}.fulfill"))
+        helper.client.wait_for_run_status(run_id, helper.RunStatus.COMPLETED)
 
-        def assertion() -> None:
-            assert state.is_done()
-            assert isinstance(state.result, inngest.Event)
-            assert state.result.id != ""
-            assert state.result.name == f"{event_name}.fulfill"
-            assert state.result.ts > 0
-
-        wait_for(assertion)
+        assert isinstance(state.result, inngest.Event)
+        assert state.result.id != ""
+        assert state.result.name == f"{event_name}.fulfill"
+        assert state.result.ts > 0
 
     return Case(
         event_name=event_name,

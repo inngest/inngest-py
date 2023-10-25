@@ -1,15 +1,13 @@
 import inngest
+from tests import helper
 
-from .base import BaseState, Case, wait_for
+from .base import BaseState, Case
 
 _TEST_NAME = "event_payload"
 
 
 class _State(BaseState):
     event: inngest.Event | None = None
-
-    def is_done(self) -> bool:
-        return self.event is not None
 
 
 def create(client: inngest.Inngest, framework: str) -> Case:
@@ -20,8 +18,9 @@ def create(client: inngest.Inngest, framework: str) -> Case:
         inngest.FunctionOpts(id=_TEST_NAME),
         inngest.TriggerEvent(event=event_name),
     )
-    def fn(*, event: inngest.Event, **_kwargs: object) -> None:
+    def fn(*, event: inngest.Event, run_id: str, **_kwargs: object) -> None:
         state.event = event
+        state.run_id = run_id
 
     def run_test(_self: object) -> None:
         client.send(
@@ -31,16 +30,15 @@ def create(client: inngest.Inngest, framework: str) -> Case:
                 user={"a": {"b": "c"}},
             )
         )
+        run_id = state.wait_for_run_id()
+        helper.client.wait_for_run_status(run_id, helper.RunStatus.COMPLETED)
 
-        def assertion() -> None:
-            assert state.event is not None
-            assert state.event.id != ""
-            assert state.event.name == event_name
-            assert state.event.data == {"foo": {"bar": "baz"}}
-            assert state.event.ts > 0
-            assert state.event.user == {"a": {"b": "c"}}
-
-        wait_for(assertion)
+        assert state.event is not None
+        assert state.event.id != ""
+        assert state.event.name == event_name
+        assert state.event.data == {"foo": {"bar": "baz"}}
+        assert state.event.ts > 0
+        assert state.event.user == {"a": {"b": "c"}}
 
     return Case(
         event_name=event_name,

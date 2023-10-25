@@ -1,6 +1,7 @@
 import inngest
+from tests import helper
 
-from .base import BaseState, Case, wait_for
+from .base import BaseState, Case
 
 _TEST_NAME = "two_steps"
 
@@ -8,14 +9,6 @@ _TEST_NAME = "two_steps"
 class _State(BaseState):
     step_1_counter = 0
     step_2_counter = 0
-    end_counter = 0
-
-    def is_done(self) -> bool:
-        return (
-            self.step_1_counter == 1
-            and self.step_2_counter == 1
-            and self.end_counter == 1
-        )
 
 
 def create(client: inngest.Inngest, framework: str) -> Case:
@@ -26,7 +19,9 @@ def create(client: inngest.Inngest, framework: str) -> Case:
         inngest.FunctionOpts(id=_TEST_NAME),
         inngest.TriggerEvent(event=event_name),
     )
-    def fn(*, step: inngest.Step, **_kwargs: object) -> None:
+    def fn(*, run_id: str, step: inngest.Step, **_kwargs: object) -> None:
+        state.run_id = run_id
+
         def step_1() -> str:
             state.step_1_counter += 1
             return "hi"
@@ -37,15 +32,14 @@ def create(client: inngest.Inngest, framework: str) -> Case:
             state.step_2_counter += 1
 
         step.run("step_2", step_2)
-        state.end_counter += 1
 
     def run_test(_self: object) -> None:
         client.send(inngest.Event(name=event_name))
+        run_id = state.wait_for_run_id()
+        helper.client.wait_for_run_status(run_id, helper.RunStatus.COMPLETED)
 
-        def assertion() -> None:
-            assert state.is_done()
-
-        wait_for(assertion)
+        assert state.step_1_counter == 1
+        assert state.step_2_counter == 1
 
     return Case(
         event_name=event_name,

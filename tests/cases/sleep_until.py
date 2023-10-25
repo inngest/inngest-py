@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta
 
 import inngest
+from tests import helper
 
-from .base import BaseState, Case, wait_for
+from .base import BaseState, Case
 
 _TEST_NAME = "sleep_until"
 
@@ -23,7 +24,9 @@ def create(client: inngest.Inngest, framework: str) -> Case:
         inngest.FunctionOpts(id=_TEST_NAME),
         inngest.TriggerEvent(event=event_name),
     )
-    def fn(*, step: inngest.Step, **_kwargs: object) -> None:
+    def fn(*, run_id: str, step: inngest.Step, **_kwargs: object) -> None:
+        state.run_id = run_id
+
         if state.before_sleep is None:
             state.before_sleep = datetime.now()
 
@@ -34,17 +37,11 @@ def create(client: inngest.Inngest, framework: str) -> Case:
 
     def run_test(_self: object) -> None:
         client.send(inngest.Event(name=event_name))
+        run_id = state.wait_for_run_id()
+        helper.client.wait_for_run_status(run_id, helper.RunStatus.COMPLETED)
 
-        def assertion() -> None:
-            assert state.is_done()
-            assert (
-                state.after_sleep is not None and state.before_sleep is not None
-            )
-            assert state.after_sleep - state.before_sleep >= timedelta(
-                seconds=2
-            )
-
-        wait_for(assertion)
+        assert state.after_sleep is not None and state.before_sleep is not None
+        assert state.after_sleep - state.before_sleep >= timedelta(seconds=2)
 
     return Case(
         event_name=event_name,
