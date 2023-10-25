@@ -4,7 +4,7 @@ import json
 import threading
 import traceback
 from datetime import datetime
-from typing import Callable, Protocol
+from typing import Callable, Protocol, runtime_checkable
 
 from pydantic import ValidationError
 
@@ -70,7 +70,10 @@ class Function:
     ) -> list[CallResponse] | str | CallError:
         try:
             res = self._handler(
+                attempt=call.ctx.attempt,
                 event=call.event,
+                events=call.events,
+                run_id=call.ctx.run_id,
                 step=_Step(client, call.steps, _StepIDCounter()),
             )
             return json.dumps(res)
@@ -272,10 +275,19 @@ class _Step:
 
 
 class _FunctionHandler(Protocol):
-    def __call__(self, *, event: Event, step: Step) -> object:
+    def __call__(
+        self,
+        *,
+        attempt: int,
+        event: Event,
+        events: list[Event],
+        run_id: str,
+        step: Step,
+    ) -> object:
         ...
 
 
+@runtime_checkable
 class Step(Protocol):
     def run(
         self,

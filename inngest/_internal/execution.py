@@ -11,10 +11,13 @@ from .types import BaseModel
 class Call(BaseModel):
     ctx: CallContext
     event: Event
+    events: list[Event]
     steps: dict[str, object]
 
 
 class CallContext(BaseModel):
+    attempt: int
+    run_id: str
     stack: CallStack
 
 
