@@ -167,6 +167,12 @@ class _Step:
         self._memos = memos
         self._step_id_counter = step_id_counter
 
+    def _get_hashed_id(self, step_id: str) -> str:
+        id_count = self._step_id_counter.increment(step_id)
+        if id_count > 1:
+            step_id = f"{step_id}:{id_count - 1}"
+        return hash_step_id(step_id)
+
     def _get_memo(self, hashed_id: str) -> object:
         if hashed_id in self._memos:
             return self._memos[hashed_id]
@@ -175,13 +181,10 @@ class _Step:
 
     def run(
         self,
-        id: str,  # pylint: disable=redefined-builtin
+        step_id: str,
         handler: Callable[[], T],
     ) -> T:
-        id_count = self._step_id_counter.increment(id)
-        if id_count > 1:
-            id = f"{id}:{id_count - 1}"
-        hashed_id = hash_step_id(id)
+        hashed_id = self._get_hashed_id(step_id)
 
         memo = self._get_memo(hashed_id)
         if memo is not EmptySentinel:
@@ -197,27 +200,24 @@ class _Step:
         raise EarlyReturn(
             hashed_id=hashed_id,
             data=output,
-            display_name=id,
+            display_name=step_id,
             op=Opcode.STEP,
-            name=id,
+            name=step_id,
         )
 
     def send_event(
         self,
-        id: str,  # pylint: disable=redefined-builtin
+        step_id: str,
         events: Event | list[Event],
     ) -> list[str]:
-        return self.run(id, lambda: self._client.send(events))
+        return self.run(step_id, lambda: self._client.send(events))
 
     def sleep_until(
         self,
-        id: str,  # pylint: disable=redefined-builtin
+        step_id: str,
         time: datetime,
     ) -> None:
-        id_count = self._step_id_counter.increment(id)
-        if id_count > 1:
-            id = f"{id}:{id_count - 1}"
-        hashed_id = hash_step_id(id)
+        hashed_id = self._get_hashed_id(step_id)
 
         memo = self._get_memo(hashed_id)
         if memo is not EmptySentinel:
@@ -225,14 +225,14 @@ class _Step:
 
         raise EarlyReturn(
             hashed_id=hashed_id,
-            display_name=id,
+            display_name=step_id,
             name=to_iso_utc(time),
             op=Opcode.SLEEP,
         )
 
     def wait_for_event(
         self,
-        id: str,  # pylint: disable=redefined-builtin
+        step_id: str,
         *,
         event: str,
         if_exp: str | None = None,
@@ -245,10 +245,7 @@ class _Step:
             timeout: The maximum number of milliseconds to wait for the event.
         """
 
-        id_count = self._step_id_counter.increment(id)
-        if id_count > 1:
-            id = f"{id}:{id_count - 1}"
-        hashed_id = hash_step_id(id)
+        hashed_id = self._get_hashed_id(step_id)
 
         memo = self._get_memo(hashed_id)
         if memo is not EmptySentinel:
@@ -267,7 +264,7 @@ class _Step:
 
         raise EarlyReturn(
             hashed_id=hashed_id,
-            display_name=id,
+            display_name=step_id,
             name=event,
             op=Opcode.WAIT_FOR_EVENT,
             opts=opts,
@@ -291,28 +288,28 @@ class _FunctionHandler(Protocol):
 class Step(Protocol):
     def run(
         self,
-        id: str,  # pylint: disable=redefined-builtin
+        step_id: str,
         handler: Callable[[], T],
     ) -> T:
         ...
 
     def send_event(
         self,
-        id: str,  # pylint: disable=redefined-builtin
+        step_id: str,
         events: Event | list[Event],
     ) -> list[str]:
         ...
 
     def sleep_until(
         self,
-        id: str,  # pylint: disable=redefined-builtin
+        step_id: str,
         time: datetime,
     ) -> None:
         ...
 
     def wait_for_event(
         self,
-        id: str,  # pylint: disable=redefined-builtin
+        step_id: str,
         *,
         event: str,
         if_exp: str | None = None,
