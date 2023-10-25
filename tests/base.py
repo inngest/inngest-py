@@ -1,5 +1,4 @@
-import time
-from typing import Callable, Protocol
+from typing import Protocol
 
 import requests
 
@@ -36,20 +35,3 @@ def set_up(case: _FrameworkTestCase) -> None:
 
 def tear_down(case: _FrameworkTestCase) -> None:
     case.http_proxy.stop()
-
-
-def wait_for(
-    assertion: Callable[[], None],
-    timeout: int = 5,
-) -> None:
-    start = time.time()
-    while True:
-        try:
-            assertion()
-            return
-        except Exception as err:
-            timed_out = time.time() - start > timeout
-            if timed_out:
-                raise err
-
-        time.sleep(0.2)

@@ -24,7 +24,7 @@ class InvalidBaseURL(InternalError):
         )
 
 
-class InvalidFunctionConfig(InternalError):
+class InvalidConfig(InternalError):
     status_code: int = 500
 
     def __init__(self, message: str | None = None) -> None:
@@ -37,7 +37,7 @@ class InvalidFunctionConfig(InternalError):
     def from_validation_error(
         cls,
         err: ValidationError,
-    ) -> InvalidFunctionConfig:
+    ) -> InvalidConfig:
         """
         Extract info from Pydantic's ValidationError and return our internal
         InvalidFunctionConfig error.

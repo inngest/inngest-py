@@ -9,11 +9,7 @@ from typing import Callable, Protocol
 from pydantic import ValidationError
 
 from .client import Inngest
-from .errors import (
-    InvalidFunctionConfig,
-    NonRetriableError,
-    UnserializableOutput,
-)
+from .errors import InvalidConfig, NonRetriableError, UnserializableOutput
 from .event import Event
 from .execution import Call, CallError, CallResponse, Opcode
 from .function_config import (
@@ -27,7 +23,7 @@ from .function_config import (
     TriggerCron,
     TriggerEvent,
 )
-from .transforms import hash_step_id, to_iso_utc
+from .transforms import hash_step_id, to_duration_str, to_iso_utc
 from .types import BaseModel, EmptySentinel, T
 
 
@@ -53,7 +49,7 @@ class FunctionOpts(BaseModel):
         self,
         err: ValidationError,
     ) -> BaseException:
-        return InvalidFunctionConfig.from_validation_error(err)
+        return InvalidConfig.from_validation_error(err)
 
 
 class Function:
@@ -86,6 +82,7 @@ class Function:
                     id=out.hashed_id,
                     name=out.name,
                     op=out.op,
+                    opts=out.opts,
                 )
             ]
         except Exception as err:
@@ -146,12 +143,14 @@ class EarlyReturn(BaseException):
         hashed_id: str,
         name: str,
         op: Opcode,
+        opts: dict[str, object] | None = None,
     ) -> None:
         self.data = data
         self.display_name = display_name
         self.hashed_id = hashed_id
         self.name = name
         self.op = op
+        self.opts = opts
 
 
 class _Step:
@@ -228,6 +227,49 @@ class _Step:
             op=Opcode.SLEEP,
         )
 
+    def wait_for_event(
+        self,
+        id: str,  # pylint: disable=redefined-builtin
+        *,
+        event: str,
+        if_exp: str | None = None,
+        timeout: int,
+    ) -> Event | None:
+        """
+        Args:
+            event: Event name.
+            if_exp: An expression to filter events.
+            timeout: The maximum number of milliseconds to wait for the event.
+        """
+
+        id_count = self._step_id_counter.increment(id)
+        if id_count > 1:
+            id = f"{id}:{id_count - 1}"
+        hashed_id = hash_step_id(id)
+
+        memo = self._get_memo(hashed_id)
+        if memo is not EmptySentinel:
+            if memo is None:
+                # Timeout
+                return None
+
+            # Fulfilled by an event
+            return Event.model_validate(memo)
+
+        opts: dict[str, object] = {
+            "timeout": to_duration_str(timeout),
+        }
+        if if_exp is not None:
+            opts["if"] = if_exp
+
+        raise EarlyReturn(
+            hashed_id=hashed_id,
+            display_name=id,
+            name=event,
+            op=Opcode.WAIT_FOR_EVENT,
+            opts=opts,
+        )
+
 
 class _FunctionHandler(Protocol):
     def __call__(self, *, event: Event, step: Step) -> object:
@@ -254,6 +296,16 @@ class Step(Protocol):
         id: str,  # pylint: disable=redefined-builtin
         time: datetime,
     ) -> None:
+        ...
+
+    def wait_for_event(
+        self,
+        id: str,  # pylint: disable=redefined-builtin
+        *,
+        event: str,
+        if_exp: str | None = None,
+        timeout: int,
+    ) -> Event | None:
         ...
 
 

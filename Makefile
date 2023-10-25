@@ -16,7 +16,7 @@ install: check-venv
 	@pip install '.[extra]' -c constraints.txt
 
 itest: check-venv
-	@pytest tests
+	@pytest -n 4 -v tests
 
 pre-commit: format-check lint type-check utest
 
@@ -27,4 +27,4 @@ type-check: check-venv
 	@mypy inngest tests
 
 utest: check-venv
-	@pytest inngest
+	@pytest -v inngest

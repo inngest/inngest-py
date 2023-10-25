@@ -37,8 +37,10 @@ class CallResponse(BaseModel):
     id: str
     name: str
     op: Opcode
+    opts: dict[str, object] | None = None
 
 
 class Opcode(Enum):
     SLEEP = "Sleep"
     STEP = "Step"
+    WAIT_FOR_EVENT = "WaitForEvent"

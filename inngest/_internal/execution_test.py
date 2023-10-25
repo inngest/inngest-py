@@ -8,6 +8,7 @@ def test_serialization() -> None:
         id="my_id",
         name="my_name",
         op=Opcode.STEP,
+        opts={},
     ).to_dict()
 
     expectation = {
@@ -16,6 +17,7 @@ def test_serialization() -> None:
         "id": "my_id",
         "name": "my_name",
         "op": "Step",
+        "opts": {},
     }
 
     assert actual == expectation

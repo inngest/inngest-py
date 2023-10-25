@@ -20,7 +20,7 @@ from .env import is_prod
 from .errors import (
     InternalError,
     InvalidBaseURL,
-    InvalidFunctionConfig,
+    InvalidConfig,
     MissingFunction,
 )
 from .execution import Call, CallError
@@ -154,7 +154,7 @@ class CommHandler:
     def get_function_configs(self, app_url: str) -> list[FunctionConfig]:
         configs = [fn.get_config(app_url) for fn in self._fns.values()]
         if len(configs) == 0:
-            raise InvalidFunctionConfig("no functions found")
+            raise InvalidConfig("no functions found")
         return configs
 
     def _parse_registration_response(

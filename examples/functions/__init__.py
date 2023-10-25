@@ -5,6 +5,7 @@ from . import (
     print_event,
     send_event,
     two_steps_and_sleep,
+    wait_for_event,
 )
 
 functions = [
@@ -14,6 +15,7 @@ functions = [
     print_event.fn,
     send_event.fn,
     two_steps_and_sleep.fn,
+    wait_for_event.fn,
 ]
 
 __all__ = ["functions"]

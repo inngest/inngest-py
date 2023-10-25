@@ -8,7 +8,7 @@ import pytest
 import inngest
 
 from .comm import CommHandler
-from .errors import InvalidFunctionConfig
+from .errors import InvalidConfig
 
 
 class Test_get_function_configs(TestCase):  # pylint: disable=invalid-name
@@ -29,7 +29,7 @@ class Test_get_function_configs(TestCase):  # pylint: disable=invalid-name
                 batch_events=inngest.BatchConfig(max_size=2, timeout="1m"),
                 cancel=inngest.CancelConfig(
                     event="app/cancel",
-                    if_expression="true",
+                    if_exp="true",
                     timeout="1m",
                 ),
                 id="fn",
@@ -60,5 +60,5 @@ class Test_get_function_configs(TestCase):  # pylint: disable=invalid-name
             logger=self.client.logger,
         )
 
-        with pytest.raises(InvalidFunctionConfig, match="no functions found"):
+        with pytest.raises(InvalidConfig, match="no functions found"):
             comm.get_function_configs("http://foo.bar")

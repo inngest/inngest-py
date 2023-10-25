@@ -2,6 +2,8 @@ import hashlib
 import re
 from datetime import datetime, timezone
 
+from .const import Duration
+from .errors import InvalidConfig
 from .types import T
 
 
@@ -37,3 +39,18 @@ def to_iso_utc(value: datetime) -> str:
         value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3]
         + "Z"
     )
+
+
+def to_duration_str(ms: int) -> str:
+    if ms < Duration.second():
+        raise InvalidConfig("duration must be at least 1 second")
+    if ms < Duration.minute():
+        return f"{ms // Duration.second()}s"
+    if ms < Duration.hour():
+        return f"{ms // Duration.minute()}m"
+    if ms < Duration.day():
+        return f"{ms // Duration.hour()}h"
+    if ms < Duration.week():
+        return f"{ms // Duration.day()}d"
+
+    return f"{ms // Duration.week()}w"

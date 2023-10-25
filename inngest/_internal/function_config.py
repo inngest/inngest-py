@@ -4,7 +4,7 @@ from typing import Final, Literal
 
 from pydantic import Field, ValidationError
 
-from .errors import InvalidFunctionConfig
+from .errors import InvalidConfig
 from .types import BaseModel
 
 # A number > 0 followed by a time unit (s, m, h, d, w)
@@ -16,12 +16,12 @@ class _BaseConfig(BaseModel):
         self,
         err: ValidationError,
     ) -> BaseException:
-        return InvalidFunctionConfig.from_validation_error(err)
+        return InvalidConfig.from_validation_error(err)
 
 
 class CancelConfig(_BaseConfig):
     event: str
-    if_expression: str | None = None
+    if_exp: str | None = None
     timeout: str | None = Field(default=None, pattern=TIME_PERIOD_REGEX)
 
 
