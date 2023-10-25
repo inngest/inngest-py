@@ -2,6 +2,8 @@ import inngest
 
 from .base import BaseState, Case, wait_for
 
+_TEST_NAME = "event_payload"
+
 
 class _State(BaseState):
     event: inngest.Event | None = None
@@ -11,12 +13,11 @@ class _State(BaseState):
 
 
 def create(client: inngest.Inngest, framework: str) -> Case:
-    name = "event_payload"
-    event_name = f"{framework}/{name}"
+    event_name = f"{framework}/{_TEST_NAME}"
     state = _State()
 
     @inngest.create_function(
-        inngest.FunctionOpts(id=name),
+        inngest.FunctionOpts(id=_TEST_NAME),
         inngest.TriggerEvent(event=event_name),
     )
     def fn(*, event: inngest.Event, **_kwargs: object) -> None:
@@ -46,5 +47,5 @@ def create(client: inngest.Inngest, framework: str) -> Case:
         fn=fn,
         run_test=run_test,
         state=state,
-        name=name,
+        name=_TEST_NAME,
     )

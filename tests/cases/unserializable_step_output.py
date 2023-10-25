@@ -3,6 +3,8 @@ from inngest._internal.errors import UnserializableOutput
 
 from .base import BaseState, Case, wait_for
 
+_TEST_NAME = "unserializable_step_output"
+
 
 class _State(BaseState):
     error: BaseException | None = None
@@ -15,12 +17,11 @@ def create(
     client: inngest.Inngest,
     framework: str,
 ) -> Case:
-    name = "unserializable_step_output"
-    event_name = f"{framework}/{name}"
+    event_name = f"{framework}/{_TEST_NAME}"
     state = _State()
 
     @inngest.create_function(
-        inngest.FunctionOpts(id=name, retries=0),
+        inngest.FunctionOpts(id=_TEST_NAME, retries=0),
         inngest.TriggerEvent(event=event_name),
     )
     def fn(*, step: inngest.Step, **_kwargs: object) -> None:
@@ -54,5 +55,5 @@ def create(
         fn=fn,
         run_test=run_test,
         state=state,
-        name=name,
+        name=_TEST_NAME,
     )
