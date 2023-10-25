@@ -1,10 +1,12 @@
 import asyncio
+
 import tornado
-from tornado.web import Application
 import tornado.autoreload
 from src.inngest import inngest_client
+from tornado.web import Application
+
+import inngest.tornado
 from examples.functions import functions
-import inngest
 
 
 async def main() -> None:

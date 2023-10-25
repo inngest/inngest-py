@@ -4,6 +4,7 @@ from flask import Flask
 from flask.testing import FlaskClient
 
 import inngest
+import inngest.flask
 
 from .base import register, set_up, tear_down
 from .cases import create_cases

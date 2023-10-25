@@ -4,7 +4,7 @@ from flask import Flask
 from pythonjsonlogger import jsonlogger
 from src.inngest import inngest_client
 
-import inngest
+import inngest.flask
 from examples.functions import functions
 
 app = Flask(__name__)

@@ -3,6 +3,7 @@ import tornado.testing
 from tornado.web import Application
 
 import inngest
+import inngest.tornado
 
 from .base import register, set_up, tear_down
 from .cases import create_cases
