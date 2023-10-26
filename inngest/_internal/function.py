@@ -4,7 +4,7 @@ import json
 import threading
 import traceback
 from datetime import datetime
-from typing import Callable, Protocol, runtime_checkable
+from typing import Callable, Protocol
 
 from pydantic import ValidationError
 
@@ -74,7 +74,7 @@ class Function:
                 event=call.event,
                 events=call.events,
                 run_id=call.ctx.run_id,
-                step=_Step(client, call.steps, _StepIDCounter()),
+                step=Step(client, call.steps, _StepIDCounter()),
             )
             return json.dumps(res)
         except EarlyReturn as out:
@@ -156,7 +156,7 @@ class EarlyReturn(BaseException):
         self.opts = opts
 
 
-class _Step:
+class Step:
     def __init__(
         self,
         client: Inngest,
@@ -281,40 +281,6 @@ class _FunctionHandler(Protocol):
         run_id: str,
         step: Step,
     ) -> object:
-        ...
-
-
-@runtime_checkable
-class Step(Protocol):
-    def run(
-        self,
-        step_id: str,
-        handler: Callable[[], T],
-    ) -> T:
-        ...
-
-    def send_event(
-        self,
-        step_id: str,
-        events: Event | list[Event],
-    ) -> list[str]:
-        ...
-
-    def sleep_until(
-        self,
-        step_id: str,
-        time: datetime,
-    ) -> None:
-        ...
-
-    def wait_for_event(
-        self,
-        step_id: str,
-        *,
-        event: str,
-        if_exp: str | None = None,
-        timeout: int,
-    ) -> Event | None:
         ...
 
 
