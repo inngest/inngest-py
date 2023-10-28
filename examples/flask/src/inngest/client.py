@@ -1,3 +1,3 @@
 import inngest
 
-inngest_client = inngest.Inngest(id="flask_example")
+inngest_client = inngest.Inngest(app_id="flask_example")

@@ -79,6 +79,6 @@ class RequestSignature:
             self._body,
             hashlib.sha256,
         )
-        mac.update(str(self._timestamp).encode())
+        mac.update(str(self._timestamp).encode("utf-8"))
         if not hmac.compare_digest(self._signature, mac.hexdigest()):
             raise InvalidRequestSignature()
