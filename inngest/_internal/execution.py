@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import Field
-
 from .event import Event
 from .types import BaseModel
 

@@ -1,7 +1,6 @@
 import inngest
 
 from . import (
-    batch,
     event_payload,
     function_args,
     no_steps,
@@ -18,7 +17,6 @@ def create_cases(client: inngest.Inngest, framework: str) -> list[Case]:
     return [
         case.create(client, framework)
         for case in (
-            batch,
             event_payload,
             function_args,
             no_steps,
