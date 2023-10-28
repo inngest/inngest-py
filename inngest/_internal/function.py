@@ -77,7 +77,7 @@ class Function:
                 step=Step(client, call.steps, _StepIDCounter()),
             )
             return json.dumps(res)
-        except EarlyReturn as out:
+        except _Interrupt as out:
             return [
                 CallResponse(
                     data=out.data,
@@ -137,7 +137,7 @@ class Function:
 # Extend BaseException to avoid being caught by the user's code. Users can still
 # catch it if they do a "bare except", but that's a known antipattern in the
 # Python world.
-class EarlyReturn(BaseException):
+class _Interrupt(BaseException):
     def __init__(
         self,
         *,
@@ -184,6 +184,10 @@ class Step:
         step_id: str,
         handler: Callable[[], T],
     ) -> T:
+        """
+        Run logic that should be retried on error and memoized after success.
+        """
+
         hashed_id = self._get_hashed_id(step_id)
 
         memo = self._get_memo(hashed_id)
@@ -197,7 +201,7 @@ class Step:
         except TypeError as err:
             raise UnserializableOutput(str(err)) from None
 
-        raise EarlyReturn(
+        raise _Interrupt(
             hashed_id=hashed_id,
             data=output,
             display_name=step_id,
@@ -210,23 +214,50 @@ class Step:
         step_id: str,
         events: Event | list[Event],
     ) -> list[str]:
+        """
+        Send an event or list of events.
+        """
+
         return self.run(step_id, lambda: self._client.send(events))
+
+    def sleep(
+        self,
+        step_id: str,
+        duration: int | timedelta,
+    ) -> None:
+        """
+        Sleep for a duration.
+
+        Args:
+            duration: The number of milliseconds to sleep.
+        """
+
+        if isinstance(duration, int):
+            until = datetime.utcnow() + timedelta(milliseconds=duration)
+        else:
+            until = datetime.utcnow() + duration
+
+        return self.sleep_until(step_id, until)
 
     def sleep_until(
         self,
         step_id: str,
-        time: datetime,
+        until: datetime,
     ) -> None:
+        """
+        Sleep until a specific time.
+        """
+
         hashed_id = self._get_hashed_id(step_id)
 
         memo = self._get_memo(hashed_id)
         if memo is not EmptySentinel:
             return memo  # type: ignore
 
-        raise EarlyReturn(
+        raise _Interrupt(
             hashed_id=hashed_id,
             display_name=step_id,
-            name=to_iso_utc(time),
+            name=to_iso_utc(until),
             op=Opcode.SLEEP,
         )
 
@@ -239,6 +270,8 @@ class Step:
         timeout: int | timedelta,
     ) -> Event | None:
         """
+        Wait for an event to be sent.
+
         Args:
             event: Event name.
             if_exp: An expression to filter events.
@@ -262,7 +295,7 @@ class Step:
         if if_exp is not None:
             opts["if"] = if_exp
 
-        raise EarlyReturn(
+        raise _Interrupt(
             hashed_id=hashed_id,
             display_name=step_id,
             name=event,
