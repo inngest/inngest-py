@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import threading
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Callable, Protocol
 
 from pydantic import ValidationError
@@ -236,7 +236,7 @@ class Step:
         *,
         event: str,
         if_exp: str | None = None,
-        timeout: int,
+        timeout: int | timedelta,
     ) -> Event | None:
         """
         Args:

@@ -43,14 +43,13 @@ class BaseModel(_BaseModel):
         return cls.model_validate(raw)
 
     def to_dict(self) -> dict[str, object]:
-        dump = self.model_dump(
-            # Enable since we want to serialize to aliases.
-            by_alias=True,
-        )
+        dump = self.model_dump()
 
         for k, v in dump.items():
-            # Pydantic doesn't serialize enums.
-            if isinstance(v, Enum):
+            if isinstance(v, BaseModel):
+                dump[k] = v.to_dict()
+            elif isinstance(v, Enum):
+                # Pydantic doesn't serialize enums.
                 dump[k] = v.value
 
         return dump

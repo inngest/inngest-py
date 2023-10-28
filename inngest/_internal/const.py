@@ -8,28 +8,6 @@ LANGUAGE: Final = "py"
 VERSION: Final = "0.1.0"
 
 
-class Duration:
-    @classmethod
-    def second(cls, count: int = 1) -> int:
-        return count * 60 * 1000
-
-    @classmethod
-    def minute(cls, count: int = 1) -> int:
-        return count * cls.second(60)
-
-    @classmethod
-    def hour(cls, count: int = 1) -> int:
-        return count * cls.minute(60)
-
-    @classmethod
-    def day(cls, count: int = 1) -> int:
-        return count * cls.hour(24)
-
-    @classmethod
-    def week(cls, count: int = 1) -> int:
-        return count * cls.day(7)
-
-
 class EnvKey(Enum):
     BASE_URL = "INNGEST_BASE_URL"
     EVENT_KEY = "INNGEST_EVENT_KEY"

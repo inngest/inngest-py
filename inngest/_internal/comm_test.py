@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 from unittest import TestCase
 
 import pytest
@@ -26,16 +27,20 @@ class Test_get_function_configs(TestCase):  # pylint: disable=invalid-name
 
         @inngest.create_function(
             inngest.FunctionOpts(
-                batch_events=inngest.BatchConfig(max_size=2, timeout="1m"),
+                batch_events=inngest.BatchConfig(
+                    max_size=2, timeout=timedelta(minutes=1)
+                ),
                 cancel=inngest.CancelConfig(
                     event="app/cancel",
                     if_exp="true",
-                    timeout="1m",
+                    timeout=timedelta(minutes=1),
                 ),
                 id="fn",
                 name="Function",
                 retries=1,
-                throttle=inngest.ThrottleConfig(count=2, period="1m"),
+                throttle=inngest.ThrottleConfig(
+                    count=2, period=timedelta(minutes=1)
+                ),
             ),
             inngest.TriggerEvent(event="app/fn"),
         )

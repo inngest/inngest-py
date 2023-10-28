@@ -1,8 +1,7 @@
 import hashlib
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from .const import Duration
 from .errors import InvalidConfig
 from .types import T
 
@@ -54,23 +53,48 @@ def to_camel_case(value: str) -> str:
     )
 
 
+class _Duration:
+    @classmethod
+    def second(cls, count: int = 1) -> int:
+        return count * 1000
+
+    @classmethod
+    def minute(cls, count: int = 1) -> int:
+        return count * cls.second(60)
+
+    @classmethod
+    def hour(cls, count: int = 1) -> int:
+        return count * cls.minute(60)
+
+    @classmethod
+    def day(cls, count: int = 1) -> int:
+        return count * cls.hour(24)
+
+    @classmethod
+    def week(cls, count: int = 1) -> int:
+        return count * cls.day(7)
+
+
+def to_duration_str(ms: int | timedelta) -> str:
+    if isinstance(ms, timedelta):
+        ms = int(ms.total_seconds() * 1000)
+
+    if ms < _Duration.second():
+        raise InvalidConfig("duration must be at least 1 second")
+    if ms < _Duration.minute():
+        return f"{ms // _Duration.second()}s"
+    if ms < _Duration.hour():
+        return f"{ms // _Duration.minute()}m"
+    if ms < _Duration.day():
+        return f"{ms // _Duration.hour()}h"
+    if ms < _Duration.week():
+        return f"{ms // _Duration.day()}d"
+
+    return f"{ms // _Duration.week()}w"
+
+
 def to_iso_utc(value: datetime) -> str:
     return (
         value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3]
         + "Z"
     )
-
-
-def to_duration_str(ms: int) -> str:
-    if ms < Duration.second():
-        raise InvalidConfig("duration must be at least 1 second")
-    if ms < Duration.minute():
-        return f"{ms // Duration.second()}s"
-    if ms < Duration.hour():
-        return f"{ms // Duration.minute()}m"
-    if ms < Duration.day():
-        return f"{ms // Duration.hour()}h"
-    if ms < Duration.week():
-        return f"{ms // Duration.day()}d"
-
-    return f"{ms // Duration.week()}w"

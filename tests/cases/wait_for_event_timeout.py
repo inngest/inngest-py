@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import inngest
 from tests import helper
 
@@ -27,7 +29,7 @@ def create(
         state.result = step.wait_for_event(
             "wait",
             event=f"{event_name}.fulfill",
-            timeout=inngest.Duration.second(1),
+            timeout=timedelta(seconds=1),
         )
 
     def run_test(_self: object) -> None:

@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from typing import Final, Literal
+from datetime import timedelta
+from typing import Literal
 
 from pydantic import Field, ValidationError
 
 from .errors import InvalidConfig
+from .transforms import to_duration_str
 from .types import BaseModel
-
-# A number > 0 followed by a time unit (s, m, h, d, w)
-TIME_PERIOD_REGEX: Final = r"^[1-9][0-9]*[s|m|h|d|w]$"
 
 
 class _BaseConfig(BaseModel):
@@ -22,12 +21,26 @@ class _BaseConfig(BaseModel):
 class CancelConfig(_BaseConfig):
     event: str
     if_exp: str | None = None
-    timeout: str | None = Field(default=None, pattern=TIME_PERIOD_REGEX)
+    timeout: int | timedelta | None = None
+
+    def to_dict(self) -> dict[str, object]:
+        d = super().to_dict()
+
+        if self.timeout is not None:
+            d["timeout"] = to_duration_str(self.timeout)
+        return d
 
 
 class BatchConfig(_BaseConfig):
     max_size: int
-    timeout: str = Field(pattern=TIME_PERIOD_REGEX)
+    timeout: int | timedelta | None = None
+
+    def to_dict(self) -> dict[str, object]:
+        d = super().to_dict()
+
+        if self.timeout is not None:
+            d["timeout"] = to_duration_str(self.timeout)
+        return d
 
 
 class FunctionConfig(_BaseConfig):
@@ -59,7 +72,14 @@ class RetriesConfig(_BaseConfig):
 class ThrottleConfig(_BaseConfig):
     key: str | None = None
     count: int
-    period: str = Field(pattern=TIME_PERIOD_REGEX)
+    period: int | timedelta | None = None
+
+    def to_dict(self) -> dict[str, object]:
+        d = super().to_dict()
+
+        if self.period is not None:
+            d["period"] = to_duration_str(self.period)
+        return d
 
 
 class TriggerCron(_BaseConfig):
