@@ -7,7 +7,6 @@ from typing import Final, Literal
 class EnvKey(Enum):
     CF_PAGES = "CF_PAGES"
     CONTEXT = "CONTEXT"
-    DENO_DEPLOYMENT_ID = "DENO_DEPLOYMENT_ID"
     ENVIRONMENT = "ENVIRONMENT"
     FLASK_ENV = "FLASK_ENV"
     VERCEL_ENV = "VERCEL_ENV"
@@ -35,7 +34,6 @@ def _starts_with(key: EnvKey, value: str) -> _EnvCheck:
 _PROD_CHECKS: Final[list[_EnvCheck]] = [
     _equals(EnvKey.CF_PAGES, "1"),
     _equals(EnvKey.FLASK_ENV, "production"),
-    _is_truthy(EnvKey.DENO_DEPLOYMENT_ID),
     _starts_with(EnvKey.CONTEXT, "prod"),
     _starts_with(EnvKey.ENVIRONMENT, "prod"),
     _starts_with(EnvKey.VERCEL_ENV, "prod"),

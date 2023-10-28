@@ -34,6 +34,7 @@ def create(
         client.send(inngest.Event(name=event_name))
         run_id = state.wait_for_run_id()
         helper.client.wait_for_run_status(run_id, helper.RunStatus.COMPLETED)
+        assert state.result is None
 
     return Case(
         event_name=event_name,
