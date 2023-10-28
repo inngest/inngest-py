@@ -6,7 +6,6 @@ from urllib.parse import parse_qs, urlparse
 from requests import session
 
 from .const import LANGUAGE, VERSION, HeaderKey
-from .env import is_prod
 from .errors import InvalidRequestSignature, MissingHeader, MissingSigningKey
 from .transforms import remove_signing_key_prefix
 
@@ -48,8 +47,10 @@ class RequestSignature:
         self,
         body: bytes,
         headers: dict[str, str],
+        is_production: bool,
     ) -> None:
         self._body = body
+        self._is_production = is_production
 
         sig_header = headers.get(HeaderKey.SIGNATURE.value)
         if sig_header is not None:
@@ -60,7 +61,7 @@ class RequestSignature:
                 self._signature = parsed["s"][0]
 
     def validate(self, signing_key: str | None) -> None:
-        if not is_prod():
+        if not self._is_production:
             return
 
         if signing_key is None:

@@ -42,6 +42,7 @@ def serve(
                     req_sig=RequestSignature(
                         body=request.data,
                         headers=dict(request.headers.items()),
+                        is_production=client.is_production,
                     ),
                 )
             )

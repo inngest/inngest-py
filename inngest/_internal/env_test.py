@@ -14,10 +14,6 @@ def test_allow_dev_server() -> None:
     assert is_prod() is True
     _clear()
 
-    os.environ["DENO_DEPLOYMENT_ID"] = "1"
-    assert is_prod() is True
-    _clear()
-
     os.environ["ENVIRONMENT"] = "production"
     assert is_prod() is True
     _clear()

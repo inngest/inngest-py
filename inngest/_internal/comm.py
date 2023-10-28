@@ -16,7 +16,6 @@ from .const import (
     ErrorCode,
     HeaderKey,
 )
-from .env import is_prod
 from .errors import (
     InternalError,
     InvalidBaseURL,
@@ -70,15 +69,16 @@ class CommHandler:
         logger: Logger,
         signing_key: str | None = None,
     ) -> None:
+        self._is_production = client.is_production
         self._logger = logger
 
-        if not is_prod():
+        if not self._is_production:
             self._logger.info("Dev Server mode enabled")
 
         api_origin = api_origin or os.getenv(EnvKey.BASE_URL.value)
 
         if api_origin is None:
-            if not is_prod():
+            if not self._is_production:
                 self._logger.info("Defaulting API origin to Dev Server")
                 api_origin = DEV_SERVER_ORIGIN
             else:
@@ -213,7 +213,7 @@ class CommHandler:
         """
 
         try:
-            if is_from_dev_server and is_prod():
+            if is_from_dev_server and self._is_production:
                 self._logger.error(
                     "Dev Server registration not allowed in production mode"
                 )
@@ -231,7 +231,7 @@ class CommHandler:
 
             body = remove_none_deep(
                 RegisterRequest(
-                    app_name=self._client.id,
+                    app_name=self._client.app_id,
                     deploy_type=DeployType.PING,
                     framework=self._framework,
                     functions=self.get_function_configs(app_url),

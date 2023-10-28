@@ -16,7 +16,7 @@ class Test_get_function_configs(TestCase):  # pylint: disable=invalid-name
         super().setUp()
         logger = logging.getLogger(__name__)
         logger.setLevel(logging.DEBUG)
-        self.client = inngest.Inngest(id="test", logger=logger)
+        self.client = inngest.Inngest(app_id="test", logger=logger)
 
     def test_full_config(self) -> None:
         """

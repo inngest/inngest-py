@@ -12,8 +12,8 @@ from .http_proxy import HTTPProxy, Response
 from .net import HOST
 
 _client = inngest.Inngest(
+    app_id="tornado",
     base_url=f"http://{HOST}:{DEV_SERVER_PORT}",
-    id="tornado",
 )
 
 _cases = create_cases(_client, "tornado")

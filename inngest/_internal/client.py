@@ -14,17 +14,19 @@ class Inngest:
     def __init__(
         self,
         *,
+        app_id: str,
         base_url: str | None = None,
         event_key: str | None = None,
-        id: str,  # pylint: disable=redefined-builtin
+        is_production: bool | None = None,
         logger: Logger | None = None,
     ) -> None:
+        self.app_id = app_id
         self.base_url = base_url
-        self.id = id
+        self.is_production = is_production or is_prod()
         self.logger = logger or getLogger(__name__)
 
         if event_key is None:
-            if not is_prod():
+            if not self.is_production:
                 event_key = "NO_EVENT_KEY_SET"
             else:
                 event_key = os.getenv(EnvKey.EVENT_KEY.value)
@@ -35,7 +37,7 @@ class Inngest:
 
         event_origin = base_url
         if event_origin is None:
-            if not is_prod():
+            if not self.is_production:
                 self.logger.info("Defaulting event origin to Dev Server")
                 event_origin = DEV_SERVER_ORIGIN
             else:

@@ -13,8 +13,8 @@ from .http_proxy import HTTPProxy, Response
 from .net import HOST
 
 _client = inngest.Inngest(
+    app_id="flask",
     base_url=f"http://{HOST}:{DEV_SERVER_PORT}",
-    id="flask",
 )
 
 _cases = create_cases(_client, "flask")
