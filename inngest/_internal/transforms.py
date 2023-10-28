@@ -26,12 +26,32 @@ def remove_signing_key_prefix(key: str) -> str:
     return key[len(prefix) :]
 
 
-def remove_none_deep(obj: T) -> T:
+def prep_body(obj: T) -> T:
+    """
+    Prep body before sending to the Inngest server. This function will:
+    - Remove items whose value is None.
+    - Convert keys to camelCase.
+    """
+
     if isinstance(obj, dict):
-        return {k: remove_none_deep(v) for k, v in obj.items() if v is not None}  # type: ignore
+        return {
+            to_camel_case(k): prep_body(v)
+            for k, v in obj.items()
+            if v is not None
+        }  # type: ignore
     if isinstance(obj, list):
-        return [remove_none_deep(v) for v in obj if v is not None]  # type: ignore
+        return [prep_body(v) for v in obj if v is not None]  # type: ignore
     return obj
+
+
+def to_camel_case(value: str) -> str:
+    """
+    Convert a string from snake_case to camelCase.
+    """
+
+    return "".join(
+        word.title() if i else word for i, word in enumerate(value.split("_"))
+    )
 
 
 def to_iso_utc(value: datetime) -> str:

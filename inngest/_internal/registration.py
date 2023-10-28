@@ -11,8 +11,8 @@ class DeployType(Enum):
 
 
 class RegisterRequest(BaseModel):
-    app_name: str = Field(..., serialization_alias="appName")
-    deploy_type: DeployType = Field(..., serialization_alias="deployType")
+    app_name: str
+    deploy_type: DeployType
     framework: str
     functions: list[FunctionConfig] = Field(min_length=1)
     sdk: str

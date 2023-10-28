@@ -1,4 +1,5 @@
 from . import (
+    batch,
     duplicate_step_name,
     error_step,
     no_steps,
@@ -9,6 +10,7 @@ from . import (
 )
 
 functions = [
+    batch.fn,
     duplicate_step_name.fn,
     error_step.fn,
     no_steps.fn,

@@ -27,7 +27,7 @@ from .function import Function
 from .function_config import FunctionConfig
 from .net import RequestSignature, create_headers, parse_url, requests_session
 from .registration import DeployType, RegisterRequest
-from .transforms import hash_signing_key, remove_none_deep
+from .transforms import hash_signing_key, prep_body
 
 
 class CommResponse:
@@ -124,10 +124,10 @@ class CommHandler:
                 for item in action_res:
                     out.append(item.to_dict())
 
-                comm_res.body = remove_none_deep(out)
+                comm_res.body = prep_body(out)
                 comm_res.status_code = 206
             elif isinstance(action_res, CallError):
-                comm_res.body = remove_none_deep(action_res.model_dump())
+                comm_res.body = prep_body(action_res.model_dump())
                 comm_res.status_code = 500
 
                 if action_res.is_retriable is False:
@@ -229,7 +229,7 @@ class CommHandler:
 
             registration_url = urljoin(self._base_url, "/fn/register")
 
-            body = remove_none_deep(
+            body = prep_body(
                 RegisterRequest(
                     app_name=self._client.app_id,
                     deploy_type=DeployType.PING,

@@ -34,9 +34,7 @@ class CallError(BaseModel):
 
 class CallResponse(BaseModel):
     data: object
-
-    # Executor expects camelCase.
-    display_name: str = Field(..., serialization_alias="displayName")
+    display_name: str
     id: str
     name: str
     op: Opcode
