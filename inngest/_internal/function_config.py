@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Literal
 
-from pydantic import Field, ValidationError
+from pydantic import Field, ValidationError, field_serializer
 
 from .errors import InvalidConfig
 from .transforms import to_duration_str
@@ -23,24 +23,22 @@ class CancelConfig(_BaseConfig):
     if_exp: str | None = None
     timeout: int | timedelta | None = None
 
-    def to_dict(self) -> dict[str, object]:
-        d = super().to_dict()
-
-        if self.timeout is not None:
-            d["timeout"] = to_duration_str(self.timeout)
-        return d
+    @field_serializer("timeout")
+    def serialize_timeout(self, value: int | timedelta | None) -> str | None:
+        if value is None:
+            return None
+        return to_duration_str(value)
 
 
 class BatchConfig(_BaseConfig):
     max_size: int
     timeout: int | timedelta | None = None
 
-    def to_dict(self) -> dict[str, object]:
-        d = super().to_dict()
-
-        if self.timeout is not None:
-            d["timeout"] = to_duration_str(self.timeout)
-        return d
+    @field_serializer("timeout")
+    def serialize_timeout(self, value: int | timedelta | None) -> str | None:
+        if value is None:
+            return None
+        return to_duration_str(value)
 
 
 class FunctionConfig(_BaseConfig):
@@ -74,12 +72,11 @@ class ThrottleConfig(_BaseConfig):
     count: int
     period: int | timedelta | None = None
 
-    def to_dict(self) -> dict[str, object]:
-        d = super().to_dict()
-
-        if self.period is not None:
-            d["period"] = to_duration_str(self.period)
-        return d
+    @field_serializer("period")
+    def serialize_period(self, value: int | timedelta | None) -> str | None:
+        if value is None:
+            return None
+        return to_duration_str(value)
 
 
 class TriggerCron(_BaseConfig):

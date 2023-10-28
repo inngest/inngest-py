@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from enum import Enum
 from typing import Type, TypeVar
 
 from pydantic import BaseModel as _BaseModel
@@ -43,16 +42,7 @@ class BaseModel(_BaseModel):
         return cls.model_validate(raw)
 
     def to_dict(self) -> dict[str, object]:
-        dump = self.model_dump()
-
-        for k, v in dump.items():
-            if isinstance(v, BaseModel):
-                dump[k] = v.to_dict()
-            elif isinstance(v, Enum):
-                # Pydantic doesn't serialize enums.
-                dump[k] = v.value
-
-        return dump
+        return self.model_dump(mode="json")
 
 
 TBaseModel = TypeVar(  # pylint: disable=invalid-name
