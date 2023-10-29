@@ -1,6 +1,7 @@
 import inngest
 
 from . import (
+    base,
     event_payload,
     function_args,
     no_steps,
@@ -11,10 +12,9 @@ from . import (
     wait_for_event_fulfill,
     wait_for_event_timeout,
 )
-from .base import Case
 
 
-def create_cases(client: inngest.Inngest, framework: str) -> list[Case]:
+def create_cases(client: inngest.Inngest, framework: str) -> list[base.Case]:
     return [
         case.create(client, framework)
         for case in (

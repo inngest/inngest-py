@@ -6,24 +6,20 @@ from flask.testing import FlaskClient
 import inngest
 import inngest.flask
 
-from .base import register, set_up, tear_down
-from .cases import create_cases
-from .dev_server import DEV_SERVER_PORT
-from .http_proxy import HTTPProxy, Response
-from .net import HOST
+from . import base, cases, dev_server, http_proxy, net
 
 _client = inngest.Inngest(
     app_id="flask",
-    base_url=f"http://{HOST}:{DEV_SERVER_PORT}",
+    base_url=f"http://{net.HOST}:{dev_server.PORT}",
 )
 
-_cases = create_cases(_client, "flask")
+_cases = cases.create_cases(_client, "flask")
 
 
 class TestFlask(unittest.TestCase):
     app: FlaskClient
     dev_server_port: int
-    http_proxy: HTTPProxy
+    proxy: http_proxy.Proxy
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -40,12 +36,12 @@ class TestFlask(unittest.TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        set_up(self)
-        register(self.http_proxy.port)
+        base.set_up(self)
+        base.register(self.proxy.port)
 
     def tearDown(self) -> None:
         super().tearDown()
-        tear_down(self)
+        base.tear_down(self)
 
     def on_proxy_request(
         self,
@@ -54,7 +50,7 @@ class TestFlask(unittest.TestCase):
         headers: dict[str, list[str]],
         method: str,
         path: str,
-    ) -> Response:
+    ) -> http_proxy.Response:
         res = self.app.open(
             method=method,
             path=path,
@@ -62,7 +58,7 @@ class TestFlask(unittest.TestCase):
             data=body,
         )
 
-        return Response(
+        return http_proxy.Response(
             body=res.data,
             headers=dict(res.headers),
             status_code=res.status_code,

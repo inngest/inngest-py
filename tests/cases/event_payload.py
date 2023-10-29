@@ -1,16 +1,16 @@
 import inngest
 from tests import helper
 
-from .base import BaseState, Case
+from . import base
 
 _TEST_NAME = "event_payload"
 
 
-class _State(BaseState):
+class _State(base.BaseState):
     event: inngest.Event | None = None
 
 
-def create(client: inngest.Inngest, framework: str) -> Case:
+def create(client: inngest.Inngest, framework: str) -> base.Case:
     event_name = f"{framework}/{_TEST_NAME}"
     state = _State()
 
@@ -40,7 +40,7 @@ def create(client: inngest.Inngest, framework: str) -> Case:
         assert state.event.ts > 0
         assert state.event.user == {"a": {"b": "c"}}
 
-    return Case(
+    return base.Case(
         event_name=event_name,
         fn=fn,
         run_test=run_test,

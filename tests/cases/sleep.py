@@ -3,12 +3,12 @@ from datetime import datetime, timedelta
 import inngest
 from tests import helper
 
-from .base import BaseState, Case
+from . import base
 
 _TEST_NAME = "sleep"
 
 
-class _State(BaseState):
+class _State(base.BaseState):
     after_sleep: datetime | None = None
     before_sleep: datetime | None = None
 
@@ -16,7 +16,7 @@ class _State(BaseState):
         return self.after_sleep is not None and self.before_sleep is not None
 
 
-def create(client: inngest.Inngest, framework: str) -> Case:
+def create(client: inngest.Inngest, framework: str) -> base.Case:
     event_name = f"{framework}/{_TEST_NAME}"
     state = _State()
 
@@ -43,7 +43,7 @@ def create(client: inngest.Inngest, framework: str) -> Case:
         assert state.after_sleep is not None and state.before_sleep is not None
         assert state.after_sleep - state.before_sleep >= timedelta(seconds=2)
 
-    return Case(
+    return base.Case(
         event_name=event_name,
         fn=fn,
         run_test=run_test,

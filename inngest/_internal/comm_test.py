@@ -8,8 +8,7 @@ import pytest
 
 import inngest
 
-from .comm import CommHandler
-from .errors import InvalidConfig
+from . import comm, errors
 
 
 class Test_get_function_configs(TestCase):  # pylint: disable=invalid-name
@@ -47,17 +46,17 @@ class Test_get_function_configs(TestCase):  # pylint: disable=invalid-name
         def fn(**_kwargs: object) -> int:
             return 1
 
-        comm = CommHandler(
+        handler = comm.CommHandler(
             api_origin="http://foo.bar",
             client=self.client,
             framework="test",
             functions=[fn],
             logger=self.client.logger,
         )
-        comm.get_function_configs("http://foo.bar")
+        handler.get_function_configs("http://foo.bar")
 
     def test_no_functions(self) -> None:
-        comm = CommHandler(
+        handler = comm.CommHandler(
             api_origin="http://foo.bar",
             client=self.client,
             framework="test",
@@ -65,5 +64,5 @@ class Test_get_function_configs(TestCase):  # pylint: disable=invalid-name
             logger=self.client.logger,
         )
 
-        with pytest.raises(InvalidConfig, match="no functions found"):
-            comm.get_function_configs("http://foo.bar")
+        with pytest.raises(errors.InvalidConfig, match="no functions found"):
+            handler.get_function_configs("http://foo.bar")

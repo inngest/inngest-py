@@ -5,9 +5,7 @@ from time import time
 
 import pytest
 
-from .const import HeaderKey
-from .errors import InvalidRequestSignature
-from .net import RequestSignature
+from . import const, errors, net
 
 
 def test_success() -> None:
@@ -16,10 +14,10 @@ def test_success() -> None:
     unix_ms = round(time() * 1000)
     sig = _sign(body, signing_key, unix_ms)
     headers = {
-        HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
+        const.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
     }
 
-    req_sig = RequestSignature(body, headers, is_production=True)
+    req_sig = net.RequestSignature(body, headers, is_production=True)
     req_sig.validate(signing_key)
 
 
@@ -29,13 +27,13 @@ def test_body_tamper() -> None:
     unix_ms = round(time() * 1000)
     sig = _sign(body, signing_key, unix_ms)
     headers = {
-        HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
+        const.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
     }
 
     body = json.dumps({"msg": "you've been hacked"}).encode("utf-8")
-    req_sig = RequestSignature(body, headers, is_production=True)
+    req_sig = net.RequestSignature(body, headers, is_production=True)
 
-    with pytest.raises(InvalidRequestSignature):
+    with pytest.raises(errors.InvalidRequestSignature):
         req_sig.validate(signing_key)
 
 

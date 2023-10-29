@@ -3,19 +3,19 @@ from datetime import timedelta
 import inngest
 from tests import helper
 
-from .base import BaseState, Case
+from . import base
 
 _TEST_NAME = "wait_for_event_timeout"
 
 
-class _State(BaseState):
+class _State(base.BaseState):
     result: inngest.Event | None | str = "not_set"
 
 
 def create(
     client: inngest.Inngest,
     framework: str,
-) -> Case:
+) -> base.Case:
     event_name = f"{framework}/{_TEST_NAME}"
     state = _State()
 
@@ -38,7 +38,7 @@ def create(
         helper.client.wait_for_run_status(run_id, helper.RunStatus.COMPLETED)
         assert state.result is None
 
-    return Case(
+    return base.Case(
         event_name=event_name,
         fn=fn,
         run_test=run_test,

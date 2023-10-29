@@ -2,14 +2,16 @@ from __future__ import annotations
 
 from pydantic import ValidationError
 
-from .const import ErrorCode
+from . import const
 
 
 class InternalError(Exception):
     code: str
     status_code: int = 500
 
-    def __init__(self, *, code: ErrorCode, message: str | None = None) -> None:
+    def __init__(
+        self, *, code: const.ErrorCode, message: str | None = None
+    ) -> None:
         super().__init__(message)
         self.code = code.value
 
@@ -19,7 +21,7 @@ class InvalidBaseURL(InternalError):
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
-            code=ErrorCode.INVALID_BASE_URL,
+            code=const.ErrorCode.INVALID_BASE_URL,
             message=message,
         )
 
@@ -29,7 +31,7 @@ class InvalidConfig(InternalError):
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
-            code=ErrorCode.INVALID_FUNCTION_CONFIG,
+            code=const.ErrorCode.INVALID_FUNCTION_CONFIG,
             message=message,
         )
 
@@ -72,7 +74,7 @@ class InvalidRequestSignature(InternalError):
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
-            code=ErrorCode.INVALID_REQUEST_SIGNATURE,
+            code=const.ErrorCode.INVALID_REQUEST_SIGNATURE,
             message=message,
         )
 
@@ -82,7 +84,7 @@ class InvalidResponseShape(InternalError):
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
-            code=ErrorCode.INVALID_RESPONSE_SHAPE,
+            code=const.ErrorCode.INVALID_RESPONSE_SHAPE,
             message=message,
         )
 
@@ -92,7 +94,7 @@ class MissingEventKey(InternalError):
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
-            code=ErrorCode.MISSING_EVENT_KEY,
+            code=const.ErrorCode.MISSING_EVENT_KEY,
             message=message,
         )
 
@@ -102,7 +104,7 @@ class MissingFunction(InternalError):
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
-            code=ErrorCode.MISSING_FUNCTION,
+            code=const.ErrorCode.MISSING_FUNCTION,
             message=message,
         )
 
@@ -112,7 +114,7 @@ class MissingHeader(InternalError):
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
-            code=ErrorCode.MISSING_HEADER,
+            code=const.ErrorCode.MISSING_HEADER,
             message=message,
         )
 
@@ -122,7 +124,7 @@ class MissingParam(InternalError):
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
-            code=ErrorCode.MISSING_HEADER,
+            code=const.ErrorCode.MISSING_HEADER,
             message=message,
         )
 
@@ -132,7 +134,7 @@ class MissingSigningKey(InternalError):
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
-            code=ErrorCode.MISSING_SIGNING_KEY,
+            code=const.ErrorCode.MISSING_SIGNING_KEY,
             message=message,
         )
 
@@ -142,7 +144,7 @@ class UnserializableOutput(InternalError):
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
-            code=ErrorCode.UNSERIALIZABLE_OUTPUT,
+            code=const.ErrorCode.UNSERIALIZABLE_OUTPUT,
             message=message,
         )
 

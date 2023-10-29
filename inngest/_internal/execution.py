@@ -2,35 +2,34 @@ from __future__ import annotations
 
 from enum import Enum
 
-from .event import Event
-from .types import BaseModel
+from . import event_lib, types
 
 
-class Call(BaseModel):
+class Call(types.BaseModel):
     ctx: CallContext
-    event: Event
-    events: list[Event]
+    event: event_lib.Event
+    events: list[event_lib.Event]
     steps: dict[str, object]
 
 
-class CallContext(BaseModel):
+class CallContext(types.BaseModel):
     attempt: int
     run_id: str
     stack: CallStack
 
 
-class CallStack(BaseModel):
+class CallStack(types.BaseModel):
     stack: list[str]
 
 
-class CallError(BaseModel):
+class CallError(types.BaseModel):
     is_retriable: bool
     message: str
     name: str
     stack: str
 
 
-class CallResponse(BaseModel):
+class CallResponse(types.BaseModel):
     data: object
     display_name: str
     id: str

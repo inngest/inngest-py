@@ -3,20 +3,20 @@ import signal
 import subprocess
 import threading
 
-from .net import get_available_port
+from . import net
 
 _DEFAULT_DEV_SERVER_PORT = 8288
 
 _enabled = os.getenv("DEV_SERVER_ENABLED") != "0"
 
-DEV_SERVER_PORT: int
+PORT: int
 dev_server_port_env_var = os.getenv("DEV_SERVER_PORT")
 if dev_server_port_env_var:
-    DEV_SERVER_PORT = int(dev_server_port_env_var)
+    PORT = int(dev_server_port_env_var)
 elif _enabled:
-    DEV_SERVER_PORT = get_available_port()
+    PORT = net.get_available_port()
 else:
-    DEV_SERVER_PORT = _DEFAULT_DEV_SERVER_PORT
+    PORT = _DEFAULT_DEV_SERVER_PORT
 
 
 class _DevServer:
@@ -54,7 +54,7 @@ class _DevServer:
                         "--no-discovery",
                         "--no-poll",
                         "--port",
-                        f"{DEV_SERVER_PORT}",
+                        f"{PORT}",
                     ],
                     stderr=stderr,
                     stdout=stdout,
@@ -83,8 +83,8 @@ class _DevServer:
         os.kill(self._process.pid, signal.SIGKILL)
 
 
-dev_server = _DevServer(
+singleton = _DevServer(
     enabled=_enabled,
-    port=DEV_SERVER_PORT,
+    port=PORT,
     verbose=os.getenv("DEV_SERVER_VERBOSE") == "1",
 )

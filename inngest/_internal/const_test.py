@@ -1,6 +1,6 @@
 import toml
 
-from .const import VERSION
+from . import const
 
 
 def test_version_matches_pyproject() -> None:
@@ -12,4 +12,4 @@ def test_version_matches_pyproject() -> None:
         pyproject: dict[str, object] = toml.load(f)
         project = pyproject.get("project")
         assert isinstance(project, dict)
-        assert VERSION == project.get("version")
+        assert const.VERSION == project.get("version")

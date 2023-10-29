@@ -2,13 +2,12 @@ from typing import Protocol
 
 import requests
 
-from .http_proxy import HTTPProxy, Response
-from .net import HOST
+from . import http_proxy, net
 
 
 class _FrameworkTestCase(Protocol):
     dev_server_port: int
-    http_proxy: HTTPProxy
+    proxy: http_proxy.Proxy
 
     def on_proxy_request(
         self,
@@ -17,21 +16,21 @@ class _FrameworkTestCase(Protocol):
         headers: dict[str, list[str]],
         method: str,
         path: str,
-    ) -> Response:
+    ) -> http_proxy.Response:
         ...
 
 
 def register(app_port: int) -> None:
     res = requests.put(
-        f"http://{HOST}:{app_port}/api/inngest",
+        f"http://{net.HOST}:{app_port}/api/inngest",
         timeout=5,
     )
     assert res.status_code == 200
 
 
 def set_up(case: _FrameworkTestCase) -> None:
-    case.http_proxy = HTTPProxy(case.on_proxy_request).start()
+    case.proxy = http_proxy.Proxy(case.on_proxy_request).start()
 
 
 def tear_down(case: _FrameworkTestCase) -> None:
-    case.http_proxy.stop()
+    case.proxy.stop()

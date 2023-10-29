@@ -2,24 +2,18 @@ import json
 
 from flask import Flask, Response, make_response, request
 
-from inngest._internal.client import Inngest
-from inngest._internal.comm import CommHandler, CommResponse
-from inngest._internal.const import HeaderKey
-from inngest._internal.errors import MissingParam
-from inngest._internal.execution import Call
-from inngest._internal.function import Function
-from inngest._internal.net import RequestSignature
+from ._internal import client_lib, comm, const, errors, execution, function, net
 
 
 def serve(
     app: Flask,
-    client: Inngest,
-    functions: list[Function],
+    client: client_lib.Inngest,
+    functions: list[function.Function],
     *,
     base_url: str | None = None,
     signing_key: str | None = None,
 ) -> None:
-    comm = CommHandler(
+    handler = comm.CommHandler(
         api_origin=base_url or client.base_url,
         client=client,
         framework="flask",
@@ -33,13 +27,13 @@ def serve(
         if request.method == "POST":
             fn_id = request.args.get("fnId")
             if fn_id is None:
-                raise MissingParam("fnId")
+                raise errors.MissingParam("fnId")
 
             return _to_response(
-                comm.call_function(
-                    call=Call.from_dict(json.loads(request.data)),
+                handler.call_function(
+                    call=execution.Call.from_dict(json.loads(request.data)),
                     fn_id=fn_id,
-                    req_sig=RequestSignature(
+                    req_sig=net.RequestSignature(
                         body=request.data,
                         headers=dict(request.headers.items()),
                         is_production=client.is_production,
@@ -49,13 +43,13 @@ def serve(
 
         if request.method == "PUT":
             remote_ip = (
-                request.headers.get(HeaderKey.REAL_IP.value)
-                or request.headers.get(HeaderKey.FORWARDED_FOR.value)
+                request.headers.get(const.HeaderKey.REAL_IP.value)
+                or request.headers.get(const.HeaderKey.FORWARDED_FOR.value)
                 or request.environ["REMOTE_ADDR"]
             )
 
             return _to_response(
-                comm.register(
+                handler.register(
                     app_url=request.url,
                     # TODO: Find a better way to figure this out.
                     is_from_dev_server=remote_ip == "127.0.0.1",
@@ -65,7 +59,7 @@ def serve(
         return ""
 
 
-def _to_response(comm_res: CommResponse) -> Response:
+def _to_response(comm_res: comm.CommResponse) -> Response:
     res = make_response()
 
     for k, v in comm_res.headers.items():

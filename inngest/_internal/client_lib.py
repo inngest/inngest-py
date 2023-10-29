@@ -3,11 +3,7 @@ from logging import Logger, getLogger
 from time import time
 from urllib.parse import urljoin
 
-from .const import DEFAULT_EVENT_ORIGIN, DEV_SERVER_ORIGIN, EnvKey
-from .env import is_prod
-from .errors import InvalidResponseShape, MissingEventKey
-from .event import Event
-from .net import create_headers, requests_session
+from . import const, env, errors, event_lib, net
 
 
 class Inngest:
@@ -22,31 +18,33 @@ class Inngest:
     ) -> None:
         self.app_id = app_id
         self.base_url = base_url
-        self.is_production = is_production or is_prod()
+        self.is_production = is_production or env.is_prod()
         self.logger = logger or getLogger(__name__)
 
         if event_key is None:
             if not self.is_production:
                 event_key = "NO_EVENT_KEY_SET"
             else:
-                event_key = os.getenv(EnvKey.EVENT_KEY.value)
+                event_key = os.getenv(const.EnvKey.EVENT_KEY.value)
         if event_key is None:
             self.logger.error("missing event key")
-            raise MissingEventKey("missing event key")
+            raise errors.MissingEventKey("missing event key")
         self._event_key = event_key
 
         event_origin = base_url
         if event_origin is None:
             if not self.is_production:
                 self.logger.info("Defaulting event origin to Dev Server")
-                event_origin = DEV_SERVER_ORIGIN
+                event_origin = const.DEV_SERVER_ORIGIN
             else:
-                event_origin = DEFAULT_EVENT_ORIGIN
+                event_origin = const.DEFAULT_EVENT_ORIGIN
         self._event_origin = event_origin
 
-    def send(self, events: Event | list[Event]) -> list[str]:
+    def send(
+        self, events: event_lib.Event | list[event_lib.Event]
+    ) -> list[str]:
         url = urljoin(self._event_origin, f"/e/{self._event_key}")
-        headers = create_headers()
+        headers = net.create_headers()
 
         if not isinstance(events, list):
             events = [events]
@@ -60,18 +58,20 @@ class Inngest:
                 d["ts"] = int(time() * 1000)
             body.append(d)
 
-        res = requests_session.post(url, json=body, headers=headers, timeout=30)
+        res = net.requests_session.post(
+            url, json=body, headers=headers, timeout=30
+        )
         res_body: object = res.json()
         if not isinstance(res_body, dict) or "ids" not in res_body:
             self.logger.error("unexpected response when sending events")
-            raise InvalidResponseShape(
+            raise errors.InvalidResponseShape(
                 "unexpected response when sending events"
             )
 
         ids = res_body["ids"]
         if not isinstance(ids, list):
             self.logger.error("unexpected response when sending events")
-            raise InvalidResponseShape(
+            raise errors.InvalidResponseShape(
                 "unexpected response when sending events"
             )
 

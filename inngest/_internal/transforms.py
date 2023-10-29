@@ -2,8 +2,7 @@ import hashlib
 import re
 from datetime import datetime, timedelta, timezone
 
-from .errors import InvalidConfig
-from .types import T
+from . import errors, types
 
 
 def hash_signing_key(key: str) -> str:
@@ -25,7 +24,7 @@ def remove_signing_key_prefix(key: str) -> str:
     return key[len(prefix) :]
 
 
-def prep_body(obj: T) -> T:
+def prep_body(obj: types.T) -> types.T:
     """
     Prep body before sending to the Inngest server. This function will:
     - Remove items whose value is None.
@@ -80,7 +79,7 @@ def to_duration_str(ms: int | timedelta) -> str:
         ms = int(ms.total_seconds() * 1000)
 
     if ms < _Duration.second():
-        raise InvalidConfig("duration must be at least 1 second")
+        raise errors.InvalidConfig("duration must be at least 1 second")
     if ms < _Duration.minute():
         return f"{ms // _Duration.second()}s"
     if ms < _Duration.hour():

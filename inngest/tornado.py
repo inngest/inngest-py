@@ -3,24 +3,26 @@ from typing import Awaitable
 
 from tornado.web import Application, RequestHandler
 
-from inngest._internal.client import Inngest
-from inngest._internal.comm import CommHandler
-from inngest._internal.const import HeaderKey
-from inngest._internal.errors import MissingParam
-from inngest._internal.execution import Call
-from inngest._internal.function import Function
-from inngest._internal.net import RequestSignature
+from inngest._internal import (
+    client_lib,
+    comm,
+    const,
+    errors,
+    execution,
+    function,
+    net,
+)
 
 
 def serve(
     app: Application,
-    client: Inngest,
-    functions: list[Function],
+    client: client_lib.Inngest,
+    functions: list[function.Function],
     *,
     base_url: str | None = None,
     signing_key: str | None = None,
 ) -> None:
-    comm = CommHandler(
+    handler = comm.CommHandler(
         api_origin=base_url or client.base_url,
         client=client,
         framework="flask",
@@ -37,7 +39,7 @@ def serve(
             fn_id: str | None
             raw_fn_id = self.request.query_arguments.get("fnId")
             if raw_fn_id is None or len(raw_fn_id) == 0:
-                raise MissingParam("fnId")
+                raise errors.MissingParam("fnId")
             fn_id = raw_fn_id[0].decode("utf-8")
 
             headers: dict[str, str] = {}
@@ -46,10 +48,10 @@ def serve(
                 if isinstance(k, str) and isinstance(v[0], str):
                     headers[k] = v[0]
 
-            comm_res = comm.call_function(
-                call=Call.from_dict(json.loads(self.request.body)),
+            comm_res = handler.call_function(
+                call=execution.Call.from_dict(json.loads(self.request.body)),
                 fn_id=fn_id,
-                req_sig=RequestSignature(
+                req_sig=net.RequestSignature(
                     body=self.request.body,
                     headers=headers,
                     is_production=client.is_production,
@@ -65,12 +67,12 @@ def serve(
 
         def put(self) -> None:
             remote_ip = (
-                self.request.headers.get(HeaderKey.REAL_IP.value)
-                or self.request.headers.get(HeaderKey.FORWARDED_FOR.value)
+                self.request.headers.get(const.HeaderKey.REAL_IP.value)
+                or self.request.headers.get(const.HeaderKey.FORWARDED_FOR.value)
                 or self.request.remote_ip
             )
 
-            comm_res = comm.register(
+            comm_res = handler.register(
                 app_url=self.request.full_url(),
                 # TODO: Find a better way to figure this out.
                 is_from_dev_server=remote_ip == "127.0.0.1",

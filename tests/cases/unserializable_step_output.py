@@ -1,20 +1,20 @@
 import inngest
-from inngest._internal.errors import UnserializableOutput
+from inngest._internal import errors
 from tests import helper
 
-from .base import BaseState, Case
+from . import base
 
 _TEST_NAME = "unserializable_step_output"
 
 
-class _State(BaseState):
+class _State(base.BaseState):
     error: BaseException | None = None
 
 
 def create(
     client: inngest.Inngest,
     framework: str,
-) -> Case:
+) -> base.Case:
     event_name = f"{framework}/{_TEST_NAME}"
     state = _State()
 
@@ -42,10 +42,10 @@ def create(
         run_id = state.wait_for_run_id()
         helper.client.wait_for_run_status(run_id, helper.RunStatus.FAILED)
 
-        assert isinstance(state.error, UnserializableOutput)
+        assert isinstance(state.error, errors.UnserializableOutput)
         assert str(state.error) == "Object of type Foo is not JSON serializable"
 
-    return Case(
+    return base.Case(
         event_name=event_name,
         fn=fn,
         run_test=run_test,

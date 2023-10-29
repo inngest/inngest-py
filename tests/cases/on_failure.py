@@ -1,12 +1,12 @@
 import inngest
 from tests import helper
 
-from .base import BaseState, Case, wait_for
+from . import base
 
 _TEST_NAME = "on_failure"
 
 
-class _State(BaseState):
+class _State(base.BaseState):
     attempt: int | None = None
     event: inngest.Event | None = None
     events: list[inngest.Event] | None = None
@@ -17,12 +17,12 @@ class _State(BaseState):
         def assertion() -> None:
             assert self.on_failure_run_id is not None
 
-        wait_for(assertion)
+        base.wait_for(assertion)
         assert self.on_failure_run_id is not None
         return self.on_failure_run_id
 
 
-def create(client: inngest.Inngest, framework: str) -> Case:
+def create(client: inngest.Inngest, framework: str) -> base.Case:
     event_name = f"{framework}/{_TEST_NAME}"
     state = _State()
 
@@ -65,7 +65,7 @@ def create(client: inngest.Inngest, framework: str) -> Case:
         assert isinstance(state.events, list) and len(state.events) == 1
         assert isinstance(state.step, inngest.Step)
 
-    return Case(
+    return base.Case(
         event_name=event_name,
         fn=fn,
         run_test=run_test,

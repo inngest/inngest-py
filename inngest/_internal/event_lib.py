@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from .types import BaseModel
+from . import types
 
 
-class Event(BaseModel):
+class Event(types.BaseModel):
     data: dict[str, object] = {}
     id: str = ""
     name: str

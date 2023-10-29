@@ -6,28 +6,17 @@ from urllib.parse import urljoin
 
 import requests
 
-from .client import Inngest
-from .const import (
-    DEFAULT_API_ORIGIN,
-    DEV_SERVER_ORIGIN,
-    LANGUAGE,
-    VERSION,
-    EnvKey,
-    ErrorCode,
-    HeaderKey,
+from . import (
+    client_lib,
+    const,
+    errors,
+    execution,
+    function,
+    function_config,
+    net,
+    registration,
+    transforms,
 )
-from .errors import (
-    InternalError,
-    InvalidBaseURL,
-    InvalidConfig,
-    MissingFunction,
-)
-from .execution import Call, CallError
-from .function import Function
-from .function_config import FunctionConfig
-from .net import RequestSignature, create_headers, parse_url, requests_session
-from .registration import DeployType, RegisterRequest
-from .transforms import hash_signing_key, prep_body
 
 
 class CommResponse:
@@ -53,9 +42,11 @@ class CommResponse:
         self._body = body
 
         if isinstance(body, (dict, list)):
-            self.headers[HeaderKey.CONTENT_TYPE.value] = "application/json"
+            self.headers[
+                const.HeaderKey.CONTENT_TYPE.value
+            ] = "application/json"
         else:
-            self.headers[HeaderKey.CONTENT_TYPE.value] = "text/plain"
+            self.headers[const.HeaderKey.CONTENT_TYPE.value] = "text/plain"
 
 
 class CommHandler:
@@ -63,9 +54,9 @@ class CommHandler:
         self,
         *,
         api_origin: str | None = None,
-        client: Inngest,
+        client: client_lib.Inngest,
         framework: str,
-        functions: list[Function],
+        functions: list[function.Function],
         logger: Logger,
         signing_key: str | None = None,
     ) -> None:
@@ -75,31 +66,35 @@ class CommHandler:
         if not self._is_production:
             self._logger.info("Dev Server mode enabled")
 
-        api_origin = api_origin or os.getenv(EnvKey.BASE_URL.value)
+        api_origin = api_origin or os.getenv(const.EnvKey.BASE_URL.value)
 
         if api_origin is None:
             if not self._is_production:
                 self._logger.info("Defaulting API origin to Dev Server")
-                api_origin = DEV_SERVER_ORIGIN
+                api_origin = const.DEV_SERVER_ORIGIN
             else:
-                api_origin = DEFAULT_API_ORIGIN
+                api_origin = const.DEFAULT_API_ORIGIN
 
         try:
-            self._base_url = parse_url(api_origin)
+            self._base_url = net.parse_url(api_origin)
         except Exception as err:
-            raise InvalidBaseURL() from err
+            raise errors.InvalidBaseURL() from err
 
         self._client = client
-        self._fns: dict[str, Function] = {fn.get_id(): fn for fn in functions}
+        self._fns: dict[str, function.Function] = {
+            fn.get_id(): fn for fn in functions
+        }
         self._framework = framework
-        self._signing_key = signing_key or os.getenv(EnvKey.SIGNING_KEY.value)
+        self._signing_key = signing_key or os.getenv(
+            const.EnvKey.SIGNING_KEY.value
+        )
 
     def call_function(
         self,
         *,
-        call: Call,
+        call: execution.Call,
         fn_id: str,
-        req_sig: RequestSignature,
+        req_sig: net.RequestSignature,
     ) -> CommResponse:
         """
         Handles a function call from the Executor.
@@ -110,7 +105,7 @@ class CommHandler:
 
             # Look for the function ID in the list of user functions, but also
             # look for it in the list of on_failure functions.
-            fn: Function | None = None
+            fn: function.Function | None = None
             for _fn in self._fns.values():
                 if _fn.get_id() == fn_id:
                     fn = _fn
@@ -120,12 +115,12 @@ class CommHandler:
                     break
 
             if fn is None:
-                raise MissingFunction(f"function {fn_id} not found")
+                raise errors.MissingFunction(f"function {fn_id} not found")
 
             comm_res = CommResponse(
                 headers={
-                    **create_headers(framework=self._framework),
-                    HeaderKey.SERVER_TIMING.value: "handler",
+                    **net.create_headers(framework=self._framework),
+                    const.HeaderKey.SERVER_TIMING.value: "handler",
                 }
             )
 
@@ -135,19 +130,19 @@ class CommHandler:
                 for item in action_res:
                     out.append(item.to_dict())
 
-                comm_res.body = prep_body(out)
+                comm_res.body = transforms.prep_body(out)
                 comm_res.status_code = 206
-            elif isinstance(action_res, CallError):
-                comm_res.body = prep_body(action_res.model_dump())
+            elif isinstance(action_res, execution.CallError):
+                comm_res.body = transforms.prep_body(action_res.model_dump())
                 comm_res.status_code = 500
 
                 if action_res.is_retriable is False:
-                    comm_res.headers[HeaderKey.NO_RETRY.value] = "true"
+                    comm_res.headers[const.HeaderKey.NO_RETRY.value] = "true"
             else:
                 comm_res.body = action_res
 
             return comm_res
-        except InternalError as err:
+        except errors.InternalError as err:
             body = {
                 "code": str(err),
                 "message": str(err),
@@ -158,12 +153,14 @@ class CommHandler:
             )
             return CommResponse(
                 body=body,
-                headers=create_headers(framework=self._framework),
+                headers=net.create_headers(framework=self._framework),
                 status_code=err.status_code,
             )
 
-    def get_function_configs(self, app_url: str) -> list[FunctionConfig]:
-        configs: list[FunctionConfig] = []
+    def get_function_configs(
+        self, app_url: str
+    ) -> list[function_config.FunctionConfig]:
+        configs: list[function_config.FunctionConfig] = []
         for fn in self._fns.values():
             config = fn.get_config(app_url)
             configs.append(config.main)
@@ -172,7 +169,7 @@ class CommHandler:
                 configs.append(config.on_failure)
 
         if len(configs) == 0:
-            raise InvalidConfig("no functions found")
+            raise errors.InvalidConfig("no functions found")
         return configs
 
     def _parse_registration_response(
@@ -180,7 +177,7 @@ class CommHandler:
         server_res: requests.Response,
     ) -> CommResponse:
         comm_res = CommResponse(
-            headers=create_headers(framework=self._framework)
+            headers=net.create_headers(framework=self._framework)
         )
         body: dict[str, object] = {}
 
@@ -238,7 +235,7 @@ class CommHandler:
 
                 return CommResponse(
                     body={
-                        "code": ErrorCode.DEV_SERVER_REGISTRATION_NOT_ALLOWED.value,
+                        "code": const.ErrorCode.DEV_SERVER_REGISTRATION_NOT_ALLOWED.value,
                         "message": "dev server not allowed",
                     },
                     headers={},
@@ -247,26 +244,26 @@ class CommHandler:
 
             registration_url = urljoin(self._base_url, "/fn/register")
 
-            body = prep_body(
-                RegisterRequest(
+            body = transforms.prep_body(
+                registration.RegisterRequest(
                     app_name=self._client.app_id,
-                    deploy_type=DeployType.PING,
+                    deploy_type=registration.DeployType.PING,
                     framework=self._framework,
                     functions=self.get_function_configs(app_url),
-                    sdk=f"{LANGUAGE}:v{VERSION}",
+                    sdk=f"{const.LANGUAGE}:v{const.VERSION}",
                     url=app_url,
                     # TODO: Do this for real.
                     v="0.1",
                 ).to_dict()
             )
 
-            headers = create_headers(framework=self._framework)
+            headers = net.create_headers(framework=self._framework)
             if self._signing_key:
                 headers[
                     "Authorization"
-                ] = f"Bearer {hash_signing_key(self._signing_key)}"
+                ] = f"Bearer {transforms.hash_signing_key(self._signing_key)}"
 
-            res = requests_session.post(
+            res = net.requests_session.post(
                 registration_url,
                 json=body,
                 headers=headers,
@@ -274,7 +271,7 @@ class CommHandler:
             )
 
             return self._parse_registration_response(res)
-        except InternalError as err:
+        except errors.InternalError as err:
             self._logger.error(
                 "registration failed",
                 extra={
@@ -288,6 +285,6 @@ class CommHandler:
                     "code": err.code,
                     "message": str(err),
                 },
-                headers=create_headers(framework=self._framework),
+                headers=net.create_headers(framework=self._framework),
                 status_code=err.status_code,
             )

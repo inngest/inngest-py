@@ -1,26 +1,15 @@
-import json
 from datetime import timedelta
 
-from .function_config import (
-    BatchConfig,
-    CancelConfig,
-    FunctionConfig,
-    RetriesConfig,
-    Runtime,
-    StepConfig,
-    ThrottleConfig,
-    TriggerCron,
-    TriggerEvent,
-)
+from . import function_config
 
 
 def test_serialization() -> None:
-    data = FunctionConfig(
-        batch_events=BatchConfig(
+    data = function_config.FunctionConfig(
+        batch_events=function_config.BatchConfig(
             max_size=10,
             timeout=timedelta(seconds=60),
         ),
-        cancel=CancelConfig(
+        cancel=function_config.CancelConfig(
             event="foo",
             if_exp="foo",
             timeout=timedelta(seconds=60),
@@ -28,21 +17,21 @@ def test_serialization() -> None:
         id="foo",
         name="foo",
         steps={
-            "foo": StepConfig(
+            "foo": function_config.StepConfig(
                 id="foo",
                 name="foo",
-                retries=RetriesConfig(attempts=1),
-                runtime=Runtime(type="http", url="foo"),
+                retries=function_config.RetriesConfig(attempts=1),
+                runtime=function_config.Runtime(type="http", url="foo"),
             )
         },
-        throttle=ThrottleConfig(
+        throttle=function_config.ThrottleConfig(
             key="foo",
             count=1,
             period=timedelta(seconds=60),
         ),
         triggers=[
-            TriggerCron(cron="foo"),
-            TriggerEvent(event="foo", expression="foo"),
+            function_config.TriggerCron(cron="foo"),
+            function_config.TriggerEvent(event="foo", expression="foo"),
         ],
     ).to_dict()
 

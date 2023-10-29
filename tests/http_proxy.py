@@ -6,15 +6,15 @@ from dataclasses import dataclass
 from http.server import SimpleHTTPRequestHandler
 from typing import Protocol
 
-from .net import HOST, get_available_port
+from . import net
 
 
-class HTTPProxy:
+class Proxy:
     _port: int
     _thread: threading.Thread | None = None
 
     def __init__(self, on_request: _OnRequest) -> None:
-        self._port = get_available_port()
+        self._port = net.get_available_port()
 
         class _Handler(SimpleHTTPRequestHandler):
             def _get_headers(self) -> dict[str, list[str]]:
@@ -87,13 +87,13 @@ class HTTPProxy:
 
     @property
     def host(self) -> str:
-        return HOST
+        return net.HOST
 
     @property
     def port(self) -> int:
         return self._port
 
-    def start(self) -> HTTPProxy:
+    def start(self) -> Proxy:
         self._thread = threading.Thread(
             daemon=True,
             target=self._server.serve_forever,

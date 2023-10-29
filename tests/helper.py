@@ -3,8 +3,7 @@ from enum import Enum
 
 from inngest._internal.result import is_ok
 
-from . import gql
-from .dev_server import DEV_SERVER_PORT
+from . import dev_server, gql
 
 
 class RunStatus(Enum):
@@ -16,7 +15,7 @@ class RunStatus(Enum):
 
 class _Client:
     def __init__(self) -> None:
-        self._gql = gql.Client(f"http://localhost:{DEV_SERVER_PORT}/v0/gql")
+        self._gql = gql.Client(f"http://localhost:{dev_server.PORT}/v0/gql")
 
     def wait_for_run_status(
         self,

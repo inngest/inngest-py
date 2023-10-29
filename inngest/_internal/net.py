@@ -5,9 +5,7 @@ from urllib.parse import parse_qs, urlparse
 
 from requests import session
 
-from .const import LANGUAGE, VERSION, HeaderKey
-from .errors import InvalidRequestSignature, MissingHeader, MissingSigningKey
-from .transforms import remove_signing_key_prefix
+from . import const, errors, transforms
 
 Method = Literal["GET", "POST"]
 
@@ -20,12 +18,12 @@ def create_headers(
     framework: str | None = None,
 ) -> dict[str, str]:
     headers = {
-        HeaderKey.USER_AGENT.value: f"inngest-{LANGUAGE}:v{VERSION}",
-        HeaderKey.SDK.value: f"inngest-{LANGUAGE}:v{VERSION}",
+        const.HeaderKey.USER_AGENT.value: f"inngest-{const.LANGUAGE}:v{const.VERSION}",
+        const.HeaderKey.SDK.value: f"inngest-{const.LANGUAGE}:v{const.VERSION}",
     }
 
     if framework is not None:
-        headers[HeaderKey.FRAMEWORK.value] = framework
+        headers[const.HeaderKey.FRAMEWORK.value] = framework
 
     return headers
 
@@ -52,7 +50,7 @@ class RequestSignature:
         self._body = body
         self._is_production = is_production
 
-        sig_header = headers.get(HeaderKey.SIGNATURE.value)
+        sig_header = headers.get(const.HeaderKey.SIGNATURE.value)
         if sig_header is not None:
             parsed = parse_qs(sig_header)
             if "t" in parsed:
@@ -65,20 +63,20 @@ class RequestSignature:
             return
 
         if signing_key is None:
-            raise MissingSigningKey(
+            raise errors.MissingSigningKey(
                 "cannot validate signature in production mode without a signing key"
             )
 
         if self._signature is None:
-            raise MissingHeader(
-                f"cannot validate signature in production mode without a {HeaderKey.SIGNATURE.value} header"
+            raise errors.MissingHeader(
+                f"cannot validate signature in production mode without a {const.HeaderKey.SIGNATURE.value} header"
             )
 
         mac = hmac.new(
-            remove_signing_key_prefix(signing_key).encode("utf-8"),
+            transforms.remove_signing_key_prefix(signing_key).encode("utf-8"),
             self._body,
             hashlib.sha256,
         )
         mac.update(str(self._timestamp).encode("utf-8"))
         if not hmac.compare_digest(self._signature, mac.hexdigest()):
-            raise InvalidRequestSignature()
+            raise errors.InvalidRequestSignature()
