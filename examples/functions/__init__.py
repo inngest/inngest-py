@@ -12,18 +12,22 @@ from . import (
     wait_for_event,
 )
 
-functions = [
-    batch.fn,
-    cancel.fn,
-    debounce.fn,
-    duplicate_step_name.fn,
-    error_step.fn,
-    no_steps.fn,
-    on_failure.fn,
-    print_event.fn,
-    send_event.fn,
-    two_steps_and_sleep.fn,
-    wait_for_event.fn,
+functions_sync = [
+    batch.fn_sync,
+    cancel.fn_sync,
+    debounce.fn_sync,
+    duplicate_step_name.fn_sync,
+    error_step.fn_sync,
+    no_steps.fn_sync,
+    on_failure.fn_sync,
+    print_event.fn_sync,
+    send_event.fn_sync,
+    two_steps_and_sleep.fn_sync,
+    wait_for_event.fn_sync,
 ]
 
-__all__ = ["functions"]
+functions = [
+    print_event.fn,
+]
+
+__all__ = ["functions", "functions_sync"]

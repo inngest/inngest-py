@@ -26,31 +26,29 @@ class Test_get_function_configs(  # pylint: disable=invalid-name
         fully-specified config.
         """
 
-        @inngest.create_function(
-            inngest.FunctionOpts(
-                batch_events=inngest.Batch(
-                    max_size=2, timeout=datetime.timedelta(minutes=1)
-                ),
-                cancel=[
-                    inngest.Cancel(
-                        event="app/cancel",
-                        if_exp="true",
-                        timeout=datetime.timedelta(minutes=1),
-                    )
-                ],
-                id="fn",
-                name="Function",
-                retries=1,
-                throttle=inngest.Throttle(
-                    count=2, period=datetime.timedelta(minutes=1)
-                ),
+        @inngest.create_function_sync(
+            batch_events=inngest.Batch(
+                max_size=2, timeout=datetime.timedelta(minutes=1)
             ),
-            inngest.TriggerEvent(event="app/fn"),
+            cancel=[
+                inngest.Cancel(
+                    event="app/cancel",
+                    if_exp="true",
+                    timeout=datetime.timedelta(minutes=1),
+                )
+            ],
+            fn_id="fn",
+            name="Function",
+            retries=1,
+            throttle=inngest.Throttle(
+                count=2, period=datetime.timedelta(minutes=1)
+            ),
+            trigger=inngest.TriggerEvent(event="app/fn"),
         )
         def fn(**_kwargs: object) -> int:
             return 1
 
-        handler = comm.CommHandler(
+        handler = comm.CommHandlerSync(
             api_origin="http://foo.bar",
             client=self.client,
             framework="test",
@@ -60,7 +58,7 @@ class Test_get_function_configs(  # pylint: disable=invalid-name
         handler.get_function_configs("http://foo.bar")
 
     def test_no_functions(self) -> None:
-        handler = comm.CommHandler(
+        handler = comm.CommHandlerSync(
             api_origin="http://foo.bar",
             client=self.client,
             framework="test",

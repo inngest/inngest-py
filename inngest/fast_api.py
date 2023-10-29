@@ -2,7 +2,7 @@ import json
 
 import fastapi
 
-from ._internal import client_lib, comm, const, errors, execution, function, net
+from ._internal import client_lib, comm, const, execution, function, net
 
 
 def serve(
@@ -23,19 +23,16 @@ def serve(
     )
 
     @app.post("/api/inngest")
-    async def post_inngest_api(request: fastapi.Request) -> fastapi.Response:
-        fn_id: object = request.get("fnId")
-        if fn_id is None:
-            raise errors.MissingParam("fnId")
-        if not isinstance(fn_id, str):
-            raise errors.InvalidParam("fnId must be a string")
-
-        body = await request.body()
+    async def post_inngest_api(
+        fnId: str,
+        request: fastapi.Request,
+    ) -> fastapi.Response:
+        body = await request.json()
 
         return _to_response(
-            handler.call_function(
+            await handler.call_function(
                 call=execution.Call.from_dict(json.loads(body)),
-                fn_id=fn_id,
+                fn_id=fnId,
                 req_sig=net.RequestSignature(
                     body=body,
                     headers=dict(request.headers.items()),

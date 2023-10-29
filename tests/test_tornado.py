@@ -12,7 +12,7 @@ _client = inngest.Inngest(
     base_url=f"http://{net.HOST}:{dev_server.PORT}",
 )
 
-_cases = cases.create_cases(_client, "tornado")
+_cases = cases.create_cases_sync(_client, "tornado")
 
 
 class TestTornado(tornado.testing.AsyncHTTPTestCase):
@@ -31,7 +31,11 @@ class TestTornado(tornado.testing.AsyncHTTPTestCase):
         inngest.tornado.serve(
             cls.app,
             _client,
-            [case.fn for case in _cases],
+            [
+                case.fn
+                for case in _cases
+                if isinstance(case.fn, inngest.FunctionSync)
+            ],
         )
 
     def setUp(self) -> None:

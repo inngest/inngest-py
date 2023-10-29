@@ -18,6 +18,7 @@ extra = [
     "Flask==3.0.0",
     "black==23.10.0",
     "fastapi==0.104.0",
+    "httpx==0.25.0",
     "isort==5.12.0",
     "mypy==1.6.1",
     "pylint==3.0.1",

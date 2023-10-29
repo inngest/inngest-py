@@ -13,7 +13,7 @@ _client = inngest.Inngest(
     base_url=f"http://{net.HOST}:{dev_server.PORT}",
 )
 
-_cases = cases.create_cases(_client, "flask")
+_cases = cases.create_cases_sync(_client, "flask")
 
 
 class TestFlask(unittest.TestCase):

@@ -11,7 +11,7 @@ class _State(base.BaseState):
     event: inngest.Event | None = None
     events: list[inngest.Event] | None = None
     on_failure_run_id: str | None = None
-    step: inngest.Step | None = None
+    step: inngest.Step | inngest.StepSync | None = None
 
     def wait_for_on_failure_run_id(self) -> str:
         def assertion() -> None:
@@ -22,11 +22,30 @@ class _State(base.BaseState):
         return self.on_failure_run_id
 
 
-def create(client: inngest.Inngest, framework: str) -> base.Case:
-    event_name = f"{framework}/{_TEST_NAME}"
+def create(
+    client: inngest.Inngest,
+    framework: str,
+    is_sync: bool,
+) -> base.Case:
+    test_name = base.create_test_name(_TEST_NAME, is_sync)
+    event_name = base.create_event_name(framework, test_name, is_sync)
     state = _State()
 
-    def on_failure(
+    def on_failure_sync(
+        *,
+        attempt: int,
+        event: inngest.Event,
+        events: list[inngest.Event],
+        run_id: str,
+        step: inngest.StepSync,
+    ) -> None:
+        state.attempt = attempt
+        state.event = event
+        state.events = events
+        state.on_failure_run_id = run_id
+        state.step = step
+
+    async def on_failure_async(
         *,
         attempt: int,
         event: inngest.Event,
@@ -40,16 +59,38 @@ def create(client: inngest.Inngest, framework: str) -> base.Case:
         state.on_failure_run_id = run_id
         state.step = step
 
-    @inngest.create_function(
-        inngest.FunctionOpts(id=_TEST_NAME, on_failure=on_failure, retries=0),
-        inngest.TriggerEvent(event=event_name),
+    @inngest.create_function_sync(
+        fn_id=test_name,
+        on_failure=on_failure_sync,
+        retries=0,
+        trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn(*, run_id: str, step: inngest.Step, **_kwargs: object) -> None:
+    def fn_sync(
+        *,
+        run_id: str,
+        step: inngest.StepSync,
+        **_kwargs: object,
+    ) -> None:
+        state.run_id = run_id
+        raise Exception("intentional failure")
+
+    @inngest.create_function(
+        fn_id=test_name,
+        on_failure=on_failure_async,
+        retries=0,
+        trigger=inngest.TriggerEvent(event=event_name),
+    )
+    async def fn_async(
+        *,
+        run_id: str,
+        step: inngest.Step,
+        **_kwargs: object,
+    ) -> None:
         state.run_id = run_id
         raise Exception("intentional failure")
 
     def run_test(_self: object) -> None:
-        client.send(inngest.Event(name=event_name))
+        client.send_sync(inngest.Event(name=event_name))
 
         run_id = state.wait_for_run_id()
         tests.helper.client.wait_for_run_status(
@@ -69,12 +110,17 @@ def create(client: inngest.Inngest, framework: str) -> base.Case:
         assert state.attempt == 0
         assert isinstance(state.event, inngest.Event)
         assert isinstance(state.events, list) and len(state.events) == 1
-        assert isinstance(state.step, inngest.Step)
+        assert isinstance(state.step, (inngest.Step, inngest.StepSync))
+
+    if is_sync:
+        fn = fn_sync
+    else:
+        fn = fn_async
 
     return base.Case(
         event_name=event_name,
         fn=fn,
         run_test=run_test,
         state=state,
-        name=_TEST_NAME,
+        name=test_name,
     )

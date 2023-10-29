@@ -5,11 +5,13 @@ class MyError(Exception):
     pass
 
 
-@inngest.create_function(
-    inngest.FunctionOpts(id="error_step", name="Error step", retries=0),
-    inngest.TriggerEvent(event="app/error_step"),
+@inngest.create_function_sync(
+    fn_id="error_step",
+    name="Error step",
+    retries=0,
+    trigger=inngest.TriggerEvent(event="app/error_step"),
 )
-def fn(*, step: inngest.Step, **_kwargs: object) -> None:
+def fn_sync(*, step: inngest.StepSync, **_kwargs: object) -> None:
     step.run("first_step", lambda: None)
 
     def _second_step() -> None:

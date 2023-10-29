@@ -19,6 +19,6 @@ app.logger.addHandler(logHandler)
 inngest.flask.serve(
     app,
     src.inngest.inngest_client,
-    examples.functions.functions,
+    examples.functions.functions_sync,
 )
 app.run(port=8000)

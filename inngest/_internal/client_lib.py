@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import os
 import time
@@ -40,7 +42,13 @@ class Inngest:
                 event_origin = const.DEFAULT_EVENT_ORIGIN
         self._event_origin = event_origin
 
-    def send(
+    async def send(
+        self, events: event_lib.Event | list[event_lib.Event]
+    ) -> list[str]:
+        # TODO: Re-implement this method to be truly async.
+        return self.send_sync(events)
+
+    def send_sync(
         self, events: event_lib.Event | list[event_lib.Event]
     ) -> list[str]:
         url = urllib.parse.urljoin(self._event_origin, f"/e/{self._event_key}")

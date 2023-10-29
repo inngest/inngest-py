@@ -3,12 +3,10 @@ import datetime
 import inngest
 
 
-@inngest.create_function(
-    inngest.FunctionOpts(
-        debounce=inngest.Debounce(period=datetime.timedelta(seconds=5)),
-        id="debounce",
-    ),
-    inngest.TriggerEvent(event="app/debounce"),
+@inngest.create_function_sync(
+    debounce=inngest.Debounce(period=datetime.timedelta(seconds=5)),
+    fn_id="debounce",
+    trigger=inngest.TriggerEvent(event="app/debounce"),
 )
-def fn(*, run_id: str, **_kwargs: object) -> None:
+def fn_sync(*, run_id: str, **_kwargs: object) -> None:
     print(run_id)
