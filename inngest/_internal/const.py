@@ -20,6 +20,7 @@ class ErrorCode(enum.Enum):
     DEV_SERVER_REGISTRATION_NOT_ALLOWED = "dev_server_registration_not_allowed"
     INVALID_BASE_URL = "invalid_base_url"
     INVALID_FUNCTION_CONFIG = "invalid_function_config"
+    INVALID_PARAM = "invalid_param"
     INVALID_REQUEST_SIGNATURE = "invalid_request_signature"
     INVALID_RESPONSE_SHAPE = "invalid_response_shape"
     MISSING_EVENT_KEY = "missing_event_key"
@@ -37,6 +38,7 @@ class HeaderKey(enum.Enum):
     NO_RETRY = "X-Inngest-No-Retry"
     REAL_IP = "X-Real-IP"
     SDK = "X-Inngest-SDK"
+    SERVER_KIND = "X-Inngest-Server-Kind"
     SERVER_TIMING = "Server-Timing"
     SIGNATURE = "X-Inngest-Signature"
     USER_AGENT = "User-Agent"
@@ -44,3 +46,8 @@ class HeaderKey(enum.Enum):
 
 class InternalEvents(enum.Enum):
     FUNCTION_FAILED = "inngest/function.failed"
+
+
+class ServerKind(enum.Enum):
+    CLOUD = "cloud"
+    DEV_SERVER = "dev"
