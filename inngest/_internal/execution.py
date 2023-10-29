@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from enum import Enum
+import enum
 
 from . import event_lib, types
 
@@ -38,7 +38,7 @@ class CallResponse(types.BaseModel):
     opts: dict[str, object] | None = None
 
 
-class Opcode(Enum):
+class Opcode(enum.Enum):
     SLEEP = "Sleep"
     STEP = "Step"
     WAIT_FOR_EVENT = "WaitForEvent"

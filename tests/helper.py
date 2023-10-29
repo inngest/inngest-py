@@ -1,12 +1,12 @@
+import enum
 import time
-from enum import Enum
 
-from inngest._internal.result import is_ok
+from inngest._internal import result
 
 from . import dev_server, gql
 
 
-class RunStatus(Enum):
+class RunStatus(enum.Enum):
     CANCELLED = "CANCELLED"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
@@ -36,7 +36,7 @@ class _Client:
         start = time.time()
         while True:
             res = self._gql.query(gql.Query(query, {"run_id": run_id}))
-            if is_ok(res):
+            if result.is_ok(res):
                 run = res.value.data.get("functionRun")
                 if not isinstance(run, dict):
                     raise Exception("unexpected response")

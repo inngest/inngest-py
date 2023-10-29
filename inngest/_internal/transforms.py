@@ -1,6 +1,6 @@
+import datetime
 import hashlib
 import re
-from datetime import datetime, timedelta, timezone
 
 from . import errors, types
 
@@ -74,8 +74,8 @@ class _Duration:
         return count * cls.day(7)
 
 
-def to_duration_str(ms: int | timedelta) -> str:
-    if isinstance(ms, timedelta):
+def to_duration_str(ms: int | datetime.timedelta) -> str:
+    if isinstance(ms, datetime.timedelta):
         ms = int(ms.total_seconds() * 1000)
 
     if ms < _Duration.second():
@@ -92,8 +92,10 @@ def to_duration_str(ms: int | timedelta) -> str:
     return f"{ms // _Duration.week()}w"
 
 
-def to_iso_utc(value: datetime) -> str:
+def to_iso_utc(value: datetime.datetime) -> str:
     return (
-        value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3]
+        value.astimezone(datetime.timezone.utc).strftime(
+            "%Y-%m-%dT%H:%M:%S.%f"
+        )[:-3]
         + "Z"
     )

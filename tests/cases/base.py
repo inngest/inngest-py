@@ -1,6 +1,6 @@
+import dataclasses
 import time
-from dataclasses import dataclass
-from typing import Callable
+import typing
 
 import inngest
 
@@ -17,17 +17,17 @@ class BaseState:
         return self.run_id
 
 
-@dataclass
+@dataclasses.dataclass
 class Case:
     event_name: str
     fn: inngest.Function
     name: str
-    run_test: Callable[[object], None]
+    run_test: typing.Callable[[object], None]
     state: BaseState
 
 
 def wait_for(
-    assertion: Callable[[], None],
+    assertion: typing.Callable[[], None],
     timeout: int = 5,
 ) -> None:
     start = time.time()

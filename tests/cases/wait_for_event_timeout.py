@@ -1,7 +1,7 @@
-from datetime import timedelta
+import datetime
 
 import inngest
-from tests import helper
+import tests.helper
 
 from . import base
 
@@ -29,13 +29,15 @@ def create(
         state.result = step.wait_for_event(
             "wait",
             event=f"{event_name}.fulfill",
-            timeout=timedelta(seconds=1),
+            timeout=datetime.timedelta(seconds=1),
         )
 
     def run_test(_self: object) -> None:
         client.send(inngest.Event(name=event_name))
         run_id = state.wait_for_run_id()
-        helper.client.wait_for_run_status(run_id, helper.RunStatus.COMPLETED)
+        tests.helper.client.wait_for_run_status(
+            run_id, tests.helper.RunStatus.COMPLETED
+        )
         assert state.result is None
 
     return base.Case(

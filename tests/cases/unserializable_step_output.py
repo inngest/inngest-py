@@ -1,6 +1,6 @@
 import inngest
+import tests.helper
 from inngest._internal import errors
-from tests import helper
 
 from . import base
 
@@ -40,7 +40,9 @@ def create(
     def run_test(_self: object) -> None:
         client.send(inngest.Event(name=event_name))
         run_id = state.wait_for_run_id()
-        helper.client.wait_for_run_status(run_id, helper.RunStatus.FAILED)
+        tests.helper.client.wait_for_run_status(
+            run_id, tests.helper.RunStatus.FAILED
+        )
 
         assert isinstance(state.error, errors.UnserializableOutput)
         assert str(state.error) == "Object of type Foo is not JSON serializable"

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import dataclasses
+import http.server
 import socketserver
 import threading
-from dataclasses import dataclass
-from http.server import SimpleHTTPRequestHandler
-from typing import Protocol
+import typing
 
 from . import net
 
@@ -16,7 +16,7 @@ class Proxy:
     def __init__(self, on_request: _OnRequest) -> None:
         self._port = net.get_available_port()
 
-        class _Handler(SimpleHTTPRequestHandler):
+        class _Handler(http.server.SimpleHTTPRequestHandler):
             def _get_headers(self) -> dict[str, list[str]]:
                 headers: dict[str, list[str]] = {}
                 for key, value in self.headers.items():
@@ -109,14 +109,14 @@ class Proxy:
         self._thread.join(timeout=5)
 
 
-@dataclass
+@dataclasses.dataclass
 class Response:
     body: bytes | None
     headers: dict[str, str]
     status_code: int
 
 
-class _OnRequest(Protocol):
+class _OnRequest(typing.Protocol):
     def __call__(
         self,
         *,

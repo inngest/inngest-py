@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import timedelta
-from typing import Literal
+import datetime
+import typing
 
-from pydantic import Field, ValidationError, field_serializer
+import pydantic
 
 from . import errors, transforms, types
 
@@ -11,7 +11,7 @@ from . import errors, transforms, types
 class _BaseConfig(types.BaseModel):
     def convert_validation_error(
         self,
-        err: ValidationError,
+        err: pydantic.ValidationError,
     ) -> BaseException:
         return errors.InvalidConfig.from_validation_error(err)
 
@@ -19,10 +19,13 @@ class _BaseConfig(types.BaseModel):
 class CancelConfig(_BaseConfig):
     event: str
     if_exp: str | None = None
-    timeout: int | timedelta | None = None
+    timeout: int | datetime.timedelta | None = None
 
-    @field_serializer("timeout")
-    def serialize_timeout(self, value: int | timedelta | None) -> str | None:
+    @pydantic.field_serializer("timeout")
+    def serialize_timeout(
+        self,
+        value: int | datetime.timedelta | None,
+    ) -> str | None:
         if value is None:
             return None
         return transforms.to_duration_str(value)
@@ -30,10 +33,13 @@ class CancelConfig(_BaseConfig):
 
 class BatchConfig(_BaseConfig):
     max_size: int
-    timeout: int | timedelta | None = None
+    timeout: int | datetime.timedelta | None = None
 
-    @field_serializer("timeout")
-    def serialize_timeout(self, value: int | timedelta | None) -> str | None:
+    @pydantic.field_serializer("timeout")
+    def serialize_timeout(
+        self,
+        value: int | datetime.timedelta | None,
+    ) -> str | None:
         if value is None:
             return None
         return transforms.to_duration_str(value)
@@ -56,7 +62,7 @@ class FunctionConfig(_BaseConfig):
 
 
 class Runtime(_BaseConfig):
-    type: Literal["http"]
+    type: typing.Literal["http"]
     url: str
 
 
@@ -68,16 +74,19 @@ class StepConfig(_BaseConfig):
 
 
 class RetriesConfig(_BaseConfig):
-    attempts: int = Field(ge=0)
+    attempts: int = pydantic.Field(ge=0)
 
 
 class ThrottleConfig(_BaseConfig):
     key: str | None = None
     count: int
-    period: int | timedelta | None = None
+    period: int | datetime.timedelta | None = None
 
-    @field_serializer("period")
-    def serialize_period(self, value: int | timedelta | None) -> str | None:
+    @pydantic.field_serializer("period")
+    def serialize_period(
+        self,
+        value: int | datetime.timedelta | None,
+    ) -> str | None:
         if value is None:
             return None
         return transforms.to_duration_str(value)

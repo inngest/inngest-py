@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import ValidationError
+import pydantic
 
 from . import const
 
@@ -38,7 +38,7 @@ class InvalidConfig(InternalError):
     @classmethod
     def from_validation_error(
         cls,
-        err: ValidationError,
+        err: pydantic.ValidationError,
     ) -> InvalidConfig:
         """
         Extract info from Pydantic's ValidationError and return our internal

@@ -1,5 +1,5 @@
 import inngest
-from tests import helper
+import tests.helper
 
 from . import base
 
@@ -52,10 +52,14 @@ def create(client: inngest.Inngest, framework: str) -> base.Case:
         client.send(inngest.Event(name=event_name))
 
         run_id = state.wait_for_run_id()
-        helper.client.wait_for_run_status(run_id, helper.RunStatus.FAILED)
+        tests.helper.client.wait_for_run_status(
+            run_id, tests.helper.RunStatus.FAILED
+        )
 
         run_id = state.wait_for_on_failure_run_id()
-        helper.client.wait_for_run_status(run_id, helper.RunStatus.COMPLETED)
+        tests.helper.client.wait_for_run_status(
+            run_id, tests.helper.RunStatus.COMPLETED
+        )
 
         # The on_failure handler has a different run ID than the original run.
         assert state.run_id != state.on_failure_run_id

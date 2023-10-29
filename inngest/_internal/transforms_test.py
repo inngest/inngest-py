@@ -1,4 +1,4 @@
-from datetime import timedelta
+import datetime
 
 from . import transforms
 
@@ -13,4 +13,4 @@ def test_hash_signing_key() -> None:
 
 def test_to_duration_str() -> None:
     assert transforms.to_duration_str(1000) == "1s"
-    assert transforms.to_duration_str(timedelta(minutes=2)) == "2m"
+    assert transforms.to_duration_str(datetime.timedelta(minutes=2)) == "2m"

@@ -1,7 +1,7 @@
 import unittest
 
-from flask import Flask
-from flask.testing import FlaskClient
+import flask
+import flask.testing
 
 import inngest
 import inngest.flask
@@ -17,7 +17,7 @@ _cases = cases.create_cases(_client, "flask")
 
 
 class TestFlask(unittest.TestCase):
-    app: FlaskClient
+    app: flask.testing.FlaskClient
     dev_server_port: int
     proxy: http_proxy.Proxy
 
@@ -25,7 +25,7 @@ class TestFlask(unittest.TestCase):
     def setUpClass(cls) -> None:
         super().setUpClass()
 
-        app = Flask(__name__)
+        app = flask.Flask(__name__)
         app.logger.disabled = True
         inngest.flask.serve(
             app,

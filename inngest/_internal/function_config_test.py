@@ -1,4 +1,4 @@
-from datetime import timedelta
+import datetime
 
 from . import function_config
 
@@ -7,12 +7,12 @@ def test_serialization() -> None:
     data = function_config.FunctionConfig(
         batch_events=function_config.BatchConfig(
             max_size=10,
-            timeout=timedelta(seconds=60),
+            timeout=datetime.timedelta(seconds=60),
         ),
         cancel=function_config.CancelConfig(
             event="foo",
             if_exp="foo",
-            timeout=timedelta(seconds=60),
+            timeout=datetime.timedelta(seconds=60),
         ),
         id="foo",
         name="foo",
@@ -27,7 +27,7 @@ def test_serialization() -> None:
         throttle=function_config.ThrottleConfig(
             key="foo",
             count=1,
-            period=timedelta(seconds=60),
+            period=datetime.timedelta(seconds=60),
         ),
         triggers=[
             function_config.TriggerCron(cron="foo"),

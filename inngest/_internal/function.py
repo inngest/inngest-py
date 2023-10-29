@@ -1,14 +1,14 @@
 from __future__ import annotations
 
+import dataclasses
+import datetime
 import hashlib
 import json
 import threading
 import traceback
-from dataclasses import dataclass
-from datetime import datetime, timedelta
-from typing import Callable, Protocol, runtime_checkable
+import typing
 
-from pydantic import ConfigDict, ValidationError
+import pydantic
 
 from . import (
     client_lib,
@@ -25,7 +25,7 @@ from . import (
 def create_function(
     opts: FunctionOpts,
     trigger: function_config.TriggerCron | function_config.TriggerEvent,
-) -> Callable[[_FunctionHandler], Function]:
+) -> typing.Callable[[_FunctionHandler], Function]:
     def decorator(func: _FunctionHandler) -> Function:
         return Function(opts, trigger, func)
 
@@ -33,7 +33,7 @@ def create_function(
 
 
 class FunctionOpts(types.BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
     batch_events: function_config.BatchConfig | None = None
     cancel: function_config.CancelConfig | None = None
@@ -45,7 +45,7 @@ class FunctionOpts(types.BaseModel):
 
     def convert_validation_error(
         self,
-        err: ValidationError,
+        err: pydantic.ValidationError,
     ) -> BaseException:
         return errors.InvalidConfig.from_validation_error(err)
 
@@ -239,7 +239,7 @@ class Step:
     def run(
         self,
         step_id: str,
-        handler: Callable[[], types.T],
+        handler: typing.Callable[[], types.T],
     ) -> types.T:
         """
         Run logic that should be retried on error and memoized after success.
@@ -280,7 +280,7 @@ class Step:
     def sleep(
         self,
         step_id: str,
-        duration: int | timedelta,
+        duration: int | datetime.timedelta,
     ) -> None:
         """
         Sleep for a duration.
@@ -290,16 +290,18 @@ class Step:
         """
 
         if isinstance(duration, int):
-            until = datetime.utcnow() + timedelta(milliseconds=duration)
+            until = datetime.datetime.utcnow() + datetime.timedelta(
+                milliseconds=duration
+            )
         else:
-            until = datetime.utcnow() + duration
+            until = datetime.datetime.utcnow() + duration
 
         return self.sleep_until(step_id, until)
 
     def sleep_until(
         self,
         step_id: str,
-        until: datetime,
+        until: datetime.datetime,
     ) -> None:
         """
         Sleep until a specific time.
@@ -324,7 +326,7 @@ class Step:
         *,
         event: str,
         if_exp: str | None = None,
-        timeout: int | timedelta,
+        timeout: int | datetime.timedelta,
     ) -> event_lib.Event | None:
         """
         Wait for an event to be sent.
@@ -361,7 +363,7 @@ class Step:
         )
 
 
-@dataclass
+@dataclasses.dataclass
 class _Config:
     # The user-defined function
     main: function_config.FunctionConfig
@@ -370,8 +372,8 @@ class _Config:
     on_failure: function_config.FunctionConfig | None
 
 
-@runtime_checkable
-class _FunctionHandler(Protocol):
+@typing.runtime_checkable
+class _FunctionHandler(typing.Protocol):
     def __call__(
         self,
         *,

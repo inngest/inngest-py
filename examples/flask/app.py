@@ -1,24 +1,24 @@
 import logging
 
-from flask import Flask
-from pythonjsonlogger import jsonlogger
-from src.inngest import inngest_client
+import flask
+import pythonjsonlogger.jsonlogger
+import src.inngest
 
+import examples.functions
 import inngest.flask
-from examples.functions import functions
 
-app = Flask(__name__)
+app = flask.Flask(__name__)
 
 # Set up logging.
 logHandler = logging.StreamHandler()
-formatter = jsonlogger.JsonFormatter()
+formatter = pythonjsonlogger.jsonlogger.JsonFormatter()
 logHandler.setFormatter(formatter)
 app.logger.addHandler(logHandler)
 
 
 inngest.flask.serve(
     app,
-    inngest_client,
-    functions,
+    src.inngest.inngest_client,
+    examples.functions.functions,
 )
 app.run(port=8000)

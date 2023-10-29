@@ -1,4 +1,4 @@
-from datetime import timedelta
+import datetime
 
 import inngest
 
@@ -7,7 +7,7 @@ import inngest
     inngest.FunctionOpts(
         batch_events=inngest.BatchConfig(
             max_size=2,
-            timeout=timedelta(minutes=1),
+            timeout=datetime.timedelta(minutes=1),
         ),
         id="batch",
         name="Batch",

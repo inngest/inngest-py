@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import pydantic
 import requests
-from pydantic import BaseModel
 
 from inngest._internal.result import Err, Ok, Result
 
@@ -51,11 +51,11 @@ class Query:
         }
 
 
-class _Response(BaseModel):
+class _Response(pydantic.BaseModel):
     data: dict[str, object]
     errors: list[dict[str, object]] | None = None
 
 
-class _Error(BaseModel):
+class _Error(pydantic.BaseModel):
     response: _Response | None = None
     message: str

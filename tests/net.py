@@ -1,9 +1,9 @@
 import random
 import socket
 import time
-from typing import Final
+import typing
 
-HOST: Final = "0.0.0.0"
+HOST: typing.Final = "0.0.0.0"
 
 
 def get_available_port() -> int:

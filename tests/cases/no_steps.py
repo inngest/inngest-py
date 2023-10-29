@@ -1,5 +1,5 @@
 import inngest
-from tests import helper
+import tests.helper
 
 from . import base
 
@@ -20,7 +20,9 @@ def create(client: inngest.Inngest, framework: str) -> base.Case:
     def run_test(_self: object) -> None:
         client.send(inngest.Event(name=event_name))
         run_id = state.wait_for_run_id()
-        helper.client.wait_for_run_status(run_id, helper.RunStatus.COMPLETED)
+        tests.helper.client.wait_for_run_status(
+            run_id, tests.helper.RunStatus.COMPLETED
+        )
 
     return base.Case(
         event_name=event_name,

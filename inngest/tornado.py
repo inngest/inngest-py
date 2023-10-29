@@ -1,7 +1,7 @@
 import json
-from typing import Awaitable
+import typing
 
-from tornado.web import Application, RequestHandler
+import tornado.web
 
 from inngest._internal import (
     client_lib,
@@ -15,7 +15,7 @@ from inngest._internal import (
 
 
 def serve(
-    app: Application,
+    app: tornado.web.Application,
     client: client_lib.Inngest,
     functions: list[function.Function],
     *,
@@ -31,8 +31,8 @@ def serve(
         signing_key=signing_key,
     )
 
-    class InngestHandler(RequestHandler):
-        def data_received(self, chunk: bytes) -> Awaitable[None] | None:
+    class InngestHandler(tornado.web.RequestHandler):
+        def data_received(self, chunk: bytes) -> typing.Awaitable[None] | None:
             return None
 
         def post(self) -> None:

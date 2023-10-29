@@ -1,10 +1,10 @@
+import dataclasses
+import enum
 import os
-from dataclasses import dataclass
-from enum import Enum
-from typing import Final, Literal
+import typing
 
 
-class EnvKey(Enum):
+class EnvKey(enum.Enum):
     CF_PAGES = "CF_PAGES"
     CONTEXT = "CONTEXT"
     ENVIRONMENT = "ENVIRONMENT"
@@ -12,11 +12,11 @@ class EnvKey(Enum):
     VERCEL_ENV = "VERCEL_ENV"
 
 
-@dataclass
+@dataclasses.dataclass
 class _EnvCheck:
     expected: str | None
     key: EnvKey
-    operator: Literal["equals", "is_truthy", "starts_with"]
+    operator: typing.Literal["equals", "is_truthy", "starts_with"]
 
 
 def _equals(key: EnvKey, value: str) -> _EnvCheck:
@@ -31,7 +31,7 @@ def _starts_with(key: EnvKey, value: str) -> _EnvCheck:
     return _EnvCheck(expected=value, key=key, operator="starts_with")
 
 
-_PROD_CHECKS: Final[list[_EnvCheck]] = [
+_PROD_CHECKS: typing.Final[list[_EnvCheck]] = [
     _equals(EnvKey.CF_PAGES, "1"),
     _equals(EnvKey.FLASK_ENV, "production"),
     _starts_with(EnvKey.CONTEXT, "prod"),

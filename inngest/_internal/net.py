@@ -1,16 +1,16 @@
 import hashlib
 import hmac
-from typing import Literal
-from urllib.parse import parse_qs, urlparse
+import typing
+import urllib.parse
 
-from requests import session
+import requests
 
 from . import const, errors, transforms
 
-Method = Literal["GET", "POST"]
+Method = typing.Literal["GET", "POST"]
 
 
-requests_session = session()
+requests_session = requests.session()
 
 
 def create_headers(
@@ -29,7 +29,7 @@ def create_headers(
 
 
 def parse_url(url: str) -> str:
-    parsed = urlparse(url)
+    parsed = urllib.parse.urlparse(url)
 
     if parsed.scheme == "":
         parsed._replace(scheme="https")
@@ -52,7 +52,7 @@ class RequestSignature:
 
         sig_header = headers.get(const.HeaderKey.SIGNATURE.value)
         if sig_header is not None:
-            parsed = parse_qs(sig_header)
+            parsed = urllib.parse.parse_qs(sig_header)
             if "t" in parsed:
                 self._timestamp = int(parsed["t"][0])
             if "s" in parsed:

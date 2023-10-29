@@ -1,11 +1,11 @@
-from typing import Protocol
+import typing
 
 import requests
 
 from . import http_proxy, net
 
 
-class _FrameworkTestCase(Protocol):
+class _FrameworkTestCase(typing.Protocol):
     dev_server_port: int
     proxy: http_proxy.Proxy
 

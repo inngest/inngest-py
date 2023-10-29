@@ -1,8 +1,8 @@
+import datetime
 import time
-from datetime import timedelta
 
 import inngest
-from tests import helper
+import tests.helper
 
 from . import base
 
@@ -30,7 +30,7 @@ def create(
         state.result = step.wait_for_event(
             "wait",
             event=f"{event_name}.fulfill",
-            timeout=timedelta(minutes=1),
+            timeout=datetime.timedelta(minutes=1),
         )
 
     def run_test(_self: object) -> None:
@@ -41,7 +41,9 @@ def create(
         time.sleep(0.5)
 
         client.send(inngest.Event(name=f"{event_name}.fulfill"))
-        helper.client.wait_for_run_status(run_id, helper.RunStatus.COMPLETED)
+        tests.helper.client.wait_for_run_status(
+            run_id, tests.helper.RunStatus.COMPLETED
+        )
 
         assert isinstance(state.result, inngest.Event)
         assert state.result.id != ""

@@ -1,7 +1,7 @@
 import hashlib
 import hmac
 import json
-from time import time
+import time
 
 import pytest
 
@@ -11,7 +11,7 @@ from . import const, errors, net
 def test_success() -> None:
     body = json.dumps({"msg": "hi"}).encode("utf-8")
     signing_key = "super-secret"
-    unix_ms = round(time() * 1000)
+    unix_ms = round(time.time() * 1000)
     sig = _sign(body, signing_key, unix_ms)
     headers = {
         const.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
@@ -24,7 +24,7 @@ def test_success() -> None:
 def test_body_tamper() -> None:
     body = json.dumps({"msg": "bar"}).encode("utf-8")
     signing_key = "super-secret"
-    unix_ms = round(time() * 1000)
+    unix_ms = round(time.time() * 1000)
     sig = _sign(body, signing_key, unix_ms)
     headers = {
         const.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",

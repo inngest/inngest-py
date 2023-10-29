@@ -1,5 +1,5 @@
 import inngest
-from tests import helper
+import tests.helper
 
 from . import base
 
@@ -31,7 +31,9 @@ def create(client: inngest.Inngest, framework: str) -> base.Case:
             )
         )
         run_id = state.wait_for_run_id()
-        helper.client.wait_for_run_status(run_id, helper.RunStatus.COMPLETED)
+        tests.helper.client.wait_for_run_status(
+            run_id, tests.helper.RunStatus.COMPLETED
+        )
 
         assert state.event is not None
         assert state.event.id != ""

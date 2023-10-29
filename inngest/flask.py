@@ -1,12 +1,12 @@
 import json
 
-from flask import Flask, Response, make_response, request
+import flask
 
 from ._internal import client_lib, comm, const, errors, execution, function, net
 
 
 def serve(
-    app: Flask,
+    app: flask.Flask,
     client: client_lib.Inngest,
     functions: list[function.Function],
     *,
@@ -23,34 +23,38 @@ def serve(
     )
 
     @app.route("/api/inngest", methods=["POST", "PUT"])
-    def inngest_api() -> Response | str:
-        if request.method == "POST":
-            fn_id = request.args.get("fnId")
+    def inngest_api() -> flask.Response | str:
+        if flask.request.method == "POST":
+            fn_id = flask.request.args.get("fnId")
             if fn_id is None:
                 raise errors.MissingParam("fnId")
 
             return _to_response(
                 handler.call_function(
-                    call=execution.Call.from_dict(json.loads(request.data)),
+                    call=execution.Call.from_dict(
+                        json.loads(flask.request.data)
+                    ),
                     fn_id=fn_id,
                     req_sig=net.RequestSignature(
-                        body=request.data,
-                        headers=dict(request.headers.items()),
+                        body=flask.request.data,
+                        headers=dict(flask.request.headers.items()),
                         is_production=client.is_production,
                     ),
                 )
             )
 
-        if request.method == "PUT":
+        if flask.request.method == "PUT":
             remote_ip = (
-                request.headers.get(const.HeaderKey.REAL_IP.value)
-                or request.headers.get(const.HeaderKey.FORWARDED_FOR.value)
-                or request.environ["REMOTE_ADDR"]
+                flask.request.headers.get(const.HeaderKey.REAL_IP.value)
+                or flask.request.headers.get(
+                    const.HeaderKey.FORWARDED_FOR.value
+                )
+                or flask.request.environ["REMOTE_ADDR"]
             )
 
             return _to_response(
                 handler.register(
-                    app_url=request.url,
+                    app_url=flask.request.url,
                     # TODO: Find a better way to figure this out.
                     is_from_dev_server=remote_ip == "127.0.0.1",
                 )
@@ -59,8 +63,8 @@ def serve(
         return ""
 
 
-def _to_response(comm_res: comm.CommResponse) -> Response:
-    res = make_response()
+def _to_response(comm_res: comm.CommResponse) -> flask.Response:
+    res = flask.make_response()
 
     for k, v in comm_res.headers.items():
         res.headers.add_header(k, v)

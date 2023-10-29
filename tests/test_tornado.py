@@ -1,6 +1,6 @@
 import tornado.log
 import tornado.testing
-from tornado.web import Application
+import tornado.web
 
 import inngest
 import inngest.tornado
@@ -16,18 +16,18 @@ _cases = cases.create_cases(_client, "tornado")
 
 
 class TestTornado(tornado.testing.AsyncHTTPTestCase):
-    app: Application
+    app: tornado.web.Application
     dev_server_port: int
     proxy: http_proxy.Proxy
 
-    def get_app(self) -> Application:
+    def get_app(self) -> tornado.web.Application:
         return self.app
 
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
 
-        cls.app = Application()
+        cls.app = tornado.web.Application()
         inngest.tornado.serve(
             cls.app,
             _client,

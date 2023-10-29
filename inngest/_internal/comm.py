@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import logging
 import os
-from logging import Logger
-from urllib.parse import urljoin
+import urllib.parse
 
 import requests
 
@@ -57,7 +57,7 @@ class CommHandler:
         client: client_lib.Inngest,
         framework: str,
         functions: list[function.Function],
-        logger: Logger,
+        logger: logging.Logger,
         signing_key: str | None = None,
     ) -> None:
         self._is_production = client.is_production
@@ -242,7 +242,10 @@ class CommHandler:
                     status_code=400,
                 )
 
-            registration_url = urljoin(self._base_url, "/fn/register")
+            registration_url = urllib.parse.urljoin(
+                self._base_url,
+                "/fn/register",
+            )
 
             body = transforms.prep_body(
                 registration.RegisterRequest(

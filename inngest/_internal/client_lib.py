@@ -1,7 +1,7 @@
+import logging
 import os
-from logging import Logger, getLogger
-from time import time
-from urllib.parse import urljoin
+import time
+import urllib.parse
 
 from . import const, env, errors, event_lib, net
 
@@ -14,12 +14,12 @@ class Inngest:
         base_url: str | None = None,
         event_key: str | None = None,
         is_production: bool | None = None,
-        logger: Logger | None = None,
+        logger: logging.Logger | None = None,
     ) -> None:
         self.app_id = app_id
         self.base_url = base_url
         self.is_production = is_production or env.is_prod()
-        self.logger = logger or getLogger(__name__)
+        self.logger = logger or logging.getLogger(__name__)
 
         if event_key is None:
             if not self.is_production:
@@ -43,7 +43,7 @@ class Inngest:
     def send(
         self, events: event_lib.Event | list[event_lib.Event]
     ) -> list[str]:
-        url = urljoin(self._event_origin, f"/e/{self._event_key}")
+        url = urllib.parse.urljoin(self._event_origin, f"/e/{self._event_key}")
         headers = net.create_headers()
 
         if not isinstance(events, list):
@@ -55,7 +55,7 @@ class Inngest:
             if d.get("id") == "":
                 del d["id"]
             if d.get("ts") == 0:
-                d["ts"] = int(time() * 1000)
+                d["ts"] = int(time.time() * 1000)
             body.append(d)
 
         res = net.requests_session.post(

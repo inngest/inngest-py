@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-from typing import Type, TypeVar
+import typing
 
-from pydantic import BaseModel as _BaseModel
-from pydantic import ConfigDict, ValidationError
+import pydantic
 
-T = TypeVar("T")
+T = typing.TypeVar("T")
 
 EmptySentinel = object()
 
 
-class BaseModel(_BaseModel):
-    model_config = ConfigDict(strict=True)
+class BaseModel(pydantic.BaseModel):
+    model_config = pydantic.ConfigDict(strict=True)
 
     def __init__(  # pylint: disable=no-self-argument
         __pydantic_self__,
@@ -20,12 +19,12 @@ class BaseModel(_BaseModel):
     ) -> None:
         try:
             super().__init__(*args, **kwargs)
-        except ValidationError as err:
+        except pydantic.ValidationError as err:
             raise __pydantic_self__.convert_validation_error(err) from None
 
     def convert_validation_error(
         self,
-        err: ValidationError,
+        err: pydantic.ValidationError,
     ) -> BaseException:
         """
         Subclasses can override this method to convert Pydantic's
@@ -36,15 +35,13 @@ class BaseModel(_BaseModel):
 
     @classmethod
     def from_dict(
-        cls: Type[TBaseModel],
+        cls: typing.Type[BaseModelT],
         raw: dict[str, object],
-    ) -> TBaseModel:
+    ) -> BaseModelT:
         return cls.model_validate(raw)
 
     def to_dict(self) -> dict[str, object]:
         return self.model_dump(mode="json")
 
 
-TBaseModel = TypeVar(  # pylint: disable=invalid-name
-    "TBaseModel", bound=BaseModel
-)
+BaseModelT = typing.TypeVar("BaseModelT", bound=BaseModel)
