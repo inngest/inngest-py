@@ -11,14 +11,13 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 
-dependencies = ["pydantic>=2.1.1", "requests>=2.27.0"]
+dependencies = ["httpx==0.25.0", "pydantic>=2.1.1", "requests>=2.27.0"]
 
 [project.optional-dependencies]
 extra = [
     "Flask==3.0.0",
     "black==23.10.0",
     "fastapi==0.104.0",
-    "httpx==0.25.0",
     "isort==5.12.0",
     "mypy==1.6.1",
     "pylint==3.0.1",
