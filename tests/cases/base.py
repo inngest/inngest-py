@@ -1,4 +1,5 @@
 import dataclasses
+import datetime
 import time
 import typing
 
@@ -8,11 +9,15 @@ import inngest
 class BaseState:
     run_id: str | None = None
 
-    def wait_for_run_id(self) -> str:
+    def wait_for_run_id(
+        self,
+        *,
+        timeout: datetime.timedelta = datetime.timedelta(seconds=5),
+    ) -> str:
         def assertion() -> None:
             assert self.run_id is not None
 
-        wait_for(assertion)
+        wait_for(assertion, timeout=timeout)
         assert self.run_id is not None
         return self.run_id
 
@@ -28,15 +33,17 @@ class Case:
 
 def wait_for(
     assertion: typing.Callable[[], None],
-    timeout: int = 5,
+    *,
+    timeout: datetime.timedelta = datetime.timedelta(seconds=5),
 ) -> None:
-    start = time.time()
+    start = datetime.datetime.now()
     while True:
         try:
             assertion()
             return
         except Exception as err:
-            timed_out = time.time() - start > timeout
+            # timed_out = time.time() - start > timeout
+            timed_out = datetime.datetime.now() > start + timeout
             if timed_out:
                 raise err
 

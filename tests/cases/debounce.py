@@ -5,11 +5,11 @@ import tests.helper
 
 from . import base
 
-_TEST_NAME = "wait_for_event_timeout"
+_TEST_NAME = "debounce"
 
 
 class _State(base.BaseState):
-    result: inngest.Event | None | str = "not_set"
+    run_count: int = 0
 
 
 def create(
@@ -20,26 +20,27 @@ def create(
     state = _State()
 
     @inngest.create_function(
-        inngest.FunctionOpts(id=_TEST_NAME, retries=0),
+        inngest.FunctionOpts(
+            debounce=inngest.Debounce(
+                period=datetime.timedelta(seconds=1),
+            ),
+            id=_TEST_NAME,
+        ),
         inngest.TriggerEvent(event=event_name),
     )
     def fn(*, run_id: str, step: inngest.Step, **_kwargs: object) -> None:
+        state.run_count += 1
         state.run_id = run_id
-
-        state.result = step.wait_for_event(
-            "wait",
-            event=f"{event_name}.fulfill",
-            timeout=datetime.timedelta(seconds=1),
-        )
 
     def run_test(_self: object) -> None:
         client.send(inngest.Event(name=event_name))
-        run_id = state.wait_for_run_id()
+        client.send(inngest.Event(name=event_name))
+        run_id = state.wait_for_run_id(timeout=datetime.timedelta(seconds=10))
         tests.helper.client.wait_for_run_status(
             run_id,
             tests.helper.RunStatus.COMPLETED,
         )
-        assert state.result is None
+        assert state.run_count == 1
 
     return base.Case(
         event_name=event_name,

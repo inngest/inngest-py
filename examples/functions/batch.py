@@ -5,7 +5,7 @@ import inngest
 
 @inngest.create_function(
     inngest.FunctionOpts(
-        batch_events=inngest.BatchConfig(
+        batch_events=inngest.Batch(
             max_size=2,
             timeout=datetime.timedelta(minutes=1),
         ),

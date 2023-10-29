@@ -41,7 +41,8 @@ def create(
         client.send(inngest.Event(name=event_name))
         run_id = state.wait_for_run_id()
         tests.helper.client.wait_for_run_status(
-            run_id, tests.helper.RunStatus.FAILED
+            run_id,
+            tests.helper.RunStatus.FAILED,
         )
 
         assert isinstance(state.error, errors.UnserializableOutput)

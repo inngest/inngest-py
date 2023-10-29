@@ -16,7 +16,21 @@ class _BaseConfig(types.BaseModel):
         return errors.InvalidConfig.from_validation_error(err)
 
 
-class CancelConfig(_BaseConfig):
+class Batch(_BaseConfig):
+    max_size: int
+    timeout: int | datetime.timedelta | None = None
+
+    @pydantic.field_serializer("timeout")
+    def serialize_timeout(
+        self,
+        value: int | datetime.timedelta | None,
+    ) -> str | None:
+        if value is None:
+            return None
+        return transforms.to_duration_str(value)
+
+
+class Cancel(_BaseConfig):
     event: str
     if_exp: str | None = None
     timeout: int | datetime.timedelta | None = None
@@ -31,12 +45,12 @@ class CancelConfig(_BaseConfig):
         return transforms.to_duration_str(value)
 
 
-class BatchConfig(_BaseConfig):
-    max_size: int
-    timeout: int | datetime.timedelta | None = None
+class Debounce(_BaseConfig):
+    key: str | None = None
+    period: int | datetime.timedelta
 
-    @pydantic.field_serializer("timeout")
-    def serialize_timeout(
+    @pydantic.field_serializer("period")
+    def serialize_period(
         self,
         value: int | datetime.timedelta | None,
     ) -> str | None:
@@ -46,12 +60,14 @@ class BatchConfig(_BaseConfig):
 
 
 class FunctionConfig(_BaseConfig):
-    batch_events: BatchConfig | None = None
-    cancel: CancelConfig | None = None
+    batch_events: Batch | None = None
+    cancel: list[Cancel] | None = None
+    debounce: Debounce | None = None
     id: str
     name: str | None = None
-    steps: dict[str, StepConfig]
-    throttle: ThrottleConfig | None = None
+    rate_limit: RateLimit | None = None
+    steps: dict[str, Step]
+    throttle: Throttle | None = None
     triggers: list[TriggerCron | TriggerEvent]
 
     def _get_url(self) -> str:
@@ -61,26 +77,41 @@ class FunctionConfig(_BaseConfig):
         return list(self.steps.values())[0].runtime.url
 
 
+class RateLimit(_BaseConfig):
+    key: str | None = None
+    limit: int
+    period: int | datetime.timedelta
+
+    @pydantic.field_serializer("period")
+    def serialize_period(
+        self,
+        value: int | datetime.timedelta | None,
+    ) -> str | None:
+        if value is None:
+            return None
+        return transforms.to_duration_str(value)
+
+
+class Retries(_BaseConfig):
+    attempts: int = pydantic.Field(ge=0)
+
+
 class Runtime(_BaseConfig):
     type: typing.Literal["http"]
     url: str
 
 
-class StepConfig(_BaseConfig):
+class Step(_BaseConfig):
     id: str
     name: str
-    retries: RetriesConfig | None = None
+    retries: Retries | None = None
     runtime: Runtime
 
 
-class RetriesConfig(_BaseConfig):
-    attempts: int = pydantic.Field(ge=0)
-
-
-class ThrottleConfig(_BaseConfig):
+class Throttle(_BaseConfig):
     key: str | None = None
     count: int
-    period: int | datetime.timedelta | None = None
+    period: int | datetime.timedelta
 
     @pydantic.field_serializer("period")
     def serialize_period(

@@ -35,13 +35,15 @@ def create_function(
 class FunctionOpts(types.BaseModel):
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
-    batch_events: function_config.BatchConfig | None = None
-    cancel: function_config.CancelConfig | None = None
+    batch_events: function_config.Batch | None = None
+    cancel: list[function_config.Cancel] | None = None
+    debounce: function_config.Debounce | None = None
     id: str
     name: str | None = None
     on_failure: _FunctionHandler | None = None
+    rate_limit: function_config.RateLimit | None = None
     retries: int | None = None
-    throttle: function_config.ThrottleConfig | None = None
+    throttle: function_config.Throttle | None = None
 
     def convert_validation_error(
         self,
@@ -137,17 +139,19 @@ class Function:
             name = self._opts.name
 
         if self._opts.retries is not None:
-            retries = function_config.RetriesConfig(attempts=self._opts.retries)
+            retries = function_config.Retries(attempts=self._opts.retries)
         else:
             retries = None
 
         main = function_config.FunctionConfig(
             batch_events=self._opts.batch_events,
             cancel=self._opts.cancel,
+            debounce=self._opts.debounce,
             id=fn_id,
             name=name,
+            rate_limit=self._opts.rate_limit,
             steps={
-                const.ROOT_STEP_ID: function_config.StepConfig(
+                const.ROOT_STEP_ID: function_config.Step(
                     id=const.ROOT_STEP_ID,
                     name=const.ROOT_STEP_ID,
                     retries=retries,
@@ -167,10 +171,10 @@ class Function:
                 id=self.on_failure_fn_id,
                 name=f"{name} (on_failure handler)",
                 steps={
-                    const.ROOT_STEP_ID: function_config.StepConfig(
+                    const.ROOT_STEP_ID: function_config.Step(
                         id=const.ROOT_STEP_ID,
                         name=const.ROOT_STEP_ID,
-                        retries=function_config.RetriesConfig(attempts=0),
+                        retries=function_config.Retries(attempts=0),
                         runtime=function_config.Runtime(
                             type="http",
                             url=f"{app_url}?fnId={self.on_failure_fn_id}&stepId={const.ROOT_STEP_ID}",

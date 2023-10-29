@@ -42,7 +42,8 @@ def create(
 
         client.send(inngest.Event(name=f"{event_name}.fulfill"))
         tests.helper.client.wait_for_run_status(
-            run_id, tests.helper.RunStatus.COMPLETED
+            run_id,
+            tests.helper.RunStatus.COMPLETED,
         )
 
         assert isinstance(state.result, inngest.Event)

@@ -28,18 +28,20 @@ class Test_get_function_configs(  # pylint: disable=invalid-name
 
         @inngest.create_function(
             inngest.FunctionOpts(
-                batch_events=inngest.BatchConfig(
+                batch_events=inngest.Batch(
                     max_size=2, timeout=datetime.timedelta(minutes=1)
                 ),
-                cancel=inngest.CancelConfig(
-                    event="app/cancel",
-                    if_exp="true",
-                    timeout=datetime.timedelta(minutes=1),
-                ),
+                cancel=[
+                    inngest.Cancel(
+                        event="app/cancel",
+                        if_exp="true",
+                        timeout=datetime.timedelta(minutes=1),
+                    )
+                ],
                 id="fn",
                 name="Function",
                 retries=1,
-                throttle=inngest.ThrottleConfig(
+                throttle=inngest.Throttle(
                     count=2, period=datetime.timedelta(minutes=1)
                 ),
             ),
