@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import inngest
 
 
@@ -9,6 +11,6 @@ def fn(*, step: inngest.Step, **_kwargs: object) -> None:
     res = step.wait_for_event(
         "wait",
         event="app/wait_for_event.fulfill",
-        timeout=inngest.Duration.second(2),
+        timeout=timedelta(seconds=2),
     )
     step.run("print-result", lambda: print(res))

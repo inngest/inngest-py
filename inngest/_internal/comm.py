@@ -108,7 +108,18 @@ class CommHandler:
         try:
             req_sig.validate(self._signing_key)
 
-            if fn_id not in self._fns:
+            # Look for the function ID in the list of user functions, but also
+            # look for it in the list of on_failure functions.
+            fn: Function | None = None
+            for _fn in self._fns.values():
+                if _fn.get_id() == fn_id:
+                    fn = _fn
+                    break
+                if _fn.on_failure_fn_id == fn_id:
+                    fn = _fn
+                    break
+
+            if fn is None:
                 raise MissingFunction(f"function {fn_id} not found")
 
             comm_res = CommResponse(
@@ -118,7 +129,7 @@ class CommHandler:
                 }
             )
 
-            action_res = self._fns[fn_id].call(call, self._client)
+            action_res = fn.call(call, self._client, fn_id)
             if isinstance(action_res, list):
                 out: list[dict[str, object]] = []
                 for item in action_res:
@@ -152,7 +163,14 @@ class CommHandler:
             )
 
     def get_function_configs(self, app_url: str) -> list[FunctionConfig]:
-        configs = [fn.get_config(app_url) for fn in self._fns.values()]
+        configs: list[FunctionConfig] = []
+        for fn in self._fns.values():
+            config = fn.get_config(app_url)
+            configs.append(config.main)
+
+            if config.on_failure is not None:
+                configs.append(config.on_failure)
+
         if len(configs) == 0:
             raise InvalidConfig("no functions found")
         return configs

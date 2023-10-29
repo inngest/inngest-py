@@ -50,6 +50,12 @@ class FunctionConfig(_BaseConfig):
     throttle: ThrottleConfig | None = None
     triggers: list[TriggerCron | TriggerEvent]
 
+    def _get_url(self) -> str:
+        steps = list(self.steps.values())
+        if len(steps) == 0:
+            raise InvalidConfig("no steps found")
+        return list(self.steps.values())[0].runtime.url
+
 
 class Runtime(_BaseConfig):
     type: Literal["http"]

@@ -1,15 +1,23 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import threading
 import traceback
+from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Callable, Protocol
+from typing import Callable, Protocol, runtime_checkable
 
 from pydantic import ValidationError
 
 from .client import Inngest
-from .errors import InvalidConfig, NonRetriableError, UnserializableOutput
+from .const import ROOT_STEP_ID, InternalEvents
+from .errors import (
+    InvalidConfig,
+    MissingFunction,
+    NonRetriableError,
+    UnserializableOutput,
+)
 from .event import Event
 from .execution import Call, CallError, CallResponse, Opcode
 from .function_config import (
@@ -42,8 +50,12 @@ class FunctionOpts(BaseModel):
     cancel: CancelConfig | None = None
     id: str
     name: str | None = None
+    on_failure: _FunctionHandler | None = None
     retries: int | None = None
     throttle: ThrottleConfig | None = None
+
+    class Config:
+        arbitrary_types_allowed = True
 
     def convert_validation_error(
         self,
@@ -53,6 +65,8 @@ class FunctionOpts(BaseModel):
 
 
 class Function:
+    _on_failure_fn_id: str | None = None
+
     def __init__(
         self,
         opts: FunctionOpts,
@@ -63,19 +77,50 @@ class Function:
         self._opts = opts
         self._trigger = trigger
 
+        if opts.on_failure is not None:
+            # Create a random suffix to avoid collisions with the main
+            # function's ID.
+            suffix = hashlib.sha1(opts.id.encode("utf-8")).hexdigest()[:8]
+
+            self._on_failure_fn_id = f"{opts.id}-{suffix}"
+
+    @property
+    def id(self) -> str:
+        return self._opts.id
+
+    @property
+    def on_failure_fn_id(self) -> str | None:
+        return self._on_failure_fn_id
+
     def call(
         self,
         call: Call,
         client: Inngest,
+        fn_id: str,
     ) -> list[CallResponse] | str | CallError:
         try:
-            res = self._handler(
-                attempt=call.ctx.attempt,
-                event=call.event,
-                events=call.events,
-                run_id=call.ctx.run_id,
-                step=Step(client, call.steps, _StepIDCounter()),
-            )
+            if self.id == fn_id:
+                res = self._handler(
+                    attempt=call.ctx.attempt,
+                    event=call.event,
+                    events=call.events,
+                    run_id=call.ctx.run_id,
+                    step=Step(client, call.steps, _StepIDCounter()),
+                )
+            elif self.on_failure_fn_id == fn_id:
+                if self._opts.on_failure is None:
+                    raise MissingFunction("on_failure not defined")
+
+                res = self._opts.on_failure(
+                    attempt=call.ctx.attempt,
+                    event=call.event,
+                    events=call.events,
+                    run_id=call.ctx.run_id,
+                    step=Step(client, call.steps, _StepIDCounter()),
+                )
+            else:
+                raise MissingFunction("function ID mismatch")
+
             return json.dumps(res)
         except _Interrupt as out:
             return [
@@ -98,7 +143,7 @@ class Function:
                 stack=traceback.format_exc(),
             )
 
-    def get_config(self, app_url: str) -> FunctionConfig:
+    def get_config(self, app_url: str) -> _Config:
         fn_id = self._opts.id
 
         name = fn_id
@@ -110,25 +155,51 @@ class Function:
         else:
             retries = None
 
-        return FunctionConfig(
+        main = FunctionConfig(
             batch_events=self._opts.batch_events,
             cancel=self._opts.cancel,
             id=fn_id,
             name=name,
             steps={
-                "step": StepConfig(
-                    id="step",
-                    name="step",
+                ROOT_STEP_ID: StepConfig(
+                    id=ROOT_STEP_ID,
+                    name=ROOT_STEP_ID,
                     retries=retries,
                     runtime=Runtime(
                         type="http",
-                        url=f"{app_url}?fnId={fn_id}&stepId=step",
+                        url=f"{app_url}?fnId={fn_id}&stepId={ROOT_STEP_ID}",
                     ),
                 ),
             },
             throttle=self._opts.throttle,
             triggers=[self._trigger],
         )
+
+        on_failure = None
+        if self.on_failure_fn_id is not None:
+            on_failure = FunctionConfig(
+                id=self.on_failure_fn_id,
+                name=f"{name} (on_failure handler)",
+                steps={
+                    ROOT_STEP_ID: StepConfig(
+                        id=ROOT_STEP_ID,
+                        name=ROOT_STEP_ID,
+                        retries=RetriesConfig(attempts=0),
+                        runtime=Runtime(
+                            type="http",
+                            url=f"{app_url}?fnId={self.on_failure_fn_id}&stepId={ROOT_STEP_ID}",
+                        ),
+                    )
+                },
+                triggers=[
+                    TriggerEvent(
+                        event=InternalEvents.FUNCTION_FAILED.value,
+                        expression=f"event.data.function_id == '{self.id}'",
+                    )
+                ],
+            )
+
+        return _Config(main=main, on_failure=on_failure)
 
     def get_id(self) -> str:
         return self._opts.id
@@ -304,6 +375,16 @@ class Step:
         )
 
 
+@dataclass
+class _Config:
+    # The user-defined function
+    main: FunctionConfig
+
+    # The internal on_failure function
+    on_failure: FunctionConfig | None
+
+
+@runtime_checkable
 class _FunctionHandler(Protocol):
     def __call__(
         self,

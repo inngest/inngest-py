@@ -5,6 +5,8 @@ DEFAULT_API_ORIGIN: Final = "https://api.inngest.com/"
 DEFAULT_EVENT_ORIGIN: Final = "https://inn.gs/"
 DEV_SERVER_ORIGIN: Final = "http://127.0.0.1:8288/"
 LANGUAGE: Final = "py"
+ON_FAILURE_ID_SUFFIX: Final = "-failure"
+ROOT_STEP_ID: Final = "step"
 VERSION: Final = "0.1.0"
 
 
@@ -38,3 +40,7 @@ class HeaderKey(Enum):
     SERVER_TIMING = "Server-Timing"
     SIGNATURE = "X-Inngest-Signature"
     USER_AGENT = "User-Agent"
+
+
+class InternalEvents(Enum):
+    FUNCTION_FAILED = "inngest/function.failed"

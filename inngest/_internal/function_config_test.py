@@ -46,8 +46,6 @@ def test_serialization() -> None:
         ],
     ).to_dict()
 
-    print(json.dumps(data, indent=2))
-
     assert data == {
         "batch_events": {
             "max_size": 10,
