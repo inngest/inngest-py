@@ -34,6 +34,7 @@ class TestTornado(tornado.testing.AsyncHTTPTestCase):
             [
                 case.fn
                 for case in _cases
+                # Should always be true but mypy doesn't know that
                 if isinstance(case.fn, inngest.FunctionSync)
             ],
         )

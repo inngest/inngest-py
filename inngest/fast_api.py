@@ -24,7 +24,7 @@ def serve(
 
     @app.post("/api/inngest")
     async def post_inngest_api(
-        fnId: str,
+        fnId: str,  # pylint: disable=invalid-name
         request: fastapi.Request,
     ) -> fastapi.Response:
         body = await request.json()

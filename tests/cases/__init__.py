@@ -19,29 +19,30 @@ from . import (
 def create_cases(
     client: inngest.Inngest,
     framework: str,
-) -> list[base.Case[inngest.Function]]:
-    return [
-        case.create(client, framework, is_sync=False)
-        for case in (
-            cancel,
-            debounce,
-            event_payload,
-            function_args,
-            no_steps,
-            on_failure,
-            sleep_until,
-            two_steps,
-            unserializable_step_output,
-            wait_for_event_fulfill,
-            wait_for_event_timeout,
-        )
-    ]
+) -> list[base.Case]:
+    cases: list[base.Case] = []
+    for case in (
+        cancel,
+        debounce,
+        event_payload,
+        function_args,
+        no_steps,
+        on_failure,
+        sleep_until,
+        two_steps,
+        unserializable_step_output,
+        wait_for_event_fulfill,
+        wait_for_event_timeout,
+    ):
+        cases.append(case.create(client, framework, is_sync=False))
+
+    return cases
 
 
 def create_cases_sync(
     client: inngest.Inngest,
     framework: str,
-) -> list[base.Case[inngest.FunctionSync]]:
+) -> list[base.Case]:
     return [
         case.create(client, framework, is_sync=True)
         for case in (

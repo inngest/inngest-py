@@ -77,6 +77,7 @@ def create(
         assert state.step_1_counter == 1
         assert state.step_2_counter == 1
 
+    fn: inngest.Function | inngest.FunctionSync
     if is_sync:
         fn = fn_sync
     else:

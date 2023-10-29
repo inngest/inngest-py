@@ -60,6 +60,7 @@ def create(
         assert state.event.ts > 0
         assert state.event.user == {"a": {"b": "c"}}
 
+    fn: inngest.Function | inngest.FunctionSync
     if is_sync:
         fn = fn_sync
     else:

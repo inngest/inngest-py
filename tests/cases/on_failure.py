@@ -112,6 +112,7 @@ def create(
         assert isinstance(state.events, list) and len(state.events) == 1
         assert isinstance(state.step, (inngest.Step, inngest.StepSync))
 
+    fn: inngest.Function | inngest.FunctionSync
     if is_sync:
         fn = fn_sync
     else:

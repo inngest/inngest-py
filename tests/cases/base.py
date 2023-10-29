@@ -28,9 +28,9 @@ FunctionT = typing.TypeVar(
 
 
 @dataclasses.dataclass
-class Case(typing.Generic[FunctionT]):
+class Case:
     event_name: str
-    fn: FunctionT
+    fn: inngest.Function | inngest.FunctionSync
     name: str
     run_test: typing.Callable[[object], None]
     state: BaseState

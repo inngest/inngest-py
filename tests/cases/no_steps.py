@@ -37,6 +37,7 @@ def create(
             tests.helper.RunStatus.COMPLETED,
         )
 
+    fn: inngest.Function | inngest.FunctionSync
     if is_sync:
         fn = fn_sync
     else:

@@ -11,6 +11,7 @@ from inngest._internal import (
     client_lib,
     const,
     errors,
+    execution,
     function,
     function_config,
     net,
@@ -18,7 +19,9 @@ from inngest._internal import (
     transforms,
 )
 
-FunctionT = typing.TypeVar("FunctionT", bound=function.FunctionBase)
+FunctionT = typing.TypeVar(
+    "FunctionT", bound=function.Function | function.FunctionSync
+)
 
 
 class CommResponse:
@@ -97,6 +100,46 @@ class CommHandlerBase(typing.Generic[FunctionT]):
             const.EnvKey.SIGNING_KEY.value
         )
 
+    def _create_response(
+        self,
+        call_res: list[execution.CallResponse] | str | execution.CallError,
+    ) -> CommResponse:
+        comm_res = CommResponse(
+            headers={
+                **net.create_headers(framework=self._framework),
+                const.HeaderKey.SERVER_TIMING.value: "handler",
+            }
+        )
+
+        if isinstance(call_res, list):
+            out: list[dict[str, object]] = []
+            for item in call_res:
+                out.append(item.to_dict())
+
+            comm_res.body = transforms.prep_body(out)
+            comm_res.status_code = 206
+        elif isinstance(call_res, execution.CallError):
+            comm_res.body = transforms.prep_body(call_res.model_dump())
+            comm_res.status_code = 500
+
+            if call_res.is_retriable is False:
+                comm_res.headers[const.HeaderKey.NO_RETRY.value] = "true"
+        else:
+            comm_res.body = call_res
+
+        return comm_res
+
+    def _get_function(self, fn_id: str) -> FunctionT:
+        # Look for the function ID in the list of user functions, but also
+        # look for it in the list of on_failure functions.
+        for _fn in self._fns.values():
+            if _fn.get_id() == fn_id:
+                return _fn
+            if _fn.on_failure_fn_id == fn_id:
+                return _fn
+
+        raise errors.MissingFunction(f"function {fn_id} not found")
+
     def get_function_configs(
         self,
         app_url: str,
@@ -112,6 +155,24 @@ class CommHandlerBase(typing.Generic[FunctionT]):
         if len(configs) == 0:
             raise errors.InvalidConfig("no functions found")
         return configs
+
+    def _convert_error_to_response(
+        self,
+        err: errors.InternalError,
+    ) -> CommResponse:
+        body = {
+            "code": str(err),
+            "message": str(err),
+        }
+        self._logger.error(
+            "function call failed",
+            extra=body,
+        )
+        return CommResponse(
+            body=body,
+            headers=net.create_headers(framework=self._framework),
+            status_code=err.status_code,
+        )
 
     def _parse_registration_response(
         self,

@@ -31,7 +31,12 @@ class TestFastAPI(unittest.TestCase):
         inngest.fast_api.serve(
             cls.app,
             _client,
-            [case.fn for case in _cases],
+            [
+                case.fn
+                for case in _cases
+                # Should always be true but mypy doesn't know that
+                if isinstance(case.fn, inngest.Function)
+            ],
         )
 
         cls.fast_api_client = fastapi.testclient.TestClient(cls.app)

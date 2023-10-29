@@ -68,7 +68,7 @@ def create_function(
     return decorator
 
 
-class Function(base.FunctionBase):
+class Function(base.FunctionBase[_FunctionHandler]):
     def __init__(
         self,
         opts: FunctionOpts,

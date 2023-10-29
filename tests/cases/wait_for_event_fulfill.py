@@ -78,6 +78,7 @@ def create(
         assert state.result.name == f"{event_name}.fulfill"
         assert state.result.ts > 0
 
+    fn: inngest.Function | inngest.FunctionSync
     if is_sync:
         fn = fn_sync
     else:
