@@ -1,5 +1,5 @@
 # Constrain to the lowest version for each range in pyproject.toml. This ensures
 # that our code won't rely on features in newer versions of dependencies. These
 # constraints won't affect installed versions by consumers.
-pydantic==2.0
+pydantic==2.1.1
 requests==2.27.0

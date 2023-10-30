@@ -3,11 +3,12 @@ import datetime
 import inngest
 
 
-@inngest.create_function(
-    inngest.FunctionOpts(id="wait_for_event", name="wait_for_event"),
-    inngest.TriggerEvent(event="app/wait_for_event"),
+@inngest.create_function_sync(
+    fn_id="wait_for_event",
+    name="wait_for_event",
+    trigger=inngest.TriggerEvent(event="app/wait_for_event"),
 )
-def fn(*, step: inngest.Step, **_kwargs: object) -> None:
+def fn_sync(*, step: inngest.StepSync, **_kwargs: object) -> None:
     res = step.wait_for_event(
         "wait",
         event="app/wait_for_event.fulfill",

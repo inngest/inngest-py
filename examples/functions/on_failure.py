@@ -6,14 +6,16 @@ def _on_failure(
     event: inngest.Event,
     events: list[inngest.Event],
     run_id: str,
-    step: inngest.Step,
+    step: inngest.StepSync,
 ) -> None:
     print("on_failure called")
 
 
-@inngest.create_function(
-    inngest.FunctionOpts(id="on_failure", on_failure=_on_failure, retries=0),
-    inngest.TriggerEvent(event="app/on_failure"),
+@inngest.create_function_sync(
+    fn_id="on_failure",
+    on_failure=_on_failure,
+    retries=0,
+    trigger=inngest.TriggerEvent(event="app/on_failure"),
 )
-def fn(*, run_id: str, **_kwargs: object) -> None:
+def fn_sync(*, run_id: str, **_kwargs: object) -> None:
     raise Exception("intentional error")

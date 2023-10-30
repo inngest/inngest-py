@@ -14,7 +14,7 @@ async def main() -> None:
     inngest.tornado.serve(
         app,
         src.inngest.inngest_client,
-        examples.functions.functions,
+        examples.functions.functions_sync,
     )
 
     app.listen(8000)

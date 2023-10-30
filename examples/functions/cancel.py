@@ -3,12 +3,10 @@ import time
 import inngest
 
 
-@inngest.create_function(
-    inngest.FunctionOpts(
-        cancel=[inngest.Cancel(event="app/cancel.cancel")],
-        id="cancel",
-    ),
-    inngest.TriggerEvent(event="app/cancel"),
+@inngest.create_function_sync(
+    cancel=[inngest.Cancel(event="app/cancel.cancel")],
+    fn_id="cancel",
+    trigger=inngest.TriggerEvent(event="app/cancel"),
 )
-def fn(*, run_id: str, **_kwargs: object) -> None:
+def fn_sync(*, run_id: str, **_kwargs: object) -> None:
     time.sleep(5)

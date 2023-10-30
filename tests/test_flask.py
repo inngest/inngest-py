@@ -13,7 +13,7 @@ _client = inngest.Inngest(
     base_url=f"http://{net.HOST}:{dev_server.PORT}",
 )
 
-_cases = cases.create_cases(_client, "flask")
+_cases = cases.create_cases_sync(_client, "flask")
 
 
 class TestFlask(unittest.TestCase):
@@ -30,7 +30,12 @@ class TestFlask(unittest.TestCase):
         inngest.flask.serve(
             app,
             _client,
-            [case.fn for case in _cases],
+            [
+                case.fn
+                for case in _cases
+                # Should always be true but mypy doesn't know that
+                if isinstance(case.fn, inngest.FunctionSync)
+            ],
         )
         cls.app = app.test_client()
 

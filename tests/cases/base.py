@@ -22,13 +22,38 @@ class BaseState:
         return self.run_id
 
 
+FunctionT = typing.TypeVar(
+    "FunctionT", bound=inngest.Function | inngest.FunctionSync
+)
+
+
 @dataclasses.dataclass
 class Case:
     event_name: str
-    fn: inngest.Function
+    fn: inngest.Function | inngest.FunctionSync
     name: str
     run_test: typing.Callable[[object], None]
     state: BaseState
+
+
+def create_event_name(
+    framework: str,
+    test_name: str,
+    is_sync: bool,
+) -> str:
+    event_name = f"{framework}/{test_name}"
+    if is_sync:
+        event_name += "_sync"
+    return event_name
+
+
+def create_test_name(
+    test_name: str,
+    is_sync: bool,
+) -> str:
+    if is_sync:
+        test_name += "_sync"
+    return test_name
 
 
 def wait_for(

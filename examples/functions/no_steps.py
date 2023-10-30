@@ -1,9 +1,10 @@
 import inngest
 
 
-@inngest.create_function(
-    inngest.FunctionOpts(id="no_steps", name="No steps"),
-    inngest.TriggerEvent(event="app/no_steps"),
+@inngest.create_function_sync(
+    fn_id="no_steps",
+    name="No steps",
+    trigger=inngest.TriggerEvent(event="app/no_steps"),
 )
-def fn(**_kwargs: object) -> int:
+def fn_sync(**_kwargs: object) -> int:
     return 1

@@ -69,6 +69,16 @@ class InvalidConfig(InternalError):
         return cls(f"{loc[0]}: {msg}")
 
 
+class InvalidParam(InternalError):
+    status_code: int = 400
+
+    def __init__(self, message: str | None = None) -> None:
+        super().__init__(
+            code=const.ErrorCode.INVALID_PARAM,
+            message=message,
+        )
+
+
 class InvalidRequestSignature(InternalError):
     status_code: int = 401
 

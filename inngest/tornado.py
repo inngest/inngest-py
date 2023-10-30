@@ -17,12 +17,12 @@ from inngest._internal import (
 def serve(
     app: tornado.web.Application,
     client: client_lib.Inngest,
-    functions: list[function.Function],
+    functions: list[function.FunctionSync],
     *,
     base_url: str | None = None,
     signing_key: str | None = None,
 ) -> None:
-    handler = comm.CommHandler(
+    handler = comm.CommHandlerSync(
         api_origin=base_url or client.base_url,
         client=client,
         framework="flask",

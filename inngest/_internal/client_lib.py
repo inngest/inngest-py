@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 import logging
 import os
 import time
 import urllib.parse
+
+import httpx
 
 from . import const, env, errors, event_lib, net
 
@@ -18,6 +22,8 @@ class Inngest:
     ) -> None:
         self.app_id = app_id
         self.base_url = base_url
+        self._httpx_client = httpx.AsyncClient()
+        self._httpx_client_sync = httpx.Client()
         self.is_production = is_production or env.is_prod()
         self.logger = logger or logging.getLogger(__name__)
 
@@ -40,14 +46,12 @@ class Inngest:
                 event_origin = const.DEFAULT_EVENT_ORIGIN
         self._event_origin = event_origin
 
-    def send(
-        self, events: event_lib.Event | list[event_lib.Event]
-    ) -> list[str]:
+    def _build_send_request(
+        self,
+        events: list[event_lib.Event],
+    ) -> httpx.Request:
         url = urllib.parse.urljoin(self._event_origin, f"/e/{self._event_key}")
         headers = net.create_headers()
-
-        if not isinstance(events, list):
-            events = [events]
 
         body = []
         for event in events:
@@ -58,21 +62,51 @@ class Inngest:
                 d["ts"] = int(time.time() * 1000)
             body.append(d)
 
-        res = net.requests_session.post(
-            url, json=body, headers=headers, timeout=30
+        return self._httpx_client.build_request(
+            "POST",
+            url,
+            headers=headers,
+            json=body,
+            timeout=30,
         )
-        res_body: object = res.json()
-        if not isinstance(res_body, dict) or "ids" not in res_body:
-            self.logger.error("unexpected response when sending events")
-            raise errors.InvalidResponseShape(
-                "unexpected response when sending events"
-            )
 
-        ids = res_body["ids"]
-        if not isinstance(ids, list):
-            self.logger.error("unexpected response when sending events")
-            raise errors.InvalidResponseShape(
-                "unexpected response when sending events"
-            )
+    async def send(
+        self,
+        events: event_lib.Event | list[event_lib.Event],
+    ) -> list[str]:
+        if not isinstance(events, list):
+            events = [events]
 
-        return ids
+        res = await self._httpx_client.send(
+            self._build_send_request(events),
+        )
+
+        return _extract_ids(res.json())
+
+    def send_sync(
+        self,
+        events: event_lib.Event | list[event_lib.Event],
+    ) -> list[str]:
+        if not isinstance(events, list):
+            events = [events]
+
+        res = self._httpx_client_sync.send(
+            self._build_send_request(events),
+        )
+
+        return _extract_ids(res.json())
+
+
+def _extract_ids(body: object) -> list[str]:
+    if not isinstance(body, dict) or "ids" not in body:
+        raise errors.InvalidResponseShape(
+            "unexpected response when sending events"
+        )
+
+    ids = body["ids"]
+    if not isinstance(ids, list):
+        raise errors.InvalidResponseShape(
+            "unexpected response when sending events"
+        )
+
+    return ids
