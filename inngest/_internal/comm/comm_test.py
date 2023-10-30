@@ -7,8 +7,9 @@ import unittest
 import pytest
 
 import inngest
+from inngest._internal import errors
 
-from . import comm, errors
+from . import comm_sync
 
 
 class Test_get_function_configs(  # pylint: disable=invalid-name
@@ -48,7 +49,7 @@ class Test_get_function_configs(  # pylint: disable=invalid-name
         def fn(**_kwargs: object) -> int:
             return 1
 
-        handler = comm.CommHandlerSync(
+        handler = comm_sync.CommHandlerSync(
             api_origin="http://foo.bar",
             client=self.client,
             framework="test",
@@ -58,7 +59,7 @@ class Test_get_function_configs(  # pylint: disable=invalid-name
         handler.get_function_configs("http://foo.bar")
 
     def test_no_functions(self) -> None:
-        handler = comm.CommHandlerSync(
+        handler = comm_sync.CommHandlerSync(
             api_origin="http://foo.bar",
             client=self.client,
             framework="test",

@@ -6,6 +6,10 @@ from . import base
 
 
 class CommHandlerSync(base.CommHandlerBase[function.FunctionSync]):
+    """
+    Synchronous version of CommHandler.
+    """
+
     def call_function(
         self,
         *,

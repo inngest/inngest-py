@@ -48,6 +48,10 @@ def create_function_sync(
     throttle: function_config.Throttle | None = None,
     trigger: function_config.TriggerCron | function_config.TriggerEvent,
 ) -> typing.Callable[[_FunctionHandlerSync], FunctionSync]:
+    """
+    Synchronous version of create_function.
+    """
+
     def decorator(func: _FunctionHandlerSync) -> FunctionSync:
         return FunctionSync(
             FunctionOptsSync(
@@ -69,6 +73,10 @@ def create_function_sync(
 
 
 class FunctionSync(base.FunctionBase[_FunctionHandlerSync]):
+    """
+    Synchronous version of Function.
+    """
+
     def __init__(
         self,
         opts: FunctionOptsSync,
