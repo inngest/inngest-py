@@ -79,6 +79,16 @@ class InvalidConfig(InternalError):
         return cls(f"{loc[0]}: {msg}")
 
 
+class MismatchedSync(InternalError):
+    status_code: int = 500
+
+    def __init__(self, message: str | None = None) -> None:
+        super().__init__(
+            code=const.ErrorCode.MISMATCHED_SYNC,
+            message=message,
+        )
+
+
 class InvalidParam(InternalError):
     status_code: int = 400
 

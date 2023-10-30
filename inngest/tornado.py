@@ -22,7 +22,7 @@ def serve(
     base_url: str | None = None,
     signing_key: str | None = None,
 ) -> None:
-    handler = comm.CommHandlerSync(
+    handler = comm.CommHandler(
         api_origin=base_url or client.base_url,
         client=client,
         framework="flask",
@@ -48,7 +48,7 @@ def serve(
                 if isinstance(k, str) and isinstance(v[0], str):
                     headers[k] = v[0]
 
-            comm_res = handler.call_function(
+            comm_res = handler.call_function_sync(
                 call=execution.Call.from_dict(json.loads(self.request.body)),
                 fn_id=fn_id,
                 req_sig=net.RequestSignature(
@@ -72,7 +72,7 @@ def serve(
                 or self.request.remote_ip
             )
 
-            comm_res = handler.register(
+            comm_res = handler.register_sync(
                 app_url=self.request.full_url(),
                 # TODO: Find a better way to figure this out.
                 is_from_dev_server=remote_ip == "127.0.0.1",

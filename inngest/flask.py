@@ -13,7 +13,7 @@ def serve(
     base_url: str | None = None,
     signing_key: str | None = None,
 ) -> None:
-    handler = comm.CommHandlerSync(
+    handler = comm.CommHandler(
         api_origin=base_url or client.base_url,
         client=client,
         framework="flask",
@@ -30,7 +30,7 @@ def serve(
                 raise errors.MissingParam("fnId")
 
             return _to_response(
-                handler.call_function(
+                handler.call_function_sync(
                     call=execution.Call.from_dict(
                         json.loads(flask.request.data)
                     ),
@@ -53,7 +53,7 @@ def serve(
             )
 
             return _to_response(
-                handler.register(
+                handler.register_sync(
                     app_url=flask.request.url,
                     # TODO: Find a better way to figure this out.
                     is_from_dev_server=remote_ip == "127.0.0.1",

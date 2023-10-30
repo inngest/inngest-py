@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import os
-import typing
 import urllib.parse
 
 import httpx
@@ -17,10 +16,6 @@ from inngest._internal import (
     net,
     registration,
     transforms,
-)
-
-FunctionT = typing.TypeVar(
-    "FunctionT", bound=function.Function | function.FunctionSync
 )
 
 
@@ -69,10 +64,10 @@ class CommResponse:
         )
 
 
-class CommHandlerBase(typing.Generic[FunctionT]):
+class CommHandler:
     _base_url: str
     _client: client_lib.Inngest
-    _fns: dict[str, FunctionT]
+    _fns: dict[str, function.Function | function.FunctionSync]
     _framework: str
     _is_production: bool
     _logger: logging.Logger
@@ -84,7 +79,7 @@ class CommHandlerBase(typing.Generic[FunctionT]):
         api_origin: str | None = None,
         client: client_lib.Inngest,
         framework: str,
-        functions: list[FunctionT],
+        functions: list[function.Function] | list[function.FunctionSync],
         logger: logging.Logger,
         signing_key: str | None = None,
     ) -> None:
@@ -109,7 +104,7 @@ class CommHandlerBase(typing.Generic[FunctionT]):
             raise errors.InvalidBaseURL() from err
 
         self._client = client
-        self._fns: dict[str, FunctionT] = {fn.get_id(): fn for fn in functions}
+        self._fns = {fn.get_id(): fn for fn in functions}
         self._framework = framework
         self._signing_key = signing_key or os.getenv(
             const.EnvKey.SIGNING_KEY.value
@@ -151,6 +146,54 @@ class CommHandlerBase(typing.Generic[FunctionT]):
             timeout=30,
         )
 
+    async def call_function(
+        self,
+        *,
+        call: execution.Call,
+        fn_id: str,
+        req_sig: net.RequestSignature,
+    ) -> CommResponse:
+        """
+        Handles a function call from the Executor.
+        """
+
+        try:
+            req_sig.validate(self._signing_key)
+            fn = self._get_function(fn_id)
+            if not isinstance(fn, function.Function):
+                raise errors.MismatchedSync(
+                    f"function {fn_id} is not asynchronous"
+                )
+
+            return self._create_response(
+                await fn.call(call, self._client, fn_id)
+            )
+        except errors.InternalError as err:
+            return CommResponse.from_internal_error(err, self._framework)
+
+    def call_function_sync(
+        self,
+        *,
+        call: execution.Call,
+        fn_id: str,
+        req_sig: net.RequestSignature,
+    ) -> CommResponse:
+        """
+        Handles a function call from the Executor.
+        """
+
+        try:
+            req_sig.validate(self._signing_key)
+            fn = self._get_function(fn_id)
+            if not isinstance(fn, function.FunctionSync):
+                raise errors.MismatchedSync(
+                    f"function {fn_id} is not synchronous"
+                )
+
+            return self._create_response(fn.call(call, self._client, fn_id))
+        except errors.InternalError as err:
+            return CommResponse.from_internal_error(err, self._framework)
+
     def _create_response(
         self,
         call_res: list[execution.CallResponse] | str | execution.CallError,
@@ -180,7 +223,9 @@ class CommHandlerBase(typing.Generic[FunctionT]):
 
         return comm_res
 
-    def _get_function(self, fn_id: str) -> FunctionT:
+    def _get_function(
+        self, fn_id: str
+    ) -> function.Function | function.FunctionSync:
         # Look for the function ID in the list of user functions, but also
         # look for it in the list of on_failure functions.
         for _fn in self._fns.values():
@@ -251,6 +296,50 @@ class CommHandlerBase(typing.Generic[FunctionT]):
 
         comm_res.body = body
         return comm_res
+
+    async def register(
+        self,
+        *,
+        app_url: str,
+        is_from_dev_server: bool,
+    ) -> CommResponse:
+        """
+        Handles a registration call.
+        """
+
+        try:
+            self._validate_registration(is_from_dev_server)
+
+            async with httpx.AsyncClient() as client:
+                res = await client.send(
+                    self._build_registration_request(app_url),
+                )
+
+            return self._parse_registration_response(res)
+        except errors.InternalError as err:
+            return CommResponse.from_internal_error(err, self._framework)
+
+    def register_sync(
+        self,
+        *,
+        app_url: str,
+        is_from_dev_server: bool,
+    ) -> CommResponse:
+        """
+        Handles a registration call.
+        """
+
+        try:
+            self._validate_registration(is_from_dev_server)
+
+            with httpx.Client() as client:
+                res = client.send(
+                    self._build_registration_request(app_url),
+                )
+
+            return self._parse_registration_response(res)
+        except errors.InternalError as err:
+            return CommResponse.from_internal_error(err, self._framework)
 
     def _validate_registration(self, is_from_dev_server: bool) -> None:
         if is_from_dev_server and self._is_production:

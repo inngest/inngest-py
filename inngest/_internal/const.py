@@ -23,6 +23,7 @@ class ErrorCode(enum.Enum):
     INVALID_PARAM = "invalid_param"
     INVALID_REQUEST_SIGNATURE = "invalid_request_signature"
     INVALID_RESPONSE_SHAPE = "invalid_response_shape"
+    MISMATCHED_SYNC = "mismatched_sync"
     MISSING_EVENT_KEY = "missing_event_key"
     MISSING_FUNCTION = "missing_function"
     MISSING_HEADER = "missing_header"
