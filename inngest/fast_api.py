@@ -44,7 +44,7 @@ def serve(
     @app.put("/api/inngest")
     async def put_inngest_api(request: fastapi.Request) -> fastapi.Response:
         return _to_response(
-            handler.register(
+            await handler.register(
                 app_url=str(request.url),
                 is_from_dev_server=(
                     request.headers.get(const.HeaderKey.SERVER_KIND.value)

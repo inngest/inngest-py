@@ -22,8 +22,6 @@ class Inngest:
     ) -> None:
         self.app_id = app_id
         self.base_url = base_url
-        self._httpx_client = httpx.AsyncClient()
-        self._httpx_client_sync = httpx.Client()
         self.is_production = is_production or env.is_prod()
         self.logger = logger or logging.getLogger(__name__)
 
@@ -62,7 +60,7 @@ class Inngest:
                 d["ts"] = int(time.time() * 1000)
             body.append(d)
 
-        return self._httpx_client.build_request(
+        return httpx.Client().build_request(
             "POST",
             url,
             headers=headers,
@@ -77,9 +75,10 @@ class Inngest:
         if not isinstance(events, list):
             events = [events]
 
-        res = await self._httpx_client.send(
-            self._build_send_request(events),
-        )
+        async with httpx.AsyncClient() as client:
+            res = await client.send(
+                self._build_send_request(events),
+            )
 
         return _extract_ids(res.json())
 
@@ -90,9 +89,10 @@ class Inngest:
         if not isinstance(events, list):
             events = [events]
 
-        res = self._httpx_client_sync.send(
-            self._build_send_request(events),
-        )
+        with httpx.Client() as client:
+            res = client.send(
+                self._build_send_request(events),
+            )
 
         return _extract_ids(res.json())
 

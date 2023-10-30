@@ -3,14 +3,9 @@ import hmac
 import typing
 import urllib.parse
 
-import requests
-
 from . import const, errors, transforms
 
 Method = typing.Literal["GET", "POST"]
-
-
-requests_session = requests.session()
 
 
 def create_headers(

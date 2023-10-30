@@ -8,6 +8,9 @@ make install
 ## Start Example Servers
 
 ```sh
+# Fast API
+(cd examples/fast_api && make dev)
+
 # Flask
 (cd examples/flask && make dev)
 

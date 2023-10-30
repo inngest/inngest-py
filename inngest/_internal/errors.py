@@ -16,6 +16,16 @@ class InternalError(Exception):
         self.code = code.value
 
 
+class DevServerRegistrationNotAllowed(InternalError):
+    status_code: int = 400
+
+    def __init__(self, message: str | None = None) -> None:
+        super().__init__(
+            code=const.ErrorCode.DEV_SERVER_REGISTRATION_NOT_ALLOWED,
+            message=message,
+        )
+
+
 class InvalidBaseURL(InternalError):
     status_code: int = 500
 
