@@ -61,7 +61,6 @@ class RequestSignature:
     ) -> None:
         self._body = body
         self._is_production = is_production
-        print(dict(headers.items()))
 
         sig_header = headers.get(const.HeaderKey.SIGNATURE.value)
         if sig_header is not None:

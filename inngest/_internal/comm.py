@@ -156,7 +156,6 @@ class CommHandler:
         """
         Handles a function call from the Executor.
         """
-        print("call_function")
 
         try:
             req_sig.validate(self._signing_key)
@@ -170,7 +169,6 @@ class CommHandler:
                 await fn.call(call, self._client, fn_id)
             )
         except errors.InternalError as err:
-            print(err)
             return CommResponse.from_internal_error(err, self._framework)
 
     def call_function_sync(
