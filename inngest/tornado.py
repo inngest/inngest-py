@@ -42,11 +42,9 @@ def serve(
                 raise errors.MissingParam("fnId")
             fn_id = raw_fn_id[0].decode("utf-8")
 
-            headers: dict[str, str] = {}
-
-            for k, v in self.request.headers.items():
-                if isinstance(k, str) and isinstance(v[0], str):
-                    headers[k] = v[0]
+            headers = net.normalize_headers(
+                {k: v[0] for k, v in self.request.headers.items()}
+            )
 
             comm_res = handler.call_function_sync(
                 call=execution.Call.from_dict(json.loads(self.request.body)),
@@ -66,16 +64,16 @@ def serve(
             self.set_status(comm_res.status_code)
 
         def put(self) -> None:
-            remote_ip = (
-                self.request.headers.get(const.HeaderKey.REAL_IP.value)
-                or self.request.headers.get(const.HeaderKey.FORWARDED_FOR.value)
-                or self.request.remote_ip
+            headers = net.normalize_headers(
+                {k: v[0] for k, v in self.request.headers.items()}
             )
 
             comm_res = handler.register_sync(
                 app_url=self.request.full_url(),
-                # TODO: Find a better way to figure this out.
-                is_from_dev_server=remote_ip == "127.0.0.1",
+                is_from_dev_server=(
+                    headers.get(const.HeaderKey.SERVER_KIND.value)
+                    == const.ServerKind.DEV_SERVER.value
+                ),
             )
 
             self.write(json.dumps(comm_res.body))

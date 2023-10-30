@@ -66,14 +66,14 @@ class TestFastAPI(unittest.TestCase):
         if method == "POST":
             res = self.fast_api_client.post(
                 path,
+                content=body,
                 headers=new_headers,
-                json=body.decode("utf-8"),
             )
         elif method == "PUT":
             res = self.fast_api_client.put(
                 path,
+                content=body,
                 headers=new_headers,
-                json=body.decode("utf-8"),
             )
         else:
             raise Exception(f"unsupported method: {method}")

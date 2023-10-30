@@ -23,6 +23,23 @@ def create_headers(
     return headers
 
 
+def normalize_headers(headers: dict[str, str]) -> dict[str, str]:
+    """
+    Ensures that known headers are in the correct casing.
+    """
+
+    new_headers = {}
+
+    for k, v in headers.items():
+        for header_key in const.HeaderKey:
+            if k.lower() == header_key.value.lower():
+                k = header_key.value
+
+        new_headers[k] = v
+
+    return new_headers
+
+
 def parse_url(url: str) -> str:
     parsed = urllib.parse.urlparse(url)
 
@@ -44,6 +61,7 @@ class RequestSignature:
     ) -> None:
         self._body = body
         self._is_production = is_production
+        print(dict(headers.items()))
 
         sig_header = headers.get(const.HeaderKey.SIGNATURE.value)
         if sig_header is not None:

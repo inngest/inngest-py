@@ -17,6 +17,7 @@ def create(
 
     @inngest.create_function_sync(
         fn_id=test_name,
+        retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
     def fn_sync(*, run_id: str, **_kwargs: object) -> None:
@@ -24,6 +25,7 @@ def create(
 
     @inngest.create_function(
         fn_id=test_name,
+        retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
     async def fn_async(*, run_id: str, **_kwargs: object) -> None:

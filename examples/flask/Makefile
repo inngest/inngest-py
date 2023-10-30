@@ -11,4 +11,4 @@ install: check-venv
 	@pip install .
 
 prod: check-venv
-	@export FLASK_ENV=production && ./scripts/start.sh
+	@export ENV=production && ./scripts/start.sh

@@ -27,7 +27,8 @@ def serve(
         fnId: str,  # pylint: disable=invalid-name
         request: fastapi.Request,
     ) -> fastapi.Response:
-        body = await request.json()
+        body = await request.body()
+        headers = net.normalize_headers(dict(request.headers.items()))
 
         return _to_response(
             await handler.call_function(
@@ -35,7 +36,7 @@ def serve(
                 fn_id=fnId,
                 req_sig=net.RequestSignature(
                     body=body,
-                    headers=dict(request.headers.items()),
+                    headers=headers,
                     is_production=client.is_production,
                 ),
             )
@@ -43,11 +44,13 @@ def serve(
 
     @app.put("/api/inngest")
     async def put_inngest_api(request: fastapi.Request) -> fastapi.Response:
+        headers = net.normalize_headers(dict(request.headers.items()))
+
         return _to_response(
             await handler.register(
                 app_url=str(request.url),
                 is_from_dev_server=(
-                    request.headers.get(const.HeaderKey.SERVER_KIND.value)
+                    headers.get(const.HeaderKey.SERVER_KIND.value)
                     == const.ServerKind.DEV_SERVER.value
                 ),
             )
