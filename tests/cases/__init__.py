@@ -3,6 +3,7 @@ import inngest
 from . import (
     base,
     cancel,
+    client_send,
     debounce,
     event_payload,
     function_args,
@@ -23,6 +24,7 @@ def create_cases(
     cases: list[base.Case] = []
     for case in (
         cancel,
+        client_send,
         debounce,
         event_payload,
         function_args,
@@ -47,6 +49,7 @@ def create_cases_sync(
         case.create(client, framework, is_sync=True)
         for case in (
             cancel,
+            client_send,
             debounce,
             event_payload,
             function_args,

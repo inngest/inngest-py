@@ -5,7 +5,7 @@ import os
 import typing
 import urllib.parse
 
-import requests
+import httpx
 
 from inngest._internal import (
     client_lib,
@@ -53,6 +53,21 @@ class CommResponse:
         else:
             self.headers[const.HeaderKey.CONTENT_TYPE.value] = "text/plain"
 
+    @classmethod
+    def from_internal_error(
+        cls,
+        err: errors.InternalError,
+        framework: str,
+    ) -> CommResponse:
+        return cls(
+            body={
+                "code": str(err),
+                "message": str(err),
+            },
+            headers=net.create_headers(framework=framework),
+            status_code=err.status_code,
+        )
+
 
 class CommHandlerBase(typing.Generic[FunctionT]):
     _base_url: str
@@ -98,6 +113,42 @@ class CommHandlerBase(typing.Generic[FunctionT]):
         self._framework = framework
         self._signing_key = signing_key or os.getenv(
             const.EnvKey.SIGNING_KEY.value
+        )
+
+    def _build_registration_request(
+        self,
+        app_url: str,
+    ) -> httpx.Request:
+        registration_url = urllib.parse.urljoin(
+            self._base_url,
+            "/fn/register",
+        )
+
+        body = transforms.prep_body(
+            registration.RegisterRequest(
+                app_name=self._client.app_id,
+                deploy_type=registration.DeployType.PING,
+                framework=self._framework,
+                functions=self.get_function_configs(app_url),
+                sdk=f"{const.LANGUAGE}:v{const.VERSION}",
+                url=app_url,
+                # TODO: Do this for real.
+                v="0.1",
+            ).to_dict()
+        )
+
+        headers = net.create_headers(framework=self._framework)
+        if self._signing_key:
+            headers[
+                "Authorization"
+            ] = f"Bearer {transforms.hash_signing_key(self._signing_key)}"
+
+        return httpx.Client().build_request(
+            "POST",
+            registration_url,
+            headers=headers,
+            json=body,
+            timeout=30,
         )
 
     def _create_response(
@@ -156,27 +207,9 @@ class CommHandlerBase(typing.Generic[FunctionT]):
             raise errors.InvalidConfig("no functions found")
         return configs
 
-    def _convert_error_to_response(
-        self,
-        err: errors.InternalError,
-    ) -> CommResponse:
-        body = {
-            "code": str(err),
-            "message": str(err),
-        }
-        self._logger.error(
-            "function call failed",
-            extra=body,
-        )
-        return CommResponse(
-            body=body,
-            headers=net.create_headers(framework=self._framework),
-            status_code=err.status_code,
-        )
-
     def _parse_registration_response(
         self,
-        server_res: requests.Response,
+        server_res: httpx.Response,
     ) -> CommResponse:
         comm_res = CommResponse(
             headers=net.create_headers(framework=self._framework)
@@ -219,77 +252,8 @@ class CommHandlerBase(typing.Generic[FunctionT]):
         comm_res.body = body
         return comm_res
 
-    def register(
-        self,
-        *,
-        app_url: str,
-        is_from_dev_server: bool,
-    ) -> CommResponse:
-        """
-        Handles a registration call.
-        """
-
-        try:
-            if is_from_dev_server and self._is_production:
-                self._logger.error(
-                    "Dev Server registration not allowed in production mode"
-                )
-
-                return CommResponse(
-                    body={
-                        "code": const.ErrorCode.DEV_SERVER_REGISTRATION_NOT_ALLOWED.value,
-                        "message": "dev server not allowed",
-                    },
-                    headers={},
-                    status_code=400,
-                )
-
-            registration_url = urllib.parse.urljoin(
-                self._base_url,
-                "/fn/register",
-            )
-
-            body = transforms.prep_body(
-                registration.RegisterRequest(
-                    app_name=self._client.app_id,
-                    deploy_type=registration.DeployType.PING,
-                    framework=self._framework,
-                    functions=self.get_function_configs(app_url),
-                    sdk=f"{const.LANGUAGE}:v{const.VERSION}",
-                    url=app_url,
-                    # TODO: Do this for real.
-                    v="0.1",
-                ).to_dict()
-            )
-
-            headers = net.create_headers(framework=self._framework)
-            if self._signing_key:
-                headers[
-                    "Authorization"
-                ] = f"Bearer {transforms.hash_signing_key(self._signing_key)}"
-
-            res = net.requests_session.post(
-                registration_url,
-                json=body,
-                headers=headers,
-                timeout=30,
-            )
-
-            return self._parse_registration_response(res)
-        except errors.InternalError as err:
-            self._logger.error(
-                "registration failed",
-                extra={
-                    "error_code": err.code,
-                    "error_message": str(err),
-                },
-            )
-
-            return CommResponse(
-                body={
-                    "code": err.code,
-                    "message": str(err),
-                },
-                headers=net.create_headers(framework=self._framework),
-                status_code=err.status_code,
+    def _validate_registration(self, is_from_dev_server: bool) -> None:
+        if is_from_dev_server and self._is_production:
+            raise errors.DevServerRegistrationNotAllowed(
+                "Dev Server registration not allowed in production mode"
             )

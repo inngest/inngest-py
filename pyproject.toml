@@ -11,7 +11,7 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 
-dependencies = ["httpx==0.25.0", "pydantic>=2.1.1", "requests>=2.27.0"]
+dependencies = ["httpx>=0.22.0", "pydantic>=2.1.1"]
 
 [project.optional-dependencies]
 extra = [
@@ -26,7 +26,6 @@ extra = [
     "python-json-logger==2.0.7",
     "toml==0.10.2",
     "tornado==6.3.3",
-    "types-requests==2.27.31",
     "types-toml==0.10.8.7",
     "types-tornado==5.1.1",
     "uvicorn==0.23.2",

@@ -6,6 +6,3 @@ check-venv:
 
 dev: check-venv
 	@sh ./scripts/start.sh
-
-prod: check-venv
-	@sh ./scripts/start.sh
