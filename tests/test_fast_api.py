@@ -39,20 +39,18 @@ class TestFastAPI(unittest.TestCase):
                 if isinstance(case.fn, inngest.Function)
             ],
         )
-
         cls.fast_api_client = fastapi.testclient.TestClient(cls.app)
+        cls.proxy = http_proxy.Proxy(cls.on_proxy_request).start()
+        base.register(cls.proxy.port)
 
-    def setUp(self) -> None:
-        super().setUp()
-        base.set_up(self)
-        base.register(self.proxy.port)
+    @classmethod
+    def tearDownClass(cls) -> None:
+        super().tearDownClass()
+        cls.proxy.stop()
 
-    def tearDown(self) -> None:
-        super().tearDown()
-        base.tear_down(self)
-
+    @classmethod
     def on_proxy_request(
-        self,
+        cls,
         *,
         body: bytes | None,
         headers: dict[str, list[str]],
@@ -65,13 +63,13 @@ class TestFastAPI(unittest.TestCase):
         new_headers = {key: value[0] for key, value in headers.items()}
 
         if method == "POST":
-            res = self.fast_api_client.post(
+            res = cls.fast_api_client.post(
                 path,
                 content=body,
                 headers=new_headers,
             )
         elif method == "PUT":
-            res = self.fast_api_client.put(
+            res = cls.fast_api_client.put(
                 path,
                 content=body,
                 headers=new_headers,
@@ -99,7 +97,7 @@ class TestFastAPIRegistration(unittest.TestCase):
         """
 
         client = inngest.Inngest(
-            app_id="fast_api",
+            app_id="fast_api_registration",
             event_key="test",
             is_production=True,
         )

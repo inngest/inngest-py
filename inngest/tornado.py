@@ -35,6 +35,19 @@ def serve(
         def data_received(self, chunk: bytes) -> typing.Awaitable[None] | None:
             return None
 
+        def get(self) -> None:
+            headers = net.normalize_headers(dict(self.request.headers.items()))
+            is_from_dev_server = (
+                headers.get(const.HeaderKey.SERVER_KIND.value)
+                == const.ServerKind.DEV_SERVER.value
+            )
+
+            comm_res = handler.inspect(is_from_dev_server)
+            self.write(json.dumps(comm_res.body))
+            for k, v in comm_res.headers.items():
+                self.add_header(k, v)
+            self.set_status(comm_res.status_code)
+
         def post(self) -> None:
             fn_id: str | None
             raw_fn_id = self.request.query_arguments.get("fnId")
@@ -53,12 +66,9 @@ def serve(
                     is_production=client.is_production,
                 ),
             )
-
             self.write(json.dumps(comm_res.body))
-
             for k, v in comm_res.headers.items():
                 self.add_header(k, v)
-
             self.set_status(comm_res.status_code)
 
         def put(self) -> None:
@@ -71,12 +81,9 @@ def serve(
                     == const.ServerKind.DEV_SERVER.value
                 ),
             )
-
             self.write(json.dumps(comm_res.body))
-
             for k, v in comm_res.headers.items():
                 self.add_header(k, v)
-
             self.set_status(comm_res.status_code)
 
     app.add_handlers(r".*", [("/api/inngest", InngestHandler)])

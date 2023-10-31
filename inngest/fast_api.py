@@ -22,6 +22,18 @@ def serve(
         signing_key=signing_key,
     )
 
+    @app.get("/api/inngest")
+    async def get_api_inngest(
+        request: fastapi.Request,
+    ) -> fastapi.Response:
+        headers = net.normalize_headers(dict(request.headers.items()))
+        is_from_dev_server = (
+            headers.get(const.HeaderKey.SERVER_KIND.value)
+            == const.ServerKind.DEV_SERVER.value
+        )
+
+        return _to_response(handler.inspect(is_from_dev_server))
+
     @app.post("/api/inngest")
     async def post_inngest_api(
         fnId: str,  # pylint: disable=invalid-name

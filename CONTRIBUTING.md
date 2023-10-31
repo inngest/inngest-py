@@ -5,7 +5,7 @@ python -m venv .venv && source .venv/bin/activate
 make install
 ```
 
-## Start Example Servers
+## Start example servers
 
 ```sh
 # Fast API
@@ -18,7 +18,7 @@ make install
 (cd examples/tornado && make dev)
 ```
 
-## Testing
+## Test
 
 Run before committing:
 
@@ -56,6 +56,18 @@ DEV_SERVER_PORT=9000
 # Show Dev Server stdout and stderr
 DEV_SERVER_VERBOSE=1
 ```
+
+# Publish
+
+Change the package version in `pyproject.toml` and `const.py`.
+
+Create and push a git tag that matches the package version. For example, the following command tags and releases version `1.2.3`:
+
+```sh
+(export TAG=1.2.3 && git tag $TAG && git push origin $TAG)
+```
+
+This will start CI for the tag, including publishing to PyPI.
 
 # Architecture
 

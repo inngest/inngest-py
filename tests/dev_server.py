@@ -2,6 +2,9 @@ import os
 import signal
 import subprocess
 import threading
+import time
+
+import httpx
 
 from . import net
 
@@ -37,6 +40,7 @@ class _DevServer:
     def start(self) -> None:
         if not self._enabled:
             return
+        print("Starting Dev Server")
 
         stderr: int | None = subprocess.DEVNULL
         stdout: int | None = subprocess.DEVNULL
@@ -66,9 +70,22 @@ class _DevServer:
         self._thread.start()
         self._thread.join(timeout=10)
 
+        print("Waiting for Dev Server to start")
+        start_time = time.time()
+        while True:
+            if time.time() - start_time > 10:
+                raise Exception("timeout waiting for dev server to start")
+
+            try:
+                httpx.get(f"http://127.0.0.1:{self.port}")
+                break
+            except Exception:
+                pass
+
     def stop(self) -> None:
         if not self._enabled:
             return
+        print("Stopping Dev Server")
 
         if self._process is None:
             raise Exception("missing process")

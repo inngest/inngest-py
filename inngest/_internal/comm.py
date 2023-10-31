@@ -291,6 +291,26 @@ class CommHandler:
             return result.Err(errors.InvalidConfig("no functions found"))
         return result.Ok(configs)
 
+    def inspect(self, is_from_dev_server: bool) -> CommResponse:
+        """
+        Used by Dev Server to discover apps.
+        """
+
+        if is_from_dev_server and self._is_production:
+            # Tell Dev Server to leave the app alone since it's in production
+            # mode.
+            return CommResponse(
+                body={},
+                headers={},
+                status_code=403,
+            )
+
+        return CommResponse(
+            body={},
+            headers=net.create_headers(framework=self._framework),
+            status_code=200,
+        )
+
     def _parse_registration_response(
         self,
         server_res: httpx.Response,

@@ -1,12 +1,13 @@
 # Dependencies
-.venv
+.venv/
 
 # Build and tools
-*.egg-info
-.mypy_cache
-.pytest_cache
-__pycache__
-build
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+__pycache__/
+build/
+dist/
 
 # Env vars
 *.env*

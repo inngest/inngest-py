@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logHandler)
 
 inngest_client = inngest.Inngest(
-    app_id="flask_example",
+    app_id="fast_api_example",
     logger=logger,
     is_production=os.getenv("ENV") == "production",
 )

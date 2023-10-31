@@ -40,25 +40,24 @@ class TestFlask(unittest.TestCase):
             ],
         )
         cls.app = app.test_client()
+        cls.proxy = http_proxy.Proxy(cls.on_proxy_request).start()
+        base.register(cls.proxy.port)
 
-    def setUp(self) -> None:
-        super().setUp()
-        base.set_up(self)
-        base.register(self.proxy.port)
+    @classmethod
+    def tearDownClass(cls) -> None:
+        super().tearDownClass()
+        cls.proxy.stop()
 
-    def tearDown(self) -> None:
-        super().tearDown()
-        base.tear_down(self)
-
+    @classmethod
     def on_proxy_request(
-        self,
+        cls,
         *,
         body: bytes | None,
         headers: dict[str, list[str]],
         method: str,
         path: str,
     ) -> http_proxy.Response:
-        res = self.app.open(
+        res = cls.app.open(
             method=method,
             path=path,
             headers=headers,
@@ -85,7 +84,7 @@ class TestFastAPIRegistration(unittest.TestCase):
         """
 
         client = inngest.Inngest(
-            app_id="flask",
+            app_id="flask_registration",
             event_key="test",
             is_production=True,
         )
