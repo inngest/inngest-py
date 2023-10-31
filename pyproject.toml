@@ -6,7 +6,6 @@ readme = "README.md"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Framework :: Flask",
-    "Framework :: Tornado",
     "Intended Audience :: Developers",
 ]
 requires-python = ">=3.10"
