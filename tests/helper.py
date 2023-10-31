@@ -37,7 +37,7 @@ class _Client:
         while True:
             res = self._gql.query(gql.Query(query, {"run_id": run_id}))
             if result.is_ok(res):
-                run = res.value.data.get("functionRun")
+                run = res.ok_value.data.get("functionRun")
                 if not isinstance(run, dict):
                     raise Exception("unexpected response")
                 if run["status"] == status.value:

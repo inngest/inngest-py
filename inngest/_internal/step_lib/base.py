@@ -56,3 +56,8 @@ class Interrupt(BaseException):
         self.name = name
         self.op = op
         self.opts = opts
+
+
+class WaitForEventOpts(types.BaseModel):
+    if_exp: str | None
+    timeout: str

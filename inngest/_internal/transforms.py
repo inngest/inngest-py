@@ -2,7 +2,7 @@ import datetime
 import hashlib
 import re
 
-from . import errors, types
+from . import errors, result, types
 
 
 def hash_signing_key(key: str) -> str:
@@ -74,22 +74,26 @@ class _Duration:
         return count * cls.day(7)
 
 
-def to_duration_str(ms: int | datetime.timedelta) -> str:
+def to_duration_str(
+    ms: int | datetime.timedelta,
+) -> result.Result[str, Exception]:
     if isinstance(ms, datetime.timedelta):
         ms = int(ms.total_seconds() * 1000)
 
     if ms < _Duration.second():
-        raise errors.InvalidConfig("duration must be at least 1 second")
+        return result.Err(
+            errors.InvalidConfig("duration must be at least 1 second")
+        )
     if ms < _Duration.minute():
-        return f"{ms // _Duration.second()}s"
+        return result.Ok(f"{ms // _Duration.second()}s")
     if ms < _Duration.hour():
-        return f"{ms // _Duration.minute()}m"
+        return result.Ok(f"{ms // _Duration.minute()}m")
     if ms < _Duration.day():
-        return f"{ms // _Duration.hour()}h"
+        return result.Ok(f"{ms // _Duration.hour()}h")
     if ms < _Duration.week():
-        return f"{ms // _Duration.day()}d"
+        return result.Ok(f"{ms // _Duration.day()}d")
 
-    return f"{ms // _Duration.week()}w"
+    return result.Ok(f"{ms // _Duration.week()}w")
 
 
 def to_iso_utc(value: datetime.datetime) -> str:

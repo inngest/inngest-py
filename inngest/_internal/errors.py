@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import http
+
 import pydantic
 
 from . import const
@@ -7,7 +9,7 @@ from . import const
 
 class InternalError(Exception):
     code: str
-    status_code: int = 500
+    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 
     def __init__(
         self, *, code: const.ErrorCode, message: str | None = None
@@ -17,7 +19,7 @@ class InternalError(Exception):
 
 
 class DevServerRegistrationNotAllowed(InternalError):
-    status_code: int = 400
+    status_code: int = http.HTTPStatus.BAD_REQUEST
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
@@ -27,7 +29,7 @@ class DevServerRegistrationNotAllowed(InternalError):
 
 
 class InvalidBaseURL(InternalError):
-    status_code: int = 500
+    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
@@ -37,7 +39,7 @@ class InvalidBaseURL(InternalError):
 
 
 class InvalidConfig(InternalError):
-    status_code: int = 500
+    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
@@ -80,7 +82,7 @@ class InvalidConfig(InternalError):
 
 
 class MismatchedSync(InternalError):
-    status_code: int = 500
+    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
@@ -90,7 +92,7 @@ class MismatchedSync(InternalError):
 
 
 class InvalidRequestSignature(InternalError):
-    status_code: int = 401
+    status_code: int = http.HTTPStatus.UNAUTHORIZED
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
@@ -100,7 +102,7 @@ class InvalidRequestSignature(InternalError):
 
 
 class InvalidBody(InternalError):
-    status_code: int = 500
+    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
@@ -110,7 +112,7 @@ class InvalidBody(InternalError):
 
 
 class MissingEventKey(InternalError):
-    status_code: int = 500
+    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
@@ -120,7 +122,7 @@ class MissingEventKey(InternalError):
 
 
 class MissingFunction(InternalError):
-    status_code: int = 400
+    status_code: int = http.HTTPStatus.BAD_REQUEST
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
@@ -130,7 +132,7 @@ class MissingFunction(InternalError):
 
 
 class MissingHeader(InternalError):
-    status_code: int = 400
+    status_code: int = http.HTTPStatus.BAD_REQUEST
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
@@ -140,7 +142,7 @@ class MissingHeader(InternalError):
 
 
 class MissingParam(InternalError):
-    status_code: int = 400
+    status_code: int = http.HTTPStatus.BAD_REQUEST
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
@@ -150,7 +152,7 @@ class MissingParam(InternalError):
 
 
 class MissingSigningKey(InternalError):
-    status_code: int = 500
+    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
@@ -160,7 +162,7 @@ class MissingSigningKey(InternalError):
 
 
 class UnserializableOutput(InternalError):
-    status_code: int = 500
+    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(

@@ -4,6 +4,8 @@ import typing
 
 import pydantic
 
+from . import result
+
 T = typing.TypeVar("T")
 
 EmptySentinel = object()
@@ -40,8 +42,11 @@ class BaseModel(pydantic.BaseModel):
     ) -> BaseModelT:
         return cls.model_validate(raw)
 
-    def to_dict(self) -> dict[str, object]:
-        return self.model_dump(mode="json")
+    def to_dict(self) -> result.Result[dict[str, object], Exception]:
+        try:
+            return result.Ok(self.model_dump(mode="json"))
+        except Exception as err:
+            return result.Err(err)
 
 
 BaseModelT = typing.TypeVar("BaseModelT", bound=BaseModel)

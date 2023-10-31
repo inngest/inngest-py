@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import http
 import logging
 import os
 import urllib.parse
@@ -15,6 +16,7 @@ from inngest._internal import (
     function_config,
     net,
     registration,
+    result,
     transforms,
 )
 
@@ -49,18 +51,24 @@ class CommResponse:
             self.headers[const.HeaderKey.CONTENT_TYPE.value] = "text/plain"
 
     @classmethod
-    def from_internal_error(
+    def from_error(
         cls,
-        err: errors.InternalError,
+        err: Exception,
         framework: str,
     ) -> CommResponse:
+        code = const.ErrorCode.UNKNOWN.value
+        status_code = http.HTTPStatus.INTERNAL_SERVER_ERROR.value
+        if isinstance(err, errors.InternalError):
+            code = err.code
+            status_code = err.status_code
+
         return cls(
             body={
-                "code": err.code,
+                "code": code,
                 "message": str(err),
             },
             headers=net.create_headers(framework=framework),
-            status_code=err.status_code,
+            status_code=status_code,
         )
 
 
@@ -117,23 +125,31 @@ class CommHandler:
     def _build_registration_request(
         self,
         app_url: str,
-    ) -> httpx.Request:
+    ) -> result.Result[httpx.Request, Exception]:
         registration_url = urllib.parse.urljoin(
             self._api_origin,
             "/fn/register",
         )
 
-        body = transforms.prep_body(
-            registration.RegisterRequest(
-                app_name=self._client.app_id,
-                deploy_type=registration.DeployType.PING,
-                framework=self._framework,
-                functions=self.get_function_configs(app_url),
-                sdk=f"{const.LANGUAGE}:v{const.VERSION}",
-                url=app_url,
-                v="0.1",
-            ).to_dict()
-        )
+        match self.get_function_configs(app_url):
+            case result.Ok(fn_configs):
+                pass
+            case result.Err(err):
+                return result.Err(err)
+
+        match registration.RegisterRequest(
+            app_name=self._client.app_id,
+            deploy_type=registration.DeployType.PING,
+            framework=self._framework,
+            functions=fn_configs,
+            sdk=f"{const.LANGUAGE}:v{const.VERSION}",
+            url=app_url,
+            v="0.1",
+        ).to_dict():
+            case result.Ok(body):
+                body = transforms.prep_body(body)
+            case result.Err(err):
+                return result.Err(err)
 
         headers = net.create_headers(framework=self._framework)
         if self._signing_key:
@@ -141,12 +157,14 @@ class CommHandler:
                 "Authorization"
             ] = f"Bearer {transforms.hash_signing_key(self._signing_key)}"
 
-        return httpx.Client().build_request(
-            "POST",
-            registration_url,
-            headers=headers,
-            json=body,
-            timeout=30,
+        return result.Ok(
+            httpx.Client().build_request(
+                "POST",
+                registration_url,
+                headers=headers,
+                json=body,
+                timeout=30,
+            )
         )
 
     async def call_function(
@@ -160,19 +178,25 @@ class CommHandler:
         Handles a function call from the Executor.
         """
 
-        try:
-            req_sig.validate(self._signing_key)
-            fn = self._get_function(fn_id)
-            if not isinstance(fn, function.Function):
-                raise errors.MismatchedSync(
-                    f"function {fn_id} is not asynchronous"
-                )
-
-            return self._create_response(
-                await fn.call(call, self._client, fn_id)
+        validation_res = req_sig.validate(self._signing_key)
+        if result.is_err(validation_res):
+            return CommResponse.from_error(
+                validation_res.err_value, self._framework
             )
-        except errors.InternalError as err:
-            return CommResponse.from_internal_error(err, self._framework)
+
+        match self._get_function(fn_id):
+            case result.Ok(fn):
+                pass
+            case result.Err(err):
+                return CommResponse.from_error(err, self._framework)
+
+        if not isinstance(fn, function.Function):
+            return CommResponse.from_error(
+                errors.MismatchedSync(f"function {fn_id} is not asynchronous"),
+                self._framework,
+            )
+
+        return self._create_response(await fn.call(call, self._client, fn_id))
 
     def call_function_sync(
         self,
@@ -185,17 +209,25 @@ class CommHandler:
         Handles a function call from the Executor.
         """
 
-        try:
-            req_sig.validate(self._signing_key)
-            fn = self._get_function(fn_id)
-            if not isinstance(fn, function.FunctionSync):
-                raise errors.MismatchedSync(
-                    f"function {fn_id} is not synchronous"
-                )
+        validation_res = req_sig.validate(self._signing_key)
+        if result.is_err(validation_res):
+            return CommResponse.from_error(
+                validation_res.err_value, self._framework
+            )
 
-            return self._create_response(fn.call(call, self._client, fn_id))
-        except errors.InternalError as err:
-            return CommResponse.from_internal_error(err, self._framework)
+        match self._get_function(fn_id):
+            case result.Ok(fn):
+                pass
+            case result.Err(err):
+                return CommResponse.from_error(err, self._framework)
+
+        if not isinstance(fn, function.FunctionSync):
+            return CommResponse.from_error(
+                errors.MismatchedSync(f"function {fn_id} is not asynchronous"),
+                self._framework,
+            )
+
+        return self._create_response(fn.call(call, self._client, fn_id))
 
     def _create_response(
         self,
@@ -211,7 +243,11 @@ class CommHandler:
         if isinstance(call_res, list):
             out: list[dict[str, object]] = []
             for item in call_res:
-                out.append(item.to_dict())
+                match item.to_dict():
+                    case result.Ok(d):
+                        out.append(d)
+                    case result.Err(err):
+                        return CommResponse.from_error(err, self._framework)
 
             comm_res.body = transforms.prep_body(out)
             comm_res.status_code = 206
@@ -228,21 +264,21 @@ class CommHandler:
 
     def _get_function(
         self, fn_id: str
-    ) -> function.Function | function.FunctionSync:
+    ) -> result.Result[function.Function | function.FunctionSync, Exception]:
         # Look for the function ID in the list of user functions, but also
         # look for it in the list of on_failure functions.
         for _fn in self._fns.values():
             if _fn.get_id() == fn_id:
-                return _fn
+                return result.Ok(_fn)
             if _fn.on_failure_fn_id == fn_id:
-                return _fn
+                return result.Ok(_fn)
 
-        raise errors.MissingFunction(f"function {fn_id} not found")
+        return result.Err(errors.MissingFunction(f"function {fn_id} not found"))
 
     def get_function_configs(
         self,
         app_url: str,
-    ) -> list[function_config.FunctionConfig]:
+    ) -> result.Result[list[function_config.FunctionConfig], Exception]:
         configs: list[function_config.FunctionConfig] = []
         for fn in self._fns.values():
             config = fn.get_config(app_url)
@@ -252,8 +288,8 @@ class CommHandler:
                 configs.append(config.on_failure)
 
         if len(configs) == 0:
-            raise errors.InvalidConfig("no functions found")
-        return configs
+            return result.Err(errors.InvalidConfig("no functions found"))
+        return result.Ok(configs)
 
     def _parse_registration_response(
         self,
@@ -310,17 +346,22 @@ class CommHandler:
         Handles a registration call.
         """
 
-        try:
-            self._validate_registration(is_from_dev_server)
+        match self._validate_registration(is_from_dev_server):
+            case result.Ok(_):
+                pass
+            case result.Err(err):
+                return CommResponse.from_error(err, self._framework)
 
-            async with httpx.AsyncClient() as client:
-                res = await client.send(
-                    self._build_registration_request(app_url),
-                )
+        async with httpx.AsyncClient() as client:
+            match self._build_registration_request(app_url):
+                case result.Ok(req):
+                    res = self._parse_registration_response(
+                        await client.send(req)
+                    )
+                case result.Err(err):
+                    return CommResponse.from_error(err, self._framework)
 
-            return self._parse_registration_response(res)
-        except errors.InternalError as err:
-            return CommResponse.from_internal_error(err, self._framework)
+        return res
 
     def register_sync(
         self,
@@ -332,20 +373,29 @@ class CommHandler:
         Handles a registration call.
         """
 
-        try:
-            self._validate_registration(is_from_dev_server)
+        match self._validate_registration(is_from_dev_server):
+            case result.Ok(_):
+                pass
+            case result.Err(err):
+                return CommResponse.from_error(err, self._framework)
 
-            with httpx.Client() as client:
-                res = client.send(
-                    self._build_registration_request(app_url),
-                )
+        with httpx.Client() as client:
+            match self._build_registration_request(app_url):
+                case result.Ok(req):
+                    res = self._parse_registration_response(client.send(req))
+                case result.Err(err):
+                    return CommResponse.from_error(err, self._framework)
 
-            return self._parse_registration_response(res)
-        except errors.InternalError as err:
-            return CommResponse.from_internal_error(err, self._framework)
+        return res
 
-    def _validate_registration(self, is_from_dev_server: bool) -> None:
+    def _validate_registration(
+        self,
+        is_from_dev_server: bool,
+    ) -> result.Result[None, Exception]:
         if is_from_dev_server and self._is_production:
-            raise errors.DevServerRegistrationNotAllowed(
-                "Dev Server registration not allowed in production mode"
+            return result.Err(
+                errors.DevServerRegistrationNotAllowed(
+                    "Dev Server registration not allowed in production mode"
+                )
             )
+        return result.Ok(None)

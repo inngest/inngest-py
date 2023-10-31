@@ -7,6 +7,7 @@ from inngest._internal import (
     errors,
     event_lib,
     execution,
+    result,
     transforms,
     types,
 )
@@ -140,11 +141,20 @@ class Step(base.StepBase):
             # Fulfilled by an event
             return event_lib.Event.model_validate(memo)
 
-        opts: dict[str, object] = {
-            "timeout": transforms.to_duration_str(timeout),
-        }
-        if if_exp is not None:
-            opts["if"] = if_exp
+        match transforms.to_duration_str(timeout):
+            case result.Ok(timeout_str):
+                pass
+            case result.Err(err):
+                raise err
+
+        match base.WaitForEventOpts(
+            if_exp=if_exp,
+            timeout=timeout_str,
+        ).to_dict():
+            case result.Ok(opts):
+                pass
+            case result.Err(err):
+                raise err
 
         raise base.Interrupt(
             hashed_id=hashed_id,

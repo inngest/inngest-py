@@ -1,6 +1,6 @@
 import datetime
 
-from . import transforms
+from . import result, transforms
 
 
 def test_hash_signing_key() -> None:
@@ -12,5 +12,14 @@ def test_hash_signing_key() -> None:
 
 
 def test_to_duration_str() -> None:
-    assert transforms.to_duration_str(1000) == "1s"
-    assert transforms.to_duration_str(datetime.timedelta(minutes=2)) == "2m"
+    match transforms.to_duration_str(1000):
+        case result.Ok(out):
+            assert out == "1s"
+        case result.Err(err):
+            raise err
+
+    match transforms.to_duration_str(datetime.timedelta(minutes=2)):
+        case result.Ok(out):
+            assert out == "2m"
+        case result.Err(err):
+            raise err

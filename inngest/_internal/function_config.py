@@ -5,7 +5,7 @@ import typing
 
 import pydantic
 
-from . import errors, transforms, types
+from . import errors, result, transforms, types
 
 
 class _BaseConfig(types.BaseModel):
@@ -27,7 +27,12 @@ class Batch(_BaseConfig):
     ) -> str | None:
         if value is None:
             return None
-        return transforms.to_duration_str(value)
+        match transforms.to_duration_str(value):
+            case result.Ok(out):
+                pass
+            case result.Err(err):
+                raise err
+        return out
 
 
 class Cancel(_BaseConfig):
@@ -42,7 +47,12 @@ class Cancel(_BaseConfig):
     ) -> str | None:
         if value is None:
             return None
-        return transforms.to_duration_str(value)
+        match transforms.to_duration_str(value):
+            case result.Ok(out):
+                pass
+            case result.Err(err):
+                raise err
+        return out
 
 
 class Debounce(_BaseConfig):
@@ -56,7 +66,12 @@ class Debounce(_BaseConfig):
     ) -> str | None:
         if value is None:
             return None
-        return transforms.to_duration_str(value)
+        match transforms.to_duration_str(value):
+            case result.Ok(out):
+                pass
+            case result.Err(err):
+                raise err
+        return out
 
 
 class FunctionConfig(_BaseConfig):
@@ -69,12 +84,6 @@ class FunctionConfig(_BaseConfig):
     steps: dict[str, Step]
     throttle: Throttle | None = None
     triggers: list[TriggerCron | TriggerEvent]
-
-    def _get_url(self) -> str:
-        steps = list(self.steps.values())
-        if len(steps) == 0:
-            raise errors.InvalidConfig("no steps found")
-        return list(self.steps.values())[0].runtime.url
 
 
 class RateLimit(_BaseConfig):
@@ -89,7 +98,12 @@ class RateLimit(_BaseConfig):
     ) -> str | None:
         if value is None:
             return None
-        return transforms.to_duration_str(value)
+        match transforms.to_duration_str(value):
+            case result.Ok(out):
+                pass
+            case result.Err(err):
+                raise err
+        return out
 
 
 class Retries(_BaseConfig):
@@ -120,7 +134,12 @@ class Throttle(_BaseConfig):
     ) -> str | None:
         if value is None:
             return None
-        return transforms.to_duration_str(value)
+        match transforms.to_duration_str(value):
+            case result.Ok(out):
+                pass
+            case result.Err(err):
+                raise err
+        return out
 
 
 class TriggerCron(_BaseConfig):

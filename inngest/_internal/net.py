@@ -3,7 +3,7 @@ import hmac
 import typing
 import urllib.parse
 
-from . import const, errors, transforms
+from . import const, errors, result, transforms
 
 Method = typing.Literal["GET", "POST"]
 
@@ -70,18 +70,24 @@ class RequestSignature:
             if "s" in parsed:
                 self._signature = parsed["s"][0]
 
-    def validate(self, signing_key: str | None) -> None:
+    def validate(
+        self, signing_key: str | None
+    ) -> result.Result[None, Exception]:
         if not self._is_production:
-            return
+            return result.Ok(None)
 
         if signing_key is None:
-            raise errors.MissingSigningKey(
-                "cannot validate signature in production mode without a signing key"
+            return result.Err(
+                errors.MissingSigningKey(
+                    "cannot validate signature in production mode without a signing key"
+                )
             )
 
         if self._signature is None:
-            raise errors.MissingHeader(
-                f"cannot validate signature in production mode without a {const.HeaderKey.SIGNATURE.value} header"
+            return result.Err(
+                errors.MissingHeader(
+                    f"cannot validate signature in production mode without a {const.HeaderKey.SIGNATURE.value} header"
+                )
             )
 
         mac = hmac.new(
@@ -91,4 +97,6 @@ class RequestSignature:
         )
         mac.update(str(self._timestamp).encode("utf-8"))
         if not hmac.compare_digest(self._signature, mac.hexdigest()):
-            raise errors.InvalidRequestSignature()
+            return result.Err(errors.InvalidRequestSignature())
+
+        return result.Ok(None)

@@ -7,7 +7,7 @@ import urllib.parse
 
 import httpx
 
-from . import const, env, errors, event_lib, net
+from . import const, env, errors, event_lib, net, result
 
 
 class Inngest:
@@ -47,25 +47,32 @@ class Inngest:
     def _build_send_request(
         self,
         events: list[event_lib.Event],
-    ) -> httpx.Request:
+    ) -> result.Result[httpx.Request, Exception]:
         url = urllib.parse.urljoin(self._event_origin, f"/e/{self._event_key}")
         headers = net.create_headers()
 
         body = []
         for event in events:
-            d = event.to_dict()
+            match event.to_dict():
+                case result.Ok(d):
+                    pass
+                case result.Err(err):
+                    return result.Err(err)
+
             if d.get("id") == "":
                 del d["id"]
             if d.get("ts") == 0:
                 d["ts"] = int(time.time() * 1000)
             body.append(d)
 
-        return httpx.Client().build_request(
-            "POST",
-            url,
-            headers=headers,
-            json=body,
-            timeout=30,
+        return result.Ok(
+            httpx.Client().build_request(
+                "POST",
+                url,
+                headers=headers,
+                json=body,
+                timeout=30,
+            )
         )
 
     async def send(
@@ -76,11 +83,12 @@ class Inngest:
             events = [events]
 
         async with httpx.AsyncClient() as client:
-            res = await client.send(
-                self._build_send_request(events),
-            )
-
-        return _extract_ids(res.json())
+            match self._build_send_request(events):
+                case result.Ok(req):
+                    ids = _extract_ids((await client.send(req)).json())
+                case result.Err(err):
+                    raise err
+        return ids
 
     def send_sync(
         self,
@@ -90,11 +98,12 @@ class Inngest:
             events = [events]
 
         with httpx.Client() as client:
-            res = client.send(
-                self._build_send_request(events),
-            )
-
-        return _extract_ids(res.json())
+            match self._build_send_request(events):
+                case result.Ok(req):
+                    ids = _extract_ids(client.send(req).json())
+                case result.Err(err):
+                    raise err
+        return ids
 
 
 def _extract_ids(body: object) -> list[str]:

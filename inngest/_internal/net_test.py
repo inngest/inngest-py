@@ -3,9 +3,7 @@ import hmac
 import json
 import time
 
-import pytest
-
-from . import const, errors, net
+from . import const, errors, net, result
 
 
 def test_success() -> None:
@@ -18,7 +16,7 @@ def test_success() -> None:
     }
 
     req_sig = net.RequestSignature(body, headers, is_production=True)
-    req_sig.validate(signing_key)
+    assert result.is_ok(req_sig.validate(signing_key))
 
 
 def test_body_tamper() -> None:
@@ -33,8 +31,9 @@ def test_body_tamper() -> None:
     body = json.dumps({"msg": "you've been hacked"}).encode("utf-8")
     req_sig = net.RequestSignature(body, headers, is_production=True)
 
-    with pytest.raises(errors.InvalidRequestSignature):
-        req_sig.validate(signing_key)
+    validation = req_sig.validate(signing_key)
+    assert result.is_err(validation)
+    assert isinstance(validation.err_value, errors.InvalidRequestSignature)
 
 
 def _sign(body: bytes, signing_key: str, unix_ms: int) -> str:

@@ -4,10 +4,8 @@ import datetime
 import logging
 import unittest
 
-import pytest
-
 import inngest
-from inngest._internal import errors
+from inngest._internal import errors, result
 
 from . import comm
 
@@ -56,7 +54,13 @@ class Test_get_function_configs(  # pylint: disable=invalid-name
             functions=[fn],
             logger=self.client.logger,
         )
-        handler.get_function_configs("http://foo.bar")
+        assert result.is_ok(handler.get_function_configs("http://foo.bar"))
+
+        match handler.get_function_configs("http://foo.bar"):
+            case result.Ok(_):
+                assert True
+            case result.Err(err):
+                assert False, f"Unexpected error: {err}"
 
     def test_no_functions(self) -> None:
         functions: list[inngest.FunctionSync] = []
@@ -69,5 +73,12 @@ class Test_get_function_configs(  # pylint: disable=invalid-name
             logger=self.client.logger,
         )
 
-        with pytest.raises(errors.InvalidConfig, match="no functions found"):
-            handler.get_function_configs("http://foo.bar")
+        match handler.get_function_configs("http://foo.bar"):
+            case result.Ok(_):
+                assert False, "Expected error"
+            case result.Err(err):
+                assert isinstance(err, errors.InvalidConfig)
+                assert str(err) == "no functions found"
+
+        # with pytest.raises(errors.InvalidConfig, match="no functions found"):
+        #     handler.get_function_configs("http://foo.bar")
