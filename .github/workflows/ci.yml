@@ -2,7 +2,15 @@ name: "Python CI"
 
 on:
   push:
+    branches:
+      - "main"
   pull_request:
+    paths:
+      - ".github/**"
+      - "Makefile"
+      - "examples/**"
+      - "inngest/**"
+      - "tests/**"
 
 jobs:
   format-check:
