@@ -59,6 +59,8 @@ DEV_SERVER_VERBOSE=1
 
 # Publish
 
+Change the package version in `pyproject.toml` and `const.py`.
+
 Create and push a git tag that matches the package version. For example, the following command tags and releases version `1.2.3`:
 
 ```sh
