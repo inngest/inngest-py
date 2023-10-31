@@ -57,7 +57,7 @@ def create(
             run_id,
             tests.helper.RunStatus.COMPLETED,
         )
-        assert state.run_count == 1
+        assert state.run_count == 1, f"Expected 1 run but got {state.run_count}"
 
     fn: inngest.Function | inngest.FunctionSync
     if is_sync:
