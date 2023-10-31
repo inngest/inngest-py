@@ -1,6 +1,6 @@
 import typing
 
-import requests
+import httpx
 
 from . import http_proxy, net
 
@@ -21,7 +21,7 @@ class _FrameworkTestCase(typing.Protocol):
 
 
 def register(app_port: int) -> None:
-    res = requests.put(
+    res = httpx.put(
         f"http://{net.HOST}:{app_port}/api/inngest",
         timeout=5,
     )

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import httpx
 import pydantic
-import requests
 
 from inngest._internal.result import Err, Ok, Result
 
@@ -11,7 +11,7 @@ class Client:
         self._endpoint = endpoint
 
     def query(self, query: Query) -> Result[_Response, _Error]:
-        http_res = requests.post(
+        http_res = httpx.post(
             self._endpoint,
             json=query.payload(),
             timeout=30,
