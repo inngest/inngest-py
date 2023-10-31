@@ -2,6 +2,12 @@
 
 ## 🚧 Currently in Alpha! Not guaranteed to be production ready! 🚧
 
+Table of Contents:
+
+- [Examples](#examples)
+  - [Basic](#basic-no-steps)
+  - [Step run](#step-run)
+
 Supported frameworks:
 
 - Fast API
@@ -10,7 +16,7 @@ Supported frameworks:
 
 ## Examples
 
-### Basic
+### Basic (no steps)
 
 This is a minimal example of an Inngest function. It's missing some of our features but it's a good starting point.
 
@@ -49,7 +55,7 @@ inngest.flask.serve(
 app.run(port=8000)
 ```
 
-### Steps
+### Step run
 
 The following example registers a function that will:
 
