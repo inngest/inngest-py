@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 
-from . import event_lib, types
+from . import errors, event_lib, transforms, types
 
 
 class Call(types.BaseModel):
@@ -23,10 +23,21 @@ class CallStack(types.BaseModel):
 
 
 class CallError(types.BaseModel):
+    is_internal: bool
     is_retriable: bool
     message: str
     name: str
     stack: str
+
+    @classmethod
+    def from_error(cls, err: Exception) -> CallError:
+        return cls(
+            is_internal=isinstance(err, errors.InternalError),
+            is_retriable=isinstance(err, errors.NonRetriableError) is False,
+            message=str(err),
+            name=type(err).__name__,
+            stack=transforms.get_traceback(err),
+        )
 
 
 class CallResponse(types.BaseModel):

@@ -32,6 +32,12 @@ class ErrorCode(enum.Enum):
     UNSERIALIZABLE_OUTPUT = "unserializable_output"
 
 
+class Framework(enum.StrEnum):
+    FAST_API = "fast_api"
+    FLASK = "flask"
+    TORNADO = "tornado"
+
+
 class HeaderKey(enum.Enum):
     CONTENT_TYPE = "Content-Type"
     FORWARDED_FOR = "X-Forwarded-For"

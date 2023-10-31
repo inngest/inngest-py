@@ -1,8 +1,15 @@
 import datetime
 import hashlib
 import re
+import traceback
 
 from . import errors, result, types
+
+
+def get_traceback(err: Exception) -> str:
+    return "".join(
+        traceback.format_exception(type(err), err, err.__traceback__)
+    )
 
 
 def hash_signing_key(key: str) -> str:

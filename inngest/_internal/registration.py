@@ -2,7 +2,7 @@ import enum
 
 import pydantic
 
-from . import function_config, types
+from . import const, function_config, types
 
 
 class DeployType(enum.Enum):
@@ -12,7 +12,7 @@ class DeployType(enum.Enum):
 class RegisterRequest(types.BaseModel):
     app_name: str
     deploy_type: DeployType
-    framework: str
+    framework: const.Framework
     functions: list[function_config.FunctionConfig] = pydantic.Field(
         min_length=1
     )

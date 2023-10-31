@@ -54,7 +54,7 @@ class CommResponse:
     def from_error(
         cls,
         err: Exception,
-        framework: str,
+        framework: const.Framework,
     ) -> CommResponse:
         code = const.ErrorCode.UNKNOWN.value
         status_code = http.HTTPStatus.INTERNAL_SERVER_ERROR.value
@@ -76,7 +76,7 @@ class CommHandler:
     _base_url: str
     _client: client_lib.Inngest
     _fns: dict[str, function.Function | function.FunctionSync]
-    _framework: str
+    _framework: const.Framework
     _is_production: bool
     _logger: logging.Logger
     _signing_key: str | None
@@ -86,7 +86,7 @@ class CommHandler:
         *,
         base_url: str | None = None,
         client: client_lib.Inngest,
-        framework: str,
+        framework: const.Framework,
         functions: list[function.Function] | list[function.FunctionSync],
         logger: logging.Logger,
         signing_key: str | None = None,

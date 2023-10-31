@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import traceback
 import typing
 
 from inngest._internal import (
@@ -107,10 +106,14 @@ class FunctionSync(base.FunctionBase[_FunctionHandlerSync]):
                 handler = self._handler
             elif self.on_failure_fn_id == fn_id:
                 if self._opts.on_failure is None:
-                    raise errors.MissingFunction("on_failure not defined")
+                    return execution.CallError.from_error(
+                        errors.MissingFunction("on_failure not defined")
+                    )
                 handler = self._opts.on_failure
             else:
-                raise errors.MissingFunction("function ID mismatch")
+                return execution.CallError.from_error(
+                    errors.MissingFunction("function ID mismatch")
+                )
 
             res = handler(
                 attempt=call.ctx.attempt,
@@ -137,11 +140,4 @@ class FunctionSync(base.FunctionBase[_FunctionHandlerSync]):
                 )
             ]
         except Exception as err:
-            is_retriable = isinstance(err, errors.NonRetriableError) is False
-
-            return execution.CallError(
-                is_retriable=is_retriable,
-                message=str(err),
-                name=type(err).__name__,
-                stack=traceback.format_exc(),
-            )
+            return execution.CallError.from_error(err)

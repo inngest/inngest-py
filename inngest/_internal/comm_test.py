@@ -5,7 +5,7 @@ import logging
 import unittest
 
 import inngest
-from inngest._internal import errors, result
+from inngest._internal import const, errors, result
 
 from . import comm
 
@@ -50,7 +50,7 @@ class Test_get_function_configs(  # pylint: disable=invalid-name
         handler = comm.CommHandler(
             base_url="http://foo.bar",
             client=self.client,
-            framework="test",
+            framework=const.Framework.FLASK,
             functions=[fn],
             logger=self.client.logger,
         )
@@ -68,7 +68,7 @@ class Test_get_function_configs(  # pylint: disable=invalid-name
         handler = comm.CommHandler(
             base_url="http://foo.bar",
             client=self.client,
-            framework="test",
+            framework=const.Framework.FLASK,
             functions=functions,
             logger=self.client.logger,
         )
@@ -79,6 +79,3 @@ class Test_get_function_configs(  # pylint: disable=invalid-name
             case result.Err(err):
                 assert isinstance(err, errors.InvalidConfig)
                 assert str(err) == "no functions found"
-
-        # with pytest.raises(errors.InvalidConfig, match="no functions found"):
-        #     handler.get_function_configs("http://foo.bar")

@@ -10,7 +10,7 @@ Method = typing.Literal["GET", "POST"]
 
 def create_headers(
     *,
-    framework: str | None = None,
+    framework: const.Framework | None = None,
 ) -> dict[str, str]:
     headers = {
         const.HeaderKey.USER_AGENT.value: f"inngest-{const.LANGUAGE}:v{const.VERSION}",
@@ -18,7 +18,7 @@ def create_headers(
     }
 
     if framework is not None:
-        headers[const.HeaderKey.FRAMEWORK.value] = framework
+        headers[const.HeaderKey.FRAMEWORK.value] = framework.value
 
     return headers
 

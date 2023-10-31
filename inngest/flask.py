@@ -16,7 +16,7 @@ def serve(
     handler = comm.CommHandler(
         base_url=base_url or client.base_url,
         client=client,
-        framework="flask",
+        framework=const.Framework.FLASK,
         functions=functions,
         logger=app.logger,
         signing_key=signing_key,
