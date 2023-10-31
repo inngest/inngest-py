@@ -1,3 +1,8 @@
+.PHONY: build
+build:
+	@if [ -d "dist" ]; then rm -rf dist; fi
+	@python -m build
+
 check-venv:
 	@if [ -z "$${CI}" ] && [ -z "$${VIRTUAL_ENV}" ]; then \
 		echo "virtual environment is not activated"; \

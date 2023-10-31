@@ -17,6 +17,7 @@ dependencies = ["httpx>=0.24.0", "pydantic>=2.1.1"]
 extra = [
     "Flask==3.0.0",
     "black==23.10.0",
+    "build==1.0.3",
     "fastapi==0.104.0",
     "isort==5.12.0",
     "mypy==1.6.1",
