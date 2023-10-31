@@ -22,14 +22,21 @@ def serve(
         signing_key=signing_key,
     )
 
-    @app.route("/api/inngest", methods=["POST", "PUT"])
+    @app.route("/api/inngest", methods=["GET", "POST", "PUT"])
     def inngest_api() -> flask.Response | str:
+        headers = net.normalize_headers(dict(flask.request.headers.items()))
+        is_from_dev_server = (
+            headers.get(const.HeaderKey.SERVER_KIND.value)
+            == const.ServerKind.DEV_SERVER.value
+        )
+
+        if flask.request.method == "GET":
+            return _to_response(handler.inspect(is_from_dev_server))
+
         if flask.request.method == "POST":
             fn_id = flask.request.args.get("fnId")
             if fn_id is None:
                 raise errors.MissingParam("fnId")
-
-            headers = net.normalize_headers(dict(flask.request.headers.items()))
 
             return _to_response(
                 handler.call_function_sync(
@@ -46,15 +53,10 @@ def serve(
             )
 
         if flask.request.method == "PUT":
-            headers = net.normalize_headers(dict(flask.request.headers.items()))
-
             return _to_response(
                 handler.register_sync(
                     app_url=flask.request.url,
-                    is_from_dev_server=(
-                        headers.get(const.HeaderKey.SERVER_KIND.value)
-                        == const.ServerKind.DEV_SERVER.value
-                    ),
+                    is_from_dev_server=is_from_dev_server,
                 )
             )
 
