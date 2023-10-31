@@ -56,7 +56,7 @@ class CommResponse:
     ) -> CommResponse:
         return cls(
             body={
-                "code": str(err),
+                "code": err.code,
                 "message": str(err),
             },
             headers=net.create_headers(framework=framework),
@@ -76,7 +76,7 @@ class CommHandler:
     def __init__(
         self,
         *,
-        api_origin: str | None = None,
+        base_url: str | None = None,
         client: client_lib.Inngest,
         framework: str,
         functions: list[function.Function] | list[function.FunctionSync],
@@ -89,33 +89,37 @@ class CommHandler:
         if not self._is_production:
             self._logger.info("Dev Server mode enabled")
 
-        api_origin = api_origin or os.getenv(const.EnvKey.BASE_URL.value)
-
-        if api_origin is None:
+        base_url = base_url or os.getenv(const.EnvKey.BASE_URL.value)
+        if base_url is None:
             if not self._is_production:
                 self._logger.info("Defaulting API origin to Dev Server")
-                api_origin = const.DEV_SERVER_ORIGIN
+                base_url = const.DEV_SERVER_ORIGIN
             else:
-                api_origin = const.DEFAULT_API_ORIGIN
+                base_url = const.DEFAULT_API_ORIGIN
 
         try:
-            self._base_url = net.parse_url(api_origin)
+            self._api_origin = net.parse_url(base_url)
         except Exception as err:
             raise errors.InvalidBaseURL() from err
 
         self._client = client
         self._fns = {fn.get_id(): fn for fn in functions}
         self._framework = framework
-        self._signing_key = signing_key or os.getenv(
-            const.EnvKey.SIGNING_KEY.value
-        )
+
+        if signing_key is None:
+            if self._client.is_production:
+                signing_key = os.getenv(const.EnvKey.SIGNING_KEY.value)
+                if signing_key is None:
+                    self._logger.error("missing signing key")
+                    raise errors.MissingSigningKey()
+        self._signing_key = signing_key
 
     def _build_registration_request(
         self,
         app_url: str,
     ) -> httpx.Request:
         registration_url = urllib.parse.urljoin(
-            self._base_url,
+            self._api_origin,
             "/fn/register",
         )
 
@@ -127,7 +131,6 @@ class CommHandler:
                 functions=self.get_function_configs(app_url),
                 sdk=f"{const.LANGUAGE}:v{const.VERSION}",
                 url=app_url,
-                # TODO: Do this for real.
                 v="0.1",
             ).to_dict()
         )

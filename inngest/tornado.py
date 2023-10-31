@@ -23,7 +23,7 @@ def serve(
     signing_key: str | None = None,
 ) -> None:
     handler = comm.CommHandler(
-        api_origin=base_url or client.base_url,
+        base_url=base_url or client.base_url,
         client=client,
         framework="flask",
         functions=functions,
@@ -42,9 +42,7 @@ def serve(
                 raise errors.MissingParam("fnId")
             fn_id = raw_fn_id[0].decode("utf-8")
 
-            headers = net.normalize_headers(
-                {k: v[0] for k, v in self.request.headers.items()}
-            )
+            headers = net.normalize_headers(dict(self.request.headers.items()))
 
             comm_res = handler.call_function_sync(
                 call=execution.Call.from_dict(json.loads(self.request.body)),
@@ -64,9 +62,7 @@ def serve(
             self.set_status(comm_res.status_code)
 
         def put(self) -> None:
-            headers = net.normalize_headers(
-                {k: v[0] for k, v in self.request.headers.items()}
-            )
+            headers = net.normalize_headers(dict(self.request.headers.items()))
 
             comm_res = handler.register_sync(
                 app_url=self.request.full_url(),

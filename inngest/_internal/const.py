@@ -17,12 +17,11 @@ class EnvKey(enum.Enum):
 
 
 class ErrorCode(enum.Enum):
-    DEV_SERVER_REGISTRATION_NOT_ALLOWED = "dev_server_registration_not_allowed"
+    DISALLOWED_REGISTRATION_INITIATOR = "disallowed_registration_initiator"
     INVALID_BASE_URL = "invalid_base_url"
+    INVALID_BODY = "invalid_body"
     INVALID_FUNCTION_CONFIG = "invalid_function_config"
-    INVALID_PARAM = "invalid_param"
     INVALID_REQUEST_SIGNATURE = "invalid_request_signature"
-    INVALID_RESPONSE_SHAPE = "invalid_response_shape"
     MISMATCHED_SYNC = "mismatched_sync"
     MISSING_EVENT_KEY = "missing_event_key"
     MISSING_FUNCTION = "missing_function"

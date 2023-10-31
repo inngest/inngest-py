@@ -1,3 +1,4 @@
+import json
 import unittest
 
 import flask
@@ -5,6 +6,7 @@ import flask.testing
 
 import inngest
 import inngest.flask
+from inngest._internal import const
 
 from . import base, cases, dev_server, http_proxy, net
 
@@ -73,6 +75,51 @@ class TestFlask(unittest.TestCase):
 for case in _cases:
     test_name = f"test_{case.name}"
     setattr(TestFlask, test_name, case.run_test)
+
+
+class TestFastAPIRegistration(unittest.TestCase):
+    def test_dev_server_to_prod(self) -> None:
+        """
+        Ensure that Dev Server cannot initiate a registration request when in
+        production mode.
+        """
+
+        client = inngest.Inngest(
+            app_id="flask",
+            event_key="test",
+            is_production=True,
+        )
+
+        @inngest.create_function_sync(
+            fn_id="foo",
+            retries=0,
+            trigger=inngest.TriggerEvent(event="app/foo"),
+        )
+        def fn(**_kwargs: object) -> None:
+            pass
+
+        app = flask.Flask(__name__)
+        inngest.flask.serve(
+            app,
+            client,
+            [fn],
+            signing_key="signkey-prod-0486c9",
+        )
+        flask_client = app.test_client()
+        res = flask_client.put(
+            "/api/inngest",
+            headers={
+                const.HeaderKey.SERVER_KIND.value.lower(): const.ServerKind.DEV_SERVER.value,
+            },
+        )
+        assert res.status_code == 400
+        body: object = json.loads(res.data)
+        assert (
+            isinstance(body, dict)
+            and body["code"]
+            == const.ErrorCode.DISALLOWED_REGISTRATION_INITIATOR.value
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

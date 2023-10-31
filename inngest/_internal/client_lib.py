@@ -32,7 +32,7 @@ class Inngest:
                 event_key = os.getenv(const.EnvKey.EVENT_KEY.value)
         if event_key is None:
             self.logger.error("missing event key")
-            raise errors.MissingEventKey("missing event key")
+            raise errors.MissingEventKey()
         self._event_key = event_key
 
         event_origin = base_url
@@ -99,14 +99,10 @@ class Inngest:
 
 def _extract_ids(body: object) -> list[str]:
     if not isinstance(body, dict) or "ids" not in body:
-        raise errors.InvalidResponseShape(
-            "unexpected response when sending events"
-        )
+        raise errors.InvalidBody("unexpected response when sending events")
 
     ids = body["ids"]
     if not isinstance(ids, list):
-        raise errors.InvalidResponseShape(
-            "unexpected response when sending events"
-        )
+        raise errors.InvalidBody("unexpected response when sending events")
 
     return ids

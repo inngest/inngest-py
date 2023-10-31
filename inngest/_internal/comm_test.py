@@ -50,7 +50,7 @@ class Test_get_function_configs(  # pylint: disable=invalid-name
             return 1
 
         handler = comm.CommHandler(
-            api_origin="http://foo.bar",
+            base_url="http://foo.bar",
             client=self.client,
             framework="test",
             functions=[fn],
@@ -62,7 +62,7 @@ class Test_get_function_configs(  # pylint: disable=invalid-name
         functions: list[inngest.FunctionSync] = []
 
         handler = comm.CommHandler(
-            api_origin="http://foo.bar",
+            base_url="http://foo.bar",
             client=self.client,
             framework="test",
             functions=functions,

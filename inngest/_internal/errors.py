@@ -21,7 +21,7 @@ class DevServerRegistrationNotAllowed(InternalError):
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
-            code=const.ErrorCode.DEV_SERVER_REGISTRATION_NOT_ALLOWED,
+            code=const.ErrorCode.DISALLOWED_REGISTRATION_INITIATOR,
             message=message,
         )
 
@@ -89,16 +89,6 @@ class MismatchedSync(InternalError):
         )
 
 
-class InvalidParam(InternalError):
-    status_code: int = 400
-
-    def __init__(self, message: str | None = None) -> None:
-        super().__init__(
-            code=const.ErrorCode.INVALID_PARAM,
-            message=message,
-        )
-
-
 class InvalidRequestSignature(InternalError):
     status_code: int = 401
 
@@ -109,12 +99,12 @@ class InvalidRequestSignature(InternalError):
         )
 
 
-class InvalidResponseShape(InternalError):
+class InvalidBody(InternalError):
     status_code: int = 500
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
-            code=const.ErrorCode.INVALID_RESPONSE_SHAPE,
+            code=const.ErrorCode.INVALID_BODY,
             message=message,
         )
 
