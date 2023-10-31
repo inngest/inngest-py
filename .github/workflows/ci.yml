@@ -5,40 +5,108 @@ on:
   pull_request:
 
 jobs:
-  build:
+  format-check:
     runs-on: "ubuntu-latest"
-
     strategy:
       matrix:
         python-version: ["3.10", "3.11"]
-
     steps:
       - uses: "actions/checkout@v2"
-
       - name: "Set up Python ${{ matrix.python-version }}"
         uses: "actions/setup-python@v2"
         with:
           python-version: "${{ matrix.python-version }}"
-
-      - name: "Set up Node"
-        uses: "actions/setup-node@v3"
-        with:
-          node-version: "18.x"
-
       - name: "Install"
         run: "make install"
-
       - name: "Format check"
         run: "make format-check"
 
+  itest:
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+    steps:
+      - uses: "actions/checkout@v2"
+      - name: "Set up Python ${{ matrix.python-version }}"
+        uses: "actions/setup-python@v2"
+        with:
+          python-version: "${{ matrix.python-version }}"
+      - name: "Install"
+        run: "make install"
+      - name: "Integration test"
+        run: "make itest"
+
+  lint:
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+    steps:
+      - uses: "actions/checkout@v2"
+      - name: "Set up Python ${{ matrix.python-version }}"
+        uses: "actions/setup-python@v2"
+        with:
+          python-version: "${{ matrix.python-version }}"
+      - name: "Install"
+        run: "make install"
       - name: "Lint"
         run: "make lint"
 
+  publish-pypi:
+    runs-on: "ubuntu-latest"
+    needs:
+      - "format-check"
+      - "itest"
+      - "lint"
+      - "type-check"
+      - "utest"
+    permissions:
+      id-token: write
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+    steps:
+      - uses: "actions/checkout@v2"
+      - name: "Set up Python ${{ matrix.python-version }}"
+        uses: "actions/setup-python@v2"
+        with:
+          python-version: "${{ matrix.python-version }}"
+      - name: "Install"
+        run: "make install"
+      - name: "Install"
+        run: "make build"
+      - name: "Upload package to PyPI"
+        uses: "pypa/gh-action-pypi-publish@release/v1"
+
+  type-check:
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+    steps:
+      - uses: "actions/checkout@v2"
+      - name: "Set up Python ${{ matrix.python-version }}"
+        uses: "actions/setup-python@v2"
+        with:
+          python-version: "${{ matrix.python-version }}"
+      - name: "Install"
+        run: "make install"
       - name: "Type check"
         run: "make type-check"
 
+  utest:
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+    steps:
+      - uses: "actions/checkout@v2"
+      - name: "Set up Python ${{ matrix.python-version }}"
+        uses: "actions/setup-python@v2"
+        with:
+          python-version: "${{ matrix.python-version }}"
+      - name: "Install"
+        run: "make install"
       - name: "Unit test"
         run: "make utest"
-
-      - name: "Integration test"
-        run: "make itest"
