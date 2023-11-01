@@ -23,6 +23,64 @@ def serve(
     )
 
     @app.route("/api/inngest", methods=["GET", "POST", "PUT"])
+    async def inngest_api() -> flask.Response | str:
+        headers = net.normalize_headers(dict(flask.request.headers.items()))
+        is_from_dev_server = (
+            headers.get(const.HeaderKey.SERVER_KIND.value)
+            == const.ServerKind.DEV_SERVER.value
+        )
+
+        if flask.request.method == "GET":
+            return _to_response(handler.inspect(is_from_dev_server))
+
+        if flask.request.method == "POST":
+            fn_id = flask.request.args.get("fnId")
+            if fn_id is None:
+                raise errors.MissingParam("fnId")
+
+            return _to_response(
+                await handler.call_function(
+                    call=execution.Call.from_dict(
+                        json.loads(flask.request.data)
+                    ),
+                    fn_id=fn_id,
+                    req_sig=net.RequestSignature(
+                        body=flask.request.data,
+                        headers=headers,
+                        is_production=client.is_production,
+                    ),
+                )
+            )
+
+        if flask.request.method == "PUT":
+            return _to_response(
+                await handler.register(
+                    app_url=flask.request.url,
+                    is_from_dev_server=is_from_dev_server,
+                )
+            )
+
+        return ""
+
+
+def serve_sync(
+    app: flask.Flask,
+    client: client_lib.Inngest,
+    functions: list[function.Function],
+    *,
+    base_url: str | None = None,
+    signing_key: str | None = None,
+) -> None:
+    handler = comm.CommHandler(
+        base_url=base_url or client.base_url,
+        client=client,
+        framework=const.Framework.FLASK,
+        functions=functions,
+        logger=app.logger,
+        signing_key=signing_key,
+    )
+
+    @app.route("/api/inngest", methods=["GET", "POST", "PUT"])
     def inngest_api() -> flask.Response | str:
         headers = net.normalize_headers(dict(flask.request.headers.items()))
         is_from_dev_server = (

@@ -1,12 +1,29 @@
+<div align="center">
+  <br/>
+    <a href="https://www.inngest.com"><img src="https://user-images.githubusercontent.com/306177/191580717-1f563f4c-31e3-4aa0-848c-5ddc97808a9a.png" width="250" /></a>
+  <br/>
+  <br/>
+  <p>
+    Serverless event-driven queues, background jobs, and scheduled jobs for Python.<br />
+    Works with any framework and platform.
+  </p>
+  Read the <a href="https://www.inngest.com/docs?ref=github-inngest-js-readme">documentation</a> and get started in minutes.
+  <br/>
+  <p>
+
+[![pypi](https://img.shields.io/pypi/v/inngest.svg)](https://pypi.python.org/pypi/inngest)
+![versions](https://img.shields.io/pypi/pyversions/pydantic.svg)
+[![discord](https://img.shields.io/discord/842170679536517141?label=discord)](https://www.inngest.com/discord)
+[![twitter](https://img.shields.io/twitter/follow/inngest?style=social)](https://twitter.com/inngest)
+
+  </p>
+</div>
+
+<hr />
+
 # Inngest Python SDK
 
-## 🚧 Currently in Alpha! Not guaranteed to be production ready! 🚧
-
-Table of Contents:
-
-- [Examples](#examples)
-  - [Basic](#basic-no-steps)
-  - [Step run](#step-run)
+## 🚧 Currently in alpha! Not guaranteed to be production ready! 🚧
 
 Supported frameworks:
 
@@ -14,7 +31,11 @@ Supported frameworks:
 - Flask
 - Tornado
 
-## Examples
+## Usage
+
+- [Basic](#basic-no-steps)
+- [Step run](#step-run)
+- [Avoiding async/await](#avoiding-async-functions)
 
 ### Basic (no steps)
 
@@ -26,14 +47,14 @@ import inngest.flask
 import requests
 
 
-@inngest.create_function_sync(
+@inngest.create_function(
     fn_id="find_person",
     trigger=inngest.TriggerEvent(event="app/person.find"),
 )
-def fetch_person(
+async def fetch_person(
     *,
     event: inngest.Event,
-    step: inngest.StepSync,
+    step: inngest.Step,
     **_kwargs: object,
 ) -> dict:
     person_id = event.data["person_id"]
@@ -42,7 +63,6 @@ def fetch_person(
 
 
 app = flask.Flask(__name__)
-
 inngest_client = inngest.Inngest(app_id="flask_example")
 
 # Register functions with the Inngest server
@@ -65,19 +85,14 @@ The following example registers a function that will:
 1. Return a summary dict
 
 ```py
-import flask
-import inngest.flask
-import requests
-
-
-@inngest.create_function_sync(
+@inngest.create_function(
     fn_id="find_ships",
     trigger=inngest.TriggerEvent(event="app/ships.find"),
 )
-def fetch_ships(
+async def fetch_ships(
     *,
     event: inngest.Event,
-    step: inngest.StepSync,
+    step: inngest.Step,
     **_kwargs: object,
 ) -> dict:
     """
@@ -108,18 +123,39 @@ def fetch_ships(
         "person_name": person["name"],
         "ship_names": ship_names,
     }
+```
+
+### Avoiding async functions
+
+Completely avoiding `async`` functions only requires 2 differences:
+
+1. Use `step: inngest.StepSync` instead of `step: inngest.Step`
+2. Use `serve_sync` instead of `serve`
+
+```py
+@inngest.create_function(
+    fn_id="find_person",
+    trigger=inngest.TriggerEvent(event="app/person.find"),
+)
+def fetch_person(
+    *,
+    event: inngest.Event,
+    step: inngest.StepSync,
+    **_kwargs: object,
+) -> dict:
+    person_id = event.data["person_id"]
+    res = requests.get(f"https://swapi.dev/api/people/{person_id}")
+    return res.json()
 
 
 app = flask.Flask(__name__)
-
 inngest_client = inngest.Inngest(app_id="flask_example")
 
-# Register functions with the Inngest server
-inngest.flask.serve(
+inngest.flask.serve_sync(
     app,
     inngest_client,
-    [fetch_ships],
+    [fetch_person],
 )
-
-app.run(port=8000)
 ```
+
+> 💡 You can mix `async` and non-`async` functions in the same app!

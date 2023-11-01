@@ -29,7 +29,7 @@ class TestFlask(unittest.TestCase):
 
         app = flask.Flask(__name__)
         app.logger.disabled = True
-        inngest.flask.serve(
+        inngest.flask.serve_sync(
             app,
             _client,
             [
