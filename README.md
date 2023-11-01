@@ -11,8 +11,8 @@
   <br/>
   <p>
 
-[![pypi](https://img.shields.io/pypi/v/inngest)](https://pypi.python.org/pypi/inngest)
-![versions](https://img.shields.io/pypi/pyversions/inngest)
+[![pypi](https://img.shields.io/pypi/v/inngest.svg)](https://pypi.python.org/pypi/inngest)
+![versions](https://img.shields.io/pypi/pyversions/inngest.svg)
 [![discord](https://img.shields.io/discord/842170679536517141?label=discord)](https://www.inngest.com/discord)
 [![twitter](https://img.shields.io/twitter/follow/inngest?style=social)](https://twitter.com/inngest)
 
