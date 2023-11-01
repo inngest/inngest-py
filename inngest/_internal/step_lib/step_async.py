@@ -1,11 +1,9 @@
 import datetime
 import inspect
-import json
 import typing
 
 from inngest._internal import (
     client_lib,
-    errors,
     event_lib,
     execution,
     result,
@@ -69,10 +67,12 @@ class Step(base.StepBase):
         else:
             output = handler()
 
-        try:
-            json.dumps(output)
-        except TypeError as err:
-            raise errors.UnserializableOutput(str(err)) from None
+        # Check whether output is serializable
+        match transforms.dump_json(output):
+            case result.Ok(_):
+                pass
+            case result.Err(err):
+                raise err
 
         raise base.Interrupt(
             hashed_id=hashed_id,

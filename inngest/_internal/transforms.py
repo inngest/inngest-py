@@ -1,5 +1,6 @@
 import datetime
 import hashlib
+import json
 import re
 import traceback
 
@@ -20,6 +21,13 @@ def hash_signing_key(key: str) -> str:
 
 def hash_step_id(step_id: str) -> str:
     return hashlib.sha1(step_id.encode("utf-8")).hexdigest()
+
+
+def dump_json(obj: object) -> result.Result[str, errors.UnserializableOutput]:
+    try:
+        return result.Ok(json.dumps(obj))
+    except Exception as err:
+        return result.Err(errors.UnserializableOutput(str(err)))
 
 
 def remove_signing_key_prefix(key: str) -> str:

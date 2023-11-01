@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import inspect
-import json
 import typing
 
 import pydantic
@@ -254,7 +253,9 @@ class Function:
         call: execution.Call,
         client: client_lib.Inngest,
         fn_id: str,
-    ) -> list[execution.CallResponse] | str | execution.CallError:
+    ) -> (
+        list[execution.CallResponse] | types.Serializable | execution.CallError
+    ):
         try:
             handler: FunctionHandlerAsync | FunctionHandlerSync
             if self.id == fn_id:
@@ -271,7 +272,7 @@ class Function:
                 )
 
             if _is_function_handler_sync(handler):
-                res = handler(
+                return handler(
                     attempt=call.ctx.attempt,
                     event=call.event,
                     events=call.events,
@@ -282,9 +283,6 @@ class Function:
                         step_lib.StepIDCounter(),
                     ),
                 )
-
-                return json.dumps(res)
-
             return execution.CallError.from_error(
                 errors.MismatchedSync(
                     "encountered async function in non-async context"
