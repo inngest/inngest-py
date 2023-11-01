@@ -80,7 +80,7 @@ import requests
 def fetch_person(
     *,
     event: inngest.Event,
-    step: inngest.Step,
+    step: inngest.StepSync,
     **_kwargs: object,
 ) -> dict:
     person_id = event.data["person_id"]
@@ -167,4 +167,29 @@ async def fetch_person(
     async with httpx.AsyncClient() as client:
         res = await client.get(f"https://swapi.dev/api/people/{person_id}")
         return res.json()
+```
+
+### Sending an event outside a function
+
+Sometimes you want to send an event from a normal, non-Inngest function. You can do that using the client:
+
+```py
+import inngest.flask
+
+inngest_client = inngest.Inngest(app_id="flask_example")
+inngest_client.send_sync(inngest.Event(name="app/test", data={"person_id": 1}))
+```
+
+If you prefer `async` then use the `send` method instead:
+
+```py
+import asyncio
+import inngest.flask
+
+inngest_client = inngest.Inngest(app_id="flask_example")
+
+async def main():
+    await inngest_client.send(inngest.Event(name="app/test", data={"person_id": 1}))
+
+asyncio.run(main())
 ```
