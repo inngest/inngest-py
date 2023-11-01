@@ -33,6 +33,11 @@ class StepSync(base.StepBase):
     ) -> types.T:
         """
         Run logic that should be retried on error and memoized after success.
+
+        Args:
+            step_id: Unique step ID within the function. If the same step ID is
+                encountered multiple times then it'll get an index suffix.
+            handler: The logic to run.
         """
 
         hashed_id = self._get_hashed_id(step_id)

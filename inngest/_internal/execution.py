@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+import typing
 
 from . import errors, event_lib, transforms, types
 
@@ -47,6 +48,14 @@ class CallResponse(types.BaseModel):
     name: str
     op: Opcode
     opts: dict[str, object] | None = None
+
+
+def is_call_responses(
+    value: object,
+) -> typing.TypeGuard[list[CallResponse]]:
+    if not isinstance(value, list):
+        return False
+    return all(isinstance(item, CallResponse) for item in value)
 
 
 class Opcode(enum.Enum):

@@ -29,7 +29,7 @@ class TestFlask(unittest.TestCase):
 
         app = flask.Flask(__name__)
         app.logger.disabled = True
-        inngest.flask.serve_sync(
+        inngest.flask.serve(
             app,
             _client,
             [
@@ -98,7 +98,7 @@ class TestRegistration(unittest.TestCase):
             pass
 
         app = flask.Flask(__name__)
-        inngest.flask.serve_sync(
+        inngest.flask.serve(
             app,
             client,
             [fn],

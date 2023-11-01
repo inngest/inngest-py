@@ -10,9 +10,17 @@ T = typing.TypeVar("T")
 
 EmptySentinel = object()
 
-JSONSerializableOutput = (
-    bool | float | int | str | dict | list | tuple[object, ...] | None
+Serializable = (
+    bool
+    | float
+    | int
+    | str
+    | dict[typing.Any, typing.Any]
+    | list[typing.Any]
+    | tuple[typing.Any, ...]
+    | None
 )
+SerializableT = typing.TypeVar("SerializableT", bound=Serializable)
 
 
 class BaseModel(pydantic.BaseModel):

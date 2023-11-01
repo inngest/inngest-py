@@ -65,7 +65,7 @@ def create(
             return Foo()
 
         try:
-            await step.run("step_1", step_1)
+            await step.run("step_1", step_1)  # type: ignore
         except BaseException as err:
             state.error = err
             raise

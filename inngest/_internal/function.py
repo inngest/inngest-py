@@ -16,6 +16,7 @@ from inngest._internal import (
     execution,
     function_config,
     step_lib,
+    transforms,
     types,
 )
 
@@ -39,7 +40,7 @@ class FunctionHandlerAsync(typing.Protocol):
         events: list[event_lib.Event],
         run_id: str,
         step: step_lib.Step,
-    ) -> typing.Awaitable[types.JSONSerializableOutput]:
+    ) -> typing.Awaitable[types.Serializable]:
         ...
 
 
@@ -53,7 +54,7 @@ class FunctionHandlerSync(typing.Protocol):
         events: list[event_lib.Event],
         run_id: str,
         step: step_lib.StepSync,
-    ) -> types.JSONSerializableOutput:
+    ) -> types.Serializable:
         ...
 
 
@@ -134,7 +135,21 @@ class Function:
 
     @property
     def is_handler_async(self) -> bool:
+        """
+        Whether the main handler is async.
+        """
         return _is_function_handler_async(self._handler)
+
+    @property
+    def is_on_failure_handler_async(self) -> bool | None:
+        """
+        Whether the on_failure handler is async. Returns None if there isn't an
+        on_failure handler.
+        """
+
+        if self._opts.on_failure is None:
+            return None
+        return _is_function_handler_async(self._opts.on_failure)
 
     @property
     def on_failure_fn_id(self) -> str | None:
@@ -162,7 +177,9 @@ class Function:
         call: execution.Call,
         client: client_lib.Inngest,
         fn_id: str,
-    ) -> list[execution.CallResponse] | str | execution.CallError:
+    ) -> list[
+        execution.CallResponse
+    ] | types.Serializable | execution.CallError:
         try:
             handler: FunctionHandlerAsync | FunctionHandlerSync
             if self.id == fn_id:
@@ -213,7 +230,7 @@ class Function:
                     )
                 )
 
-            return json.dumps(res)
+            return res
         except step_lib.Interrupt as out:
             return [
                 execution.CallResponse(
@@ -226,6 +243,10 @@ class Function:
                 )
             ]
         except Exception as err:
+            # An error occurred with the user's code. Print the traceback to
+            # help them debug.
+            print(transforms.get_traceback(err))
+
             return execution.CallError.from_error(err)
 
     def call_sync(
@@ -281,6 +302,10 @@ class Function:
                 )
             ]
         except Exception as err:
+            # An error occurred with the user's code. Print the traceback to
+            # help them debug.
+            print(transforms.get_traceback(err))
+
             return execution.CallError.from_error(err)
 
     def get_config(self, app_url: str) -> _Config:
