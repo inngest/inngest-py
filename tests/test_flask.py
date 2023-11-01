@@ -76,7 +76,7 @@ for case in _cases:
     setattr(TestFlask, test_name, case.run_test)
 
 
-class TestFastAPIRegistration(unittest.TestCase):
+class TestRegistration(unittest.TestCase):
     def test_dev_server_to_prod(self) -> None:
         """
         Ensure that Dev Server cannot initiate a registration request when in
@@ -94,7 +94,7 @@ class TestFastAPIRegistration(unittest.TestCase):
             retries=0,
             trigger=inngest.TriggerEvent(event="app/foo"),
         )
-        def fn(**_kwargs: object) -> None:
+        async def fn(**_kwargs: object) -> None:
             pass
 
         app = flask.Flask(__name__)
