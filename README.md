@@ -38,11 +38,23 @@ We currently support the following frameworks (but adding a new framework is eas
 - Flask
 - Tornado
 
-## Installation
+## Getting started
 
-```
+Install `inngest` in your project:
+
+```sh
 pip install inngest
 ```
+
+Write a basic function and serve it (see the [basic](#basic-no-steps) example for guidance).
+
+Start the Dev Server (the local version of our cloud platform):
+
+```sh
+npx inngest-cli@latest dev
+```
+
+Browse to http://127.0.0.1:8288 and you should see your app! Visit our docs to read more about the https://www.inngest.com/docs/local-development.
 
 ## Examples
 
