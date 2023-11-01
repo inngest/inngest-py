@@ -8,7 +8,7 @@ make install
 ## Start example servers
 
 ```sh
-# Fast API
+# FastAPI
 (cd examples/fast_api && make dev)
 
 # Flask
