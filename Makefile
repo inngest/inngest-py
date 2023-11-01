@@ -25,6 +25,9 @@ itest: check-venv
 
 pre-commit: format-check lint type-check utest
 
+release:
+	@grep  "version = \"$${VERSION}\"" pyproject.toml && git tag $${VERSION} && git push origin $${VERSION} || echo "pyproject.toml version does not match"
+
 lint: check-venv
 	@pylint inngest tests
 
