@@ -8,7 +8,7 @@ from ._internal import client_lib, comm, const, errors, execution, function, net
 def serve(
     app: flask.Flask,
     client: client_lib.Inngest,
-    functions: list[function.FunctionSync],
+    functions: list[function.Function],
     *,
     base_url: str | None = None,
     signing_key: str | None = None,

@@ -3,9 +3,8 @@ import datetime
 import inngest
 
 
-@inngest.create_function_sync(
+@inngest.create_function(
     fn_id="two_steps_and_sleep",
-    name="Two steps and sleep",
     trigger=inngest.TriggerEvent(event="app/two_steps_and_sleep"),
 )
 def fn_sync(*, step: inngest.StepSync, **_kwargs: object) -> str:

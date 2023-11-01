@@ -3,7 +3,7 @@ import datetime
 import inngest
 
 
-@inngest.create_function_sync(
+@inngest.create_function(
     debounce=inngest.Debounce(period=datetime.timedelta(seconds=5)),
     fn_id="debounce",
     trigger=inngest.TriggerEvent(event="app/debounce"),

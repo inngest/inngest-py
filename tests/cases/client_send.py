@@ -17,7 +17,7 @@ def create(
     event_name = base.create_event_name(framework, test_name, is_sync)
     state = base.BaseState()
 
-    @inngest.create_function_sync(
+    @inngest.create_function(
         fn_id=test_name,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
@@ -41,7 +41,7 @@ def create(
             tests.helper.RunStatus.COMPLETED,
         )
 
-    fn: inngest.Function | inngest.FunctionSync
+    fn: inngest.Function
     if is_sync:
         fn = fn_sync
     else:

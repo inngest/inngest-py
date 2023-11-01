@@ -22,15 +22,10 @@ class BaseState:
         return self.run_id
 
 
-FunctionT = typing.TypeVar(
-    "FunctionT", bound=inngest.Function | inngest.FunctionSync
-)
-
-
 @dataclasses.dataclass
 class Case:
     event_name: str
-    fn: inngest.Function | inngest.FunctionSync
+    fn: inngest.Function
     name: str
     run_test: typing.Callable[[object], None]
     state: BaseState

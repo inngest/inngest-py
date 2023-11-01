@@ -161,6 +161,16 @@ class MissingSigningKey(InternalError):
         )
 
 
+class UnknownError(InternalError):
+    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
+
+    def __init__(self, message: str | None = None) -> None:
+        super().__init__(
+            code=const.ErrorCode.UNKNOWN,
+            message=message,
+        )
+
+
 class UnserializableOutput(InternalError):
     status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 

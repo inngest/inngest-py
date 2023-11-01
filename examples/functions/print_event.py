@@ -1,9 +1,8 @@
 import inngest
 
 
-@inngest.create_function_sync(
+@inngest.create_function(
     fn_id="print_event",
-    name="Print event",
     trigger=inngest.TriggerEvent(event="app/print_event"),
 )
 def fn_sync(
@@ -24,7 +23,6 @@ def fn_sync(
 
 @inngest.create_function(
     fn_id="print_event_async",
-    name="Print event (async)",
     trigger=inngest.TriggerEvent(event="app/print_event_async"),
 )
 async def fn(

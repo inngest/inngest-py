@@ -1,14 +1,7 @@
 from ._internal.client_lib import Inngest
 from ._internal.errors import NonRetriableError
 from ._internal.event_lib import Event
-from ._internal.function import (
-    Function,
-    FunctionOpts,
-    FunctionOptsSync,
-    FunctionSync,
-    create_function,
-    create_function_sync,
-)
+from ._internal.function import Function, create_function
 from ._internal.function_config import (
     Batch,
     Cancel,
@@ -26,9 +19,6 @@ __all__ = [
     "Debounce",
     "Event",
     "Function",
-    "FunctionOpts",
-    "FunctionOptsSync",
-    "FunctionSync",
     "Inngest",
     "NonRetriableError",
     "RateLimit",
@@ -38,5 +28,4 @@ __all__ = [
     "TriggerCron",
     "TriggerEvent",
     "create_function",
-    "create_function_sync",
 ]

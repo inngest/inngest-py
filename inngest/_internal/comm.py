@@ -75,7 +75,7 @@ class CommResponse:
 class CommHandler:
     _base_url: str
     _client: client_lib.Inngest
-    _fns: dict[str, function.Function | function.FunctionSync]
+    _fns: dict[str, function.Function]
     _framework: const.Framework
     _is_production: bool
     _logger: logging.Logger
@@ -87,7 +87,7 @@ class CommHandler:
         base_url: str | None = None,
         client: client_lib.Inngest,
         framework: const.Framework,
-        functions: list[function.Function] | list[function.FunctionSync],
+        functions: list[function.Function],
         logger: logging.Logger,
         signing_key: str | None = None,
     ) -> None:
@@ -190,12 +190,6 @@ class CommHandler:
             case result.Err(err):
                 return CommResponse.from_error(err, self._framework)
 
-        if not isinstance(fn, function.Function):
-            return CommResponse.from_error(
-                errors.MismatchedSync(f"function {fn_id} is not asynchronous"),
-                self._framework,
-            )
-
         return self._create_response(await fn.call(call, self._client, fn_id))
 
     def call_function_sync(
@@ -211,23 +205,24 @@ class CommHandler:
 
         validation_res = req_sig.validate(self._signing_key)
         if result.is_err(validation_res):
-            return CommResponse.from_error(
-                validation_res.err_value, self._framework
-            )
+            err = validation_res.err_value
+            extra = {}
+            if isinstance(err, errors.InternalError):
+                extra["code"] = err.code
+            self._logger.error(err, extra=extra)
+            return CommResponse.from_error(err, self._framework)
 
         match self._get_function(fn_id):
             case result.Ok(fn):
                 pass
             case result.Err(err):
+                extra = {}
+                if isinstance(err, errors.InternalError):
+                    extra["code"] = err.code
+                self._logger.error(err, extra=extra)
                 return CommResponse.from_error(err, self._framework)
 
-        if not isinstance(fn, function.FunctionSync):
-            return CommResponse.from_error(
-                errors.MismatchedSync(f"function {fn_id} is not asynchronous"),
-                self._framework,
-            )
-
-        return self._create_response(fn.call(call, self._client, fn_id))
+        return self._create_response(fn.call_sync(call, self._client, fn_id))
 
     def _create_response(
         self,
@@ -252,7 +247,17 @@ class CommHandler:
             comm_res.body = transforms.prep_body(out)
             comm_res.status_code = 206
         elif isinstance(call_res, execution.CallError):
-            comm_res.body = transforms.prep_body(call_res.model_dump())
+            match call_res.to_dict():
+                case result.Ok(d):
+                    body = transforms.prep_body(d)
+                case result.Err(err):
+                    return CommResponse.from_error(err, self._framework)
+
+            self._logger.error(
+                call_res.message,
+                extra={"is_internal": call_res.is_internal},
+            )
+            comm_res.body = body
             comm_res.status_code = 500
 
             if call_res.is_retriable is False:
@@ -264,7 +269,7 @@ class CommHandler:
 
     def _get_function(
         self, fn_id: str
-    ) -> result.Result[function.Function | function.FunctionSync, Exception]:
+    ) -> result.Result[function.Function, Exception]:
         # Look for the function ID in the list of user functions, but also
         # look for it in the list of on_failure functions.
         for _fn in self._fns.values():
@@ -370,6 +375,8 @@ class CommHandler:
             case result.Ok(_):
                 pass
             case result.Err(err):
+                print(err)
+                self._logger.error(err)
                 return CommResponse.from_error(err, self._framework)
 
         async with httpx.AsyncClient() as client:
@@ -379,6 +386,8 @@ class CommHandler:
                         await client.send(req)
                     )
                 case result.Err(err):
+                    print(err)
+                    self._logger.error(err)
                     return CommResponse.from_error(err, self._framework)
 
         return res
