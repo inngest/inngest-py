@@ -5,9 +5,8 @@ class MyError(Exception):
     pass
 
 
-@inngest.create_function_sync(
+@inngest.create_function(
     fn_id="error_step",
-    name="Error step",
     retries=0,
     trigger=inngest.TriggerEvent(event="app/error_step"),
 )

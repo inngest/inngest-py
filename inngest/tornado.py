@@ -17,7 +17,7 @@ from inngest._internal import (
 def serve(
     app: tornado.web.Application,
     client: client_lib.Inngest,
-    functions: list[function.FunctionSync],
+    functions: list[function.Function],
     *,
     base_url: str | None = None,
     signing_key: str | None = None,

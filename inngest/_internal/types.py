@@ -10,6 +10,10 @@ T = typing.TypeVar("T")
 
 EmptySentinel = object()
 
+JSONSerializableOutput = (
+    bool | float | int | str | dict | list | tuple[object, ...] | None
+)
+
 
 class BaseModel(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(strict=True)

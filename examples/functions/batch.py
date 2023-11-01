@@ -3,13 +3,12 @@ import datetime
 import inngest
 
 
-@inngest.create_function_sync(
+@inngest.create_function(
     batch_events=inngest.Batch(
         max_size=2,
         timeout=datetime.timedelta(minutes=1),
     ),
     fn_id="batch",
-    name="Batch",
     trigger=inngest.TriggerEvent(event="app/batch"),
 )
 def fn_sync(

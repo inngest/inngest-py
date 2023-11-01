@@ -25,7 +25,7 @@ class Test_get_function_configs(  # pylint: disable=invalid-name
         fully-specified config.
         """
 
-        @inngest.create_function_sync(
+        @inngest.create_function(
             batch_events=inngest.Batch(
                 max_size=2, timeout=datetime.timedelta(minutes=1)
             ),
@@ -63,7 +63,7 @@ class Test_get_function_configs(  # pylint: disable=invalid-name
                 assert False, f"Unexpected error: {err}"
 
     def test_no_functions(self) -> None:
-        functions: list[inngest.FunctionSync] = []
+        functions: list[inngest.Function] = []
 
         handler = comm.CommHandler(
             base_url="http://foo.bar",

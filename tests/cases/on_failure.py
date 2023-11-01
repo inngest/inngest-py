@@ -59,7 +59,7 @@ def create(
         state.on_failure_run_id = run_id
         state.step = step
 
-    @inngest.create_function_sync(
+    @inngest.create_function(
         fn_id=test_name,
         on_failure=on_failure_sync,
         retries=0,
@@ -112,7 +112,7 @@ def create(
         assert isinstance(state.events, list) and len(state.events) == 1
         assert isinstance(state.step, (inngest.Step, inngest.StepSync))
 
-    fn: inngest.Function | inngest.FunctionSync
+    fn: inngest.Function
     if is_sync:
         fn = fn_sync
     else:

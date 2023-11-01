@@ -11,7 +11,7 @@ def _on_failure(
     print("on_failure called")
 
 
-@inngest.create_function_sync(
+@inngest.create_function(
     fn_id="on_failure",
     on_failure=_on_failure,
     retries=0,

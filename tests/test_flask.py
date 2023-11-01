@@ -36,7 +36,7 @@ class TestFlask(unittest.TestCase):
                 case.fn
                 for case in _cases
                 # Should always be true but mypy doesn't know that
-                if isinstance(case.fn, inngest.FunctionSync)
+                if isinstance(case.fn, inngest.Function)
             ],
         )
         cls.app = app.test_client()
@@ -89,7 +89,7 @@ class TestFastAPIRegistration(unittest.TestCase):
             is_production=True,
         )
 
-        @inngest.create_function_sync(
+        @inngest.create_function(
             fn_id="foo",
             retries=0,
             trigger=inngest.TriggerEvent(event="app/foo"),

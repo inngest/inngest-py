@@ -21,7 +21,7 @@ def create(
     event_name = base.create_event_name(framework, test_name, is_sync)
     state = _State()
 
-    @inngest.create_function_sync(
+    @inngest.create_function(
         debounce=inngest.Debounce(
             period=datetime.timedelta(seconds=1),
         ),
@@ -59,7 +59,7 @@ def create(
         )
         assert state.run_count == 1, f"Expected 1 run but got {state.run_count}"
 
-    fn: inngest.Function | inngest.FunctionSync
+    fn: inngest.Function
     if is_sync:
         fn = fn_sync
     else:

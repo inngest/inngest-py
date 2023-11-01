@@ -36,7 +36,7 @@ class TestFastAPI(unittest.TestCase):
                 case.fn
                 for case in _cases
                 # Should always be true but mypy doesn't know that
-                if isinstance(case.fn, inngest.Function)
+                # if case.fn.is_handler_async
             ],
         )
         cls.fast_api_client = fastapi.testclient.TestClient(cls.app)

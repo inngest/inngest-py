@@ -3,9 +3,8 @@ import datetime
 import inngest
 
 
-@inngest.create_function_sync(
+@inngest.create_function(
     fn_id="wait_for_event",
-    name="wait_for_event",
     trigger=inngest.TriggerEvent(event="app/wait_for_event"),
 )
 def fn_sync(*, step: inngest.StepSync, **_kwargs: object) -> None:

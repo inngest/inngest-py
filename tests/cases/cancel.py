@@ -21,7 +21,7 @@ def create(
     event_name = base.create_event_name(framework, test_name, is_sync)
     state = _State()
 
-    @inngest.create_function_sync(
+    @inngest.create_function(
         cancel=[
             inngest.Cancel(
                 event=f"{event_name}.cancel",
@@ -85,7 +85,7 @@ def create(
 
         base.wait_for(assert_is_done)
 
-    fn: inngest.Function | inngest.FunctionSync
+    fn: inngest.Function
     if is_sync:
         fn = fn_sync
     else:
