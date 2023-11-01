@@ -25,15 +25,28 @@
 
 > 🚧 Currently in beta! It hasn't been battle-tested in production environments yet.
 
-Supported frameworks:
+Our Python SDK is nearing feature parity with our [TypeScript SDK](https://github.com/inngest/inngest-js), but there are a few missing features:
+
+- Middleware
+- Idempotent logging
+- Parallel steps
+- Large batches
+
+We currently support the following frameworks (but adding a new framework is easy!):
 
 - Fast API
 - Flask
 - Tornado
 
-## Usage
+## Installation
 
-> 💡 Most of these examples don't show `async` functions but you can mix `async` and non-`async` functions in the same app!
+```
+pip install inngest
+```
+
+## Examples
+
+> 💡 You can mix `async` and non-`async` functions in the same app!
 
 - [Basic](#basic-no-steps)
 - [Step run](#step-run)
@@ -52,7 +65,7 @@ import requests
     fn_id="find_person",
     trigger=inngest.TriggerEvent(event="app/person.find"),
 )
-async def fetch_person(
+def fetch_person(
     *,
     event: inngest.Event,
     step: inngest.Step,
@@ -125,7 +138,7 @@ def fetch_ships(
     }
 ```
 
-### Async functions
+### Async function
 
 ```py
 @inngest.create_function(
@@ -143,5 +156,3 @@ async def fetch_person(
         res = await client.get(f"https://swapi.dev/api/people/{person_id}")
         return res.json()
 ```
-
-> 💡 You can mix `async` and non-`async` functions in the same app!
