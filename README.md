@@ -34,7 +34,7 @@ Our Python SDK is nearing feature parity with our [TypeScript SDK](https://githu
 
 We currently support the following frameworks (but adding a new framework is easy!):
 
-- Fast API
+- FastAPI
 - Flask
 - Tornado
 
