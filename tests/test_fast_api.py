@@ -89,7 +89,7 @@ for case in _cases:
     setattr(TestFastAPI, test_name, case.run_test)
 
 
-class TestFastAPIRegistration(unittest.TestCase):
+class TestRegistration(unittest.TestCase):
     def test_dev_server_to_prod(self) -> None:
         """
         Ensure that Dev Server cannot initiate a registration request when in

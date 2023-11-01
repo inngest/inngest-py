@@ -14,7 +14,7 @@ from inngest._internal import (
 )
 
 
-def serve(
+def serve_sync(
     app: tornado.web.Application,
     client: client_lib.Inngest,
     functions: list[function.Function],
