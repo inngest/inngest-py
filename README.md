@@ -54,7 +54,7 @@ Start the Dev Server (the local version of our cloud platform):
 npx inngest-cli@latest dev
 ```
 
-Browse to http://127.0.0.1:8288 and you should see your app! Visit our docs to read more about the https://www.inngest.com/docs/local-development.
+Browse to http://127.0.0.1:8288 and you should see your app! Visit our docs to read more about the [Dev Server](https://www.inngest.com/docs/local-development).
 
 ## Examples
 
