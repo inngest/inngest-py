@@ -94,11 +94,11 @@ class TestRegistration(unittest.TestCase):
             retries=0,
             trigger=inngest.TriggerEvent(event="app/foo"),
         )
-        async def fn(**_kwargs: object) -> None:
+        def fn(**_kwargs: object) -> None:
             pass
 
         app = flask.Flask(__name__)
-        inngest.flask.serve(
+        inngest.flask.serve_sync(
             app,
             client,
             [fn],
