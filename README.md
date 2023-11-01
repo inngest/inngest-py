@@ -23,7 +23,7 @@
 
 # Inngest Python SDK
 
-## 🚧 Currently in alpha! Not guaranteed to be production ready! 🚧
+> 🚧 Currently in beta! It hasn't been battle-tested in production environments yet.
 
 Supported frameworks:
 
@@ -33,9 +33,11 @@ Supported frameworks:
 
 ## Usage
 
+> 💡 Most of these examples don't show `async` functions but you can mix `async` and non-`async` functions in the same app!
+
 - [Basic](#basic-no-steps)
 - [Step run](#step-run)
-- [Avoiding async/await](#avoiding-async-functions)
+- [Async function](#async-function)
 
 ### Basic (no steps)
 
@@ -45,7 +47,6 @@ This is a minimal example of an Inngest function. It's missing some of our featu
 import flask
 import inngest.flask
 import requests
-
 
 @inngest.create_function(
     fn_id="find_person",
@@ -60,7 +61,6 @@ async def fetch_person(
     person_id = event.data["person_id"]
     res = requests.get(f"https://swapi.dev/api/people/{person_id}")
     return res.json()
-
 
 app = flask.Flask(__name__)
 inngest_client = inngest.Inngest(app_id="flask_example")
@@ -89,10 +89,10 @@ The following example registers a function that will:
     fn_id="find_ships",
     trigger=inngest.TriggerEvent(event="app/ships.find"),
 )
-async def fetch_ships(
+def fetch_ships(
     *,
     event: inngest.Event,
-    step: inngest.Step,
+    step: inngest.StepSync,
     **_kwargs: object,
 ) -> dict:
     """
@@ -125,37 +125,23 @@ async def fetch_ships(
     }
 ```
 
-### Avoiding async functions
-
-Completely avoiding `async`` functions only requires 2 differences:
-
-1. Use `step: inngest.StepSync` instead of `step: inngest.Step`
-2. Use `serve_sync` instead of `serve`
+### Async functions
 
 ```py
 @inngest.create_function(
     fn_id="find_person",
     trigger=inngest.TriggerEvent(event="app/person.find"),
 )
-def fetch_person(
+async def fetch_person(
     *,
     event: inngest.Event,
-    step: inngest.StepSync,
+    step: inngest.Step,
     **_kwargs: object,
 ) -> dict:
     person_id = event.data["person_id"]
-    res = requests.get(f"https://swapi.dev/api/people/{person_id}")
-    return res.json()
-
-
-app = flask.Flask(__name__)
-inngest_client = inngest.Inngest(app_id="flask_example")
-
-inngest.flask.serve_sync(
-    app,
-    inngest_client,
-    [fetch_person],
-)
+    async with httpx.AsyncClient() as client:
+        res = await client.get(f"https://swapi.dev/api/people/{person_id}")
+        return res.json()
 ```
 
 > 💡 You can mix `async` and non-`async` functions in the same app!

@@ -22,6 +22,21 @@ def serve(
         signing_key=signing_key,
     )
 
+    async_mode = any(
+        function.is_handler_async or function.is_on_failure_handler_async
+        for function in functions
+    )
+    if async_mode:
+        _create_handler_async(app, client, handler)
+    else:
+        _create_handler_sync(app, client, handler)
+
+
+def _create_handler_async(
+    app: flask.Flask,
+    client: client_lib.Inngest,
+    handler: comm.CommHandler,
+) -> None:
     @app.route("/api/inngest", methods=["GET", "POST", "PUT"])
     async def inngest_api() -> flask.Response | str:
         headers = net.normalize_headers(dict(flask.request.headers.items()))
@@ -60,26 +75,15 @@ def serve(
                 )
             )
 
+        # Should be unreachable
         return ""
 
 
-def serve_sync(
+def _create_handler_sync(
     app: flask.Flask,
     client: client_lib.Inngest,
-    functions: list[function.Function],
-    *,
-    base_url: str | None = None,
-    signing_key: str | None = None,
+    handler: comm.CommHandler,
 ) -> None:
-    handler = comm.CommHandler(
-        base_url=base_url or client.base_url,
-        client=client,
-        framework=const.Framework.FLASK,
-        functions=functions,
-        logger=app.logger,
-        signing_key=signing_key,
-    )
-
     @app.route("/api/inngest", methods=["GET", "POST", "PUT"])
     def inngest_api() -> flask.Response | str:
         headers = net.normalize_headers(dict(flask.request.headers.items()))
@@ -118,6 +122,7 @@ def serve_sync(
                 )
             )
 
+        # Should be unreachable
         return ""
 
 

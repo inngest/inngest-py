@@ -1,10 +1,9 @@
 import datetime
-import json
+import inspect
 import typing
 
 from inngest._internal import (
     client_lib,
-    errors,
     event_lib,
     execution,
     result,
@@ -26,13 +25,35 @@ class Step(base.StepBase):
         self._memos = memos
         self._step_id_counter = step_id_counter
 
+    @typing.overload
     async def run(
         self,
         step_id: str,
-        handler: typing.Callable[[], typing.Awaitable[types.T]],
-    ) -> types.T:
+        handler: typing.Callable[[], typing.Awaitable[types.SerializableT]],
+    ) -> types.SerializableT:
+        ...
+
+    @typing.overload
+    async def run(
+        self,
+        step_id: str,
+        handler: typing.Callable[[], types.SerializableT],
+    ) -> types.SerializableT:
+        ...
+
+    async def run(
+        self,
+        step_id: str,
+        handler: typing.Callable[[], typing.Awaitable[types.SerializableT]]
+        | typing.Callable[[], types.SerializableT],
+    ) -> types.SerializableT:
         """
         Run logic that should be retried on error and memoized after success.
+
+        Args:
+            step_id: Unique step ID within the function. If the same step ID is
+                encountered multiple times then it'll get an index suffix.
+            handler: The logic to run. Can be async or sync.
         """
 
         hashed_id = self._get_hashed_id(step_id)
@@ -41,12 +62,17 @@ class Step(base.StepBase):
         if memo is not types.EmptySentinel:
             return memo  # type: ignore
 
-        output = await handler()
+        if inspect.iscoroutinefunction(handler):
+            output = await handler()
+        else:
+            output = handler()
 
-        try:
-            json.dumps(output)
-        except TypeError as err:
-            raise errors.UnserializableOutput(str(err)) from None
+        # Check whether output is serializable
+        match transforms.dump_json(output):
+            case result.Ok(_):
+                pass
+            case result.Err(err):
+                raise err
 
         raise base.Interrupt(
             hashed_id=hashed_id,

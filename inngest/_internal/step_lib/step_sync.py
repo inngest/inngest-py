@@ -1,10 +1,8 @@
 import datetime
-import json
 import typing
 
 from inngest._internal import (
     client_lib,
-    errors,
     event_lib,
     execution,
     result,
@@ -33,6 +31,11 @@ class StepSync(base.StepBase):
     ) -> types.T:
         """
         Run logic that should be retried on error and memoized after success.
+
+        Args:
+            step_id: Unique step ID within the function. If the same step ID is
+                encountered multiple times then it'll get an index suffix.
+            handler: The logic to run.
         """
 
         hashed_id = self._get_hashed_id(step_id)
@@ -43,10 +46,12 @@ class StepSync(base.StepBase):
 
         output = handler()
 
-        try:
-            json.dumps(output)
-        except TypeError as err:
-            raise errors.UnserializableOutput(str(err)) from None
+        # Check whether output is serializable
+        match transforms.dump_json(output):
+            case result.Ok(_):
+                pass
+            case result.Err(err):
+                raise err
 
         raise base.Interrupt(
             hashed_id=hashed_id,

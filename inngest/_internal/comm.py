@@ -18,6 +18,7 @@ from inngest._internal import (
     registration,
     result,
     transforms,
+    types,
 )
 
 
@@ -226,7 +227,9 @@ class CommHandler:
 
     def _create_response(
         self,
-        call_res: list[execution.CallResponse] | str | execution.CallError,
+        call_res: list[execution.CallResponse]
+        | types.Serializable
+        | execution.CallError,
     ) -> CommResponse:
         comm_res = CommResponse(
             headers={
@@ -235,7 +238,7 @@ class CommHandler:
             }
         )
 
-        if isinstance(call_res, list):
+        if execution.is_call_responses(call_res):
             out: list[dict[str, object]] = []
             for item in call_res:
                 match item.to_dict():
