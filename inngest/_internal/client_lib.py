@@ -19,7 +19,10 @@ class Inngest:
         event_key: str | None = None,
         is_production: bool | None = None,
         logger: logging.Logger | None = None,
-        middleware: list[middleware_lib.Middleware] | None = None,
+        middleware: list[
+            middleware_lib.Middleware | middleware_lib.MiddlewareSync
+        ]
+        | None = None,
     ) -> None:
         self.app_id = app_id
         self.base_url = base_url

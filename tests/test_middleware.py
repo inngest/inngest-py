@@ -1,5 +1,4 @@
 import unittest
-import unittest.mock
 
 import flask
 import flask.testing
@@ -11,16 +10,30 @@ from tests import helper
 from . import base, dev_server, http_proxy, net
 
 
+class _Middleware(inngest.MiddlewareSync):
+    def __init__(self) -> None:
+        super().__init__()
+        self.call_list: list[str] = []
+
+    def after_execution(self) -> None:
+        self.call_list.append("after_execution")
+
+    def before_execution(self) -> None:
+        self.call_list.append("before_execution")
+
+
 @inngest.create_function(
     fn_id="two_steps",
     trigger=inngest.TriggerEvent(event="app/two_steps"),
 )
-def two_steps(*, step: inngest.StepSync, **_kwargs: object) -> None:
+def _two_steps(*, step: inngest.StepSync, **_kwargs: object) -> None:
     step.run("first_step", lambda: None)
     step.run("second_step", lambda: None)
 
 
 class TestFlask(unittest.TestCase):
+    _client: inngest.Inngest
+    _middleware: _Middleware
     app: flask.testing.FlaskClient
     dev_server_port: int
     proxy: http_proxy.Proxy
@@ -29,7 +42,7 @@ class TestFlask(unittest.TestCase):
     def setUpClass(cls) -> None:
         super().setUpClass()
 
-        cls._middleware = unittest.mock.Mock(spec=inngest.Middleware)
+        cls._middleware = _Middleware()
 
         cls._client = inngest.Inngest(
             app_id="flask",
@@ -42,7 +55,7 @@ class TestFlask(unittest.TestCase):
         inngest.flask.serve(
             app,
             cls._client,
-            [two_steps],
+            [_two_steps],
         )
         cls.app = app.test_client()
         cls.proxy = http_proxy.Proxy(cls.on_proxy_request).start()
@@ -85,8 +98,10 @@ class TestFlask(unittest.TestCase):
             run_ids[0], helper.RunStatus.COMPLETED
         )
 
-        assert self._middleware.before_execution.call_count == 1
-        assert self._middleware.after_execution.call_count == 1
+        assert self._middleware.call_list == [
+            "before_execution",
+            "after_execution",
+        ]
 
 
 if __name__ == "__main__":

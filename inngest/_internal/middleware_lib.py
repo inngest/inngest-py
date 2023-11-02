@@ -1,4 +1,3 @@
-import dataclasses
 import inspect
 import typing
 
@@ -7,20 +6,48 @@ from . import errors, result
 BlankHook = typing.Callable[[], typing.Awaitable[None] | None]
 
 
-def noop() -> None:
-    pass
-
-
-@dataclasses.dataclass
 class Middleware:
-    after_execution: BlankHook | None = None
-    before_execution: BlankHook | None = None
+    async def after_execution(self) -> None:
+        """
+        Called after a function run is done executing. Called once per run
+        regardless of the number of steps. Will still be called if the run
+        failed.
+        """
+
+        return None
+
+    async def before_execution(self) -> None:
+        """
+        Called when a function run starts executing. Called once per run
+        regardless of the number of steps.
+        """
+
+        return None
+
+
+class MiddlewareSync:
+    def after_execution(self) -> None:
+        """
+        Called after a function run is done executing. Called once per run
+        regardless of the number of steps. Will still be called if the run
+        failed.
+        """
+
+        return None
+
+    def before_execution(self) -> None:
+        """
+        Called when a function run starts executing. Called once per run
+        regardless of the number of steps.
+        """
+
+        return None
 
 
 class MiddlewareManager:
     def __init__(
         self,
-        middleware: list[Middleware],
+        middleware: list[Middleware | MiddlewareSync],
     ):
         self._middleware = middleware
 
