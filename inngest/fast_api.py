@@ -2,7 +2,16 @@ import json
 
 import fastapi
 
-from ._internal import client_lib, comm, const, execution, function, net
+from ._internal import (
+    client_lib,
+    comm,
+    const,
+    execution,
+    function,
+    net,
+    result,
+    transforms,
+)
 
 
 def serve(
@@ -27,12 +36,17 @@ def serve(
         request: fastapi.Request,
     ) -> fastapi.Response:
         headers = net.normalize_headers(dict(request.headers.items()))
-        is_from_dev_server = (
-            headers.get(const.HeaderKey.SERVER_KIND.value)
-            == const.ServerKind.DEV_SERVER.value
-        )
 
-        return _to_response(handler.inspect(is_from_dev_server))
+        server_kind: const.ServerKind | None = None
+        match transforms.to_server_kind(
+            headers.get(const.HeaderKey.SERVER_KIND.value, "")
+        ):
+            case result.Ok(server_kind):
+                pass
+            case result.Err(_):
+                pass
+
+        return _to_response(handler.inspect(server_kind))
 
     @app.post("/api/inngest")
     async def post_inngest_api(
@@ -58,13 +72,19 @@ def serve(
     async def put_inngest_api(request: fastapi.Request) -> fastapi.Response:
         headers = net.normalize_headers(dict(request.headers.items()))
 
+        server_kind: const.ServerKind | None = None
+        match transforms.to_server_kind(
+            headers.get(const.HeaderKey.SERVER_KIND.value, "")
+        ):
+            case result.Ok(server_kind):
+                pass
+            case result.Err(_):
+                pass
+
         return _to_response(
             await handler.register(
                 app_url=str(request.url),
-                is_from_dev_server=(
-                    headers.get(const.HeaderKey.SERVER_KIND.value)
-                    == const.ServerKind.DEV_SERVER.value
-                ),
+                server_kind=server_kind,
             )
         )
 

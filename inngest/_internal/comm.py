@@ -51,17 +51,27 @@ class CommResponse:
         else:
             self.headers[const.HeaderKey.CONTENT_TYPE.value] = "text/plain"
 
+    @property
+    def is_success(self) -> bool:
+        return self.status_code < 400
+
     @classmethod
     def from_error(
         cls,
+        logger: logging.Logger,
         err: Exception,
         framework: const.Framework,
     ) -> CommResponse:
-        code = const.ErrorCode.UNKNOWN.value
+        code: str | None = None
         status_code = http.HTTPStatus.INTERNAL_SERVER_ERROR.value
         if isinstance(err, errors.InternalError):
-            code = err.code
+            code = err.code.value
             status_code = err.status_code
+
+        if code:
+            logger.error(f"{code}: {str(err)}")
+        else:
+            logger.error(f"_{str(err)}_")
 
         return cls(
             body={
@@ -182,14 +192,20 @@ class CommHandler:
         validation_res = req_sig.validate(self._signing_key)
         if result.is_err(validation_res):
             return CommResponse.from_error(
-                validation_res.err_value, self._framework
+                self._logger,
+                validation_res.err_value,
+                self._framework,
             )
 
         match self._get_function(fn_id):
             case result.Ok(fn):
                 pass
             case result.Err(err):
-                return CommResponse.from_error(err, self._framework)
+                return CommResponse.from_error(
+                    self._logger,
+                    err,
+                    self._framework,
+                )
 
         return self._create_response(await fn.call(call, self._client, fn_id))
 
@@ -211,7 +227,7 @@ class CommHandler:
             if isinstance(err, errors.InternalError):
                 extra["code"] = err.code
             self._logger.error(err, extra=extra)
-            return CommResponse.from_error(err, self._framework)
+            return CommResponse.from_error(self._logger, err, self._framework)
 
         match self._get_function(fn_id):
             case result.Ok(fn):
@@ -221,7 +237,11 @@ class CommHandler:
                 if isinstance(err, errors.InternalError):
                     extra["code"] = err.code
                 self._logger.error(err, extra=extra)
-                return CommResponse.from_error(err, self._framework)
+                return CommResponse.from_error(
+                    self._logger,
+                    err,
+                    self._framework,
+                )
 
         return self._create_response(fn.call_sync(call, self._client, fn_id))
 
@@ -245,21 +265,27 @@ class CommHandler:
                     case result.Ok(d):
                         out.append(d)
                     case result.Err(err):
-                        return CommResponse.from_error(err, self._framework)
+                        return CommResponse.from_error(
+                            self._logger,
+                            err,
+                            self._framework,
+                        )
 
             comm_res.body = transforms.prep_body(out)
             comm_res.status_code = 206
         elif isinstance(call_res, execution.CallError):
+            self._logger.error(call_res.stack)
+
             match call_res.to_dict():
                 case result.Ok(d):
                     body = transforms.prep_body(d)
                 case result.Err(err):
-                    return CommResponse.from_error(err, self._framework)
+                    return CommResponse.from_error(
+                        self._logger,
+                        err,
+                        self._framework,
+                    )
 
-            self._logger.error(
-                call_res.message,
-                extra={"is_internal": call_res.is_internal},
-            )
             comm_res.body = body
             comm_res.status_code = 500
 
@@ -299,12 +325,12 @@ class CommHandler:
             return result.Err(errors.InvalidConfig("no functions found"))
         return result.Ok(configs)
 
-    def inspect(self, is_from_dev_server: bool) -> CommResponse:
+    def inspect(self, server_kind: const.ServerKind | None) -> CommResponse:
         """
         Used by Dev Server to discover apps.
         """
 
-        if is_from_dev_server and self._is_production:
+        if server_kind == const.ServerKind.DEV_SERVER and self._is_production:
             # Tell Dev Server to leave the app alone since it's in production
             # mode.
             return CommResponse(
@@ -323,64 +349,60 @@ class CommHandler:
         self,
         server_res: httpx.Response,
     ) -> CommResponse:
-        comm_res = CommResponse(
-            headers=net.create_headers(framework=self._framework)
-        )
-        body: dict[str, object] = {}
-
-        server_res_body: dict[str, object] | None = None
         try:
-            raw_body: object = server_res.json()
-            if isinstance(raw_body, dict):
-                server_res_body = raw_body
+            server_res_body = server_res.json()
         except Exception:
-            pass
-
-        if server_res.status_code < 400:
-            if server_res_body:
-                message = server_res_body.get("message")
-                if isinstance(message, str):
-                    body["message"] = message
-
-                modified = server_res_body.get("modified")
-                if isinstance(modified, bool):
-                    body["modified"] = modified
-        else:
-            extra: dict[str, object] = {"status_code": server_res.status_code}
-
-            if server_res_body:
-                error = server_res_body.get("error")
-                if isinstance(error, str):
-                    body["message"] = error
-                    extra["error"] = server_res_body.get("error")
-
-            self._logger.error(
-                "registration response failed",
-                extra=extra,
+            return CommResponse.from_error(
+                self._logger,
+                errors.RegistrationError("response is not valid JSON"),
+                self._framework,
             )
 
-            comm_res.status_code = server_res.status_code
+        if not isinstance(server_res_body, dict):
+            return CommResponse.from_error(
+                self._logger,
+                errors.RegistrationError("response is not an object"),
+                self._framework,
+            )
 
-        comm_res.body = body
+        if server_res.status_code < 400:
+            return CommResponse(
+                body=server_res_body,
+                headers=net.create_headers(framework=self._framework),
+                status_code=server_res.status_code,
+            )
+
+        msg = server_res_body.get("error")
+        if not isinstance(msg, str):
+            msg = "registration failed"
+        comm_res = CommResponse.from_error(
+            self._logger,
+            errors.RegistrationError(msg.strip()),
+            self._framework,
+        )
+        comm_res.status_code = server_res.status_code
         return comm_res
 
     async def register(
         self,
         *,
         app_url: str,
-        is_from_dev_server: bool,
+        server_kind: const.ServerKind | None,
     ) -> CommResponse:
         """
         Handles a registration call.
         """
 
-        match self._validate_registration(is_from_dev_server):
+        match self._validate_registration(server_kind):
             case result.Ok(_):
                 pass
             case result.Err(err):
-                print(err)
                 self._logger.error(err)
-                return CommResponse.from_error(err, self._framework)
+                return CommResponse.from_error(
+                    self._logger,
+                    err,
+                    self._framework,
+                )
 
         async with httpx.AsyncClient() as client:
             match self._build_registration_request(app_url):
@@ -389,9 +411,12 @@ class CommHandler:
                         await client.send(req)
                     )
                 case result.Err(err):
-                    print(err)
                     self._logger.error(err)
-                    return CommResponse.from_error(err, self._framework)
+                    return CommResponse.from_error(
+                        self._logger,
+                        err,
+                        self._framework,
+                    )
 
         return res
 
@@ -399,32 +424,43 @@ class CommHandler:
         self,
         *,
         app_url: str,
-        is_from_dev_server: bool,
+        server_kind: const.ServerKind | None,
     ) -> CommResponse:
         """
         Handles a registration call.
         """
 
-        match self._validate_registration(is_from_dev_server):
+        match self._validate_registration(server_kind):
             case result.Ok(_):
                 pass
             case result.Err(err):
-                return CommResponse.from_error(err, self._framework)
+                self._logger.error(err)
+                return CommResponse.from_error(
+                    self._logger,
+                    err,
+                    self._framework,
+                )
 
         with httpx.Client() as client:
             match self._build_registration_request(app_url):
                 case result.Ok(req):
                     res = self._parse_registration_response(client.send(req))
                 case result.Err(err):
-                    return CommResponse.from_error(err, self._framework)
+                    self._logger.error(err)
+                    return CommResponse.from_error(
+                        self._logger,
+                        err,
+                        self._framework,
+                    )
 
         return res
 
     def _validate_registration(
         self,
-        is_from_dev_server: bool,
+        server_kind: const.ServerKind | None,
     ) -> result.Result[None, Exception]:
-        if is_from_dev_server and self._is_production:
+        print(server_kind, self._is_production)
+        if server_kind == const.ServerKind.DEV_SERVER and self._is_production:
             return result.Err(
                 errors.DevServerRegistrationNotAllowed(
                     "Dev Server registration not allowed in production mode"
