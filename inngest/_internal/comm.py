@@ -240,49 +240,53 @@ class CommHandler:
 
         # No memoized data means we're calling the function for the first time.
         if len(call.steps.keys()) == 0:
-            self._client.middleware.before_run_execution_sync()
+            await self._client.middleware.before_run_execution()
 
-        comm_res: CommResponse
+        call_input = await self._client.middleware.transform_input(
+            logger=self._logger,
+        )
 
         validation_res = req_sig.validate(self._signing_key)
         if result.is_err(validation_res):
             err = validation_res.err_value
-            extra = {}
-            if isinstance(err, errors.InternalError):
-                extra["code"] = err.code
-            self._logger.error(err, extra=extra)
-            comm_res = CommResponse.from_error(
+            await self._client.middleware.before_response()
+            return CommResponse.from_error(
                 self._logger,
                 self._framework,
                 err,
             )
-        else:
-            match self._get_function(fn_id):
-                case result.Ok(fn):
-                    call_res = await fn.call(call, self._client, fn_id)
 
-                    if isinstance(call_res, execution.FunctionCallResponse):
-                        # Only call this hook if we get a return at the function
-                        # level.
-                        self._client.middleware.after_run_execution_sync()
+        match self._get_function(fn_id):
+            case result.Ok(fn):
+                call_res = await fn.call(
+                    call,
+                    self._client,
+                    fn_id,
+                    call_input,
+                )
 
-                    comm_res = CommResponse.from_call_result(
-                        self._logger,
-                        self._framework,
-                        call_res,
-                    )
-                case result.Err(err):
-                    extra = {}
-                    if isinstance(err, errors.InternalError):
-                        extra["code"] = err.code
-                    self._logger.error(err, extra=extra)
-                    comm_res = CommResponse.from_error(
-                        self._logger,
-                        self._framework,
-                        err,
-                    )
+                if isinstance(call_res, execution.FunctionCallResponse):
+                    # Only call this hook if we get a return at the function
+                    # level.
+                    await self._client.middleware.after_run_execution()
 
-        self._client.middleware.before_response_sync()
+                comm_res = CommResponse.from_call_result(
+                    self._logger,
+                    self._framework,
+                    call_res,
+                )
+            case result.Err(err):
+                extra = {}
+                if isinstance(err, errors.InternalError):
+                    extra["code"] = err.code
+                self._logger.error(err, extra=extra)
+                comm_res = CommResponse.from_error(
+                    self._logger,
+                    self._framework,
+                    err,
+                )
+
+        await self._client.middleware.before_response()
         return comm_res
 
     def call_function_sync(
@@ -300,7 +304,18 @@ class CommHandler:
         if len(call.steps.keys()) == 0:
             self._client.middleware.before_run_execution_sync()
 
-        comm_res: CommResponse
+        match self._client.middleware.transform_input_sync(
+            logger=self._logger,
+        ):
+            case result.Ok(call_input):
+                pass
+            case result.Err(err):
+                self._client.middleware.before_response_sync()
+                return CommResponse.from_error(
+                    self._logger,
+                    self._framework,
+                    err,
+                )
 
         validation_res = req_sig.validate(self._signing_key)
         if result.is_err(validation_res):
@@ -317,7 +332,12 @@ class CommHandler:
         else:
             match self._get_function(fn_id):
                 case result.Ok(fn):
-                    call_res = fn.call_sync(call, self._client, fn_id)
+                    call_res = fn.call_sync(
+                        call,
+                        self._client,
+                        fn_id,
+                        call_input,
+                    )
 
                     if isinstance(call_res, execution.FunctionCallResponse):
                         # Only call this hook if we get a return at the function

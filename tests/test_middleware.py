@@ -1,4 +1,6 @@
+import logging
 import unittest
+import unittest.mock
 
 import flask
 import flask.testing
@@ -8,6 +10,8 @@ import inngest.flask
 from tests import helper
 
 from . import base, dev_server, http_proxy, net
+
+_logger = unittest.mock.Mock()
 
 
 class _Middleware(inngest.MiddlewareSync):
@@ -24,14 +28,27 @@ class _Middleware(inngest.MiddlewareSync):
     def before_run_execution(self) -> None:
         self.call_list.append("before_run_execution")
 
+    def transform_input(self) -> inngest.CallInputTransform:
+        self.call_list.append("transform_input")
+        return inngest.CallInputTransform(logger=_logger)
+
 
 @inngest.create_function(
     fn_id="two_steps",
     trigger=inngest.TriggerEvent(event="app/two_steps"),
 )
-def _two_steps(*, step: inngest.StepSync, **_kwargs: object) -> None:
-    step.run("first_step", lambda: None)
-    step.run("second_step", lambda: None)
+def _two_steps(
+    *, logger: logging.Logger, step: inngest.StepSync, **_kwargs: object
+) -> None:
+    def _first_step() -> None:
+        logger.info("first_step")
+
+    step.run("first_step", _first_step)
+
+    def _second_step() -> None:
+        logger.info("second_step")
+
+    step.run("second_step", _second_step)
 
 
 class TestFlask(unittest.TestCase):
@@ -101,13 +118,21 @@ class TestFlask(unittest.TestCase):
             run_ids[0], helper.RunStatus.COMPLETED
         )
 
+        # Assert that the middleware hooks were called in the correct order
         assert self._middleware.call_list == [
             "before_run_execution",
-            "before_response",  # first_step
-            "before_response",  # second_step
+            "transform_input",
+            "before_response",  # first_step done
+            "transform_input",
+            "before_response",  # second_step done
+            "transform_input",
             "after_run_execution",
-            "before_response",  # Function return
+            "before_response",  # Function done
         ]
+
+        # Assert that the middleware was able to transform the input
+        _logger.info.assert_any_call("first_step")
+        _logger.info.assert_any_call("second_step")
 
 
 if __name__ == "__main__":

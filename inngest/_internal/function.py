@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import inspect
+import logging
 import typing
 
 import pydantic
@@ -38,6 +39,7 @@ class FunctionHandlerAsync(typing.Protocol):
         attempt: int,
         event: event_lib.Event,
         events: list[event_lib.Event],
+        logger: logging.Logger,
         run_id: str,
         step: step_lib.Step,
     ) -> typing.Awaitable[types.Serializable]:
@@ -52,6 +54,7 @@ class FunctionHandlerSync(typing.Protocol):
         attempt: int,
         event: event_lib.Event,
         events: list[event_lib.Event],
+        logger: logging.Logger,
         run_id: str,
         step: step_lib.StepSync,
     ) -> types.Serializable:
@@ -177,6 +180,7 @@ class Function:
         call: execution.Call,
         client: client_lib.Inngest,
         fn_id: str,
+        call_input: execution.CallInput,
     ) -> execution.CallResult:
         try:
             handler: FunctionHandlerAsync | FunctionHandlerSync
@@ -201,6 +205,7 @@ class Function:
                     attempt=call.ctx.attempt,
                     event=call.event,
                     events=call.events,
+                    logger=call_input.logger,
                     run_id=call.ctx.run_id,
                     step=step_lib.Step(
                         client,
@@ -213,6 +218,7 @@ class Function:
                     attempt=call.ctx.attempt,
                     event=call.event,
                     events=call.events,
+                    logger=call_input.logger,
                     run_id=call.ctx.run_id,
                     step=step_lib.StepSync(
                         client,
@@ -255,6 +261,7 @@ class Function:
         call: execution.Call,
         client: client_lib.Inngest,
         fn_id: str,
+        call_input: execution.CallInput,
     ) -> execution.CallResult:
         try:
             handler: FunctionHandlerAsync | FunctionHandlerSync
@@ -276,6 +283,7 @@ class Function:
                     attempt=call.ctx.attempt,
                     event=call.event,
                     events=call.events,
+                    logger=call_input.logger,
                     run_id=call.ctx.run_id,
                     step=step_lib.StepSync(
                         client,

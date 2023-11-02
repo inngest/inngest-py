@@ -11,7 +11,11 @@ from ._internal.function_config import (
     TriggerCron,
     TriggerEvent,
 )
-from ._internal.middleware_lib import Middleware, MiddlewareSync
+from ._internal.middleware_lib import (
+    CallInputTransform,
+    Middleware,
+    MiddlewareSync,
+)
 from ._internal.step_lib import Step, StepSync
 
 __all__ = [
@@ -21,6 +25,7 @@ __all__ = [
     "Event",
     "Function",
     "Inngest",
+    "CallInputTransform",
     "Middleware",
     "MiddlewareSync",
     "NonRetriableError",

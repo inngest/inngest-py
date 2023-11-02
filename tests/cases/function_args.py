@@ -1,3 +1,5 @@
+import logging
+
 import inngest
 import tests.helper
 
@@ -32,6 +34,7 @@ def create(
         attempt: int,
         event: inngest.Event,
         events: list[inngest.Event],
+        logger: logging.Logger,
         run_id: str,
         step: inngest.StepSync,
     ) -> None:
@@ -51,6 +54,7 @@ def create(
         attempt: int,
         event: inngest.Event,
         events: list[inngest.Event],
+        logger: logging.Logger,
         run_id: str,
         step: inngest.Step,
     ) -> None:
