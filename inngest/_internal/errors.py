@@ -8,14 +8,14 @@ from . import const
 
 
 class InternalError(Exception):
-    code: str
+    code: const.ErrorCode
     status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 
     def __init__(
         self, *, code: const.ErrorCode, message: str | None = None
     ) -> None:
         super().__init__(message)
-        self.code = code.value
+        self.code = code
 
 
 class DevServerRegistrationNotAllowed(InternalError):
@@ -157,6 +157,16 @@ class MissingSigningKey(InternalError):
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
             code=const.ErrorCode.MISSING_SIGNING_KEY,
+            message=message,
+        )
+
+
+class RegistrationError(InternalError):
+    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
+
+    def __init__(self, message: str | None = None) -> None:
+        super().__init__(
+            code=const.ErrorCode.REGISTRATION_ERROR,
             message=message,
         )
 

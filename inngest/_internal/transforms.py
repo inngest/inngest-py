@@ -4,7 +4,7 @@ import json
 import re
 import traceback
 
-from . import errors, result, types
+from . import const, errors, result, types
 
 
 def get_traceback(err: Exception) -> str:
@@ -118,3 +118,10 @@ def to_iso_utc(value: datetime.datetime) -> str:
         )[:-3]
         + "Z"
     )
+
+
+def to_server_kind(value: str) -> result.Result[const.ServerKind, Exception]:
+    try:
+        return result.Ok(const.ServerKind(value))
+    except ValueError:
+        return result.Err(Exception(f"invalid server kind: {value}"))

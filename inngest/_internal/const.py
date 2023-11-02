@@ -27,6 +27,7 @@ class ErrorCode(enum.Enum):
     MISSING_HEADER = "missing_header"
     MISSING_PARAM = "missing_param"
     MISSING_SIGNING_KEY = "missing_signing_key"
+    REGISTRATION_ERROR = "registration_error"
     UNKNOWN = "unknown"
     UNSERIALIZABLE_OUTPUT = "unserializable_output"
 

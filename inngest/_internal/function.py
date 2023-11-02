@@ -15,7 +15,6 @@ from inngest._internal import (
     execution,
     function_config,
     step_lib,
-    transforms,
     types,
 )
 
@@ -242,10 +241,6 @@ class Function:
                 )
             ]
         except Exception as err:
-            # An error occurred with the user's code. Print the traceback to
-            # help them debug.
-            print(transforms.get_traceback(err))
-
             return execution.CallError.from_error(err)
 
     def call_sync(
@@ -300,10 +295,6 @@ class Function:
                 )
             ]
         except Exception as err:
-            # An error occurred with the user's code. Print the traceback to
-            # help them debug.
-            print(transforms.get_traceback(err))
-
             return execution.CallError.from_error(err)
 
     def get_config(self, app_url: str) -> _Config:
