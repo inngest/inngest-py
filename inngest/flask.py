@@ -147,11 +147,8 @@ def _create_handler_sync(
 
 
 def _to_response(comm_res: comm.CommResponse) -> flask.Response:
-    res = flask.make_response()
-
-    for k, v in comm_res.headers.items():
-        res.headers.add_header(k, v)
-
-    res.set_data(json.dumps(comm_res.body))
-    res.status_code = comm_res.status_code
-    return res
+    return flask.Response(
+        response=json.dumps(comm_res.body),
+        headers=comm_res.headers,
+        status=comm_res.status_code,
+    )

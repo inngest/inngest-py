@@ -76,8 +76,12 @@ def create(
             tests.helper.RunStatus.COMPLETED,
         )
 
-        assert state.step_1_counter == 1
-        assert state.step_2_counter == 1
+        assert (
+            state.step_1_counter == 1
+        ), f"step_1_counter: {state.step_1_counter}"
+        assert (
+            state.step_2_counter == 1
+        ), f"step_2_counter: {state.step_2_counter}"
 
     fn: inngest.Function
     if is_sync:

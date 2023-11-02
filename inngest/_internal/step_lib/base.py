@@ -43,13 +43,20 @@ class Interrupt(BaseException):
     def __init__(
         self,
         *,
-        data: object = None,
+        data: types.Serializable = None,
         display_name: str,
         hashed_id: str,
         name: str,
         op: execution.Opcode,
         opts: dict[str, object] | None = None,
     ) -> None:
+        """
+        Args:
+            data: JSON returned by the step.
+            display_name: User-specified step ID.
+            hashed_id: Hashed step ID.
+        """
+
         self.data = data
         self.display_name = display_name
         self.hashed_id = hashed_id

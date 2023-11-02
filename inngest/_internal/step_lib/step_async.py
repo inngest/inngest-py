@@ -1,5 +1,4 @@
 import datetime
-import inspect
 import typing
 
 from inngest._internal import (
@@ -62,14 +61,9 @@ class Step(base.StepBase):
         if memo is not types.EmptySentinel:
             return memo  # type: ignore
 
-        if inspect.iscoroutinefunction(handler):
-            output = await handler()
-        else:
-            output = handler()
-
-        # Check whether output is serializable
-        match transforms.dump_json(output):
-            case result.Ok(_):
+        # Ensure the output is JSON-serializable.
+        match transforms.dump_json(await transforms.maybe_await(handler())):
+            case result.Ok(output):
                 pass
             case result.Err(err):
                 raise err

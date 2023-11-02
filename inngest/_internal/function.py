@@ -14,7 +14,9 @@ from inngest._internal import (
     event_lib,
     execution,
     function_config,
+    result,
     step_lib,
+    transforms,
     types,
 )
 
@@ -175,9 +177,7 @@ class Function:
         call: execution.Call,
         client: client_lib.Inngest,
         fn_id: str,
-    ) -> list[
-        execution.CallResponse
-    ] | types.Serializable | execution.CallError:
+    ) -> execution.CallResult:
         try:
             handler: FunctionHandlerAsync | FunctionHandlerSync
             if self.id == fn_id:
@@ -193,11 +193,11 @@ class Function:
                     errors.MissingFunction("function ID mismatch")
                 )
 
-            # Determine whether the handler is async (i.e. if we need to await
-            # it). Sync functions are OK in async contexts, so it's OK if the
-            # handler is sync.
+            # # Determine whether the handler is async (i.e. if we need to await
+            # # it). Sync functions are OK in async contexts, so it's OK if the
+            # # handler is sync.
             if _is_function_handler_async(handler):
-                res = await handler(
+                output = await handler(
                     attempt=call.ctx.attempt,
                     event=call.event,
                     events=call.events,
@@ -209,7 +209,7 @@ class Function:
                     ),
                 )
             elif _is_function_handler_sync(handler):
-                res = handler(
+                output = handler(
                     attempt=call.ctx.attempt,
                     event=call.event,
                     events=call.events,
@@ -228,16 +228,23 @@ class Function:
                     )
                 )
 
-            return res
-        except step_lib.Interrupt as out:
+            # Ensure the output is JSON-serializable.
+            match transforms.dump_json(output):
+                case result.Ok(_):
+                    pass
+                case result.Err(err):
+                    raise err
+
+            return execution.FunctionCallResponse(data=output)
+        except step_lib.Interrupt as interrupt:
             return [
-                execution.CallResponse(
-                    data=out.data,
-                    display_name=out.display_name,
-                    id=out.hashed_id,
-                    name=out.name,
-                    op=out.op,
-                    opts=out.opts,
+                execution.StepCallResponse(
+                    data=interrupt.data,
+                    display_name=interrupt.display_name,
+                    id=interrupt.hashed_id,
+                    name=interrupt.name,
+                    op=interrupt.op,
+                    opts=interrupt.opts,
                 )
             ]
         except Exception as err:
@@ -248,9 +255,7 @@ class Function:
         call: execution.Call,
         client: client_lib.Inngest,
         fn_id: str,
-    ) -> (
-        list[execution.CallResponse] | types.Serializable | execution.CallError
-    ):
+    ) -> execution.CallResult:
         try:
             handler: FunctionHandlerAsync | FunctionHandlerSync
             if self.id == fn_id:
@@ -267,7 +272,7 @@ class Function:
                 )
 
             if _is_function_handler_sync(handler):
-                return handler(
+                output = handler(
                     attempt=call.ctx.attempt,
                     event=call.event,
                     events=call.events,
@@ -278,20 +283,28 @@ class Function:
                         step_lib.StepIDCounter(),
                     ),
                 )
+
+                match transforms.dump_json(output):
+                    case result.Ok(output_str):
+                        pass
+                    case result.Err(err):
+                        return execution.CallError.from_error(err)
+
+                return execution.FunctionCallResponse(data=output_str)
             return execution.CallError.from_error(
                 errors.MismatchedSync(
                     "encountered async function in non-async context"
                 )
             )
-        except step_lib.Interrupt as out:
+        except step_lib.Interrupt as interrupt:
             return [
-                execution.CallResponse(
-                    data=out.data,
-                    display_name=out.display_name,
-                    id=out.hashed_id,
-                    name=out.name,
-                    op=out.op,
-                    opts=out.opts,
+                execution.StepCallResponse(
+                    data=interrupt.data,
+                    display_name=interrupt.display_name,
+                    id=interrupt.hashed_id,
+                    name=interrupt.name,
+                    op=interrupt.op,
+                    opts=interrupt.opts,
                 )
             ]
         except Exception as err:

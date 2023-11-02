@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import http
+import json
 import logging
 import os
 import urllib.parse
@@ -23,33 +24,16 @@ from inngest._internal import (
 
 
 class CommResponse:
-    _body: object | None = None
-
     def __init__(
         self,
         *,
-        body: object | None = None,
+        body: types.Serializable = None,
         headers: dict[str, str],
-        status_code: int = 200,
+        status_code: int = http.HTTPStatus.OK.value,
     ) -> None:
         self.headers = headers
         self.body = body
         self.status_code = status_code
-
-    @property
-    def body(self) -> object:
-        return self._body or {}
-
-    @body.setter
-    def body(self, body: object) -> None:
-        self._body = body
-
-        if isinstance(body, (dict, list)):
-            self.headers[
-                const.HeaderKey.CONTENT_TYPE.value
-            ] = "application/json"
-        else:
-            self.headers[const.HeaderKey.CONTENT_TYPE.value] = "text/plain"
 
     @property
     def is_success(self) -> bool:
@@ -189,25 +173,46 @@ class CommHandler:
         Handles a function call from the Executor.
         """
 
+        # No memoized data means we're calling the function for the first time.
+        if len(call.steps.keys()) == 0:
+            self._client.middleware.before_run_execution_sync()
+
+        comm_res: CommResponse
+
         validation_res = req_sig.validate(self._signing_key)
         if result.is_err(validation_res):
-            return CommResponse.from_error(
-                self._logger,
-                validation_res.err_value,
-                self._framework,
+            err = validation_res.err_value
+            extra = {}
+            if isinstance(err, errors.InternalError):
+                extra["code"] = err.code
+            self._logger.error(err, extra=extra)
+            comm_res = CommResponse.from_error(
+                self._logger, err, self._framework
             )
+        else:
+            match self._get_function(fn_id):
+                case result.Ok(fn):
+                    call_res = await fn.call(call, self._client, fn_id)
 
-        match self._get_function(fn_id):
-            case result.Ok(fn):
-                pass
-            case result.Err(err):
-                return CommResponse.from_error(
-                    self._logger,
-                    err,
-                    self._framework,
-                )
+                    if isinstance(call_res, execution.FunctionCallResponse):
+                        # Only call this hook if we get a return at the function
+                        # level.
+                        self._client.middleware.after_run_execution_sync()
 
-        return self._create_response(await fn.call(call, self._client, fn_id))
+                    comm_res = self._create_response(call_res)
+                case result.Err(err):
+                    extra = {}
+                    if isinstance(err, errors.InternalError):
+                        extra["code"] = err.code
+                    self._logger.error(err, extra=extra)
+                    comm_res = CommResponse.from_error(
+                        self._logger,
+                        err,
+                        self._framework,
+                    )
+
+        self._client.middleware.before_response_sync()
+        return comm_res
 
     def call_function_sync(
         self,
@@ -220,6 +225,12 @@ class CommHandler:
         Handles a function call from the Executor.
         """
 
+        # No memoized data means we're calling the function for the first time.
+        if len(call.steps.keys()) == 0:
+            self._client.middleware.before_run_execution_sync()
+
+        comm_res: CommResponse
+
         validation_res = req_sig.validate(self._signing_key)
         if result.is_err(validation_res):
             err = validation_res.err_value
@@ -227,38 +238,44 @@ class CommHandler:
             if isinstance(err, errors.InternalError):
                 extra["code"] = err.code
             self._logger.error(err, extra=extra)
-            return CommResponse.from_error(self._logger, err, self._framework)
+            comm_res = CommResponse.from_error(
+                self._logger, err, self._framework
+            )
+        else:
+            match self._get_function(fn_id):
+                case result.Ok(fn):
+                    call_res = fn.call_sync(call, self._client, fn_id)
 
-        match self._get_function(fn_id):
-            case result.Ok(fn):
-                pass
-            case result.Err(err):
-                extra = {}
-                if isinstance(err, errors.InternalError):
-                    extra["code"] = err.code
-                self._logger.error(err, extra=extra)
-                return CommResponse.from_error(
-                    self._logger,
-                    err,
-                    self._framework,
-                )
+                    if isinstance(call_res, execution.FunctionCallResponse):
+                        # Only call this hook if we get a return at the function
+                        # level.
+                        self._client.middleware.after_run_execution_sync()
 
-        return self._create_response(fn.call_sync(call, self._client, fn_id))
+                    comm_res = self._create_response(call_res)
+                case result.Err(err):
+                    extra = {}
+                    if isinstance(err, errors.InternalError):
+                        extra["code"] = err.code
+                    self._logger.error(err, extra=extra)
+                    comm_res = CommResponse.from_error(
+                        self._logger,
+                        err,
+                        self._framework,
+                    )
+
+        self._client.middleware.before_response_sync()
+        return comm_res
 
     def _create_response(
         self,
-        call_res: list[execution.CallResponse]
-        | types.Serializable
-        | execution.CallError,
+        call_res: execution.CallResult,
     ) -> CommResponse:
-        comm_res = CommResponse(
-            headers={
-                **net.create_headers(framework=self._framework),
-                const.HeaderKey.SERVER_TIMING.value: "handler",
-            }
-        )
+        headers = {
+            **net.create_headers(framework=self._framework),
+            const.HeaderKey.SERVER_TIMING.value: "handler",
+        }
 
-        if execution.is_call_responses(call_res):
+        if execution.is_step_call_responses(call_res):
             out: list[dict[str, object]] = []
             for item in call_res:
                 match item.to_dict():
@@ -271,9 +288,13 @@ class CommHandler:
                             self._framework,
                         )
 
-            comm_res.body = transforms.prep_body(out)
-            comm_res.status_code = 206
-        elif isinstance(call_res, execution.CallError):
+            return CommResponse(
+                body=transforms.prep_body(out),
+                headers=headers,
+                status_code=http.HTTPStatus.PARTIAL_CONTENT.value,
+            )
+
+        if isinstance(call_res, execution.CallError):
             self._logger.error(call_res.stack)
 
             match call_res.to_dict():
@@ -286,15 +307,26 @@ class CommHandler:
                         self._framework,
                     )
 
-            comm_res.body = body
-            comm_res.status_code = 500
-
             if call_res.is_retriable is False:
-                comm_res.headers[const.HeaderKey.NO_RETRY.value] = "true"
-        else:
-            comm_res.body = call_res
+                headers[const.HeaderKey.NO_RETRY.value] = "true"
 
-        return comm_res
+            return CommResponse(
+                body=body,
+                headers=headers,
+                status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR.value,
+            )
+
+        if isinstance(call_res, execution.FunctionCallResponse):
+            return CommResponse(
+                body=call_res.data,
+                headers=headers,
+            )
+
+        return CommResponse.from_error(
+            self._logger,
+            errors.UnknownError("unknown call result"),
+            self._framework,
+        )
 
     def _get_function(
         self, fn_id: str
@@ -334,13 +366,13 @@ class CommHandler:
             # Tell Dev Server to leave the app alone since it's in production
             # mode.
             return CommResponse(
-                body={},
+                body=json.dumps({}),
                 headers={},
                 status_code=403,
             )
 
         return CommResponse(
-            body={},
+            body=json.dumps({}),
             headers=net.create_headers(framework=self._framework),
             status_code=200,
         )
@@ -459,7 +491,6 @@ class CommHandler:
         self,
         server_kind: const.ServerKind | None,
     ) -> result.Result[None, Exception]:
-        print(server_kind, self._is_production)
         if server_kind == const.ServerKind.DEV_SERVER and self._is_production:
             return result.Err(
                 errors.DevServerRegistrationNotAllowed(
