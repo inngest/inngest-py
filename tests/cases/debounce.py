@@ -22,7 +22,7 @@ def create(
 
     @inngest.create_function(
         debounce=inngest.Debounce(
-            period=datetime.timedelta(seconds=1),
+            period=datetime.timedelta(seconds=2),
         ),
         fn_id=test_name,
         retries=0,
@@ -36,7 +36,7 @@ def create(
 
     @inngest.create_function(
         debounce=inngest.Debounce(
-            period=datetime.timedelta(seconds=3),
+            period=datetime.timedelta(seconds=2),
         ),
         fn_id=test_name,
         retries=0,
@@ -49,8 +49,12 @@ def create(
         state.run_id = run_id
 
     def run_test(self: base.TestClass) -> None:
-        self.client.send_sync(inngest.Event(name=event_name))
-        self.client.send_sync(inngest.Event(name=event_name))
+        self.client.send_sync(
+            [
+                inngest.Event(name=event_name),
+                inngest.Event(name=event_name),
+            ]
+        )
         run_id = state.wait_for_run_id(timeout=datetime.timedelta(seconds=10))
         tests.helper.client.wait_for_run_status(
             run_id,
