@@ -40,7 +40,10 @@ def create(
             return Foo()
 
         try:
-            step.run("step_1", step_1)
+            step.run(
+                "step_1",
+                step_1,  # type: ignore
+            )
         except BaseException as err:
             state.error = err
             raise

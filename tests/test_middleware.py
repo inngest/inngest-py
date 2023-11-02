@@ -18,6 +18,9 @@ class _Middleware(inngest.MiddlewareSync):
     def after_run_execution(self) -> None:
         self.call_list.append("after_run_execution")
 
+    def before_response(self) -> None:
+        self.call_list.append("before_response")
+
     def before_run_execution(self) -> None:
         self.call_list.append("before_run_execution")
 
@@ -98,11 +101,12 @@ class TestFlask(unittest.TestCase):
             run_ids[0], helper.RunStatus.COMPLETED
         )
 
-        print(self._middleware.call_list)
-
         assert self._middleware.call_list == [
             "before_run_execution",
+            "before_response",  # first_step
+            "before_response",  # second_step
             "after_run_execution",
+            "before_response",  # Function return
         ]
 
 
