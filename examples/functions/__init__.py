@@ -28,6 +28,7 @@ functions_sync = [
 
 functions = [
     print_event.fn,
+    two_steps_and_sleep.fn,
 ]
 
 __all__ = ["functions", "functions_sync"]

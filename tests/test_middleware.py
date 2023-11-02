@@ -15,11 +15,11 @@ class _Middleware(inngest.MiddlewareSync):
         super().__init__()
         self.call_list: list[str] = []
 
-    def after_execution(self) -> None:
-        self.call_list.append("after_execution")
+    def after_run_execution(self) -> None:
+        self.call_list.append("after_run_execution")
 
-    def before_execution(self) -> None:
-        self.call_list.append("before_execution")
+    def before_run_execution(self) -> None:
+        self.call_list.append("before_run_execution")
 
 
 @inngest.create_function(
@@ -98,9 +98,11 @@ class TestFlask(unittest.TestCase):
             run_ids[0], helper.RunStatus.COMPLETED
         )
 
+        print(self._middleware.call_list)
+
         assert self._middleware.call_list == [
-            "before_execution",
-            "after_execution",
+            "before_run_execution",
+            "after_run_execution",
         ]
 
 

@@ -43,7 +43,7 @@ class Interrupt(BaseException):
     def __init__(
         self,
         *,
-        data: object = None,
+        data: str | None = None,
         display_name: str,
         hashed_id: str,
         name: str,

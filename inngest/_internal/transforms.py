@@ -1,8 +1,10 @@
 import datetime
 import hashlib
+import inspect
 import json
 import re
 import traceback
+import typing
 
 from . import const, errors, result, types
 
@@ -125,3 +127,12 @@ def to_server_kind(value: str) -> result.Result[const.ServerKind, Exception]:
         return result.Ok(const.ServerKind(value))
     except ValueError:
         return result.Err(Exception(f"invalid server kind: {value}"))
+
+
+async def maybe_await(
+    value: types.T | typing.Awaitable[types.T],
+) -> types.T:
+    if inspect.isawaitable(value):
+        return await value  # type: ignore
+
+    return value  # type: ignore

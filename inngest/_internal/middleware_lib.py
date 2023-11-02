@@ -7,7 +7,7 @@ BlankHook = typing.Callable[[], typing.Awaitable[None] | None]
 
 
 class Middleware:
-    async def after_execution(self) -> None:
+    async def after_run_execution(self) -> None:
         """
         Called after a function run is done executing. Called once per run
         regardless of the number of steps. Will still be called if the run
@@ -16,7 +16,17 @@ class Middleware:
 
         return None
 
-    async def before_execution(self) -> None:
+    async def before_response(self) -> None:
+        """
+        Called after the output has been set and before the response is sent
+        back to Inngest. This is where you can perform any final actions before
+        the response is sent back to Inngest. Called multiple times per run when
+        using steps.
+        """
+
+        return None
+
+    async def before_run_execution(self) -> None:
         """
         Called when a function run starts executing. Called once per run
         regardless of the number of steps.
@@ -26,7 +36,7 @@ class Middleware:
 
 
 class MiddlewareSync:
-    def after_execution(self) -> None:
+    def after_run_execution(self) -> None:
         """
         Called after a function run is done executing. Called once per run
         regardless of the number of steps. Will still be called if the run
@@ -35,7 +45,17 @@ class MiddlewareSync:
 
         return None
 
-    def before_execution(self) -> None:
+    def before_response(self) -> None:
+        """
+        Called after the output has been set and before the response is sent
+        back to Inngest. This is where you can perform any final actions before
+        the response is sent back to Inngest. Called multiple times per run when
+        using steps.
+        """
+
+        return None
+
+    def before_run_execution(self) -> None:
         """
         Called when a function run starts executing. Called once per run
         regardless of the number of steps.
@@ -51,26 +71,35 @@ class MiddlewareManager:
     ):
         self._middleware = middleware
 
-    def after_execution_sync(self) -> result.OkOrError[None]:
+    def after_run_execution_sync(self) -> result.OkOrError[None]:
         for m in self._middleware:
-            if m.after_execution:
-                if inspect.iscoroutinefunction(m.after_execution):
-                    return result.Err(
-                        errors.MismatchedSync(
-                            "encountered async middleware in non-async context"
-                        )
+            if inspect.iscoroutinefunction(m.after_run_execution):
+                return result.Err(
+                    errors.MismatchedSync(
+                        "encountered async middleware in non-async context"
                     )
-                m.after_execution()
+                )
+            m.after_run_execution()
         return result.Ok(None)
 
-    def before_execution_sync(self) -> result.OkOrError[None]:
+    def before_response_sync(self) -> result.OkOrError[None]:
         for m in self._middleware:
-            if m.before_execution:
-                if inspect.iscoroutinefunction(m.before_execution):
-                    return result.Err(
-                        errors.MismatchedSync(
-                            "encountered async middleware in non-async context"
-                        )
+            if inspect.iscoroutinefunction(m.before_response):
+                return result.Err(
+                    errors.MismatchedSync(
+                        "encountered async middleware in non-async context"
                     )
-                m.before_execution()
+                )
+            m.before_response()
+        return result.Ok(None)
+
+    def before_run_execution_sync(self) -> result.OkOrError[None]:
+        for m in self._middleware:
+            if inspect.iscoroutinefunction(m.before_run_execution):
+                return result.Err(
+                    errors.MismatchedSync(
+                        "encountered async middleware in non-async context"
+                    )
+                )
+            m.before_run_execution()
         return result.Ok(None)

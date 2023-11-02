@@ -24,6 +24,11 @@ class CallStack(types.BaseModel):
 
 
 class CallError(types.BaseModel):
+    """
+    When an error that occurred during a call. Used for both function- and step-level
+    errors.
+    """
+
     is_internal: bool
     is_retriable: bool
     message: str
@@ -41,8 +46,20 @@ class CallError(types.BaseModel):
         )
 
 
-class CallResponse(types.BaseModel):
-    data: object
+class FunctionCallResponse(types.BaseModel):
+    """
+    When a function successfully returns.
+    """
+
+    data: str
+
+
+class StepCallResponse(types.BaseModel):
+    """
+    When a step successfully returns.
+    """
+
+    data: str
     display_name: str
     id: str
     name: str
@@ -50,12 +67,17 @@ class CallResponse(types.BaseModel):
     opts: dict[str, object] | None = None
 
 
-def is_call_responses(
+def is_step_call_responses(
     value: object,
-) -> typing.TypeGuard[list[CallResponse]]:
+) -> typing.TypeGuard[list[StepCallResponse]]:
     if not isinstance(value, list):
         return False
-    return all(isinstance(item, CallResponse) for item in value)
+    return all(isinstance(item, StepCallResponse) for item in value)
+
+
+CallResult: typing.TypeAlias = (
+    list[StepCallResponse] | FunctionCallResponse | CallError
+)
 
 
 class Opcode(enum.Enum):
