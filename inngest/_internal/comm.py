@@ -243,6 +243,10 @@ class CommHandler:
                     self._framework,
                 )
 
+        # No memoized data means we're calling the function for the first time.
+        if len(call.steps.keys()) == 0:
+            self._client.middleware.before_execution_sync()
+
         return self._create_response(fn.call_sync(call, self._client, fn_id))
 
     def _create_response(
@@ -292,6 +296,11 @@ class CommHandler:
             if call_res.is_retriable is False:
                 comm_res.headers[const.HeaderKey.NO_RETRY.value] = "true"
         else:
+            # If we aren't dealing with CallResponses or CallErrors then we must
+            # have gotten the function output. This means this is the last
+            # function call.
+            self._client.middleware.after_execution_sync()
+
             comm_res.body = call_res
 
         return comm_res
@@ -459,7 +468,6 @@ class CommHandler:
         self,
         server_kind: const.ServerKind | None,
     ) -> result.Result[None, Exception]:
-        print(server_kind, self._is_production)
         if server_kind == const.ServerKind.DEV_SERVER and self._is_production:
             return result.Err(
                 errors.DevServerRegistrationNotAllowed(

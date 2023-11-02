@@ -7,7 +7,7 @@ import urllib.parse
 
 import httpx
 
-from . import const, env, errors, event_lib, net, result
+from . import const, env, errors, event_lib, middleware_lib, net, result
 
 
 class Inngest:
@@ -19,11 +19,13 @@ class Inngest:
         event_key: str | None = None,
         is_production: bool | None = None,
         logger: logging.Logger | None = None,
+        middleware: list[middleware_lib.Middleware] | None = None,
     ) -> None:
         self.app_id = app_id
         self.base_url = base_url
         self.is_production = is_production or env.is_prod()
         self.logger = logger or logging.getLogger(__name__)
+        self.middleware = middleware_lib.MiddlewareManager(middleware or [])
 
         if event_key is None:
             if not self.is_production:
