@@ -67,7 +67,6 @@ def create(
         )
         assert state.result is None
 
-    fn: inngest.Function
     if is_sync:
         fn = fn_sync
     else:

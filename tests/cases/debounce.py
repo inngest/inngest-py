@@ -58,7 +58,6 @@ def create(
         )
         assert state.run_count == 1, f"Expected 1 run but got {state.run_count}"
 
-    fn: inngest.Function
     if is_sync:
         fn = fn_sync
     else:

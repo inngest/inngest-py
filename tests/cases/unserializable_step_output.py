@@ -83,7 +83,6 @@ def create(
         assert isinstance(state.error, errors.UnserializableOutput)
         assert str(state.error) == "Object of type Foo is not JSON serializable"
 
-    fn: inngest.Function
     if is_sync:
         fn = fn_sync
     else:

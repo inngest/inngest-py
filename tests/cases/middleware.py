@@ -26,21 +26,42 @@ def create(
 
     _logger = unittest.mock.Mock()
 
-    class _Middleware(middleware_lib.MiddlewareSync):
-        def after_run_execution(self) -> None:
-            state.call_list.append("after_run_execution")
+    middleware: middleware_lib.Middleware | middleware_lib.MiddlewareSync
+    if is_sync:
 
-        def before_response(self) -> None:
-            state.call_list.append("before_response")
+        class _MiddlewareSync(middleware_lib.MiddlewareSync):
+            def after_run_execution(self) -> None:
+                state.call_list.append("after_run_execution")
 
-        def before_run_execution(self) -> None:
-            state.call_list.append("before_run_execution")
+            def before_response(self) -> None:
+                state.call_list.append("before_response")
 
-        def transform_input(self) -> inngest.CallInputTransform:
-            state.call_list.append("transform_input")
-            return inngest.CallInputTransform(logger=_logger)
+            def before_run_execution(self) -> None:
+                state.call_list.append("before_run_execution")
 
-    middleware = _Middleware()
+            def transform_input(self) -> inngest.CallInputTransform:
+                state.call_list.append("transform_input")
+                return inngest.CallInputTransform(logger=_logger)
+
+        middleware = _MiddlewareSync()
+
+    else:
+
+        class _MiddlewareAsync(middleware_lib.Middleware):
+            async def after_run_execution(self) -> None:
+                state.call_list.append("after_run_execution")
+
+            async def before_response(self) -> None:
+                state.call_list.append("before_response")
+
+            async def before_run_execution(self) -> None:
+                state.call_list.append("before_run_execution")
+
+            async def transform_input(self) -> inngest.CallInputTransform:
+                state.call_list.append("transform_input")
+                return inngest.CallInputTransform(logger=_logger)
+
+        middleware = _MiddlewareAsync()
 
     @inngest.create_function(
         fn_id=test_name,
@@ -115,7 +136,6 @@ def create(
         _logger.info.assert_any_call("first_step")
         _logger.info.assert_any_call("second_step")
 
-    fn: inngest.Function
     if is_sync:
         fn = fn_sync
     else:

@@ -83,7 +83,6 @@ def create(
             seconds=2
         )
 
-    fn: inngest.Function
     if is_sync:
         fn = fn_sync
     else:

@@ -86,7 +86,6 @@ def create(
 
         base.wait_for(assert_is_done)
 
-    fn: inngest.Function
     if is_sync:
         fn = fn_sync
     else:
