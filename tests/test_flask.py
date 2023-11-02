@@ -112,10 +112,10 @@ class TestRegistration(unittest.TestCase):
             },
         )
         assert res.status_code == 400
-        body: object = json.loads(res.data)
+        body: object = res.json
+        assert isinstance(body, dict)
         assert (
-            isinstance(body, dict)
-            and body["code"]
+            body["code"]
             == const.ErrorCode.DISALLOWED_REGISTRATION_INITIATOR.value
         )
 

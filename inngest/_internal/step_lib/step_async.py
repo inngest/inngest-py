@@ -61,18 +61,16 @@ class Step(base.StepBase):
         if memo is not types.EmptySentinel:
             return memo  # type: ignore
 
-        output = await transforms.maybe_await(handler())
-
-        # Check whether output is serializable
-        match transforms.dump_json(output):
-            case result.Ok(output_str):
+        # Ensure the output is JSON-serializable.
+        match transforms.dump_json(await transforms.maybe_await(handler())):
+            case result.Ok(output):
                 pass
             case result.Err(err):
                 raise err
 
         raise base.Interrupt(
             hashed_id=hashed_id,
-            data=output_str,
+            data=output,
             display_name=step_id,
             op=execution.Opcode.STEP,
             name=step_id,

@@ -193,9 +193,9 @@ class Function:
                     errors.MissingFunction("function ID mismatch")
                 )
 
-            # Determine whether the handler is async (i.e. if we need to await
-            # it). Sync functions are OK in async contexts, so it's OK if the
-            # handler is sync.
+            # # Determine whether the handler is async (i.e. if we need to await
+            # # it). Sync functions are OK in async contexts, so it's OK if the
+            # # handler is sync.
             if _is_function_handler_async(handler):
                 output = await handler(
                     attempt=call.ctx.attempt,
@@ -228,23 +228,18 @@ class Function:
                     )
                 )
 
+            # Ensure the output is JSON-serializable.
             match transforms.dump_json(output):
-                case result.Ok(output_str):
+                case result.Ok(_):
                     pass
                 case result.Err(err):
-                    return execution.CallError.from_error(err)
+                    raise err
 
-            return execution.FunctionCallResponse(data=output_str)
+            return execution.FunctionCallResponse(data=output)
         except step_lib.Interrupt as interrupt:
-            match transforms.dump_json(interrupt.data):
-                case result.Ok(output_str):
-                    pass
-                case result.Err(err):
-                    return execution.CallError.from_error(err)
-
             return [
                 execution.StepCallResponse(
-                    data=output_str,
+                    data=interrupt.data,
                     display_name=interrupt.display_name,
                     id=interrupt.hashed_id,
                     name=interrupt.name,
@@ -302,15 +297,9 @@ class Function:
                 )
             )
         except step_lib.Interrupt as interrupt:
-            match transforms.dump_json(interrupt.data):
-                case result.Ok(output_str):
-                    pass
-                case result.Err(err):
-                    return execution.CallError.from_error(err)
-
             return [
                 execution.StepCallResponse(
-                    data=output_str,
+                    data=interrupt.data,
                     display_name=interrupt.display_name,
                     id=interrupt.hashed_id,
                     name=interrupt.name,

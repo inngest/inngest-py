@@ -71,7 +71,7 @@ class MiddlewareManager:
     ):
         self._middleware = middleware
 
-    def after_run_execution_sync(self) -> result.OkOrError[None]:
+    def after_run_execution_sync(self) -> result.MaybeError[None]:
         for m in self._middleware:
             if inspect.iscoroutinefunction(m.after_run_execution):
                 return result.Err(
@@ -82,7 +82,7 @@ class MiddlewareManager:
             m.after_run_execution()
         return result.Ok(None)
 
-    def before_response_sync(self) -> result.OkOrError[None]:
+    def before_response_sync(self) -> result.MaybeError[None]:
         for m in self._middleware:
             if inspect.iscoroutinefunction(m.before_response):
                 return result.Err(
@@ -93,7 +93,7 @@ class MiddlewareManager:
             m.before_response()
         return result.Ok(None)
 
-    def before_run_execution_sync(self) -> result.OkOrError[None]:
+    def before_run_execution_sync(self) -> result.MaybeError[None]:
         for m in self._middleware:
             if inspect.iscoroutinefunction(m.before_run_execution):
                 return result.Err(

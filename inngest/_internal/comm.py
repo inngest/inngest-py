@@ -19,6 +19,7 @@ from inngest._internal import (
     registration,
     result,
     transforms,
+    types,
 )
 
 
@@ -26,28 +27,13 @@ class CommResponse:
     def __init__(
         self,
         *,
-        body: str | None = None,
+        body: types.Serializable = None,
         headers: dict[str, str],
         status_code: int = http.HTTPStatus.OK.value,
     ) -> None:
         self.headers = headers
         self.body = body
         self.status_code = status_code
-
-    # @property
-    # def body(self) -> types.Serializable:
-    #     return self._body or {}
-
-    # @body.setter
-    # def body(self, body: types.Serializable) -> None:
-    #     self._body = body
-
-    #     if isinstance(body, (dict, list)):
-    #         self.headers[
-    #             const.HeaderKey.CONTENT_TYPE.value
-    #         ] = "application/json"
-    #     else:
-    #         self.headers[const.HeaderKey.CONTENT_TYPE.value] = "text/plain"
 
     @property
     def is_success(self) -> bool:
@@ -72,12 +58,10 @@ class CommResponse:
             logger.error(f"_{str(err)}_")
 
         return cls(
-            body=json.dumps(
-                {
-                    "code": code,
-                    "message": str(err),
-                }
-            ),
+            body={
+                "code": code,
+                "message": str(err),
+            },
             headers=net.create_headers(framework=framework),
             status_code=status_code,
         )
@@ -208,9 +192,7 @@ class CommHandler:
         else:
             match self._get_function(fn_id):
                 case result.Ok(fn):
-                    call_res = await transforms.maybe_await(
-                        fn.call(call, self._client, fn_id),
-                    )
+                    call_res = await fn.call(call, self._client, fn_id)
 
                     if isinstance(call_res, execution.FunctionCallResponse):
                         # Only call this hook if we get a return at the function
@@ -306,18 +288,8 @@ class CommHandler:
                             self._framework,
                         )
 
-            match transforms.dump_json(transforms.prep_body(out)):
-                case result.Ok(body_str):
-                    pass
-                case result.Err(err):
-                    return CommResponse.from_error(
-                        self._logger,
-                        err,
-                        self._framework,
-                    )
-
             return CommResponse(
-                body=body_str,
+                body=transforms.prep_body(out),
                 headers=headers,
                 status_code=http.HTTPStatus.PARTIAL_CONTENT.value,
             )
@@ -335,21 +307,11 @@ class CommHandler:
                         self._framework,
                     )
 
-            match transforms.dump_json(body):
-                case result.Ok(body_str):
-                    pass
-                case result.Err(err):
-                    return CommResponse.from_error(
-                        self._logger,
-                        err,
-                        self._framework,
-                    )
-
             if call_res.is_retriable is False:
                 headers[const.HeaderKey.NO_RETRY.value] = "true"
 
             return CommResponse(
-                body=body_str,
+                body=body,
                 headers=headers,
                 status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR.value,
             )
@@ -437,7 +399,7 @@ class CommHandler:
 
         if server_res.status_code < 400:
             return CommResponse(
-                body=json.dumps(server_res_body),
+                body=server_res_body,
                 headers=net.create_headers(framework=self._framework),
                 status_code=server_res.status_code,
             )

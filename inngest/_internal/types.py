@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import typing
 
 import pydantic
@@ -21,6 +22,14 @@ Serializable = (
     | None
 )
 SerializableT = typing.TypeVar("SerializableT", bound=Serializable)
+
+
+def is_serializable(obj: object) -> typing.TypeGuard[Serializable]:
+    try:
+        json.dumps(obj)
+        return True
+    except Exception:
+        return False
 
 
 class BaseModel(pydantic.BaseModel):
