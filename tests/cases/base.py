@@ -6,6 +6,10 @@ import typing
 import inngest
 
 
+class TestClass(typing.Protocol):
+    client: inngest.Inngest
+
+
 class BaseState:
     run_id: str | None = None
 
@@ -27,7 +31,7 @@ class Case:
     event_name: str
     fn: inngest.Function
     name: str
-    run_test: typing.Callable[[object], None]
+    run_test: typing.Callable[[TestClass], None]
     state: BaseState
 
 

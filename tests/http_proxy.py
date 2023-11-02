@@ -13,6 +13,14 @@ class Proxy:
     _port: int
     _thread: threading.Thread | None = None
 
+    @property
+    def host(self) -> str:
+        return net.HOST
+
+    @property
+    def port(self) -> int:
+        return self._port
+
     def __init__(self, on_request: _OnRequest) -> None:
         self._port = net.get_available_port()
 
@@ -83,15 +91,11 @@ class Proxy:
                 )
                 self._set_response(res)
 
+            def log_message(self, *args: object, **kwargs: object) -> None:
+                # Silence logs
+                pass
+
         self._server = socketserver.TCPServer((self.host, self.port), _Handler)
-
-    @property
-    def host(self) -> str:
-        return net.HOST
-
-    @property
-    def port(self) -> int:
-        return self._port
 
     def start(self) -> Proxy:
         self._thread = threading.Thread(

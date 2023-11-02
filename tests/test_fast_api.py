@@ -10,47 +10,39 @@ from inngest._internal import const
 
 from . import base, cases, dev_server, http_proxy, net
 
-_client = inngest.Inngest(
-    app_id="fast_api",
-    base_url=f"http://{net.HOST}:{dev_server.PORT}",
-)
-
-_cases = cases.create_cases(_client, "fast_api")
+_cases = cases.create_cases("fast_api")
 
 
 class TestFastAPI(unittest.TestCase):
     app: fastapi.FastAPI
+    client: inngest.Inngest
     dev_server_port: int
     fast_api_client: fastapi.testclient.TestClient
     proxy: http_proxy.Proxy
 
-    @classmethod
-    def setUpClass(cls) -> None:
-        super().setUpClass()
-
-        cls.app = fastapi.FastAPI()
-        inngest.fast_api.serve(
-            cls.app,
-            _client,
-            [
-                case.fn
-                for case in _cases
-                # Should always be true but mypy doesn't know that
-                # if case.fn.is_handler_async
-            ],
+    def setUp(self) -> None:
+        super().setUp()
+        self.app = fastapi.FastAPI()
+        self.client = inngest.Inngest(
+            app_id="fast_api",
+            base_url=f"http://{net.HOST}:{dev_server.PORT}",
         )
-        cls.fast_api_client = fastapi.testclient.TestClient(cls.app)
-        cls.proxy = http_proxy.Proxy(cls.on_proxy_request).start()
-        base.register(cls.proxy.port)
 
-    @classmethod
-    def tearDownClass(cls) -> None:
-        super().tearDownClass()
-        cls.proxy.stop()
+        inngest.fast_api.serve(
+            self.app,
+            self.client,
+            [case.fn for case in _cases],
+        )
+        self.fast_api_client = fastapi.testclient.TestClient(self.app)
+        self.proxy = http_proxy.Proxy(self.on_proxy_request).start()
+        base.register(self.proxy.port)
 
-    @classmethod
+    def tearDown(self) -> None:
+        super().tearDown()
+        self.proxy.stop()
+
     def on_proxy_request(
-        cls,
+        self,
         *,
         body: bytes | None,
         headers: dict[str, list[str]],
@@ -63,13 +55,13 @@ class TestFastAPI(unittest.TestCase):
         new_headers = {key: value[0] for key, value in headers.items()}
 
         if method == "POST":
-            res = cls.fast_api_client.post(
+            res = self.fast_api_client.post(
                 path,
                 content=body,
                 headers=new_headers,
             )
         elif method == "PUT":
-            res = cls.fast_api_client.put(
+            res = self.fast_api_client.put(
                 path,
                 content=body,
                 headers=new_headers,

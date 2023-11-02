@@ -99,6 +99,9 @@ class MiddlewareManager:
     ):
         self._middleware = middleware
 
+    def add(self, middleware: Middleware | MiddlewareSync) -> None:
+        self._middleware = [*self._middleware, middleware]
+
     async def after_run_execution(self) -> None:
         for m in self._middleware:
             await transforms.maybe_await(m.after_run_execution())

@@ -14,7 +14,6 @@ class _State(base.BaseState):
 
 
 def create(
-    client: inngest.Inngest,
     framework: str,
     is_sync: bool,
 ) -> base.Case:
@@ -60,14 +59,14 @@ def create(
             timeout=datetime.timedelta(minutes=1),
         )
 
-    def run_test(_self: object) -> None:
-        client.send_sync(inngest.Event(name=event_name))
+    def run_test(self: base.TestClass) -> None:
+        self.client.send_sync(inngest.Event(name=event_name))
         run_id = state.wait_for_run_id()
 
         # Sleep long enough for the wait_for_event to register.
         time.sleep(0.5)
 
-        client.send_sync(inngest.Event(name=f"{event_name}.fulfill"))
+        self.client.send_sync(inngest.Event(name=f"{event_name}.fulfill"))
         tests.helper.client.wait_for_run_status(
             run_id,
             tests.helper.RunStatus.COMPLETED,

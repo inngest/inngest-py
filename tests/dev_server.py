@@ -53,6 +53,7 @@ class _DevServer:
                 subprocess.Popen(  # pylint: disable=consider-using-with
                     [
                         "npx",
+                        "--yes",
                         "inngest-cli@latest",
                         "dev",
                         "--no-discovery",

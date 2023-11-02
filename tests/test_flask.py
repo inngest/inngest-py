@@ -1,6 +1,7 @@
 import unittest
 
 import flask
+import flask.logging
 import flask.testing
 
 import inngest
@@ -9,54 +10,45 @@ from inngest._internal import const
 
 from . import base, cases, dev_server, http_proxy, net
 
-_client = inngest.Inngest(
-    app_id="flask",
-    base_url=f"http://{net.HOST}:{dev_server.PORT}",
-)
-
-_cases = cases.create_cases_sync(_client, "flask")
+_cases = cases.create_cases_sync("flask")
 
 
 class TestFlask(unittest.TestCase):
     app: flask.testing.FlaskClient
+    client: inngest.Inngest
     dev_server_port: int
     proxy: http_proxy.Proxy
 
-    @classmethod
-    def setUpClass(cls) -> None:
-        super().setUpClass()
-
+    def setUp(self) -> None:
+        super().setUp()
         app = flask.Flask(__name__)
-        app.logger.disabled = True
+        self.client = inngest.Inngest(
+            app_id="flask",
+            base_url=f"http://{net.HOST}:{dev_server.PORT}",
+        )
+
         inngest.flask.serve(
             app,
-            _client,
-            [
-                case.fn
-                for case in _cases
-                # Should always be true but mypy doesn't know that
-                if isinstance(case.fn, inngest.Function)
-            ],
+            self.client,
+            [case.fn for case in _cases],
         )
-        cls.app = app.test_client()
-        cls.proxy = http_proxy.Proxy(cls.on_proxy_request).start()
-        base.register(cls.proxy.port)
+        self.app = app.test_client()
+        self.proxy = http_proxy.Proxy(self.on_proxy_request).start()
+        base.register(self.proxy.port)
 
-    @classmethod
-    def tearDownClass(cls) -> None:
-        super().tearDownClass()
-        cls.proxy.stop()
+    def tearDown(self) -> None:
+        super().tearDown()
+        self.proxy.stop()
 
-    @classmethod
     def on_proxy_request(
-        cls,
+        self,
         *,
         body: bytes | None,
         headers: dict[str, list[str]],
         method: str,
         path: str,
     ) -> http_proxy.Response:
-        res = cls.app.open(
+        res = self.app.open(
             method=method,
             path=path,
             headers=headers,

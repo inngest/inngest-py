@@ -11,7 +11,6 @@ class _State(base.BaseState):
 
 
 def create(
-    client: inngest.Inngest,
     framework: str,
     is_sync: bool,
 ) -> base.Case:
@@ -41,8 +40,8 @@ def create(
         state.event = event
         state.run_id = run_id
 
-    def run_test(_self: object) -> None:
-        client.send_sync(
+    def run_test(self: base.TestClass) -> None:
+        self.client.send_sync(
             inngest.Event(
                 data={"foo": {"bar": "baz"}},
                 name=event_name,

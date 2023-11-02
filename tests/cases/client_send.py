@@ -9,7 +9,6 @@ _TEST_NAME = "client_send"
 
 
 def create(
-    client: inngest.Inngest,
     framework: str,
     is_sync: bool,
 ) -> base.Case:
@@ -33,8 +32,8 @@ def create(
     async def fn_async(*, run_id: str, **_kwargs: object) -> None:
         state.run_id = run_id
 
-    def run_test(_self: object) -> None:
-        asyncio.run(client.send(inngest.Event(name=event_name)))
+    def run_test(self: base.TestClass) -> None:
+        asyncio.run(self.client.send(inngest.Event(name=event_name)))
         run_id = state.wait_for_run_id()
         tests.helper.client.wait_for_run_status(
             run_id,

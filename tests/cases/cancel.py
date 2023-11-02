@@ -13,7 +13,6 @@ class _State(base.BaseState):
 
 
 def create(
-    client: inngest.Inngest,
     framework: str,
     is_sync: bool,
 ) -> base.Case:
@@ -69,10 +68,12 @@ def create(
         # still running after the test is done.
         state.is_done = True
 
-    def run_test(_self: object) -> None:
-        client.send_sync(inngest.Event(name=event_name, data={"id": "foo"}))
+    def run_test(self: base.TestClass) -> None:
+        self.client.send_sync(
+            inngest.Event(name=event_name, data={"id": "foo"})
+        )
         run_id = state.wait_for_run_id()
-        client.send_sync(
+        self.client.send_sync(
             inngest.Event(name=f"{event_name}.cancel", data={"id": "foo"})
         )
         tests.helper.client.wait_for_run_status(
