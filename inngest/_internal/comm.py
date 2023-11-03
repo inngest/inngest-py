@@ -338,7 +338,16 @@ class CommHandler:
                 if isinstance(call_res, execution.FunctionCallResponse):
                     # Only call this hook if we get a return at the function
                     # level.
-                    middleware.after_execution_sync()
+                    match middleware.after_execution_sync():
+                        case result.Ok(_):
+                            pass
+                        case result.Err(err):
+                            middleware.before_response_sync()
+                            return CommResponse.from_error(
+                                self._client.logger,
+                                self._framework,
+                                err,
+                            )
 
                 comm_res = CommResponse.from_call_result(
                     self._client.logger,

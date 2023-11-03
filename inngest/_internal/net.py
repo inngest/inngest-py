@@ -14,8 +14,8 @@ def create_headers(
 ) -> dict[str, str]:
     headers = {
         const.HeaderKey.CONTENT_TYPE.value: "application/json",
-        const.HeaderKey.USER_AGENT.value: f"inngest-{const.LANGUAGE}:v{const.VERSION}",
         const.HeaderKey.SDK.value: f"inngest-{const.LANGUAGE}:v{const.VERSION}",
+        const.HeaderKey.USER_AGENT.value: f"inngest-{const.LANGUAGE}:v{const.VERSION}",
     }
 
     if framework is not None:

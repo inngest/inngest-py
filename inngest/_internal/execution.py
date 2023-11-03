@@ -4,6 +4,8 @@ import dataclasses
 import enum
 import typing
 
+import pydantic
+
 from . import errors, event_lib, transforms, types
 
 
@@ -39,6 +41,7 @@ class CallError(types.BaseModel):
     is_retriable: bool
     message: str
     name: str
+    original_error: object = pydantic.Field(exclude=True)
     stack: str
 
     @classmethod
@@ -48,6 +51,7 @@ class CallError(types.BaseModel):
             is_retriable=isinstance(err, errors.NonRetriableError) is False,
             message=str(err),
             name=type(err).__name__,
+            original_error=err,
             stack=transforms.get_traceback(err),
         )
 
