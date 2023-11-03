@@ -31,36 +31,50 @@ def create(
     if is_sync:
 
         class _MiddlewareSync(middleware_lib.MiddlewareSync):
-            def after_run_execution(self) -> None:
-                state.hook_list.append("after_run_execution")
+            def after_function_execution(self) -> None:
+                state.hook_list.append("after_function_execution")
 
             def before_response(self) -> None:
                 state.hook_list.append("before_response")
 
-            def before_run_execution(self) -> None:
-                state.hook_list.append("before_run_execution")
+            def before_function_execution(self) -> None:
+                state.hook_list.append("before_function_execution")
 
             def transform_input(self) -> inngest.CallInputTransform:
                 state.hook_list.append("transform_input")
                 return inngest.CallInputTransform(logger=_logger)
+
+            def transform_output(
+                self,
+                output: inngest.Serializable,
+            ) -> inngest.Serializable:
+                state.hook_list.append("transform_output")
+                return output
 
         middleware = _MiddlewareSync()
 
     else:
 
         class _MiddlewareAsync(middleware_lib.Middleware):
-            async def after_run_execution(self) -> None:
-                state.hook_list.append("after_run_execution")
+            async def after_function_execution(self) -> None:
+                state.hook_list.append("after_function_execution")
 
             async def before_response(self) -> None:
                 state.hook_list.append("before_response")
 
-            async def before_run_execution(self) -> None:
-                state.hook_list.append("before_run_execution")
+            async def before_function_execution(self) -> None:
+                state.hook_list.append("before_function_execution")
 
             async def transform_input(self) -> inngest.CallInputTransform:
                 state.hook_list.append("transform_input")
                 return inngest.CallInputTransform(logger=_logger)
+
+            async def transform_output(
+                self,
+                output: inngest.Serializable,
+            ) -> inngest.Serializable:
+                state.hook_list.append("transform_output")
+                return output
 
         middleware = _MiddlewareAsync()
 
@@ -123,13 +137,16 @@ def create(
 
         # Assert that the middleware hooks were called in the correct order
         assert state.hook_list == [
-            "before_run_execution",
+            "before_function_execution",
             "transform_input",
+            "transform_output",
             "before_response",  # first_step done
             "transform_input",
+            "transform_output",
             "before_response",  # second_step done
             "transform_input",
-            "after_run_execution",
+            "transform_output",
+            "after_function_execution",
             "before_response",  # Function done
         ], state.hook_list
 

@@ -19,6 +19,7 @@ from ._internal.middleware_lib import CallInputTransform
 #     MiddlewareSync,
 # )
 from ._internal.step_lib import Step, StepSync
+from ._internal.types import Serializable
 
 __all__ = [
     "Batch",
@@ -33,6 +34,7 @@ __all__ = [
     # "MiddlewareSync",
     "NonRetriableError",
     "RateLimit",
+    "Serializable",
     "Step",
     "StepSync",
     "Throttle",

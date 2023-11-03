@@ -111,6 +111,16 @@ class InvalidBody(InternalError):
         )
 
 
+class InvalidTransform(InternalError):
+    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
+
+    def __init__(self, message: str | None = None) -> None:
+        super().__init__(
+            code=const.ErrorCode.INVALID_TRANSFORM,
+            message=message,
+        )
+
+
 class MissingEventKey(InternalError):
     status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 

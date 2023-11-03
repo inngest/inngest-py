@@ -234,6 +234,8 @@ class Function:
                     )
                 )
 
+            output = await client.middleware.transform_output(output)
+
             # Ensure the output is JSON-serializable.
             match transforms.dump_json(output):
                 case result.Ok(_):
@@ -243,9 +245,11 @@ class Function:
 
             return execution.FunctionCallResponse(data=output)
         except step_lib.Interrupt as interrupt:
+            output = await client.middleware.transform_output(interrupt.data)
+
             return [
                 execution.StepCallResponse(
-                    data=interrupt.data,
+                    data=output,
                     display_name=interrupt.display_name,
                     id=interrupt.hashed_id,
                     name=interrupt.name,
@@ -292,6 +296,12 @@ class Function:
                     ),
                 )
 
+                match client.middleware.transform_output_sync(output):
+                    case result.Ok(output):
+                        pass
+                    case result.Err(err):
+                        return execution.CallError.from_error(err)
+
                 match transforms.dump_json(output):
                     case result.Ok(output_str):
                         pass
@@ -305,9 +315,15 @@ class Function:
                 )
             )
         except step_lib.Interrupt as interrupt:
+            match client.middleware.transform_output_sync(interrupt.data):
+                case result.Ok(output):
+                    pass
+                case result.Err(err):
+                    return execution.CallError.from_error(err)
+
             return [
                 execution.StepCallResponse(
-                    data=interrupt.data,
+                    data=output,
                     display_name=interrupt.display_name,
                     id=interrupt.hashed_id,
                     name=interrupt.name,
