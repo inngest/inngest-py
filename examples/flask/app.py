@@ -1,21 +1,16 @@
-import logging
-
 import flask
-import src.inngest
+from src.inngest import inngest_client
 
-import examples.functions
 import inngest.flask
+from examples import functions
 
 app = flask.Flask(__name__)
-
-
-log = logging.getLogger("werkzeug")
-log.setLevel(logging.ERROR)
+inngest_client.set_logger(app.logger)
 
 
 inngest.flask.serve(
     app,
-    src.inngest.inngest_client,
-    examples.functions.functions_sync,
+    inngest_client,
+    functions.functions_sync,
 )
 app.run(port=8000)

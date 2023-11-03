@@ -3,14 +3,19 @@ from __future__ import annotations
 import logging
 import os
 import time
+import typing
 import urllib.parse
 
 import httpx
 
-from . import const, env, errors, event_lib, middleware_lib, net, result
+from . import const, env, errors, event_lib, middleware_lib, net, result, types
 
 
 class Inngest:
+    middleware: list[
+        typing.Type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]
+    ]
+
     def __init__(
         self,
         *,
@@ -18,9 +23,11 @@ class Inngest:
         base_url: str | None = None,
         event_key: str | None = None,
         is_production: bool | None = None,
-        logger: logging.Logger | None = None,
+        logger: types.Logger | None = None,
         middleware: list[
-            middleware_lib.Middleware | middleware_lib.MiddlewareSync
+            typing.Type[
+                middleware_lib.Middleware | middleware_lib.MiddlewareSync
+            ]
         ]
         | None = None,
     ) -> None:
@@ -28,7 +35,7 @@ class Inngest:
         self.base_url = base_url
         self.is_production = is_production or env.is_prod()
         self.logger = logger or logging.getLogger(__name__)
-        self.middleware = middleware_lib.MiddlewareManager(middleware or [])
+        self.middleware = middleware or []
 
         if event_key is None:
             if not self.is_production:
@@ -80,6 +87,14 @@ class Inngest:
             )
         )
 
+    def add_middleware(
+        self,
+        middleware: typing.Type[
+            middleware_lib.Middleware | middleware_lib.MiddlewareSync
+        ],
+    ) -> None:
+        self.middleware = [*self.middleware, middleware]
+
     async def send(
         self,
         events: event_lib.Event | list[event_lib.Event],
@@ -109,6 +124,9 @@ class Inngest:
                 case result.Err(err):
                     raise err
         return ids
+
+    def set_logger(self, logger: types.Logger) -> None:
+        self.logger = logger
 
 
 def _extract_ids(body: object) -> list[str]:

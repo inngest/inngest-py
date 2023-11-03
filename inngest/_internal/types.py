@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import typing
 
 import pydantic
@@ -71,3 +72,5 @@ class BaseModel(pydantic.BaseModel):
 
 
 BaseModelT = typing.TypeVar("BaseModelT", bound=BaseModel)
+
+Logger: typing.TypeAlias = logging.Logger | logging.LoggerAdapter

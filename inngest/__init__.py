@@ -11,15 +11,15 @@ from ._internal.function_config import (
     TriggerCron,
     TriggerEvent,
 )
-from ._internal.middleware_lib import CallInputTransform
 
 # TODO: Uncomment when middleware is ready for external use.
 # from ._internal.middleware_lib import (
 #     Middleware,
 #     MiddlewareSync,
 # )
+# from ._internal.execution import TransformableCallInput
 from ._internal.step_lib import Step, StepSync
-from ._internal.types import Serializable
+from ._internal.types import Logger, Serializable
 
 __all__ = [
     "Batch",
@@ -28,10 +28,11 @@ __all__ = [
     "Event",
     "Function",
     "Inngest",
-    "CallInputTransform",
+    "Logger",
     # TODO: Uncomment when middleware is ready for external use.
     # "Middleware",
     # "MiddlewareSync",
+    # "TransformableCallInput",
     "NonRetriableError",
     "RateLimit",
     "Serializable",

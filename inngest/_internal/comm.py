@@ -2,25 +2,29 @@ from __future__ import annotations
 
 import http
 import json
-import logging
 import os
+import typing
 import urllib.parse
 
 import httpx
 
 from inngest._internal import (
-    client_lib,
     const,
     errors,
     execution,
     function,
     function_config,
+    middleware_lib,
     net,
     registration,
     result,
     transforms,
     types,
 )
+
+# Prevent circular import
+if typing.TYPE_CHECKING:
+    from inngest._internal import client_lib
 
 
 class CommResponse:
@@ -42,7 +46,7 @@ class CommResponse:
     @classmethod
     def from_call_result(
         cls,
-        logger: logging.Logger,
+        logger: types.Logger,
         framework: const.Framework,
         call_res: execution.CallResult,
     ) -> CommResponse:
@@ -107,7 +111,7 @@ class CommResponse:
     @classmethod
     def from_error(
         cls,
-        logger: logging.Logger,
+        logger: types.Logger,
         framework: const.Framework,
         err: Exception,
     ) -> CommResponse:
@@ -138,7 +142,7 @@ class CommHandler:
     _fns: dict[str, function.Function]
     _framework: const.Framework
     _is_production: bool
-    _logger: logging.Logger
+    _logger: types.Logger
     _signing_key: str | None
 
     def __init__(
@@ -148,7 +152,7 @@ class CommHandler:
         client: client_lib.Inngest,
         framework: const.Framework,
         functions: list[function.Function],
-        logger: logging.Logger,
+        logger: types.Logger,
         signing_key: str | None = None,
     ) -> None:
         self._is_production = client.is_production
@@ -238,21 +242,18 @@ class CommHandler:
         Handles a function call from the Executor.
         """
 
-        # No memoized data means we're calling the function for the first time.
-        is_first_call = len(call.steps.keys()) == 0
-        if is_first_call:
-            await self._client.middleware.before_function_execution()
+        middleware = middleware_lib.MiddlewareManager(self._client)
 
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
-        call_input = await self._client.middleware.transform_input(
-            logger=self._logger,
+        call_input = await middleware.transform_input(
+            execution.TransformableCallInput(logger=self._logger),
         )
 
         # Validate the request signature.
         validation_res = req_sig.validate(self._signing_key)
         if result.is_err(validation_res):
-            await self._client.middleware.before_response()
+            await middleware.before_response()
             return CommResponse.from_error(
                 self._logger,
                 self._framework,
@@ -266,12 +267,13 @@ class CommHandler:
                     self._client,
                     fn_id,
                     call_input,
+                    middleware,
                 )
 
                 if isinstance(call_res, execution.FunctionCallResponse):
                     # Only call this hook if we get a return at the function
                     # level.
-                    await self._client.middleware.after_function_execution()
+                    await middleware.after_execution()
 
                 comm_res = CommResponse.from_call_result(
                     self._logger,
@@ -285,7 +287,7 @@ class CommHandler:
                     err,
                 )
 
-        await self._client.middleware.before_response()
+        await middleware.before_response()
         return comm_res
 
     def call_function_sync(
@@ -299,20 +301,17 @@ class CommHandler:
         Handles a function call from the Executor.
         """
 
-        # No memoized data means we're calling the function for the first time.
-        is_first_call = len(call.steps.keys()) == 0
-        if is_first_call:
-            self._client.middleware.before_function_execution_sync()
+        middleware = middleware_lib.MiddlewareManager(self._client)
 
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
-        match self._client.middleware.transform_input_sync(
-            logger=self._logger,
+        match middleware.transform_input_sync(
+            execution.TransformableCallInput(logger=self._logger),
         ):
             case result.Ok(call_input):
                 pass
             case result.Err(err):
-                self._client.middleware.before_response_sync()
+                middleware.before_response_sync()
                 return CommResponse.from_error(
                     self._logger,
                     self._framework,
@@ -322,7 +321,7 @@ class CommHandler:
         # Validate the request signature.
         validation_res = req_sig.validate(self._signing_key)
         if result.is_err(validation_res):
-            self._client.middleware.before_response_sync()
+            middleware.before_response_sync()
             return CommResponse.from_error(
                 self._logger,
                 self._framework,
@@ -336,12 +335,13 @@ class CommHandler:
                     self._client,
                     fn_id,
                     call_input,
+                    middleware,
                 )
 
                 if isinstance(call_res, execution.FunctionCallResponse):
                     # Only call this hook if we get a return at the function
                     # level.
-                    self._client.middleware.after_function_execution_sync()
+                    middleware.after_execution_sync()
 
                 comm_res = CommResponse.from_call_result(
                     self._logger,
@@ -355,7 +355,7 @@ class CommHandler:
                     err,
                 )
 
-        self._client.middleware.before_response_sync()
+        middleware.before_response_sync()
         return comm_res
 
     def _get_function(

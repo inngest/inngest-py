@@ -28,7 +28,7 @@ def serve(
         client=client,
         framework=const.Framework.FLASK,
         functions=functions,
-        logger=app.logger,
+        logger=client.logger,
         signing_key=signing_key,
     )
 

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 import enum
-import logging
 import typing
 
 from . import errors, event_lib, transforms, types
@@ -26,8 +25,8 @@ class CallStack(types.BaseModel):
 
 
 @dataclasses.dataclass
-class CallInput:
-    logger: logging.Logger
+class TransformableCallInput:
+    logger: types.Logger
 
 
 class CallError(types.BaseModel):
