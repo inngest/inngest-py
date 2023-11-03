@@ -3,7 +3,7 @@ import inspect
 import logging
 import typing
 
-from . import errors, execution, result, transforms
+from . import errors, execution, result, transforms, types
 
 BlankHook = typing.Callable[[], typing.Awaitable[None] | None]
 
@@ -14,11 +14,10 @@ class CallInputTransform:
 
 
 class Middleware:
-    async def after_run_execution(self) -> None:
+    async def after_function_execution(self) -> None:
         """
-        After a function run is done executing. Called once per run
-        regardless of the number of steps. Will still be called if the run
-        failed.
+        After a function is done executing. Called once per run regardless of
+        the number of steps. Will still be called if the run failed.
         """
 
         return None
@@ -33,10 +32,10 @@ class Middleware:
 
         return None
 
-    async def before_run_execution(self) -> None:
+    async def before_function_execution(self) -> None:
         """
-        Before a function run starts executing. Called once per run
-        regardless of the number of steps.
+        Before a function starts executing. Called once per run regardless of
+        the number of steps.
         """
 
         return None
@@ -49,13 +48,24 @@ class Middleware:
 
         return CallInputTransform()
 
+    async def transform_output(
+        self,
+        output: types.Serializable,
+    ) -> types.Serializable:
+        """
+        After a function or step returns. Used to modify the returned data.
+        Called multiple times per run when using steps. Not called when an error
+        is thrown.
+        """
+
+        return output
+
 
 class MiddlewareSync:
-    def after_run_execution(self) -> None:
+    def after_function_execution(self) -> None:
         """
-        After a function run is done executing. Called once per run
-        regardless of the number of steps. Will still be called if the run
-        failed.
+        After a function is done executing. Called once per run regardless of
+        the number of steps. Will still be called if the run failed.
         """
 
         return None
@@ -70,10 +80,10 @@ class MiddlewareSync:
 
         return None
 
-    def before_run_execution(self) -> None:
+    def before_function_execution(self) -> None:
         """
-        Before a function run starts executing. Called once per run
-        regardless of the number of steps.
+        Before a function starts executing. Called once per run regardless of
+        the number of steps.
         """
 
         return None
@@ -85,6 +95,18 @@ class MiddlewareSync:
         """
 
         return CallInputTransform()
+
+    def transform_output(
+        self,
+        output: types.Serializable,
+    ) -> types.Serializable:
+        """
+        After a function or step returns. Used to modify the returned data.
+        Called multiple times per run when using steps. Not called when an error
+        is thrown.
+        """
+
+        return output
 
 
 _mismatched_sync = errors.MismatchedSync(
@@ -102,15 +124,15 @@ class MiddlewareManager:
     def add(self, middleware: Middleware | MiddlewareSync) -> None:
         self._middleware = [*self._middleware, middleware]
 
-    async def after_run_execution(self) -> None:
+    async def after_function_execution(self) -> None:
         for m in self._middleware:
-            await transforms.maybe_await(m.after_run_execution())
+            await transforms.maybe_await(m.after_function_execution())
 
-    def after_run_execution_sync(self) -> result.MaybeError[None]:
+    def after_function_execution_sync(self) -> result.MaybeError[None]:
         for m in self._middleware:
-            if inspect.iscoroutinefunction(m.after_run_execution):
+            if inspect.iscoroutinefunction(m.after_function_execution):
                 return result.Err(_mismatched_sync)
-            m.after_run_execution()
+            m.after_function_execution()
         return result.Ok(None)
 
     async def before_response(self) -> None:
@@ -124,15 +146,15 @@ class MiddlewareManager:
             m.before_response()
         return result.Ok(None)
 
-    async def before_run_execution(self) -> None:
+    async def before_function_execution(self) -> None:
         for m in self._middleware:
-            await transforms.maybe_await(m.before_run_execution())
+            await transforms.maybe_await(m.before_function_execution())
 
-    def before_run_execution_sync(self) -> result.MaybeError[None]:
+    def before_function_execution_sync(self) -> result.MaybeError[None]:
         for m in self._middleware:
-            if inspect.iscoroutinefunction(m.before_run_execution):
+            if inspect.iscoroutinefunction(m.before_function_execution):
                 return result.Err(_mismatched_sync)
-            m.before_run_execution()
+            m.before_function_execution()
         return result.Ok(None)
 
     async def transform_input(
@@ -157,3 +179,22 @@ class MiddlewareManager:
             if t.logger is not None:
                 logger = t.logger
         return result.Ok(execution.CallInput(logger=logger))
+
+    async def transform_output(
+        self,
+        output: types.Serializable,
+    ) -> types.Serializable:
+        for m in self._middleware:
+            output = await transforms.maybe_await(m.transform_output(output))
+        return output
+
+    def transform_output_sync(
+        self,
+        output: types.Serializable,
+    ) -> result.MaybeError[types.Serializable]:
+        for m in self._middleware:
+            if isinstance(m, Middleware):
+                return result.Err(_mismatched_sync)
+
+            output = m.transform_output(output)
+        return result.Ok(output)
