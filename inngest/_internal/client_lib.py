@@ -8,7 +8,10 @@ import urllib.parse
 
 import httpx
 
-from . import const, env, errors, event_lib, middleware_lib, net, result, types
+from . import const, env, errors, event_lib, net, result, types
+
+if typing.TYPE_CHECKING:
+    from . import middleware_lib
 
 
 class Inngest:

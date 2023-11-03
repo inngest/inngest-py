@@ -1,22 +1,8 @@
 from __future__ import annotations
 
-import logging
-import typing
-
-from inngest._internal import execution, types
+from inngest._internal import client_lib, execution, types
 
 from .middleware import MiddlewareSync
-
-# Prevent circular import
-if typing.TYPE_CHECKING:
-    from inngest._internal import client_lib
-
-
-# https://github.com/python/typeshed/issues/7855#issuecomment-1128857842
-if typing.TYPE_CHECKING:
-    _LoggerAdapter = logging.LoggerAdapter[types.Logger]
-else:
-    _LoggerAdapter = logging.LoggerAdapter
 
 
 class LoggerProxy:

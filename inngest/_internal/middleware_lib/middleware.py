@@ -1,12 +1,6 @@
 from __future__ import annotations
 
-import typing
-
-from inngest._internal import execution, types
-
-# Prevent circular import
-if typing.TYPE_CHECKING:
-    from inngest._internal import client_lib
+from inngest._internal import client_lib, execution, types
 
 
 class Middleware:

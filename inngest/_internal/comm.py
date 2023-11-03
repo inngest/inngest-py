@@ -3,12 +3,12 @@ from __future__ import annotations
 import http
 import json
 import os
-import typing
 import urllib.parse
 
 import httpx
 
 from inngest._internal import (
+    client_lib,
     const,
     errors,
     execution,
@@ -21,10 +21,6 @@ from inngest._internal import (
     transforms,
     types,
 )
-
-# Prevent circular import
-if typing.TYPE_CHECKING:
-    from inngest._internal import client_lib
 
 
 class CommResponse:

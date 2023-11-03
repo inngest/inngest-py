@@ -3,12 +3,7 @@ from __future__ import annotations
 import logging
 import typing
 
-from . import execution, middleware_lib, types
-
-# Prevent circular import
-if typing.TYPE_CHECKING:
-    from . import client_lib
-
+from . import client_lib, execution, middleware_lib, types
 
 # https://github.com/python/typeshed/issues/7855#issuecomment-1128857842
 if typing.TYPE_CHECKING:

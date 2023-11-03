@@ -3,15 +3,17 @@ from __future__ import annotations
 import inspect
 import typing
 
-from inngest._internal import errors, execution, result, transforms, types
+from inngest._internal import (
+    client_lib,
+    errors,
+    execution,
+    result,
+    transforms,
+    types,
+)
 
 from .log import LoggerMiddleware
 from .middleware import Middleware, MiddlewareSync
-
-# Prevent circular import
-if typing.TYPE_CHECKING:
-    from inngest._internal import client_lib
-
 
 MiddlewareT = typing.TypeVar("MiddlewareT", bound=Middleware)
 MiddlewareSyncT = typing.TypeVar("MiddlewareSyncT", bound=MiddlewareSync)
