@@ -1,11 +1,10 @@
-import logging
-import unittest.mock
+import typing
 
 import inngest
 import tests.helper
 
 # TODO: Remove when middleware is ready for external use.
-from inngest._internal import middleware_lib
+from inngest._internal import execution, middleware_lib, types
 
 from . import base
 
@@ -25,24 +24,27 @@ def create(
     event_name = base.create_event_name(framework, test_name, is_sync)
     state = _State()
 
-    _logger = unittest.mock.Mock()
-
-    middleware: middleware_lib.Middleware | middleware_lib.MiddlewareSync
+    middleware: typing.Type[
+        middleware_lib.Middleware | middleware_lib.MiddlewareSync
+    ]
     if is_sync:
 
         class _MiddlewareSync(middleware_lib.MiddlewareSync):
-            def after_function_execution(self) -> None:
-                state.hook_list.append("after_function_execution")
+            def after_execution(self) -> None:
+                state.hook_list.append("after_execution")
 
             def before_response(self) -> None:
                 state.hook_list.append("before_response")
 
-            def before_function_execution(self) -> None:
-                state.hook_list.append("before_function_execution")
+            def before_execution(self) -> None:
+                state.hook_list.append("before_execution")
 
-            def transform_input(self) -> inngest.CallInputTransform:
+            def transform_input(
+                self,
+                call_input: execution.TransformableCallInput,
+            ) -> execution.TransformableCallInput:
                 state.hook_list.append("transform_input")
-                return inngest.CallInputTransform(logger=_logger)
+                return call_input
 
             def transform_output(
                 self,
@@ -51,23 +53,26 @@ def create(
                 state.hook_list.append("transform_output")
                 return output
 
-        middleware = _MiddlewareSync()
+        middleware = _MiddlewareSync
 
     else:
 
         class _MiddlewareAsync(middleware_lib.Middleware):
-            async def after_function_execution(self) -> None:
-                state.hook_list.append("after_function_execution")
+            async def after_execution(self) -> None:
+                state.hook_list.append("after_execution")
 
             async def before_response(self) -> None:
                 state.hook_list.append("before_response")
 
-            async def before_function_execution(self) -> None:
-                state.hook_list.append("before_function_execution")
+            async def before_execution(self) -> None:
+                state.hook_list.append("before_execution")
 
-            async def transform_input(self) -> inngest.CallInputTransform:
+            async def transform_input(
+                self,
+                call_input: execution.TransformableCallInput,
+            ) -> execution.TransformableCallInput:
                 state.hook_list.append("transform_input")
-                return inngest.CallInputTransform(logger=_logger)
+                return call_input
 
             async def transform_output(
                 self,
@@ -76,7 +81,7 @@ def create(
                 state.hook_list.append("transform_output")
                 return output
 
-        middleware = _MiddlewareAsync()
+        middleware = _MiddlewareAsync
 
     @inngest.create_function(
         fn_id=test_name,
@@ -85,11 +90,12 @@ def create(
     )
     def fn_sync(
         *,
-        logger: logging.Logger,
+        logger: types.Logger,
         step: inngest.StepSync,
         run_id: str,
         **_kwargs: object,
     ) -> None:
+        logger.info("function start")
         state.run_id = run_id
 
         def _first_step() -> None:
@@ -97,10 +103,13 @@ def create(
 
         step.run("first_step", _first_step)
 
+        logger.info("between steps")
+
         def _second_step() -> None:
             logger.info("second_step")
 
         step.run("second_step", _second_step)
+        logger.info("function end")
 
     @inngest.create_function(
         fn_id=test_name,
@@ -109,11 +118,12 @@ def create(
     )
     async def fn_async(
         *,
-        logger: logging.Logger,
+        logger: types.Logger,
         step: inngest.Step,
         run_id: str,
         **_kwargs: object,
     ) -> None:
+        logger.info("function start")
         state.run_id = run_id
 
         def _first_step() -> None:
@@ -121,13 +131,16 @@ def create(
 
         await step.run("first_step", _first_step)
 
+        logger.info("between steps")
+
         def _second_step() -> None:
             logger.info("second_step")
 
         await step.run("second_step", _second_step)
+        logger.info("function end")
 
     def run_test(self: base.TestClass) -> None:
-        self.client.middleware.add(middleware)
+        self.client.add_middleware(middleware)
         self.client.send_sync(inngest.Event(name=event_name))
         run_id = state.wait_for_run_id()
         tests.helper.client.wait_for_run_status(
@@ -137,22 +150,23 @@ def create(
 
         # Assert that the middleware hooks were called in the correct order
         assert state.hook_list == [
-            "before_function_execution",
+            # Entry 1
             "transform_input",
+            "before_execution",
             "transform_output",
-            "before_response",  # first_step done
+            "before_response",
+            # Entry 2
             "transform_input",
+            "before_execution",
             "transform_output",
-            "before_response",  # second_step done
+            "before_response",
+            # Entry 3
             "transform_input",
+            "before_execution",
             "transform_output",
-            "after_function_execution",
-            "before_response",  # Function done
+            "after_execution",
+            "before_response",
         ], state.hook_list
-
-        # Assert that the middleware was able to transform the input
-        _logger.info.assert_any_call("first_step")
-        _logger.info.assert_any_call("second_step")
 
     if is_sync:
         fn = fn_sync

@@ -1,29 +1,12 @@
 import datetime
 import typing
 
-from inngest._internal import (
-    client_lib,
-    event_lib,
-    execution,
-    result,
-    transforms,
-    types,
-)
+from inngest._internal import event_lib, execution, result, transforms, types
 
 from . import base
 
 
 class Step(base.StepBase):
-    def __init__(
-        self,
-        client: client_lib.Inngest,
-        memos: dict[str, object],
-        step_id_counter: base.StepIDCounter,
-    ) -> None:
-        self._client = client
-        self._memos = memos
-        self._step_id_counter = step_id_counter
-
     @typing.overload
     async def run(
         self,
@@ -57,9 +40,11 @@ class Step(base.StepBase):
 
         hashed_id = self._get_hashed_id(step_id)
 
-        memo = self._get_memo(hashed_id)
+        memo = await self.get_memo(hashed_id)
         if memo is not types.EmptySentinel:
             return memo  # type: ignore
+
+        await self._middleware.before_execution()
 
         # Ensure the output is JSON-serializable.
         match transforms.dump_json(await transforms.maybe_await(handler())):
@@ -122,7 +107,7 @@ class Step(base.StepBase):
 
         hashed_id = self._get_hashed_id(step_id)
 
-        memo = self._get_memo(hashed_id)
+        memo = await self.get_memo(hashed_id)
         if memo is not types.EmptySentinel:
             return memo  # type: ignore
 
@@ -152,7 +137,7 @@ class Step(base.StepBase):
 
         hashed_id = self._get_hashed_id(step_id)
 
-        memo = self._get_memo(hashed_id)
+        memo = await self.get_memo(hashed_id)
         if memo is not types.EmptySentinel:
             if memo is None:
                 # Timeout

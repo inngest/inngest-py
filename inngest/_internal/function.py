@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import inspect
-import logging
 import typing
 
 import pydantic
@@ -15,6 +14,7 @@ from inngest._internal import (
     event_lib,
     execution,
     function_config,
+    middleware_lib,
     result,
     step_lib,
     transforms,
@@ -39,7 +39,7 @@ class FunctionHandlerAsync(typing.Protocol):
         attempt: int,
         event: event_lib.Event,
         events: list[event_lib.Event],
-        logger: logging.Logger,
+        logger: types.Logger,
         run_id: str,
         step: step_lib.Step,
     ) -> typing.Awaitable[types.Serializable]:
@@ -54,7 +54,7 @@ class FunctionHandlerSync(typing.Protocol):
         attempt: int,
         event: event_lib.Event,
         events: list[event_lib.Event],
-        logger: logging.Logger,
+        logger: types.Logger,
         run_id: str,
         step: step_lib.StepSync,
     ) -> types.Serializable:
@@ -180,8 +180,15 @@ class Function:
         call: execution.Call,
         client: client_lib.Inngest,
         fn_id: str,
-        call_input: execution.CallInput,
+        call_input: execution.TransformableCallInput,
+        middleware: middleware_lib.MiddlewareManager,
     ) -> execution.CallResult:
+        memos = step_lib.StepMemos(call.steps)
+
+        # No memoized data means we're calling the function for the first time.
+        if memos.size == 0:
+            await middleware.before_execution()
+
         try:
             handler: FunctionHandlerAsync | FunctionHandlerSync
             if self.id == fn_id:
@@ -209,7 +216,8 @@ class Function:
                     run_id=call.ctx.run_id,
                     step=step_lib.Step(
                         client,
-                        call.steps,
+                        memos,
+                        middleware,
                         step_lib.StepIDCounter(),
                     ),
                 )
@@ -222,7 +230,8 @@ class Function:
                     run_id=call.ctx.run_id,
                     step=step_lib.StepSync(
                         client,
-                        call.steps,
+                        memos,
+                        middleware,
                         step_lib.StepIDCounter(),
                     ),
                 )
@@ -234,7 +243,7 @@ class Function:
                     )
                 )
 
-            output = await client.middleware.transform_output(output)
+            output = await middleware.transform_output(output)
 
             # Ensure the output is JSON-serializable.
             match transforms.dump_json(output):
@@ -245,7 +254,7 @@ class Function:
 
             return execution.FunctionCallResponse(data=output)
         except step_lib.Interrupt as interrupt:
-            output = await client.middleware.transform_output(interrupt.data)
+            output = await middleware.transform_output(interrupt.data)
 
             return [
                 execution.StepCallResponse(
@@ -265,8 +274,15 @@ class Function:
         call: execution.Call,
         client: client_lib.Inngest,
         fn_id: str,
-        call_input: execution.CallInput,
+        call_input: execution.TransformableCallInput,
+        middleware: middleware_lib.MiddlewareManager,
     ) -> execution.CallResult:
+        memos = step_lib.StepMemos(call.steps)
+
+        # No memoized data means we're calling the function for the first time.
+        if memos.size == 0:
+            middleware.before_execution_sync()
+
         try:
             handler: FunctionHandlerAsync | FunctionHandlerSync
             if self.id == fn_id:
@@ -291,12 +307,13 @@ class Function:
                     run_id=call.ctx.run_id,
                     step=step_lib.StepSync(
                         client,
-                        call.steps,
+                        memos,
+                        middleware,
                         step_lib.StepIDCounter(),
                     ),
                 )
 
-                match client.middleware.transform_output_sync(output):
+                match middleware.transform_output_sync(output):
                     case result.Ok(output):
                         pass
                     case result.Err(err):
@@ -315,7 +332,7 @@ class Function:
                 )
             )
         except step_lib.Interrupt as interrupt:
-            match client.middleware.transform_output_sync(interrupt.data):
+            match middleware.transform_output_sync(interrupt.data):
                 case result.Ok(output):
                     pass
                 case result.Err(err):

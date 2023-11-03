@@ -29,7 +29,6 @@ def serve(
         client=client,
         framework=const.Framework.TORNADO,
         functions=functions,
-        logger=client.logger,
         signing_key=signing_key,
     )
 
