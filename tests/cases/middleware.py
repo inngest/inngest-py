@@ -13,7 +13,8 @@ _TEST_NAME = "middleware"
 
 
 class _State(base.BaseState):
-    hook_list: list[str] = []
+    def __init__(self) -> None:
+        self.hook_list: list[str] = []
 
 
 def create(
