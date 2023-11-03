@@ -65,11 +65,9 @@ class _DevServer:
                     stdout=stdout,
                 )
             )
-            self._process.communicate()
 
         self._thread = threading.Thread(target=_run)
         self._thread.start()
-        self._thread.join(timeout=10)
 
         print("Waiting for Dev Server to start")
         start_time = time.time()
@@ -90,15 +88,15 @@ class _DevServer:
 
         if self._process is None:
             raise Exception("missing process")
-        if self._thread is None:
-            raise Exception("missing thread")
 
-        if not self._thread.is_alive():
-            raise Exception("thread is not alive")
+        self._process.send_signal(signal.SIGINT)
 
-        # Would rather use `self._process.terminate()` but sometimes Dev Server
-        # takes too long to shutdown.
-        os.kill(self._process.pid, signal.SIGKILL)
+        # Try to gracefully stop but kill it if that fails.
+        try:
+            self._process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            self._process.kill()
+            self._process.wait(timeout=5)
 
 
 singleton = _DevServer(

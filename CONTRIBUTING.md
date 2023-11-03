@@ -82,3 +82,7 @@ This will start CI for the tag, including publishing to PyPI.
 - `net`: General networking stuff. Should not have business logic.
 - `result`: Wrapper types for writing Rust-like errors-as-values code. Will probably expand its use.
 - `types`: Low-level primitives for type annotations. Should not have business logic.
+
+# Troubleshooting
+
+Kill orphaned Dev Servers using `kill -9 $(pgrep inngest-cli)`.
