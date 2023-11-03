@@ -13,7 +13,7 @@ _TEST_NAME = "middleware"
 
 
 class _State(base.BaseState):
-    call_list: list[str] = []
+    hook_list: list[str] = []
 
 
 def create(
@@ -31,16 +31,16 @@ def create(
 
         class _MiddlewareSync(middleware_lib.MiddlewareSync):
             def after_run_execution(self) -> None:
-                state.call_list.append("after_run_execution")
+                state.hook_list.append("after_run_execution")
 
             def before_response(self) -> None:
-                state.call_list.append("before_response")
+                state.hook_list.append("before_response")
 
             def before_run_execution(self) -> None:
-                state.call_list.append("before_run_execution")
+                state.hook_list.append("before_run_execution")
 
             def transform_input(self) -> inngest.CallInputTransform:
-                state.call_list.append("transform_input")
+                state.hook_list.append("transform_input")
                 return inngest.CallInputTransform(logger=_logger)
 
         middleware = _MiddlewareSync()
@@ -49,16 +49,16 @@ def create(
 
         class _MiddlewareAsync(middleware_lib.Middleware):
             async def after_run_execution(self) -> None:
-                state.call_list.append("after_run_execution")
+                state.hook_list.append("after_run_execution")
 
             async def before_response(self) -> None:
-                state.call_list.append("before_response")
+                state.hook_list.append("before_response")
 
             async def before_run_execution(self) -> None:
-                state.call_list.append("before_run_execution")
+                state.hook_list.append("before_run_execution")
 
             async def transform_input(self) -> inngest.CallInputTransform:
-                state.call_list.append("transform_input")
+                state.hook_list.append("transform_input")
                 return inngest.CallInputTransform(logger=_logger)
 
         middleware = _MiddlewareAsync()
@@ -121,7 +121,7 @@ def create(
         )
 
         # Assert that the middleware hooks were called in the correct order
-        assert state.call_list == [
+        assert state.hook_list == [
             "before_run_execution",
             "transform_input",
             "before_response",  # first_step done
@@ -130,7 +130,7 @@ def create(
             "transform_input",
             "after_run_execution",
             "before_response",  # Function done
-        ]
+        ], state.hook_list
 
         # Assert that the middleware was able to transform the input
         _logger.info.assert_any_call("first_step")
