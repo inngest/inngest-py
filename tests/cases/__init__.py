@@ -1,5 +1,3 @@
-import inngest
-
 from . import (
     base,
     cancel,
@@ -7,6 +5,7 @@ from . import (
     debounce,
     event_payload,
     function_args,
+    middleware,
     no_steps,
     on_failure,
     sleep_until,
@@ -17,10 +16,7 @@ from . import (
 )
 
 
-def create_cases(
-    client: inngest.Inngest,
-    framework: str,
-) -> list[base.Case]:
+def create_cases(framework: str) -> list[base.Case]:
     cases: list[base.Case] = []
     for case in (
         cancel,
@@ -28,6 +24,7 @@ def create_cases(
         debounce,
         event_payload,
         function_args,
+        middleware,
         no_steps,
         on_failure,
         sleep_until,
@@ -36,23 +33,21 @@ def create_cases(
         wait_for_event_fulfill,
         wait_for_event_timeout,
     ):
-        cases.append(case.create(client, framework, is_sync=False))
+        cases.append(case.create(framework, is_sync=False))
 
     return cases
 
 
-def create_cases_sync(
-    client: inngest.Inngest,
-    framework: str,
-) -> list[base.Case]:
+def create_cases_sync(framework: str) -> list[base.Case]:
     return [
-        case.create(client, framework, is_sync=True)
+        case.create(framework, is_sync=True)
         for case in (
             cancel,
             client_send,
             debounce,
             event_payload,
             function_args,
+            middleware,
             no_steps,
             on_failure,
             sleep_until,

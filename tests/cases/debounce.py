@@ -13,7 +13,6 @@ class _State(base.BaseState):
 
 
 def create(
-    client: inngest.Inngest,
     framework: str,
     is_sync: bool,
 ) -> base.Case:
@@ -23,7 +22,7 @@ def create(
 
     @inngest.create_function(
         debounce=inngest.Debounce(
-            period=datetime.timedelta(seconds=1),
+            period=datetime.timedelta(seconds=2),
         ),
         fn_id=test_name,
         retries=0,
@@ -37,7 +36,7 @@ def create(
 
     @inngest.create_function(
         debounce=inngest.Debounce(
-            period=datetime.timedelta(seconds=3),
+            period=datetime.timedelta(seconds=2),
         ),
         fn_id=test_name,
         retries=0,
@@ -49,9 +48,13 @@ def create(
         state.run_count += 1
         state.run_id = run_id
 
-    def run_test(_self: object) -> None:
-        client.send_sync(inngest.Event(name=event_name))
-        client.send_sync(inngest.Event(name=event_name))
+    def run_test(self: base.TestClass) -> None:
+        self.client.send_sync(
+            [
+                inngest.Event(name=event_name),
+                inngest.Event(name=event_name),
+            ]
+        )
         run_id = state.wait_for_run_id(timeout=datetime.timedelta(seconds=10))
         tests.helper.client.wait_for_run_status(
             run_id,
@@ -59,7 +62,6 @@ def create(
         )
         assert state.run_count == 1, f"Expected 1 run but got {state.run_count}"
 
-    fn: inngest.Function
     if is_sync:
         fn = fn_sync
     else:

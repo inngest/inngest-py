@@ -1,3 +1,5 @@
+import logging
+
 import inngest
 import tests.helper
 
@@ -23,7 +25,6 @@ class _State(base.BaseState):
 
 
 def create(
-    client: inngest.Inngest,
     framework: str,
     is_sync: bool,
 ) -> base.Case:
@@ -36,6 +37,7 @@ def create(
         attempt: int,
         event: inngest.Event,
         events: list[inngest.Event],
+        logger: logging.Logger,
         run_id: str,
         step: inngest.StepSync,
     ) -> None:
@@ -50,6 +52,7 @@ def create(
         attempt: int,
         event: inngest.Event,
         events: list[inngest.Event],
+        logger: logging.Logger,
         run_id: str,
         step: inngest.Step,
     ) -> None:
@@ -89,8 +92,8 @@ def create(
         state.run_id = run_id
         raise Exception("intentional failure")
 
-    def run_test(_self: object) -> None:
-        client.send_sync(inngest.Event(name=event_name))
+    def run_test(self: base.TestClass) -> None:
+        self.client.send_sync(inngest.Event(name=event_name))
 
         run_id = state.wait_for_run_id()
         tests.helper.client.wait_for_run_status(
@@ -112,7 +115,6 @@ def create(
         assert isinstance(state.events, list) and len(state.events) == 1
         assert isinstance(state.step, (inngest.Step, inngest.StepSync))
 
-    fn: inngest.Function
     if is_sync:
         fn = fn_sync
     else:

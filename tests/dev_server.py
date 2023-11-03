@@ -53,6 +53,7 @@ class _DevServer:
                 subprocess.Popen(  # pylint: disable=consider-using-with
                     [
                         "npx",
+                        "--yes",
                         "inngest-cli@latest",
                         "dev",
                         "--no-discovery",
@@ -73,7 +74,7 @@ class _DevServer:
         print("Waiting for Dev Server to start")
         start_time = time.time()
         while True:
-            if time.time() - start_time > 10:
+            if time.time() - start_time > 20:
                 raise Exception("timeout waiting for dev server to start")
 
             try:
