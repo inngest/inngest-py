@@ -1,6 +1,7 @@
 from . import (
     batch,
     cancel,
+    cron,
     debounce,
     duplicate_step_name,
     error_step,
@@ -15,6 +16,7 @@ from . import (
 functions_sync = [
     batch.fn_sync,
     cancel.fn_sync,
+    cron.fn_sync,
     debounce.fn_sync,
     duplicate_step_name.fn_sync,
     error_step.fn_sync,
@@ -27,6 +29,7 @@ functions_sync = [
 ]
 
 functions = [
+    cron.fn,
     print_event.fn,
     two_steps_and_sleep.fn,
 ]

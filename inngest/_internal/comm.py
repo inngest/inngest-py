@@ -154,7 +154,12 @@ class CommHandler:
         signing_key: str | None = None,
     ) -> None:
         self._client = client
+
         self._is_production = client.is_production
+        if self._is_production:
+            self._client.logger.info("Running in production mode")
+        else:
+            self._client.logger.warning("Running in development mode")
 
         if not self._is_production:
             self._client.logger.info("Dev Server mode enabled")
