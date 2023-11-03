@@ -27,7 +27,6 @@ def serve(
         client=client,
         framework=const.Framework.FAST_API,
         functions=functions,
-        logger=client.logger,
         signing_key=signing_key,
     )
 

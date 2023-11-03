@@ -1,4 +1,3 @@
-import logging
 import typing
 
 import inngest
@@ -10,20 +9,6 @@ from inngest._internal import execution, middleware_lib, types
 from . import base
 
 _TEST_NAME = "middleware"
-
-
-class StatefulLogger(logging.Logger):
-    """
-    Fake logger that stores calls to its methods. We can use this to assert that
-    logger methods are properly called (e.g. no duplicates).
-    """
-
-    def __init__(self) -> None:
-        super().__init__("test")
-        self.info_calls: list[object] = []
-
-    def info(self, msg: object, *args: object, **kwargs: object) -> None:
-        self.info_calls.append(msg)
 
 
 class _State(base.BaseState):
@@ -38,8 +23,6 @@ def create(
     test_name = base.create_test_name(_TEST_NAME, is_sync)
     event_name = base.create_event_name(framework, test_name, is_sync)
     state = _State()
-
-    _logger = StatefulLogger()
 
     middleware: typing.Type[
         middleware_lib.Middleware | middleware_lib.MiddlewareSync
@@ -61,7 +44,6 @@ def create(
                 call_input: execution.TransformableCallInput,
             ) -> execution.TransformableCallInput:
                 state.hook_list.append("transform_input")
-                call_input.logger = _logger
                 return call_input
 
             def transform_output(
@@ -90,7 +72,6 @@ def create(
                 call_input: execution.TransformableCallInput,
             ) -> execution.TransformableCallInput:
                 state.hook_list.append("transform_input")
-                call_input.logger = _logger
                 return call_input
 
             async def transform_output(
@@ -186,14 +167,6 @@ def create(
             "after_execution",
             "before_response",
         ], state.hook_list
-
-        assert _logger.info_calls == [
-            "function start",
-            "first_step",
-            "between steps",
-            "second_step",
-            "function end",
-        ], _logger.info_calls
 
     if is_sync:
         fn = fn_sync

@@ -52,7 +52,6 @@ class Test_get_function_configs(  # pylint: disable=invalid-name
             client=self.client,
             framework=const.Framework.FLASK,
             functions=[fn],
-            logger=self.client.logger,
         )
         assert result.is_ok(handler.get_function_configs("http://foo.bar"))
 
@@ -70,7 +69,6 @@ class Test_get_function_configs(  # pylint: disable=invalid-name
             client=self.client,
             framework=const.Framework.FLASK,
             functions=functions,
-            logger=self.client.logger,
         )
 
         match handler.get_function_configs("http://foo.bar"):

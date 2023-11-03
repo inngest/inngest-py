@@ -142,7 +142,6 @@ class CommHandler:
     _fns: dict[str, function.Function]
     _framework: const.Framework
     _is_production: bool
-    _logger: types.Logger
     _signing_key: str | None
 
     def __init__(
@@ -152,19 +151,18 @@ class CommHandler:
         client: client_lib.Inngest,
         framework: const.Framework,
         functions: list[function.Function],
-        logger: types.Logger,
         signing_key: str | None = None,
     ) -> None:
+        self._client = client
         self._is_production = client.is_production
-        self._logger = logger
 
         if not self._is_production:
-            self._logger.info("Dev Server mode enabled")
+            self._client.logger.info("Dev Server mode enabled")
 
         base_url = base_url or os.getenv(const.EnvKey.BASE_URL.value)
         if base_url is None:
             if not self._is_production:
-                self._logger.info("Defaulting API origin to Dev Server")
+                self._client.logger.info("Defaulting API origin to Dev Server")
                 base_url = const.DEV_SERVER_ORIGIN
             else:
                 base_url = const.DEFAULT_API_ORIGIN
@@ -174,7 +172,6 @@ class CommHandler:
         except Exception as err:
             raise errors.InvalidBaseURL() from err
 
-        self._client = client
         self._fns = {fn.get_id(): fn for fn in functions}
         self._framework = framework
 
@@ -182,7 +179,7 @@ class CommHandler:
             if self._client.is_production:
                 signing_key = os.getenv(const.EnvKey.SIGNING_KEY.value)
                 if signing_key is None:
-                    self._logger.error("missing signing key")
+                    self._client.logger.error("missing signing key")
                     raise errors.MissingSigningKey()
         self._signing_key = signing_key
 
@@ -247,7 +244,7 @@ class CommHandler:
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
         call_input = await middleware.transform_input(
-            execution.TransformableCallInput(logger=self._logger),
+            execution.TransformableCallInput(logger=self._client.logger),
         )
 
         # Validate the request signature.
@@ -255,7 +252,7 @@ class CommHandler:
         if result.is_err(validation_res):
             await middleware.before_response()
             return CommResponse.from_error(
-                self._logger,
+                self._client.logger,
                 self._framework,
                 validation_res.err_value,
             )
@@ -276,13 +273,13 @@ class CommHandler:
                     await middleware.after_execution()
 
                 comm_res = CommResponse.from_call_result(
-                    self._logger,
+                    self._client.logger,
                     self._framework,
                     call_res,
                 )
             case result.Err(err):
                 comm_res = CommResponse.from_error(
-                    self._logger,
+                    self._client.logger,
                     self._framework,
                     err,
                 )
@@ -306,14 +303,14 @@ class CommHandler:
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
         match middleware.transform_input_sync(
-            execution.TransformableCallInput(logger=self._logger),
+            execution.TransformableCallInput(logger=self._client.logger),
         ):
             case result.Ok(call_input):
                 pass
             case result.Err(err):
                 middleware.before_response_sync()
                 return CommResponse.from_error(
-                    self._logger,
+                    self._client.logger,
                     self._framework,
                     err,
                 )
@@ -323,7 +320,7 @@ class CommHandler:
         if result.is_err(validation_res):
             middleware.before_response_sync()
             return CommResponse.from_error(
-                self._logger,
+                self._client.logger,
                 self._framework,
                 validation_res.err_value,
             )
@@ -344,13 +341,13 @@ class CommHandler:
                     middleware.after_execution_sync()
 
                 comm_res = CommResponse.from_call_result(
-                    self._logger,
+                    self._client.logger,
                     self._framework,
                     call_res,
                 )
             case result.Err(err):
                 comm_res = CommResponse.from_error(
-                    self._logger,
+                    self._client.logger,
                     self._framework,
                     err,
                 )
@@ -415,14 +412,14 @@ class CommHandler:
             server_res_body = server_res.json()
         except Exception:
             return CommResponse.from_error(
-                self._logger,
+                self._client.logger,
                 self._framework,
                 errors.RegistrationError("response is not valid JSON"),
             )
 
         if not isinstance(server_res_body, dict):
             return CommResponse.from_error(
-                self._logger,
+                self._client.logger,
                 self._framework,
                 errors.RegistrationError("response is not an object"),
             )
@@ -438,7 +435,7 @@ class CommHandler:
         if not isinstance(msg, str):
             msg = "registration failed"
         comm_res = CommResponse.from_error(
-            self._logger,
+            self._client.logger,
             self._framework,
             errors.RegistrationError(msg.strip()),
         )
@@ -459,9 +456,9 @@ class CommHandler:
             case result.Ok(_):
                 pass
             case result.Err(err):
-                self._logger.error(err)
+                self._client.logger.error(err)
                 return CommResponse.from_error(
-                    self._logger,
+                    self._client.logger,
                     self._framework,
                     err,
                 )
@@ -473,9 +470,9 @@ class CommHandler:
                         await client.send(req)
                     )
                 case result.Err(err):
-                    self._logger.error(err)
+                    self._client.logger.error(err)
                     return CommResponse.from_error(
-                        self._logger,
+                        self._client.logger,
                         self._framework,
                         err,
                     )
@@ -496,9 +493,9 @@ class CommHandler:
             case result.Ok(_):
                 pass
             case result.Err(err):
-                self._logger.error(err)
+                self._client.logger.error(err)
                 return CommResponse.from_error(
-                    self._logger,
+                    self._client.logger,
                     self._framework,
                     err,
                 )
@@ -508,9 +505,9 @@ class CommHandler:
                 case result.Ok(req):
                     res = self._parse_registration_response(client.send(req))
                 case result.Err(err):
-                    self._logger.error(err)
+                    self._client.logger.error(err)
                     return CommResponse.from_error(
-                        self._logger,
+                        self._client.logger,
                         self._framework,
                         err,
                     )
