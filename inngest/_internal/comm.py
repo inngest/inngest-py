@@ -244,49 +244,40 @@ class CommHandler:
 
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
-        call_input = await middleware.transform_input(
+        match await middleware.transform_input(
             execution.TransformableCallInput(logger=self._client.logger),
-        )
+        ):
+            case result.Ok(call_input):
+                pass
+            case result.Err(err):
+                return await self._respond(middleware, err)
 
         # Validate the request signature.
-        validation_res = req_sig.validate(self._signing_key)
-        if result.is_err(validation_res):
-            await middleware.before_response()
-            return CommResponse.from_error(
-                self._client.logger,
-                self._framework,
-                validation_res.err_value,
-            )
+        match req_sig.validate(self._signing_key):
+            case result.Err(err):
+                return await self._respond(middleware, err)
 
+        # Get the function we should call.
         match self._get_function(fn_id):
             case result.Ok(fn):
-                call_res = await fn.call(
-                    call,
-                    self._client,
-                    fn_id,
-                    call_input,
-                    middleware,
-                )
-
-                if isinstance(call_res, execution.FunctionCallResponse):
-                    # Only call this hook if we get a return at the function
-                    # level.
-                    await middleware.after_execution()
-
-                comm_res = CommResponse.from_call_result(
-                    self._client.logger,
-                    self._framework,
-                    call_res,
-                )
+                pass
             case result.Err(err):
-                comm_res = CommResponse.from_error(
-                    self._client.logger,
-                    self._framework,
-                    err,
-                )
+                return await self._respond(middleware, err)
 
-        await middleware.before_response()
-        return comm_res
+        call_res = await fn.call(
+            call,
+            self._client,
+            fn_id,
+            call_input,
+            middleware,
+        )
+
+        match await middleware.after_execution():
+            case result.Err(err):
+                print(4)
+                return await self._respond(middleware, err)
+
+        return await self._respond(middleware, call_res)
 
     def call_function_sync(
         self,
@@ -317,53 +308,36 @@ class CommHandler:
                 )
 
         # Validate the request signature.
-        validation_res = req_sig.validate(self._signing_key)
-        if result.is_err(validation_res):
-            middleware.before_response_sync()
-            return CommResponse.from_error(
-                self._client.logger,
-                self._framework,
-                validation_res.err_value,
-            )
+        match req_sig.validate(self._signing_key):
+            case result.Err(err):
+                return self._respond_sync(middleware, err)
+
+        # Get the function we should call.
+        match self._get_function(fn_id):
+            case result.Ok(fn):
+                pass
+            case result.Err(err):
+                return self._respond_sync(middleware, err)
 
         match self._get_function(fn_id):
             case result.Ok(fn):
-                call_res = fn.call_sync(
-                    call,
-                    self._client,
-                    fn_id,
-                    call_input,
-                    middleware,
-                )
-
-                if isinstance(call_res, execution.FunctionCallResponse):
-                    # Only call this hook if we get a return at the function
-                    # level.
-                    match middleware.after_execution_sync():
-                        case result.Ok(_):
-                            pass
-                        case result.Err(err):
-                            middleware.before_response_sync()
-                            return CommResponse.from_error(
-                                self._client.logger,
-                                self._framework,
-                                err,
-                            )
-
-                comm_res = CommResponse.from_call_result(
-                    self._client.logger,
-                    self._framework,
-                    call_res,
-                )
+                pass
             case result.Err(err):
-                comm_res = CommResponse.from_error(
-                    self._client.logger,
-                    self._framework,
-                    err,
-                )
+                return self._respond_sync(middleware, err)
 
-        middleware.before_response_sync()
-        return comm_res
+        call_res = fn.call_sync(
+            call,
+            self._client,
+            fn_id,
+            call_input,
+            middleware,
+        )
+
+        match middleware.after_execution_sync():
+            case result.Err(err):
+                return self._respond_sync(middleware, err)
+
+        return self._respond_sync(middleware, call_res)
 
     def _get_function(
         self, fn_id: str
@@ -523,6 +497,58 @@ class CommHandler:
                     )
 
         return res
+
+    async def _respond(
+        self,
+        middleware: middleware_lib.MiddlewareManager,
+        value: execution.CallResult | Exception,
+    ) -> CommResponse:
+        match await middleware.before_response():
+            case result.Err(err):
+                return CommResponse.from_error(
+                    self._client.logger,
+                    self._framework,
+                    err,
+                )
+
+        if isinstance(value, Exception):
+            return CommResponse.from_error(
+                self._client.logger,
+                self._framework,
+                value,
+            )
+
+        return CommResponse.from_call_result(
+            self._client.logger,
+            self._framework,
+            value,
+        )
+
+    def _respond_sync(
+        self,
+        middleware: middleware_lib.MiddlewareManager,
+        value: execution.CallResult | Exception,
+    ) -> CommResponse:
+        match middleware.before_response_sync():
+            case result.Err(err):
+                return CommResponse.from_error(
+                    self._client.logger,
+                    self._framework,
+                    err,
+                )
+
+        if isinstance(value, Exception):
+            return CommResponse.from_error(
+                self._client.logger,
+                self._framework,
+                value,
+            )
+
+        return CommResponse.from_call_result(
+            self._client.logger,
+            self._framework,
+            value,
+        )
 
     def _validate_registration(
         self,

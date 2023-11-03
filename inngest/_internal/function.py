@@ -187,7 +187,9 @@ class Function:
 
         # No memoized data means we're calling the function for the first time.
         if memos.size == 0:
-            await middleware.before_execution()
+            match await middleware.before_execution():
+                case result.Err(err):
+                    return execution.CallError.from_error(err)
 
         try:
             handler: FunctionHandlerAsync | FunctionHandlerSync
@@ -243,7 +245,11 @@ class Function:
                     )
                 )
 
-            output = await middleware.transform_output(output)
+            match await middleware.transform_output(output):
+                case result.Ok(output):
+                    pass
+                case result.Err(err):
+                    return execution.CallError.from_error(err)
 
             # Ensure the output is JSON-serializable.
             match transforms.dump_json(output):
@@ -254,7 +260,11 @@ class Function:
 
             return execution.FunctionCallResponse(data=output)
         except step_lib.Interrupt as interrupt:
-            output = await middleware.transform_output(interrupt.data)
+            match await middleware.transform_output(interrupt.data):
+                case result.Ok(output):
+                    pass
+                case result.Err(err):
+                    return execution.CallError.from_error(err)
 
             return [
                 execution.StepCallResponse(

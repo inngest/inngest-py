@@ -154,11 +154,13 @@ def create(
             "transform_input",
             "before_execution",
             "transform_output",
+            "after_execution",
             "before_response",
             # Entry 2
             "transform_input",
             "before_execution",
             "transform_output",
+            "after_execution",
             "before_response",
             # Entry 3
             "transform_input",
