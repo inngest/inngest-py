@@ -1,10 +1,8 @@
 import typing
 
 import inngest
+import inngest.experimental
 import tests.helper
-
-# TODO: Remove when middleware is ready for external use.
-from inngest._internal import execution, middleware_lib, types
 
 from . import base
 
@@ -25,11 +23,11 @@ def create(
     state = _State()
 
     middleware: typing.Type[
-        middleware_lib.Middleware | middleware_lib.MiddlewareSync
+        inngest.experimental.Middleware | inngest.experimental.MiddlewareSync
     ]
     if is_sync:
 
-        class _MiddlewareSync(middleware_lib.MiddlewareSync):
+        class _MiddlewareSync(inngest.experimental.MiddlewareSync):
             def after_execution(self) -> None:
                 state.hook_list.append("after_execution")
 
@@ -41,8 +39,8 @@ def create(
 
             def transform_input(
                 self,
-                call_input: execution.TransformableCallInput,
-            ) -> execution.TransformableCallInput:
+                call_input: inngest.experimental.TransformableCallInput,
+            ) -> inngest.experimental.TransformableCallInput:
                 state.hook_list.append("transform_input")
                 return call_input
 
@@ -57,7 +55,7 @@ def create(
 
     else:
 
-        class _MiddlewareAsync(middleware_lib.Middleware):
+        class _MiddlewareAsync(inngest.experimental.Middleware):
             async def after_execution(self) -> None:
                 state.hook_list.append("after_execution")
 
@@ -69,8 +67,8 @@ def create(
 
             async def transform_input(
                 self,
-                call_input: execution.TransformableCallInput,
-            ) -> execution.TransformableCallInput:
+                call_input: inngest.experimental.TransformableCallInput,
+            ) -> inngest.experimental.TransformableCallInput:
                 state.hook_list.append("transform_input")
                 return call_input
 
@@ -90,7 +88,7 @@ def create(
     )
     def fn_sync(
         *,
-        logger: types.Logger,
+        logger: inngest.Logger,
         step: inngest.StepSync,
         run_id: str,
         **_kwargs: object,
@@ -118,7 +116,7 @@ def create(
     )
     async def fn_async(
         *,
-        logger: types.Logger,
+        logger: inngest.Logger,
         step: inngest.Step,
         run_id: str,
         **_kwargs: object,
