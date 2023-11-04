@@ -19,7 +19,7 @@ class StepMemos:
     def __init__(self, memos: dict[str, object]) -> None:
         self._memos = memos
 
-    def get(self, hashed_id: str) -> object:
+    def pop(self, hashed_id: str) -> object:
         if hashed_id in self._memos:
             memo = self._memos[hashed_id]
 
@@ -57,16 +57,18 @@ class StepBase:
         return transforms.hash_step_id(step_id)
 
     async def get_memo(self, hashed_id: str) -> object:
-        memo = self._memos.get(hashed_id)
+        memo = self._memos.pop(hashed_id)
 
+        # If there are no more memos then all future code is new.
         if self._memos.size == 0:
             await self._middleware.before_execution()
 
         return memo
 
     def get_memo_sync(self, hashed_id: str) -> object:
-        memo = self._memos.get(hashed_id)
+        memo = self._memos.pop(hashed_id)
 
+        # If there are no more memos then all future code is new.
         if self._memos.size == 0:
             self._middleware.before_execution_sync()
 

@@ -44,7 +44,9 @@ class Step(base.StepBase):
         if memo is not types.EmptySentinel:
             return memo  # type: ignore
 
-        await self._middleware.before_execution()
+        match await self._middleware.before_execution():
+            case result.Err(err):
+                raise err
 
         # Ensure the output is JSON-serializable.
         match transforms.dump_json(await transforms.maybe_await(handler())):
@@ -111,6 +113,10 @@ class Step(base.StepBase):
         if memo is not types.EmptySentinel:
             return memo  # type: ignore
 
+        match await self._middleware.before_execution():
+            case result.Err(err):
+                raise err
+
         raise base.Interrupt(
             hashed_id=hashed_id,
             display_name=step_id,
@@ -145,6 +151,10 @@ class Step(base.StepBase):
 
             # Fulfilled by an event
             return event_lib.Event.model_validate(memo)
+
+        match await self._middleware.before_execution():
+            case result.Err(err):
+                raise err
 
         match transforms.to_duration_str(timeout):
             case result.Ok(timeout_str):

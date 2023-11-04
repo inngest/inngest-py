@@ -99,6 +99,10 @@ def create_function(
     cancel: list[function_config.Cancel] | None = None,
     debounce: function_config.Debounce | None = None,
     fn_id: str,
+    middleware: list[
+        typing.Type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]
+    ]
+    | None = None,
     name: str | None = None,
     on_failure: FunctionHandlerAsync | FunctionHandlerSync | None = None,
     rate_limit: function_config.RateLimit | None = None,
@@ -106,6 +110,24 @@ def create_function(
     throttle: function_config.Throttle | None = None,
     trigger: function_config.TriggerCron | function_config.TriggerEvent,
 ) -> typing.Callable[[FunctionHandlerAsync | FunctionHandlerSync], Function]:
+    """
+    Create an Inngest function.
+
+    Args:
+        batch_events: Event batching config.
+        cancel: Run cancellation config.
+        debounce: Debouncing config.
+        fn_id: Function ID. Changing this ID will make Inngest think this is a
+            new function.
+        middleware: Middleware to apply to this function.
+        name: Human-readable function name. (Defaults to the function ID).
+        on_failure: Function to call when this function fails.
+        rate_limit: Rate limiting config.
+        retries: Number of times to retry this function.
+        throttle: Throttling config.
+        trigger: What should trigger runs of this function.
+    """
+
     def decorator(func: FunctionHandlerAsync | FunctionHandlerSync) -> Function:
         return Function(
             FunctionOpts(
@@ -121,6 +143,7 @@ def create_function(
             ),
             trigger,
             func,
+            middleware,
         )
 
     return decorator
@@ -163,8 +186,15 @@ class Function:
         opts: FunctionOpts,
         trigger: function_config.TriggerCron | function_config.TriggerEvent,
         handler: FunctionHandlerAsync | FunctionHandlerSync,
+        middleware: list[
+            typing.Type[
+                middleware_lib.Middleware | middleware_lib.MiddlewareSync
+            ]
+        ]
+        | None = None,
     ) -> None:
         self._handler = handler
+        self._middleware = middleware or []
         self._opts = opts
         self._trigger = trigger
 
@@ -183,7 +213,21 @@ class Function:
         call_input: execution.TransformableCallInput,
         middleware: middleware_lib.MiddlewareManager,
     ) -> execution.CallResult:
+        middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
+        for m in self._middleware:
+            middleware.add(m)
+
         memos = step_lib.StepMemos(call.steps)
+
+        # Give middleware the opportunity to change some of params passed to the
+        # user's handler.
+        match await middleware.transform_input(
+            execution.TransformableCallInput(logger=client.logger),
+        ):
+            case result.Ok(call_input):
+                pass
+            case result.Err(err):
+                return execution.CallError.from_error(err)
 
         # No memoized data means we're calling the function for the first time.
         if memos.size == 0:
@@ -245,6 +289,10 @@ class Function:
                     )
                 )
 
+            match await middleware.after_execution():
+                case result.Err(err):
+                    return execution.CallError.from_error(err)
+
             match await middleware.transform_output(output):
                 case result.Ok(output):
                     pass
@@ -260,6 +308,10 @@ class Function:
 
             return execution.FunctionCallResponse(data=output)
         except step_lib.Interrupt as interrupt:
+            match await middleware.after_execution():
+                case result.Err(err):
+                    return execution.CallError.from_error(err)
+
             match await middleware.transform_output(interrupt.data):
                 case result.Ok(output):
                     pass
@@ -287,7 +339,19 @@ class Function:
         call_input: execution.TransformableCallInput,
         middleware: middleware_lib.MiddlewareManager,
     ) -> execution.CallResult:
+        middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
+        for m in self._middleware:
+            middleware.add(m)
+
         memos = step_lib.StepMemos(call.steps)
+
+        # Give middleware the opportunity to change some of params passed to the
+        # user's handler.
+        match middleware.transform_input_sync(call_input):
+            case result.Ok(call_input):
+                pass
+            case result.Err(err):
+                return execution.CallError.from_error(err)
 
         # No memoized data means we're calling the function for the first time.
         if memos.size == 0:
@@ -322,26 +386,35 @@ class Function:
                         step_lib.StepIDCounter(),
                     ),
                 )
-
-                match middleware.transform_output_sync(output):
-                    case result.Ok(output):
-                        pass
-                    case result.Err(err):
-                        return execution.CallError.from_error(err)
-
-                match transforms.dump_json(output):
-                    case result.Ok(output_str):
-                        pass
-                    case result.Err(err):
-                        return execution.CallError.from_error(err)
-
-                return execution.FunctionCallResponse(data=output_str)
-            return execution.CallError.from_error(
-                errors.MismatchedSync(
-                    "encountered async function in non-async context"
+            else:
+                return execution.CallError.from_error(
+                    errors.MismatchedSync(
+                        "encountered async function in non-async context"
+                    )
                 )
-            )
+
+            match middleware.after_execution_sync():
+                case result.Err(err):
+                    return execution.CallError.from_error(err)
+
+            match middleware.transform_output_sync(output):
+                case result.Ok(output):
+                    pass
+                case result.Err(err):
+                    return execution.CallError.from_error(err)
+
+            match transforms.dump_json(output):
+                case result.Ok(output_str):
+                    pass
+                case result.Err(err):
+                    return execution.CallError.from_error(err)
+
+            return execution.FunctionCallResponse(data=output_str)
         except step_lib.Interrupt as interrupt:
+            match middleware.after_execution_sync():
+                case result.Err(err):
+                    return execution.CallError.from_error(err)
+
             match middleware.transform_output_sync(interrupt.data):
                 case result.Ok(output):
                     pass

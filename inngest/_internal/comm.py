@@ -240,17 +240,7 @@ class CommHandler:
         Handles a function call from the Executor.
         """
 
-        middleware = middleware_lib.MiddlewareManager(self._client)
-
-        # Give middleware the opportunity to change some of params passed to the
-        # user's handler.
-        match await middleware.transform_input(
-            execution.TransformableCallInput(logger=self._client.logger),
-        ):
-            case result.Ok(call_input):
-                pass
-            case result.Err(err):
-                return await self._respond(middleware, err)
+        middleware = middleware_lib.MiddlewareManager.from_client(self._client)
 
         # Validate the request signature.
         match req_sig.validate(self._signing_key):
@@ -268,14 +258,9 @@ class CommHandler:
             call,
             self._client,
             fn_id,
-            call_input,
+            execution.TransformableCallInput(logger=self._client.logger),
             middleware,
         )
-
-        match await middleware.after_execution():
-            case result.Err(err):
-                print(4)
-                return await self._respond(middleware, err)
 
         return await self._respond(middleware, call_res)
 
@@ -290,22 +275,7 @@ class CommHandler:
         Handles a function call from the Executor.
         """
 
-        middleware = middleware_lib.MiddlewareManager(self._client)
-
-        # Give middleware the opportunity to change some of params passed to the
-        # user's handler.
-        match middleware.transform_input_sync(
-            execution.TransformableCallInput(logger=self._client.logger),
-        ):
-            case result.Ok(call_input):
-                pass
-            case result.Err(err):
-                middleware.before_response_sync()
-                return CommResponse.from_error(
-                    self._client.logger,
-                    self._framework,
-                    err,
-                )
+        middleware = middleware_lib.MiddlewareManager.from_client(self._client)
 
         # Validate the request signature.
         match req_sig.validate(self._signing_key):
@@ -319,23 +289,13 @@ class CommHandler:
             case result.Err(err):
                 return self._respond_sync(middleware, err)
 
-        match self._get_function(fn_id):
-            case result.Ok(fn):
-                pass
-            case result.Err(err):
-                return self._respond_sync(middleware, err)
-
         call_res = fn.call_sync(
             call,
             self._client,
             fn_id,
-            call_input,
+            execution.TransformableCallInput(logger=self._client.logger),
             middleware,
         )
-
-        match middleware.after_execution_sync():
-            case result.Err(err):
-                return self._respond_sync(middleware, err)
 
         return self._respond_sync(middleware, call_res)
 

@@ -27,7 +27,9 @@ class StepSync(base.StepBase):
         if memo is not types.EmptySentinel:
             return memo  # type: ignore
 
-        self._middleware.before_execution_sync()
+        match self._middleware.before_execution_sync():
+            case result.Err(err):
+                raise err
 
         # Ensure the output is JSON-serializable.
         match transforms.dump_json(handler()):
@@ -94,6 +96,10 @@ class StepSync(base.StepBase):
         if memo is not types.EmptySentinel:
             return memo  # type: ignore
 
+        match self._middleware.before_execution_sync():
+            case result.Err(err):
+                raise err
+
         raise base.Interrupt(
             hashed_id=hashed_id,
             display_name=step_id,
@@ -128,6 +134,10 @@ class StepSync(base.StepBase):
 
             # Fulfilled by an event
             return event_lib.Event.model_validate(memo)
+
+        match self._middleware.before_execution_sync():
+            case result.Err(err):
+                raise err
 
         match transforms.to_duration_str(timeout):
             case result.Ok(timeout_str):

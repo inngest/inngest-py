@@ -23,23 +23,52 @@ _mismatched_sync = errors.MismatchedSync(
     "encountered async middleware in non-async context"
 )
 
-DEFAULT_MIDDLEWARE: list[typing.Type[Middleware | MiddlewareSync]] = [
+DEFAULT_CLIENT_MIDDLEWARE: list[typing.Type[Middleware | MiddlewareSync]] = [
     LoggerMiddleware
 ]
 
 
 class MiddlewareManager:
+    @property
+    def middleware(self) -> list[Middleware | MiddlewareSync]:
+        return [*self._middleware]
+
     def __init__(self, client: client_lib.Inngest) -> None:
-        middleware = [
-            *client.middleware,
-            *DEFAULT_MIDDLEWARE,
-        ]
-        self._middleware = [m(client) for m in middleware]
+        self.client = client
+        self._disabled_hooks = set[str]()
+        self._middleware = list[Middleware | MiddlewareSync]()
 
-        self._disabled_methods = set[str]()
+    @classmethod
+    def from_client(cls, client: client_lib.Inngest) -> MiddlewareManager:
+        """
+        Create a new manager from an Inngest client, using the middleware on the
+        client.
+        """
 
-    def add(self, middleware: Middleware | MiddlewareSync) -> None:
-        self._middleware = [*self._middleware, middleware]
+        mgr = cls(client)
+
+        for m in DEFAULT_CLIENT_MIDDLEWARE:
+            mgr.add(m)
+
+        for m in client.middleware:
+            mgr.add(m)
+
+        return mgr
+
+    @classmethod
+    def from_manager(cls, manager: MiddlewareManager) -> MiddlewareManager:
+        """
+        Create a new manager from another manager, using the middleware on the
+        passed manager. Effectively wraps a manager.
+        """
+
+        new_mgr = cls(manager.client)
+        for m in manager.middleware:
+            new_mgr._middleware = [*new_mgr._middleware, m]
+        return new_mgr
+
+    def add(self, middleware: typing.Type[Middleware | MiddlewareSync]) -> None:
+        self._middleware = [*self._middleware, middleware(self.client)]
 
     async def after_execution(self) -> result.MaybeError[None]:
         try:
@@ -60,29 +89,35 @@ class MiddlewareManager:
             return result.Err(err)
 
     async def before_execution(self) -> result.MaybeError[None]:
-        try:
-            method_name = inspect.currentframe().f_code.co_name  # type: ignore
-            if method_name in self._disabled_methods:
-                return result.Ok(None)
+        hook = "before_execution"
+        if hook in self._disabled_hooks:
+            # Only allow before_execution to be called once. This simplifies
+            # code since execution can start at the function or step level.
+            return result.Ok(None)
 
+        try:
             for m in self._middleware:
                 await transforms.maybe_await(m.before_execution())
-            self._disabled_methods.add(method_name)
+
+            self._disabled_hooks.add(hook)
             return result.Ok(None)
         except Exception as err:
             return result.Err(err)
 
     def before_execution_sync(self) -> result.MaybeError[None]:
-        try:
-            method_name = inspect.currentframe().f_code.co_name  # type: ignore
-            if method_name in self._disabled_methods:
-                return result.Ok(None)
+        hook = "before_execution"
+        if hook in self._disabled_hooks:
+            # Only allow before_execution to be called once. This simplifies
+            # code since execution can start at the function or step level.
+            return result.Ok(None)
 
+        try:
             for m in self._middleware:
                 if inspect.iscoroutinefunction(m.before_execution):
                     return result.Err(_mismatched_sync)
                 m.before_execution()
-            self._disabled_methods.add(method_name)
+
+            self._disabled_hooks.add(hook)
             return result.Ok(None)
         except Exception as err:
             return result.Err(err)
