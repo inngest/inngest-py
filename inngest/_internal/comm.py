@@ -40,7 +40,7 @@ class CommResponse:
         return self.status_code < 400
 
     @classmethod
-    def from_call_result(  # noqa: C901
+    def from_call_result(
         cls,
         logger: types.Logger,
         framework: const.Framework,

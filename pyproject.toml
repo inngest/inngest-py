@@ -66,11 +66,13 @@ disable = [
 
 [tool.ruff]
 exclude = [".venv"]
-line-length = 80
 
 # https://docs.astral.sh/ruff/rules
 extend-select = ['Q', 'RUF100', 'C90', 'UP', 'I', 'D', 'T']
 extend-ignore = ['D202', 'D203', 'D205', 'D212']
+
+line-length = 80
+mccabe = { max-complexity = 16 }
 
 [tool.ruff.extend-per-file-ignores]
 "examples/**/*.py" = ['D', 'T20']

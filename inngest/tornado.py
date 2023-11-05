@@ -17,7 +17,7 @@ from inngest._internal import (
 )
 
 
-def serve(  # noqa: C901
+def serve(
     app: tornado.web.Application,
     client: client_lib.Inngest,
     functions: list[function.Function],

@@ -200,7 +200,7 @@ class Function:
 
             self._on_failure_fn_id = f"{opts.id}-{suffix}"
 
-    async def call(  # noqa: C901
+    async def call(
         self,
         call: execution.Call,
         client: client_lib.Inngest,
@@ -317,7 +317,7 @@ class Function:
         except Exception as err:
             return execution.CallError.from_error(err)
 
-    def call_sync(  # noqa: C901
+    def call_sync(
         self,
         call: execution.Call,
         client: client_lib.Inngest,
