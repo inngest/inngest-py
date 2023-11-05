@@ -11,7 +11,6 @@ from inngest._internal import (
     execution,
     function,
     net,
-    result,
     transforms,
 )
 
@@ -39,14 +38,10 @@ def serve(
         def get(self) -> None:
             headers = net.normalize_headers(dict(self.request.headers.items()))
 
-            server_kind: const.ServerKind | None = None
-            match transforms.to_server_kind(
-                headers.get(const.HeaderKey.SERVER_KIND.value, "")
-            ):
-                case result.Ok(server_kind):
-                    pass
-                case result.Err(_):
-                    pass
+            server_kind = transforms.get_server_kind(headers)
+            if isinstance(server_kind, Exception):
+                client.logger.error(server_kind)
+                server_kind = None
 
             comm_res = handler.inspect(server_kind)
             self.write(json.dumps(comm_res.body))
@@ -80,14 +75,10 @@ def serve(
         def put(self) -> None:
             headers = net.normalize_headers(dict(self.request.headers.items()))
 
-            server_kind: const.ServerKind | None = None
-            match transforms.to_server_kind(
-                headers.get(const.HeaderKey.SERVER_KIND.value, "")
-            ):
-                case result.Ok(server_kind):
-                    pass
-                case result.Err(_):
-                    pass
+            server_kind = transforms.get_server_kind(headers)
+            if isinstance(server_kind, Exception):
+                client.logger.error(server_kind)
+                server_kind = None
 
             comm_res = handler.register_sync(
                 app_url=self.request.full_url(),

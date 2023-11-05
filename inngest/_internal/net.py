@@ -71,24 +71,18 @@ class RequestSignature:
             if "s" in parsed:
                 self._signature = parsed["s"][0]
 
-    def validate(
-        self, signing_key: str | None
-    ) -> result.Result[None, Exception]:
+    def validate(self, signing_key: str | None) -> result.MaybeError[None]:
         if not self._is_production:
-            return result.Ok(None)
+            return None
 
         if signing_key is None:
-            return result.Err(
-                errors.MissingSigningKey(
-                    "cannot validate signature in production mode without a signing key"
-                )
+            return errors.MissingSigningKey(
+                "cannot validate signature in production mode without a signing key"
             )
 
         if self._signature is None:
-            return result.Err(
-                errors.MissingHeader(
-                    f"cannot validate signature in production mode without a {const.HeaderKey.SIGNATURE.value} header"
-                )
+            return errors.MissingHeader(
+                f"cannot validate signature in production mode without a {const.HeaderKey.SIGNATURE.value} header"
             )
 
         mac = hmac.new(
@@ -98,6 +92,6 @@ class RequestSignature:
         )
         mac.update(str(self._timestamp).encode("utf-8"))
         if not hmac.compare_digest(self._signature, mac.hexdigest()):
-            return result.Err(errors.InvalidRequestSignature())
+            return errors.InvalidRequestSignature()
 
-        return result.Ok(None)
+        return None

@@ -54,27 +54,25 @@ class CommResponse:
         if execution.is_step_call_responses(call_res):
             out: list[dict[str, object]] = []
             for item in call_res:
-                match item.to_dict():
-                    case result.Ok(d):
-                        out.append(d)
-                    case result.Err(err):
-                        return cls.from_error(
-                            logger,
-                            framework,
-                            errors.UnserializableOutput(
-                                f'"{item.display_name}" returned unserializable data'
-                            ),
-                        )
-
-            match transforms.dump_json(transforms.prep_body(out)):
-                case result.Ok(body):
-                    pass
-                case result.Err(err):
+                d = item.to_dict()
+                if isinstance(d, Exception):
                     return cls.from_error(
                         logger,
                         framework,
-                        err,
+                        errors.UnserializableOutput(
+                            f'"{item.display_name}" returned unserializable data'
+                        ),
                     )
+
+                out.append(d)
+
+            body = transforms.dump_json(transforms.prep_body(out))
+            if isinstance(body, Exception):
+                return cls.from_error(
+                    logger,
+                    framework,
+                    body,
+                )
 
             return cls(
                 body=body.encode("utf-8"),
@@ -85,25 +83,21 @@ class CommResponse:
         if isinstance(call_res, execution.CallError):
             logger.error(call_res.stack)
 
-            match call_res.to_dict():
-                case result.Ok(d):
-                    pass
-                case result.Err(err):
-                    return cls.from_error(
-                        logger,
-                        framework,
-                        err,
-                    )
+            d = call_res.to_dict()
+            if isinstance(d, Exception):
+                return cls.from_error(
+                    logger,
+                    framework,
+                    d,
+                )
 
-            match transforms.dump_json(transforms.prep_body(d)):
-                case result.Ok(body):
-                    pass
-                case result.Err(err):
-                    return cls.from_error(
-                        logger,
-                        framework,
-                        err,
-                    )
+            body = transforms.dump_json(transforms.prep_body(d))
+            if isinstance(body, Exception):
+                return cls.from_error(
+                    logger,
+                    framework,
+                    body,
+                )
 
             if call_res.is_retriable is False:
                 headers[const.HeaderKey.NO_RETRY.value] = "true"
@@ -115,15 +109,13 @@ class CommResponse:
             )
 
         if isinstance(call_res, execution.FunctionCallResponse):
-            match transforms.dump_json(transforms.prep_body(call_res.data)):
-                case result.Ok(body):
-                    pass
-                case result.Err(err):
-                    return cls.from_error(
-                        logger,
-                        framework,
-                        err,
-                    )
+            body = transforms.dump_json(transforms.prep_body(call_res.data))
+            if isinstance(body, Exception):
+                return cls.from_error(
+                    logger,
+                    framework,
+                    body,
+                )
 
             return cls(
                 body=body.encode("utf-8"),
@@ -222,19 +214,17 @@ class CommHandler:
     def _build_registration_request(
         self,
         app_url: str,
-    ) -> result.Result[httpx.Request, Exception]:
+    ) -> result.MaybeError[httpx.Request]:
         registration_url = urllib.parse.urljoin(
             self._api_origin,
             "/fn/register",
         )
 
-        match self.get_function_configs(app_url):
-            case result.Ok(fn_configs):
-                pass
-            case result.Err(err):
-                return result.Err(err)
+        fn_configs = self.get_function_configs(app_url)
+        if isinstance(fn_configs, Exception):
+            return fn_configs
 
-        match registration.RegisterRequest(
+        body = registration.RegisterRequest(
             app_name=self._client.app_id,
             deploy_type=registration.DeployType.PING,
             framework=self._framework,
@@ -242,11 +232,13 @@ class CommHandler:
             sdk=f"{const.LANGUAGE}:v{const.VERSION}",
             url=app_url,
             v="0.1",
-        ).to_dict():
-            case result.Ok(body):
-                body = transforms.prep_body(body)
-            case result.Err(err):
-                return result.Err(err)
+        ).to_dict()
+        if isinstance(body, Exception):
+            return body
+
+        body = transforms.prep_body(body)
+        if isinstance(body, Exception):
+            return body
 
         headers = net.create_headers(framework=self._framework)
         if self._signing_key:
@@ -254,14 +246,12 @@ class CommHandler:
                 "Authorization"
             ] = f"Bearer {transforms.hash_signing_key(self._signing_key)}"
 
-        return result.Ok(
-            httpx.Client().build_request(
-                "POST",
-                registration_url,
-                headers=headers,
-                json=body,
-                timeout=30,
-            )
+        return httpx.Client().build_request(
+            "POST",
+            registration_url,
+            headers=headers,
+            json=body,
+            timeout=30,
         )
 
     async def call_function(
@@ -278,16 +268,14 @@ class CommHandler:
         middleware = middleware_lib.MiddlewareManager.from_client(self._client)
 
         # Validate the request signature.
-        match req_sig.validate(self._signing_key):
-            case result.Err(err):
-                return await self._respond(middleware, err)
+        err = req_sig.validate(self._signing_key)
+        if isinstance(err, Exception):
+            return await self._respond(middleware, err)
 
         # Get the function we should call.
-        match self._get_function(fn_id):
-            case result.Ok(fn):
-                pass
-            case result.Err(err):
-                return await self._respond(middleware, err)
+        fn = self._get_function(fn_id)
+        if isinstance(fn, Exception):
+            return await self._respond(middleware, fn)
 
         call_res = await fn.call(
             call,
@@ -313,16 +301,14 @@ class CommHandler:
         middleware = middleware_lib.MiddlewareManager.from_client(self._client)
 
         # Validate the request signature.
-        match req_sig.validate(self._signing_key):
-            case result.Err(err):
-                return self._respond_sync(middleware, err)
+        err = req_sig.validate(self._signing_key)
+        if isinstance(err, Exception):
+            return self._respond_sync(middleware, err)
 
         # Get the function we should call.
-        match self._get_function(fn_id):
-            case result.Ok(fn):
-                pass
-            case result.Err(err):
-                return self._respond_sync(middleware, err)
+        fn = self._get_function(fn_id)
+        if isinstance(fn, Exception):
+            return self._respond_sync(middleware, fn)
 
         call_res = fn.call_sync(
             call,
@@ -334,23 +320,21 @@ class CommHandler:
 
         return self._respond_sync(middleware, call_res)
 
-    def _get_function(
-        self, fn_id: str
-    ) -> result.Result[function.Function, Exception]:
+    def _get_function(self, fn_id: str) -> result.MaybeError[function.Function]:
         # Look for the function ID in the list of user functions, but also
         # look for it in the list of on_failure functions.
         for _fn in self._fns.values():
             if _fn.get_id() == fn_id:
-                return result.Ok(_fn)
+                return _fn
             if _fn.on_failure_fn_id == fn_id:
-                return result.Ok(_fn)
+                return _fn
 
-        return result.Err(errors.MissingFunction(f"function {fn_id} not found"))
+        return errors.MissingFunction(f"function {fn_id} not found")
 
     def get_function_configs(
         self,
         app_url: str,
-    ) -> result.Result[list[function_config.FunctionConfig], Exception]:
+    ) -> result.MaybeError[list[function_config.FunctionConfig]]:
         configs: list[function_config.FunctionConfig] = []
         for fn in self._fns.values():
             config = fn.get_config(app_url)
@@ -360,8 +344,8 @@ class CommHandler:
                 configs.append(config.on_failure)
 
         if len(configs) == 0:
-            return result.Err(errors.InvalidConfig("no functions found"))
-        return result.Ok(configs)
+            return errors.InvalidConfig("no functions found")
+        return configs
 
     def inspect(self, server_kind: const.ServerKind | None) -> CommResponse:
         """
@@ -431,32 +415,24 @@ class CommHandler:
         Handles a registration call.
         """
 
-        match self._validate_registration(server_kind):
-            case result.Ok(_):
-                pass
-            case result.Err(err):
-                self._client.logger.error(err)
+        err = self._validate_registration(server_kind)
+        if isinstance(err, Exception):
+            return CommResponse.from_error(
+                self._client.logger,
+                self._framework,
+                err,
+            )
+
+        async with httpx.AsyncClient() as client:
+            req = self._build_registration_request(app_url)
+            if isinstance(req, Exception):
                 return CommResponse.from_error(
                     self._client.logger,
                     self._framework,
-                    err,
+                    req,
                 )
 
-        async with httpx.AsyncClient() as client:
-            match self._build_registration_request(app_url):
-                case result.Ok(req):
-                    res = self._parse_registration_response(
-                        await client.send(req)
-                    )
-                case result.Err(err):
-                    self._client.logger.error(err)
-                    return CommResponse.from_error(
-                        self._client.logger,
-                        self._framework,
-                        err,
-                    )
-
-        return res
+            return self._parse_registration_response(await client.send(req))
 
     def register_sync(
         self,
@@ -468,43 +444,37 @@ class CommHandler:
         Handles a registration call.
         """
 
-        match self._validate_registration(server_kind):
-            case result.Ok(_):
-                pass
-            case result.Err(err):
-                self._client.logger.error(err)
+        err = self._validate_registration(server_kind)
+        if isinstance(err, Exception):
+            return CommResponse.from_error(
+                self._client.logger,
+                self._framework,
+                err,
+            )
+
+        with httpx.Client() as client:
+            req = self._build_registration_request(app_url)
+            if isinstance(req, Exception):
                 return CommResponse.from_error(
                     self._client.logger,
                     self._framework,
-                    err,
+                    req,
                 )
 
-        with httpx.Client() as client:
-            match self._build_registration_request(app_url):
-                case result.Ok(req):
-                    res = self._parse_registration_response(client.send(req))
-                case result.Err(err):
-                    self._client.logger.error(err)
-                    return CommResponse.from_error(
-                        self._client.logger,
-                        self._framework,
-                        err,
-                    )
-
-        return res
+            return self._parse_registration_response(client.send(req))
 
     async def _respond(
         self,
         middleware: middleware_lib.MiddlewareManager,
         value: execution.CallResult | Exception,
     ) -> CommResponse:
-        match await middleware.before_response():
-            case result.Err(err):
-                return CommResponse.from_error(
-                    self._client.logger,
-                    self._framework,
-                    err,
-                )
+        err = await middleware.before_response()
+        if isinstance(err, Exception):
+            return CommResponse.from_error(
+                self._client.logger,
+                self._framework,
+                err,
+            )
 
         if isinstance(value, Exception):
             return CommResponse.from_error(
@@ -524,13 +494,13 @@ class CommHandler:
         middleware: middleware_lib.MiddlewareManager,
         value: execution.CallResult | Exception,
     ) -> CommResponse:
-        match middleware.before_response_sync():
-            case result.Err(err):
-                return CommResponse.from_error(
-                    self._client.logger,
-                    self._framework,
-                    err,
-                )
+        err = middleware.before_response_sync()
+        if isinstance(err, Exception):
+            return CommResponse.from_error(
+                self._client.logger,
+                self._framework,
+                err,
+            )
 
         if isinstance(value, Exception):
             return CommResponse.from_error(
@@ -548,11 +518,10 @@ class CommHandler:
     def _validate_registration(
         self,
         server_kind: const.ServerKind | None,
-    ) -> result.Result[None, Exception]:
+    ) -> result.MaybeError[None]:
         if server_kind == const.ServerKind.DEV_SERVER and self._is_production:
-            return result.Err(
-                errors.DevServerRegistrationNotAllowed(
-                    "Dev Server registration not allowed in production mode"
-                )
+            return errors.DevServerRegistrationNotAllowed(
+                "Dev Server registration not allowed in production mode"
             )
-        return result.Ok(None)
+
+        return None

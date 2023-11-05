@@ -25,11 +25,11 @@ def hash_step_id(step_id: str) -> str:
     return hashlib.sha1(step_id.encode("utf-8")).hexdigest()
 
 
-def dump_json(obj: object) -> result.Result[str, errors.UnserializableOutput]:
+def dump_json(obj: object) -> result.MaybeError[str]:
     try:
-        return result.Ok(json.dumps(obj))
+        return json.dumps(obj)
     except Exception as err:
-        return result.Err(errors.UnserializableOutput(str(err)))
+        return errors.UnserializableOutput(str(err))
 
 
 def remove_signing_key_prefix(key: str) -> str:
@@ -93,24 +93,23 @@ class _Duration:
 
 def to_duration_str(
     ms: int | datetime.timedelta,
-) -> result.Result[str, Exception]:
+) -> result.MaybeError[str]:
     if isinstance(ms, datetime.timedelta):
         ms = int(ms.total_seconds() * 1000)
 
     if ms < _Duration.second():
-        return result.Err(
-            errors.InvalidConfig("duration must be at least 1 second")
-        )
-    if ms < _Duration.minute():
-        return result.Ok(f"{ms // _Duration.second()}s")
-    if ms < _Duration.hour():
-        return result.Ok(f"{ms // _Duration.minute()}m")
-    if ms < _Duration.day():
-        return result.Ok(f"{ms // _Duration.hour()}h")
-    if ms < _Duration.week():
-        return result.Ok(f"{ms // _Duration.day()}d")
+        return errors.InvalidConfig("duration must be at least 1 second")
 
-    return result.Ok(f"{ms // _Duration.week()}w")
+    if ms < _Duration.minute():
+        return f"{ms // _Duration.second()}s"
+    if ms < _Duration.hour():
+        return f"{ms // _Duration.minute()}m"
+    if ms < _Duration.day():
+        return f"{ms // _Duration.hour()}h"
+    if ms < _Duration.week():
+        return f"{ms // _Duration.day()}d"
+
+    return f"{ms // _Duration.week()}w"
 
 
 def to_iso_utc(value: datetime.datetime) -> str:
@@ -122,11 +121,17 @@ def to_iso_utc(value: datetime.datetime) -> str:
     )
 
 
-def to_server_kind(value: str) -> result.Result[const.ServerKind, Exception]:
+def get_server_kind(
+    headers: dict[str, str],
+) -> const.ServerKind | None | Exception:
+    value = headers.get(const.HeaderKey.SERVER_KIND.value, None)
+    if value is None:
+        return None
+
     try:
-        return result.Ok(const.ServerKind(value))
+        return const.ServerKind(value)
     except ValueError:
-        return result.Err(Exception(f"invalid server kind: {value}"))
+        return Exception(f"invalid server kind: {value}")
 
 
 async def maybe_await(

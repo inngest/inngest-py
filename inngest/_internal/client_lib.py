@@ -62,17 +62,15 @@ class Inngest:
     def _build_send_request(
         self,
         events: list[event_lib.Event],
-    ) -> result.Result[httpx.Request, Exception]:
+    ) -> result.MaybeError[httpx.Request]:
         url = urllib.parse.urljoin(self._event_origin, f"/e/{self._event_key}")
         headers = net.create_headers()
 
         body = []
         for event in events:
-            match event.to_dict():
-                case result.Ok(d):
-                    pass
-                case result.Err(err):
-                    return result.Err(err)
+            d = event.to_dict()
+            if isinstance(d, Exception):
+                return d
 
             if d.get("id") == "":
                 del d["id"]
@@ -80,14 +78,12 @@ class Inngest:
                 d["ts"] = int(time.time() * 1000)
             body.append(d)
 
-        return result.Ok(
-            httpx.Client().build_request(
-                "POST",
-                url,
-                headers=headers,
-                json=body,
-                timeout=30,
-            )
+        return httpx.Client().build_request(
+            "POST",
+            url,
+            headers=headers,
+            json=body,
+            timeout=30,
         )
 
     def add_middleware(
@@ -106,12 +102,10 @@ class Inngest:
             events = [events]
 
         async with httpx.AsyncClient() as client:
-            match self._build_send_request(events):
-                case result.Ok(req):
-                    ids = _extract_ids((await client.send(req)).json())
-                case result.Err(err):
-                    raise err
-        return ids
+            req = self._build_send_request(events)
+            if isinstance(req, Exception):
+                raise req
+            return _extract_ids((await client.send(req)).json())
 
     def send_sync(
         self,
@@ -121,12 +115,10 @@ class Inngest:
             events = [events]
 
         with httpx.Client() as client:
-            match self._build_send_request(events):
-                case result.Ok(req):
-                    ids = _extract_ids(client.send(req).json())
-                case result.Err(err):
-                    raise err
-        return ids
+            req = self._build_send_request(events)
+            if isinstance(req, Exception):
+                raise req
+            return _extract_ids((client.send(req)).json())
 
     def set_logger(self, logger: types.Logger) -> None:
         self.logger = logger

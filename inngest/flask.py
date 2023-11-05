@@ -10,7 +10,6 @@ from ._internal import (
     execution,
     function,
     net,
-    result,
     transforms,
 )
 
@@ -50,14 +49,10 @@ def _create_handler_async(
     async def inngest_api() -> flask.Response | str:
         headers = net.normalize_headers(dict(flask.request.headers.items()))
 
-        server_kind: const.ServerKind | None = None
-        match transforms.to_server_kind(
-            headers.get(const.HeaderKey.SERVER_KIND.value, "")
-        ):
-            case result.Ok(server_kind):
-                pass
-            case result.Err(_):
-                pass
+        server_kind = transforms.get_server_kind(headers)
+        if isinstance(server_kind, Exception):
+            client.logger.error(server_kind)
+            server_kind = None
 
         if flask.request.method == "GET":
             return _to_response(handler.inspect(server_kind))
@@ -102,14 +97,10 @@ def _create_handler_sync(
     def inngest_api() -> flask.Response | str:
         headers = net.normalize_headers(dict(flask.request.headers.items()))
 
-        server_kind: const.ServerKind | None = None
-        match transforms.to_server_kind(
-            headers.get(const.HeaderKey.SERVER_KIND.value, "")
-        ):
-            case result.Ok(server_kind):
-                pass
-            case result.Err(_):
-                pass
+        server_kind = transforms.get_server_kind(headers)
+        if isinstance(server_kind, Exception):
+            client.logger.error(server_kind)
+            server_kind = None
 
         if flask.request.method == "GET":
             return _to_response(handler.inspect(server_kind))

@@ -3,7 +3,7 @@ import hmac
 import json
 import time
 
-from . import const, errors, net, result
+from . import const, errors, net
 
 
 def test_success() -> None:
@@ -16,7 +16,7 @@ def test_success() -> None:
     }
 
     req_sig = net.RequestSignature(body, headers, is_production=True)
-    assert result.is_ok(req_sig.validate(signing_key))
+    assert not isinstance(req_sig.validate(signing_key), Exception)
 
 
 def test_body_tamper() -> None:
@@ -32,8 +32,7 @@ def test_body_tamper() -> None:
     req_sig = net.RequestSignature(body, headers, is_production=True)
 
     validation = req_sig.validate(signing_key)
-    assert result.is_err(validation)
-    assert isinstance(validation.err_value, errors.InvalidRequestSignature)
+    assert isinstance(validation, errors.InvalidRequestSignature)
 
 
 def _sign(body: bytes, signing_key: str, unix_ms: int) -> str:

@@ -5,7 +5,7 @@ import typing
 
 import pydantic
 
-from . import errors, result, transforms, types
+from . import errors, transforms, types
 
 
 class _BaseConfig(types.BaseModel):
@@ -27,11 +27,9 @@ class Batch(_BaseConfig):
     ) -> str | None:
         if value is None:
             return None
-        match transforms.to_duration_str(value):
-            case result.Ok(out):
-                pass
-            case result.Err(err):
-                raise err
+        out = transforms.to_duration_str(value)
+        if isinstance(out, Exception):
+            raise out
         return out
 
 
@@ -47,11 +45,9 @@ class Cancel(_BaseConfig):
     ) -> str | None:
         if value is None:
             return None
-        match transforms.to_duration_str(value):
-            case result.Ok(out):
-                pass
-            case result.Err(err):
-                raise err
+        out = transforms.to_duration_str(value)
+        if isinstance(out, Exception):
+            raise out
         return out
 
 
@@ -66,11 +62,9 @@ class Debounce(_BaseConfig):
     ) -> str | None:
         if value is None:
             return None
-        match transforms.to_duration_str(value):
-            case result.Ok(out):
-                pass
-            case result.Err(err):
-                raise err
+        out = transforms.to_duration_str(value)
+        if isinstance(out, Exception):
+            raise out
         return out
 
 
@@ -98,11 +92,9 @@ class RateLimit(_BaseConfig):
     ) -> str | None:
         if value is None:
             return None
-        match transforms.to_duration_str(value):
-            case result.Ok(out):
-                pass
-            case result.Err(err):
-                raise err
+        out = transforms.to_duration_str(value)
+        if isinstance(out, Exception):
+            raise out
         return out
 
 
@@ -134,11 +126,9 @@ class Throttle(_BaseConfig):
     ) -> str | None:
         if value is None:
             return None
-        match transforms.to_duration_str(value):
-            case result.Ok(out):
-                pass
-            case result.Err(err):
-                raise err
+        out = transforms.to_duration_str(value)
+        if isinstance(out, Exception):
+            raise out
         return out
 
 

@@ -1,10 +1,10 @@
 import datetime
 
-from . import function_config, result
+from . import function_config
 
 
 def test_serialization() -> None:
-    match function_config.FunctionConfig(
+    data = function_config.FunctionConfig(
         batch_events=function_config.Batch(
             max_size=10,
             timeout=datetime.timedelta(seconds=60),
@@ -44,11 +44,9 @@ def test_serialization() -> None:
             function_config.TriggerCron(cron="foo"),
             function_config.TriggerEvent(event="foo", expression="foo"),
         ],
-    ).to_dict():
-        case result.Ok(data):
-            pass
-        case result.Err(err):
-            raise err
+    ).to_dict()
+    if isinstance(data, Exception):
+        raise data
 
     assert data == {
         "batch_events": {

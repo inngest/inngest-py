@@ -64,11 +64,11 @@ class BaseModel(pydantic.BaseModel):
     ) -> BaseModelT:
         return cls.model_validate(raw)
 
-    def to_dict(self) -> result.Result[dict[str, object], Exception]:
+    def to_dict(self) -> result.MaybeError[dict[str, object]]:
         try:
-            return result.Ok(self.model_dump(mode="json"))
+            return self.model_dump(mode="json")
         except Exception as err:
-            return result.Err(err)
+            return err
 
 
 BaseModelT = typing.TypeVar("BaseModelT", bound=BaseModel)

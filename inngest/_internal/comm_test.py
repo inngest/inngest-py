@@ -5,7 +5,7 @@ import logging
 import unittest
 
 import inngest
-from inngest._internal import const, errors, result
+from inngest._internal import const, errors
 
 from . import comm
 
@@ -53,13 +53,11 @@ class Test_get_function_configs(  # pylint: disable=invalid-name
             framework=const.Framework.FLASK,
             functions=[fn],
         )
-        assert result.is_ok(handler.get_function_configs("http://foo.bar"))
 
-        match handler.get_function_configs("http://foo.bar"):
-            case result.Ok(_):
-                assert True
-            case result.Err(err):
-                assert False, f"Unexpected error: {err}"
+        configs = handler.get_function_configs("http://foo.bar")
+        assert not isinstance(
+            configs, Exception
+        ), f"Unexpected error: {configs}"
 
     def test_no_functions(self) -> None:
         functions: list[inngest.Function] = []
@@ -71,9 +69,6 @@ class Test_get_function_configs(  # pylint: disable=invalid-name
             functions=functions,
         )
 
-        match handler.get_function_configs("http://foo.bar"):
-            case result.Ok(_):
-                assert False, "Expected error"
-            case result.Err(err):
-                assert isinstance(err, errors.InvalidConfig)
-                assert str(err) == "no functions found"
+        configs = handler.get_function_configs("http://foo.bar")
+        assert isinstance(configs, errors.InvalidConfig)
+        assert str(configs) == "no functions found"

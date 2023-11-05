@@ -15,7 +15,6 @@ from inngest._internal import (
     execution,
     function_config,
     middleware_lib,
-    result,
     step_lib,
     transforms,
     types,
@@ -205,7 +204,7 @@ class Function:
 
             self._on_failure_fn_id = f"{opts.id}-{suffix}"
 
-    async def call(
+    async def call(  # pylint: disable=too-many-branches
         self,
         call: execution.Call,
         client: client_lib.Inngest,
@@ -221,19 +220,18 @@ class Function:
 
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
-        match await middleware.transform_input(
+        transformed_input = await middleware.transform_input(
             execution.TransformableCallInput(logger=client.logger),
-        ):
-            case result.Ok(call_input):
-                pass
-            case result.Err(err):
-                return execution.CallError.from_error(err)
+        )
+        if isinstance(transformed_input, Exception):
+            return execution.CallError.from_error(transformed_input)
+        call_input = transformed_input
 
         # No memoized data means we're calling the function for the first time.
         if memos.size == 0:
-            match await middleware.before_execution():
-                case result.Err(err):
-                    return execution.CallError.from_error(err)
+            err = await middleware.before_execution()
+            if isinstance(err, Exception):
+                return execution.CallError.from_error(err)
 
         try:
             handler: FunctionHandlerAsync | FunctionHandlerSync
@@ -291,27 +289,24 @@ class Function:
                     )
                 )
 
-            match await middleware.after_execution():
-                case result.Err(err):
-                    return execution.CallError.from_error(err)
+            err = await middleware.after_execution()
+            if isinstance(err, Exception):
+                return execution.CallError.from_error(err)
 
-            match await middleware.transform_output(output):
-                case result.Ok(output):
-                    pass
-                case result.Err(err):
-                    return execution.CallError.from_error(err)
+            transformed_output = await middleware.transform_output(output)
+            if isinstance(transformed_output, Exception):
+                return execution.CallError.from_error(transformed_output)
+            output = transformed_output
 
             return execution.FunctionCallResponse(data=output)
         except step_lib.Interrupt as interrupt:
-            match await middleware.after_execution():
-                case result.Err(err):
-                    return execution.CallError.from_error(err)
+            err = await middleware.after_execution()
+            if isinstance(err, Exception):
+                return execution.CallError.from_error(err)
 
-            match await middleware.transform_output(interrupt.data):
-                case result.Ok(output):
-                    pass
-                case result.Err(err):
-                    return execution.CallError.from_error(err)
+            output = await middleware.transform_output(interrupt.data)
+            if isinstance(output, Exception):
+                return execution.CallError.from_error(output)
 
             return [
                 execution.StepCallResponse(
@@ -326,7 +321,7 @@ class Function:
         except Exception as err:
             return execution.CallError.from_error(err)
 
-    def call_sync(
+    def call_sync(  # pylint: disable=too-many-branches
         self,
         call: execution.Call,
         client: client_lib.Inngest,
@@ -342,11 +337,10 @@ class Function:
 
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
-        match middleware.transform_input_sync(call_input):
-            case result.Ok(call_input):
-                pass
-            case result.Err(err):
-                return execution.CallError.from_error(err)
+        transformed = middleware.transform_input_sync(call_input)
+        if isinstance(transformed, Exception):
+            return execution.CallError.from_error(transformed)
+        call_input = transformed
 
         # No memoized data means we're calling the function for the first time.
         if memos.size == 0:
@@ -388,33 +382,27 @@ class Function:
                     )
                 )
 
-            match middleware.after_execution_sync():
-                case result.Err(err):
-                    return execution.CallError.from_error(err)
+            err = middleware.after_execution_sync()
+            if isinstance(err, Exception):
+                return execution.CallError.from_error(err)
 
-            match middleware.transform_output_sync(output):
-                case result.Ok(output):
-                    pass
-                case result.Err(err):
-                    return execution.CallError.from_error(err)
+            output = middleware.transform_output_sync(output)
+            if isinstance(output, Exception):
+                return execution.CallError.from_error(output)
 
-            match transforms.dump_json(output):
-                case result.Ok(output_str):
-                    pass
-                case result.Err(err):
-                    return execution.CallError.from_error(err)
+            output_str = transforms.dump_json(output)
+            if isinstance(output_str, Exception):
+                return execution.CallError.from_error(output_str)
 
             return execution.FunctionCallResponse(data=output_str)
         except step_lib.Interrupt as interrupt:
-            match middleware.after_execution_sync():
-                case result.Err(err):
-                    return execution.CallError.from_error(err)
+            err = middleware.after_execution_sync()
+            if isinstance(err, Exception):
+                return execution.CallError.from_error(err)
 
-            match middleware.transform_output_sync(interrupt.data):
-                case result.Ok(output):
-                    pass
-                case result.Err(err):
-                    return execution.CallError.from_error(err)
+            output = middleware.transform_output_sync(interrupt.data)
+            if isinstance(output, Exception):
+                return execution.CallError.from_error(output)
 
             return [
                 execution.StepCallResponse(

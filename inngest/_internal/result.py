@@ -51,7 +51,8 @@ class Ok(typing.Generic[OkT]):
 
 
 Result: typing.TypeAlias = Ok[OkT] | Err[ErrT]
-MaybeError: typing.TypeAlias = Result[OkT, Exception]
+# MaybeError: typing.TypeAlias = Result[OkT, Exception]
+MaybeError: typing.TypeAlias = OkT | Exception
 
 
 def is_err(result: Result[OkT, ErrT]) -> typing.TypeGuard[Err[ErrT]]:

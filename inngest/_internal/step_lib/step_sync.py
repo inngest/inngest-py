@@ -1,7 +1,7 @@
 import datetime
 import typing
 
-from inngest._internal import event_lib, execution, result, transforms, types
+from inngest._internal import event_lib, execution, transforms, types
 
 from . import base
 
@@ -27,9 +27,9 @@ class StepSync(base.StepBase):
         if memo is not types.EmptySentinel:
             return memo  # type: ignore
 
-        match self._middleware.before_execution_sync():
-            case result.Err(err):
-                raise err
+        err = self._middleware.before_execution_sync()
+        if isinstance(err, Exception):
+            raise err
 
         raise base.Interrupt(
             hashed_id=hashed_id,
@@ -89,9 +89,9 @@ class StepSync(base.StepBase):
         if memo is not types.EmptySentinel:
             return memo  # type: ignore
 
-        match self._middleware.before_execution_sync():
-            case result.Err(err):
-                raise err
+        err = self._middleware.before_execution_sync()
+        if isinstance(err, Exception):
+            raise err
 
         raise base.Interrupt(
             hashed_id=hashed_id,
@@ -128,24 +128,20 @@ class StepSync(base.StepBase):
             # Fulfilled by an event
             return event_lib.Event.model_validate(memo)
 
-        match self._middleware.before_execution_sync():
-            case result.Err(err):
-                raise err
+        err = self._middleware.before_execution_sync()
+        if isinstance(err, Exception):
+            raise err
 
-        match transforms.to_duration_str(timeout):
-            case result.Ok(timeout_str):
-                pass
-            case result.Err(err):
-                raise err
+        timeout_str = transforms.to_duration_str(timeout)
+        if isinstance(timeout_str, Exception):
+            raise timeout_str
 
-        match base.WaitForEventOpts(
+        opts = base.WaitForEventOpts(
             if_exp=if_exp,
             timeout=timeout_str,
-        ).to_dict():
-            case result.Ok(opts):
-                pass
-            case result.Err(err):
-                raise err
+        ).to_dict()
+        if isinstance(opts, Exception):
+            raise opts
 
         raise base.Interrupt(
             hashed_id=hashed_id,

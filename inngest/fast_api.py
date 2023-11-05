@@ -9,7 +9,6 @@ from ._internal import (
     execution,
     function,
     net,
-    result,
     transforms,
 )
 
@@ -36,14 +35,10 @@ def serve(
     ) -> fastapi.Response:
         headers = net.normalize_headers(dict(request.headers.items()))
 
-        server_kind: const.ServerKind | None = None
-        match transforms.to_server_kind(
-            headers.get(const.HeaderKey.SERVER_KIND.value, "")
-        ):
-            case result.Ok(server_kind):
-                pass
-            case result.Err(_):
-                pass
+        server_kind = transforms.get_server_kind(headers)
+        if isinstance(server_kind, Exception):
+            client.logger.error(server_kind)
+            server_kind = None
 
         return _to_response(handler.inspect(server_kind))
 
@@ -71,14 +66,10 @@ def serve(
     async def put_inngest_api(request: fastapi.Request) -> fastapi.Response:
         headers = net.normalize_headers(dict(request.headers.items()))
 
-        server_kind: const.ServerKind | None = None
-        match transforms.to_server_kind(
-            headers.get(const.HeaderKey.SERVER_KIND.value, "")
-        ):
-            case result.Ok(server_kind):
-                pass
-            case result.Err(_):
-                pass
+        server_kind = transforms.get_server_kind(headers)
+        if isinstance(server_kind, Exception):
+            client.logger.error(server_kind)
+            server_kind = None
 
         return _to_response(
             await handler.register(

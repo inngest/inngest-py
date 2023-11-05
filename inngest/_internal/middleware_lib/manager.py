@@ -67,71 +67,71 @@ class MiddlewareManager:
         try:
             for m in self._middleware:
                 await transforms.maybe_await(m.after_execution())
-            return result.Ok(None)
+            return None
         except Exception as err:
-            return result.Err(err)
+            return err
 
     def after_execution_sync(self) -> result.MaybeError[None]:
         try:
             for m in self._middleware:
                 if inspect.iscoroutinefunction(m.after_execution):
-                    return result.Err(_mismatched_sync)
+                    return _mismatched_sync
                 m.after_execution()
-            return result.Ok(None)
+            return None
         except Exception as err:
-            return result.Err(err)
+            return err
 
     async def before_execution(self) -> result.MaybeError[None]:
         hook = "before_execution"
         if hook in self._disabled_hooks:
             # Only allow before_execution to be called once. This simplifies
             # code since execution can start at the function or step level.
-            return result.Ok(None)
+            return None
 
         try:
             for m in self._middleware:
                 await transforms.maybe_await(m.before_execution())
 
             self._disabled_hooks.add(hook)
-            return result.Ok(None)
+            return None
         except Exception as err:
-            return result.Err(err)
+            return err
 
     def before_execution_sync(self) -> result.MaybeError[None]:
         hook = "before_execution"
         if hook in self._disabled_hooks:
             # Only allow before_execution to be called once. This simplifies
             # code since execution can start at the function or step level.
-            return result.Ok(None)
+            return None
 
         try:
             for m in self._middleware:
                 if inspect.iscoroutinefunction(m.before_execution):
-                    return result.Err(_mismatched_sync)
+                    return _mismatched_sync
                 m.before_execution()
 
             self._disabled_hooks.add(hook)
-            return result.Ok(None)
+            return None
         except Exception as err:
-            return result.Err(err)
+            return err
 
     async def before_response(self) -> result.MaybeError[None]:
         try:
             for m in self._middleware:
                 await transforms.maybe_await(m.before_response())
-            return result.Ok(None)
+            return None
         except Exception as err:
-            return result.Err(err)
+            return err
 
     def before_response_sync(self) -> result.MaybeError[None]:
         try:
             for m in self._middleware:
                 if inspect.iscoroutinefunction(m.before_response):
-                    return result.Err(_mismatched_sync)
+                    return _mismatched_sync
                 m.before_response()
-            return result.Ok(None)
+            return None
         except Exception as err:
-            return result.Err(err)
+            return err
 
     async def transform_input(
         self,
@@ -142,9 +142,9 @@ class MiddlewareManager:
                 call_input = await transforms.maybe_await(
                     m.transform_input(call_input),
                 )
-            return result.Ok(call_input)
+            return call_input
         except Exception as err:
-            return result.Err(err)
+            return err
 
     def transform_input_sync(
         self,
@@ -153,11 +153,11 @@ class MiddlewareManager:
         try:
             for m in self._middleware:
                 if isinstance(m, Middleware):
-                    return result.Err(_mismatched_sync)
+                    return _mismatched_sync
                 call_input = m.transform_input(call_input)
-            return result.Ok(call_input)
+            return call_input
         except Exception as err:
-            return result.Err(err)
+            return err
 
     async def transform_output(
         self,
@@ -168,9 +168,9 @@ class MiddlewareManager:
                 output = await transforms.maybe_await(
                     m.transform_output(output)
                 )
-            return result.Ok(output)
+            return output
         except Exception as err:
-            return result.Err(err)
+            return err
 
     def transform_output_sync(
         self,
@@ -179,8 +179,8 @@ class MiddlewareManager:
         try:
             for m in self._middleware:
                 if isinstance(m, Middleware):
-                    return result.Err(_mismatched_sync)
+                    return _mismatched_sync
                 output = m.transform_output(output)
-            return result.Ok(output)
+            return output
         except Exception as err:
-            return result.Err(err)
+            return err
