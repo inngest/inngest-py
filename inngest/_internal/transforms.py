@@ -47,7 +47,6 @@ def prep_body(obj: types.T) -> types.T:
     - Remove items whose value is None.
     - Convert keys to camelCase.
     """
-
     if isinstance(obj, dict):
         return {
             to_camel_case(k): prep_body(v)
@@ -60,10 +59,7 @@ def prep_body(obj: types.T) -> types.T:
 
 
 def to_camel_case(value: str) -> str:
-    """
-    Convert a string from snake_case to camelCase.
-    """
-
+    """Convert a string from snake_case to camelCase."""
     return "".join(
         word.title() if i else word for i, word in enumerate(value.split("_"))
     )

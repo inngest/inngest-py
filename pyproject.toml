@@ -19,15 +19,12 @@ dependencies = ["httpx>=0.24.0", "pydantic>=2.1.1"]
 [project.optional-dependencies]
 extra = [
     "Flask==3.0.0",
-    "black==23.10.0",
     "build==1.0.3",
     "fastapi==0.104.0",
-    "isort==5.12.0",
     "mypy==1.6.1",
-    "pylint==3.0.1",
     "pytest==7.4.2",
     "pytest-xdist[psutil]==3.3.1",
-    "python-json-logger==2.0.7",
+    "ruff==0.1.4",
     "toml==0.10.2",
     "tornado==6.3.3",
     "types-toml==0.10.8.7",
@@ -66,3 +63,21 @@ disable = [
     'too-many-return-statements',
     'unused-argument',
 ]
+
+[tool.ruff]
+exclude = [".venv"]
+
+# https://docs.astral.sh/ruff/rules
+extend-select = ['C90', 'D', 'I', 'Q', 'RUF100', 'T', 'UP']
+extend-ignore = ['D202', 'D203', 'D205', 'D212']
+
+line-length = 80
+mccabe = { max-complexity = 16 }
+
+[tool.ruff.extend-per-file-ignores]
+"examples/**/*.py" = ['D', 'T20']
+"tests/**/*.py" = ['C901', 'D', 'T20']
+
+[tool.ruff.lint]
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]

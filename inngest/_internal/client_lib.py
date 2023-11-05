@@ -16,7 +16,7 @@ if typing.TYPE_CHECKING:
 
 class Inngest:
     middleware: list[
-        typing.Type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]
+        type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]
     ]
 
     def __init__(
@@ -28,9 +28,7 @@ class Inngest:
         is_production: bool | None = None,
         logger: types.Logger | None = None,
         middleware: list[
-            typing.Type[
-                middleware_lib.Middleware | middleware_lib.MiddlewareSync
-            ]
+            type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]
         ]
         | None = None,
     ) -> None:
@@ -88,7 +86,7 @@ class Inngest:
 
     def add_middleware(
         self,
-        middleware: typing.Type[
+        middleware: type[
             middleware_lib.Middleware | middleware_lib.MiddlewareSync
         ],
     ) -> None:

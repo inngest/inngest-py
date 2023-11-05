@@ -261,10 +261,7 @@ class CommHandler:
         fn_id: str,
         req_sig: net.RequestSignature,
     ) -> CommResponse:
-        """
-        Handles a function call from the Executor.
-        """
-
+        """Handle a function call from the Executor."""
         middleware = middleware_lib.MiddlewareManager.from_client(self._client)
 
         # Validate the request signature.
@@ -294,10 +291,7 @@ class CommHandler:
         fn_id: str,
         req_sig: net.RequestSignature,
     ) -> CommResponse:
-        """
-        Handles a function call from the Executor.
-        """
-
+        """Handle a function call from the Executor."""
         middleware = middleware_lib.MiddlewareManager.from_client(self._client)
 
         # Validate the request signature.
@@ -348,10 +342,7 @@ class CommHandler:
         return configs
 
     def inspect(self, server_kind: const.ServerKind | None) -> CommResponse:
-        """
-        Used by Dev Server to discover apps.
-        """
-
+        """Handle Dev Server's auto-discovery."""
         if server_kind == const.ServerKind.DEV_SERVER and self._is_production:
             # Tell Dev Server to leave the app alone since it's in production
             # mode.
@@ -411,10 +402,7 @@ class CommHandler:
         app_url: str,
         server_kind: const.ServerKind | None,
     ) -> CommResponse:
-        """
-        Handles a registration call.
-        """
-
+        """Handle a registration call."""
         err = self._validate_registration(server_kind)
         if isinstance(err, Exception):
             return CommResponse.from_error(
@@ -440,10 +428,7 @@ class CommHandler:
         app_url: str,
         server_kind: const.ServerKind | None,
     ) -> CommResponse:
-        """
-        Handles a registration call.
-        """
-
+        """Handle a registration call."""
         err = self._validate_registration(server_kind)
         if isinstance(err, Exception):
             return CommResponse.from_error(

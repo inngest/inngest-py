@@ -4,9 +4,7 @@ from . import const
 
 
 def test_version_matches_pyproject() -> None:
-    """
-    Ensure that the version in pyproject.toml matches the version in code.
-    """
+    """Ensure that the version in pyproject.toml matches the version in code."""
 
     with open("pyproject.toml", encoding="utf-8") as f:
         pyproject: dict[str, object] = toml.load(f)

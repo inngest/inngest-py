@@ -23,5 +23,5 @@ def _is_port_available(port: int) -> bool:
         try:
             s.bind((HOST, port))
             return True
-        except socket.error:
+        except OSError:
             return False

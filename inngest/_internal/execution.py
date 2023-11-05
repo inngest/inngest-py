@@ -57,17 +57,13 @@ class CallError(types.BaseModel):
 
 
 class FunctionCallResponse(types.BaseModel):
-    """
-    When a function successfully returns.
-    """
+    """When a function successfully returns."""
 
     data: object
 
 
 class StepCallResponse(types.BaseModel):
-    """
-    When a step successfully returns.
-    """
+    """When a step successfully returns."""
 
     data: object
     display_name: str

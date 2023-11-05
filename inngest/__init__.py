@@ -1,3 +1,6 @@
+"""Public entrypoint for the Inngest SDK."""
+
+
 from ._internal.client_lib import Inngest
 from ._internal.errors import NonRetriableError
 from ._internal.event_lib import Event

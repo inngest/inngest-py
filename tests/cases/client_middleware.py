@@ -1,5 +1,3 @@
-import typing
-
 import inngest
 import inngest.experimental
 import tests.helper
@@ -22,7 +20,7 @@ def create(
     event_name = base.create_event_name(framework, test_name, is_sync)
     state = _State()
 
-    middleware: typing.Type[
+    middleware: type[
         inngest.experimental.Middleware | inngest.experimental.MiddlewareSync
     ]
     if is_sync:

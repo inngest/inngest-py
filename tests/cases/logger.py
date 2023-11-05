@@ -9,8 +9,7 @@ _TEST_NAME = "logger"
 
 
 class StatefulLogger(logging.Logger):
-    """
-    Fake logger that stores calls to its methods. We can use this to assert that
+    """Fake logger that stores calls to its methods. We can use this to assert that
     logger methods are properly called (e.g. no duplicates).
     """
 

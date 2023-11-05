@@ -36,7 +36,7 @@ def is_serializable(obj: object) -> typing.TypeGuard[Serializable]:
 class BaseModel(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(strict=True)
 
-    def __init__(  # pylint: disable=no-self-argument
+    def __init__(
         __pydantic_self__,
         *args: object,
         **kwargs: object,
@@ -51,15 +51,14 @@ class BaseModel(pydantic.BaseModel):
         err: pydantic.ValidationError,
     ) -> BaseException:
         """
-        Subclasses can override this method to convert Pydantic's
+        Override this method in subclasses to convert Pydantic's
         ValidationError into a different error.
         """
-
         return err
 
     @classmethod
     def from_dict(
-        cls: typing.Type[BaseModelT],
+        cls: type[BaseModelT],
         raw: dict[str, object],
     ) -> BaseModelT:
         return cls.model_validate(raw)

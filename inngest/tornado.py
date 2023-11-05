@@ -1,3 +1,5 @@
+"""Tornado integration for Inngest."""
+
 import json
 import typing
 
@@ -23,6 +25,18 @@ def serve(
     base_url: str | None = None,
     signing_key: str | None = None,
 ) -> None:
+    """
+    Serve Inngest functions in a Tornado app.
+
+    Args:
+    ----
+        app: Tornado app.
+        client: Inngest client.
+        functions: List of functions to serve.
+
+        base_url: Base URL to serve from.
+        signing_key: Inngest signing key.
+    """
     handler = comm.CommHandler(
         base_url=base_url or client.base_url,
         client=client,

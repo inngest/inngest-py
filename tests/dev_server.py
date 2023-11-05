@@ -49,21 +49,19 @@ class _DevServer:
             stdout = None
 
         def _run() -> None:
-            self._process = (
-                subprocess.Popen(  # pylint: disable=consider-using-with
-                    [
-                        "npx",
-                        "--yes",
-                        "inngest-cli@latest",
-                        "dev",
-                        "--no-discovery",
-                        "--no-poll",
-                        "--port",
-                        f"{PORT}",
-                    ],
-                    stderr=stderr,
-                    stdout=stdout,
-                )
+            self._process = subprocess.Popen(
+                [
+                    "npx",
+                    "--yes",
+                    "inngest-cli@latest",
+                    "dev",
+                    "--no-discovery",
+                    "--no-poll",
+                    "--port",
+                    f"{PORT}",
+                ],
+                stderr=stderr,
+                stdout=stdout,
             )
 
         self._thread = threading.Thread(target=_run)

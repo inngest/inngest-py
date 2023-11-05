@@ -12,9 +12,7 @@ from inngest._internal import (
 
 
 class StepMemos:
-    """
-    Holds memoized step output.
-    """
+    """Holds memoized step output."""
 
     def __init__(self, memos: dict[str, object]) -> None:
         self._memos = memos
@@ -113,11 +111,15 @@ class Interrupt(BaseException):
     ) -> None:
         """
         Args:
-            data: JSON returned by the step.
+        ----
+            data: Any data present for this operation.
             display_name: User-specified step ID.
             hashed_id: Hashed step ID.
+            name: Legacy field that's only used for sleep duration.
+            op: Operation code that tells the Executor what operation to do.
+            opts: Any additional data required for this operation to send to
+                Inngest.
         """
-
         self.data = data
         self.display_name = display_name
         self.hashed_id = hashed_id

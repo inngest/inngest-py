@@ -56,7 +56,6 @@ class InvalidConfig(InternalError):
         Extract info from Pydantic's ValidationError and return our internal
         InvalidFunctionConfig error.
         """
-
         default = cls(str(err))
 
         errors = err.errors()
@@ -206,6 +205,4 @@ class ExternalError(Exception):
 
 
 class NonRetriableError(ExternalError):
-    """
-    End users can raise this error to prevent retries.
-    """
+    """End users can raise this error to prevent retries."""
