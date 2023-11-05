@@ -3,14 +3,7 @@ from __future__ import annotations
 import inspect
 import typing
 
-from inngest._internal import (
-    client_lib,
-    errors,
-    execution,
-    result,
-    transforms,
-    types,
-)
+from inngest._internal import client_lib, errors, execution, result, transforms
 
 from .log import LoggerMiddleware
 from .middleware import Middleware, MiddlewareSync
@@ -168,8 +161,8 @@ class MiddlewareManager:
 
     async def transform_output(
         self,
-        output: types.Serializable,
-    ) -> result.MaybeError[types.Serializable]:
+        output: object,
+    ) -> result.MaybeError[object]:
         try:
             for m in self._middleware:
                 output = await transforms.maybe_await(
@@ -181,8 +174,8 @@ class MiddlewareManager:
 
     def transform_output_sync(
         self,
-        output: types.Serializable,
-    ) -> result.MaybeError[types.Serializable]:
+        output: object,
+    ) -> result.MaybeError[object]:
         try:
             for m in self._middleware:
                 if isinstance(m, Middleware):

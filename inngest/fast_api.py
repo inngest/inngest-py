@@ -88,8 +88,8 @@ def serve(
         )
 
 
-def _to_response(comm_res: comm.CommResponse) -> fastapi.responses.JSONResponse:
-    return fastapi.responses.JSONResponse(
+def _to_response(comm_res: comm.CommResponse) -> fastapi.responses.Response:
+    return fastapi.responses.Response(
         content=comm_res.body,
         headers=comm_res.headers,
         status_code=comm_res.status_code,

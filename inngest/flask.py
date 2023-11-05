@@ -147,7 +147,7 @@ def _create_handler_sync(
 
 def _to_response(comm_res: comm.CommResponse) -> flask.Response:
     return flask.Response(
-        response=json.dumps(comm_res.body),
+        response=comm_res.body,
         headers=comm_res.headers,
         status=comm_res.status_code,
     )

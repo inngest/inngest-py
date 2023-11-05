@@ -27,7 +27,7 @@ class CommResponse:
     def __init__(
         self,
         *,
-        body: types.Serializable = None,
+        body: bytes | None = None,
         headers: dict[str, str],
         status_code: int = http.HTTPStatus.OK.value,
     ) -> None:
@@ -61,11 +61,23 @@ class CommResponse:
                         return cls.from_error(
                             logger,
                             framework,
-                            err,
+                            errors.UnserializableOutput(
+                                f'"{item.display_name}" returned unserializable data'
+                            ),
                         )
 
+            match transforms.dump_json(transforms.prep_body(out)):
+                case result.Ok(body):
+                    pass
+                case result.Err(err):
+                    return cls.from_error(
+                        logger,
+                        framework,
+                        err,
+                    )
+
             return cls(
-                body=transforms.prep_body(out),
+                body=body.encode("utf-8"),
                 headers=headers,
                 status_code=http.HTTPStatus.PARTIAL_CONTENT.value,
             )
@@ -75,7 +87,17 @@ class CommResponse:
 
             match call_res.to_dict():
                 case result.Ok(d):
-                    body = transforms.prep_body(d)
+                    pass
+                case result.Err(err):
+                    return cls.from_error(
+                        logger,
+                        framework,
+                        err,
+                    )
+
+            match transforms.dump_json(transforms.prep_body(d)):
+                case result.Ok(body):
+                    pass
                 case result.Err(err):
                     return cls.from_error(
                         logger,
@@ -87,14 +109,24 @@ class CommResponse:
                 headers[const.HeaderKey.NO_RETRY.value] = "true"
 
             return cls(
-                body=body,
+                body=body.encode("utf-8"),
                 headers=headers,
                 status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR.value,
             )
 
         if isinstance(call_res, execution.FunctionCallResponse):
+            match transforms.dump_json(transforms.prep_body(call_res.data)):
+                case result.Ok(body):
+                    pass
+                case result.Err(err):
+                    return cls.from_error(
+                        logger,
+                        framework,
+                        err,
+                    )
+
             return cls(
-                body=call_res.data,
+                body=body.encode("utf-8"),
                 headers=headers,
             )
 
@@ -123,10 +155,13 @@ class CommResponse:
             logger.error(f"_{str(err)}_")
 
         return cls(
-            body={
-                "code": code,
-                "message": str(err),
-            },
+            body=json.dumps(
+                {
+                    "code": code,
+                    "message": str(err),
+                    "name": type(err).__name__,
+                }
+            ).encode("utf-8"),
             headers=net.create_headers(framework=framework),
             status_code=status_code,
         )
@@ -337,13 +372,13 @@ class CommHandler:
             # Tell Dev Server to leave the app alone since it's in production
             # mode.
             return CommResponse(
-                body=json.dumps({}),
+                body=json.dumps({}).encode("utf-8"),
                 headers={},
                 status_code=403,
             )
 
         return CommResponse(
-            body=json.dumps({}),
+            body=json.dumps({}).encode("utf-8"),
             headers=net.create_headers(framework=self._framework),
             status_code=200,
         )
@@ -370,7 +405,7 @@ class CommHandler:
 
         if server_res.status_code < 400:
             return CommResponse(
-                body=server_res_body,
+                body=json.dumps(server_res_body).encode("utf-8"),
                 headers=net.create_headers(framework=self._framework),
                 status_code=server_res.status_code,
             )

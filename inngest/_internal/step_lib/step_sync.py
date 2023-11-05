@@ -31,16 +31,9 @@ class StepSync(base.StepBase):
             case result.Err(err):
                 raise err
 
-        # Ensure the output is JSON-serializable.
-        match transforms.dump_json(handler()):
-            case result.Ok(output):
-                pass
-            case result.Err(err):
-                raise err
-
         raise base.Interrupt(
             hashed_id=hashed_id,
-            data=output,
+            data=handler(),
             display_name=step_id,
             op=execution.Opcode.STEP,
             name=step_id,

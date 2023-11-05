@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from inngest._internal import client_lib, execution, types
+from inngest._internal import client_lib, execution
 
 
 class Middleware:
@@ -46,8 +46,8 @@ class Middleware:
 
     async def transform_output(
         self,
-        output: types.Serializable,
-    ) -> types.Serializable:
+        output: object,
+    ) -> object:
         """
         After a function or step returns. Used to modify the returned data.
         Called multiple times per run when using steps. Not called when an error
@@ -102,8 +102,8 @@ class MiddlewareSync:
 
     def transform_output(
         self,
-        output: types.Serializable,
-    ) -> types.Serializable:
+        output: object,
+    ) -> object:
         """
         After a function or step returns. Used to modify the returned data.
         Called multiple times per run when using steps. Not called when an error

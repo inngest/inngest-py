@@ -104,7 +104,7 @@ class Interrupt(BaseException):
     def __init__(
         self,
         *,
-        data: types.Serializable = None,
+        data: object = None,
         display_name: str,
         hashed_id: str,
         name: str,

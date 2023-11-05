@@ -41,8 +41,8 @@ def create(
 
         def transform_output(
             self,
-            output: inngest.Serializable,
-        ) -> inngest.Serializable:
+            output: object,
+        ) -> object:
             state.hook_list.append("transform_output")
             return output
 
@@ -67,8 +67,8 @@ def create(
 
         async def transform_output(
             self,
-            output: inngest.Serializable,
-        ) -> inngest.Serializable:
+            output: object,
+        ) -> object:
             state.hook_list.append("transform_output")
             return output
 

@@ -1,6 +1,7 @@
+import json
+
 import inngest
 import tests.helper
-from inngest._internal import errors
 
 from . import base
 
@@ -66,22 +67,24 @@ def create(
         async def step_1() -> Foo:
             return Foo()
 
-        try:
-            await step.run("step_1", step_1)  # type: ignore
-        except BaseException as err:
-            state.error = err
-            raise
+        await step.run("step_1", step_1)  # type: ignore
 
     def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
         run_id = state.wait_for_run_id()
-        tests.helper.client.wait_for_run_status(
+        run = tests.helper.client.wait_for_run_status(
             run_id,
             tests.helper.RunStatus.FAILED,
         )
 
-        assert isinstance(state.error, errors.UnserializableOutput)
-        assert str(state.error) == "Object of type Foo is not JSON serializable"
+        assert run.output is not None
+        output = json.loads(run.output)
+
+        assert output == {
+            "code": "unserializable_output",
+            "message": '"step_1" returned unserializable data',
+            "name": "UnserializableOutput",
+        }, output
 
     if is_sync:
         fn = fn_sync

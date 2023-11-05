@@ -250,6 +250,8 @@ class Function:
                     errors.MissingFunction("function ID mismatch")
                 )
 
+            output: object
+
             # # Determine whether the handler is async (i.e. if we need to await
             # # it). Sync functions are OK in async contexts, so it's OK if the
             # # handler is sync.
@@ -298,13 +300,6 @@ class Function:
                     pass
                 case result.Err(err):
                     return execution.CallError.from_error(err)
-
-            # Ensure the output is JSON-serializable.
-            match transforms.dump_json(output):
-                case result.Ok(_):
-                    pass
-                case result.Err(err):
-                    raise err
 
             return execution.FunctionCallResponse(data=output)
         except step_lib.Interrupt as interrupt:
@@ -373,7 +368,7 @@ class Function:
                 )
 
             if _is_function_handler_sync(handler):
-                output = handler(
+                output: object = handler(
                     attempt=call.ctx.attempt,
                     event=call.event,
                     events=call.events,

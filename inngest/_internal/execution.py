@@ -61,7 +61,7 @@ class FunctionCallResponse(types.BaseModel):
     When a function successfully returns.
     """
 
-    data: types.Serializable
+    data: object
 
 
 class StepCallResponse(types.BaseModel):
@@ -69,7 +69,7 @@ class StepCallResponse(types.BaseModel):
     When a step successfully returns.
     """
 
-    data: types.Serializable
+    data: object
     display_name: str
     id: str
     name: str

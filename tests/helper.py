@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 import enum
 import time
 
-from inngest._internal import result
+import pydantic
+
+from inngest._internal import result, types
 
 from . import dev_server, gql
 
@@ -58,11 +62,12 @@ class _Client:
         status: RunStatus,
         *,
         timeout: int = 5,
-    ) -> None:
+    ) -> _Run:
         query = """
         query GetRun($run_id: ID!) {
             functionRun(query: { functionRunId: $run_id }) {
                 id
+                output
                 status
             }
         }
@@ -76,12 +81,25 @@ class _Client:
                 if not isinstance(run, dict):
                     raise Exception("unexpected response")
                 if run["status"] == status.value:
-                    return
+                    return _Run.model_validate(run)
 
             if time.time() - start > timeout:
                 raise Exception("timed out waiting for run status")
 
             time.sleep(0.2)
+
+
+class _Run(types.BaseModel):
+    id: str
+    output: str | None
+    status: RunStatus
+
+    @pydantic.field_validator("status", mode="before")
+    @classmethod
+    def convert_status(cls, value: str) -> RunStatus:
+        if isinstance(value, str):
+            return RunStatus(value)
+        raise ValueError("invalid status")
 
 
 client = _Client()
