@@ -28,9 +28,7 @@ class Inngest:
         is_production: bool | None = None,
         logger: types.Logger | None = None,
         middleware: list[
-            type[
-                middleware_lib.Middleware | middleware_lib.MiddlewareSync
-            ]
+            type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]
         ]
         | None = None,
     ) -> None:

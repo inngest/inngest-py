@@ -46,7 +46,7 @@ class Proxy:
                 if res.body is not None:
                     self.wfile.write(res.body)
 
-            def do_DELETE(self) -> None:  # pylint: disable=invalid-name
+            def do_DELETE(self) -> None:
                 res = on_request(
                     body=self.rfile.read(int(self.headers["Content-Length"])),
                     headers=self._get_headers(),
@@ -64,7 +64,7 @@ class Proxy:
                 )
                 self._set_response(res)
 
-            def do_PATCH(self) -> None:  # pylint: disable=invalid-name
+            def do_PATCH(self) -> None:
                 res = on_request(
                     body=self.rfile.read(int(self.headers["Content-Length"])),
                     headers=self._get_headers(),
@@ -73,7 +73,7 @@ class Proxy:
                 )
                 self._set_response(res)
 
-            def do_POST(self) -> None:  # pylint: disable=invalid-name
+            def do_POST(self) -> None:
                 res = on_request(
                     body=self.rfile.read(int(self.headers["Content-Length"])),
                     headers=self._get_headers(),
@@ -82,7 +82,7 @@ class Proxy:
                 )
                 self._set_response(res)
 
-            def do_PUT(self) -> None:  # pylint: disable=invalid-name
+            def do_PUT(self) -> None:
                 res = on_request(
                     body=self.rfile.read(int(self.headers["Content-Length"])),
                     headers=self._get_headers(),

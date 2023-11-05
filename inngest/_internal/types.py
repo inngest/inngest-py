@@ -36,7 +36,7 @@ def is_serializable(obj: object) -> typing.TypeGuard[Serializable]:
 class BaseModel(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(strict=True)
 
-    def __init__(  # pylint: disable=no-self-argument
+    def __init__(
         __pydantic_self__,
         *args: object,
         **kwargs: object,

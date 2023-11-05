@@ -22,7 +22,9 @@ class StepMemos:
             memo = self._memos[hashed_id]
 
             # Remove memo
-            self._memos = {k: v for k, v in self._memos.items() if k != hashed_id}
+            self._memos = {
+                k: v for k, v in self._memos.items() if k != hashed_id
+            }
 
             return memo
 

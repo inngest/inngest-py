@@ -81,7 +81,9 @@ def is_step_call_responses(
     return all(isinstance(item, StepCallResponse) for item in value)
 
 
-CallResult: typing.TypeAlias = list[StepCallResponse] | FunctionCallResponse | CallError
+CallResult: typing.TypeAlias = (
+    list[StepCallResponse] | FunctionCallResponse | CallError
+)
 
 
 class Opcode(enum.Enum):

@@ -98,7 +98,9 @@ def create_function(
     cancel: list[function_config.Cancel] | None = None,
     debounce: function_config.Debounce | None = None,
     fn_id: str,
-    middleware: list[type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]]
+    middleware: list[
+        type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]
+    ]
     | None = None,
     name: str | None = None,
     on_failure: FunctionHandlerAsync | FunctionHandlerSync | None = None,
@@ -278,7 +280,9 @@ class Function:
             else:
                 # Should be unreachable.
                 return execution.CallError.from_error(
-                    errors.UnknownError("unable to determine function handler type")
+                    errors.UnknownError(
+                        "unable to determine function handler type"
+                    )
                 )
 
             err = await middleware.after_execution()

@@ -78,7 +78,9 @@ def _create_handler_async(
 
             return _to_response(
                 await handler.call_function(
-                    call=execution.Call.from_dict(json.loads(flask.request.data)),
+                    call=execution.Call.from_dict(
+                        json.loads(flask.request.data)
+                    ),
                     fn_id=fn_id,
                     req_sig=net.RequestSignature(
                         body=flask.request.data,
@@ -124,7 +126,9 @@ def _create_handler_sync(
 
             return _to_response(
                 handler.call_function_sync(
-                    call=execution.Call.from_dict(json.loads(flask.request.data)),
+                    call=execution.Call.from_dict(
+                        json.loads(flask.request.data)
+                    ),
                     fn_id=fn_id,
                     req_sig=net.RequestSignature(
                         body=flask.request.data,

@@ -10,9 +10,7 @@ from inngest._internal import const, errors
 from . import comm
 
 
-class Test_get_function_configs(  # pylint: disable=invalid-name
-    unittest.TestCase
-):
+class Test_get_function_configs(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
         logger = logging.getLogger(__name__)
