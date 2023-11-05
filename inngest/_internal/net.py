@@ -73,12 +73,12 @@ class RequestSignature:
             return None
 
         if signing_key is None:
-            return errors.MissingSigningKey(
+            return errors.MissingSigningKeyError(
                 "cannot validate signature in production mode without a signing key"
             )
 
         if self._signature is None:
-            return errors.MissingHeader(
+            return errors.MissingHeaderError(
                 f"cannot validate signature in production mode without a {const.HeaderKey.SIGNATURE.value} header"
             )
 
@@ -89,6 +89,6 @@ class RequestSignature:
         )
         mac.update(str(self._timestamp).encode("utf-8"))
         if not hmac.compare_digest(self._signature, mac.hexdigest()):
-            return errors.InvalidRequestSignature()
+            return errors.InvalidRequestSignatureError()
 
         return None

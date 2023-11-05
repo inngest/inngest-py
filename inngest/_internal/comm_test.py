@@ -68,5 +68,5 @@ class Test_get_function_configs(unittest.TestCase):
         )
 
         configs = handler.get_function_configs("http://foo.bar")
-        assert isinstance(configs, errors.InvalidConfig)
+        assert isinstance(configs, errors.InvalidConfigError)
         assert str(configs) == "no functions found"

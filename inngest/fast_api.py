@@ -58,7 +58,7 @@ def serve(
 
     @app.post("/api/inngest")
     async def post_inngest_api(
-        fnId: str,
+        fnId: str,  # noqa: N803
         request: fastapi.Request,
     ) -> fastapi.Response:
         body = await request.body()

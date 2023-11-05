@@ -1,3 +1,4 @@
+import asyncio
 import time
 
 import inngest
@@ -61,7 +62,7 @@ def create(
         state.run_id = run_id
 
         # Wait a little bit to allow the cancel event to be sent.
-        time.sleep(3)
+        await asyncio.sleep(3)
 
         # The test will need to wait for this function's logic to finish even
         # though it's cancelled. Without this, Tornado will error due to logic

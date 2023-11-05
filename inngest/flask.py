@@ -74,7 +74,7 @@ def _create_handler_async(
         if flask.request.method == "POST":
             fn_id = flask.request.args.get("fnId")
             if fn_id is None:
-                raise errors.MissingParam("fnId")
+                raise errors.MissingParamError("fnId")
 
             return _to_response(
                 await handler.call_function(
@@ -122,7 +122,7 @@ def _create_handler_sync(
         if flask.request.method == "POST":
             fn_id = flask.request.args.get("fnId")
             if fn_id is None:
-                raise errors.MissingParam("fnId")
+                raise errors.MissingParamError("fnId")
 
             return _to_response(
                 handler.call_function_sync(

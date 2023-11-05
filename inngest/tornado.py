@@ -67,7 +67,7 @@ def serve(
             fn_id: str | None
             raw_fn_id = self.request.query_arguments.get("fnId")
             if raw_fn_id is None or len(raw_fn_id) == 0:
-                raise errors.MissingParam("fnId")
+                raise errors.MissingParamError("fnId")
             fn_id = raw_fn_id[0].decode("utf-8")
 
             headers = net.normalize_headers(dict(self.request.headers.items()))

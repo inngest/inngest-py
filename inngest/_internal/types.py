@@ -37,7 +37,7 @@ class BaseModel(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(strict=True)
 
     def __init__(
-        __pydantic_self__,
+        __pydantic_self__,  # noqa: N805
         *args: object,
         **kwargs: object,
     ) -> None:

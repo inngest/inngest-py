@@ -59,7 +59,7 @@ class CommResponse:
                     return cls.from_error(
                         logger,
                         framework,
-                        errors.UnserializableOutput(
+                        errors.UnserializableOutputError(
                             f'"{item.display_name}" returned unserializable data'
                         ),
                     )
@@ -142,9 +142,9 @@ class CommResponse:
             status_code = err.status_code
 
         if code:
-            logger.error(f"{code}: {str(err)}")
+            logger.error(f"{code}: {err!s}")
         else:
-            logger.error(f"_{str(err)}_")
+            logger.error(f"_{err!s}_")
 
         return cls(
             body=json.dumps(
@@ -198,7 +198,7 @@ class CommHandler:
         try:
             self._api_origin = net.parse_url(base_url)
         except Exception as err:
-            raise errors.InvalidBaseURL() from err
+            raise errors.InvalidBaseURLError() from err
 
         self._fns = {fn.get_id(): fn for fn in functions}
         self._framework = framework
@@ -208,7 +208,7 @@ class CommHandler:
                 signing_key = os.getenv(const.EnvKey.SIGNING_KEY.value)
                 if signing_key is None:
                     self._client.logger.error("missing signing key")
-                    raise errors.MissingSigningKey()
+                    raise errors.MissingSigningKeyError()
         self._signing_key = signing_key
 
     def _build_registration_request(
@@ -323,7 +323,7 @@ class CommHandler:
             if _fn.on_failure_fn_id == fn_id:
                 return _fn
 
-        return errors.MissingFunction(f"function {fn_id} not found")
+        return errors.MissingFunctionError(f"function {fn_id} not found")
 
     def get_function_configs(
         self,
@@ -338,7 +338,7 @@ class CommHandler:
                 configs.append(config.on_failure)
 
         if len(configs) == 0:
-            return errors.InvalidConfig("no functions found")
+            return errors.InvalidConfigError("no functions found")
         return configs
 
     def inspect(self, server_kind: const.ServerKind | None) -> CommResponse:
@@ -505,7 +505,7 @@ class CommHandler:
         server_kind: const.ServerKind | None,
     ) -> result.MaybeError[None]:
         if server_kind == const.ServerKind.DEV_SERVER and self._is_production:
-            return errors.DevServerRegistrationNotAllowed(
+            return errors.DisallowedRegistrationError(
                 "Dev Server registration not allowed in production mode"
             )
 

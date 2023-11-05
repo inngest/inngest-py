@@ -89,7 +89,7 @@ class FunctionOpts(types.BaseModel):
         self,
         err: pydantic.ValidationError,
     ) -> BaseException:
-        return errors.InvalidConfig.from_validation_error(err)
+        return errors.InvalidConfigError.from_validation_error(err)
 
 
 def create_function(
@@ -196,7 +196,7 @@ class Function:
         if opts.on_failure is not None:
             # Create a random suffix to avoid collisions with the main
             # function's ID.
-            suffix = hashlib.sha1(opts.id.encode("utf-8")).hexdigest()[:8]
+            suffix = hashlib.sha1(opts.id.encode("utf-8")).hexdigest()[:8]  # noqa: S324
 
             self._on_failure_fn_id = f"{opts.id}-{suffix}"
 
@@ -236,12 +236,12 @@ class Function:
             elif self.on_failure_fn_id == fn_id:
                 if self._opts.on_failure is None:
                     return execution.CallError.from_error(
-                        errors.MissingFunction("on_failure not defined")
+                        errors.MissingFunctionError("on_failure not defined")
                     )
                 handler = self._opts.on_failure
             else:
                 return execution.CallError.from_error(
-                    errors.MissingFunction("function ID mismatch")
+                    errors.MissingFunctionError("function ID mismatch")
                 )
 
             output: object
@@ -349,12 +349,12 @@ class Function:
             elif self.on_failure_fn_id == fn_id:
                 if self._opts.on_failure is None:
                     return execution.CallError.from_error(
-                        errors.MissingFunction("on_failure not defined")
+                        errors.MissingFunctionError("on_failure not defined")
                     )
                 handler = self._opts.on_failure
             else:
                 return execution.CallError.from_error(
-                    errors.MissingFunction("function ID mismatch")
+                    errors.MissingFunctionError("function ID mismatch")
                 )
 
             if _is_function_handler_sync(handler):
@@ -373,7 +373,7 @@ class Function:
                 )
             else:
                 return execution.CallError.from_error(
-                    errors.MismatchedSync(
+                    errors.MismatchedSyncError(
                         "encountered async function in non-async context"
                     )
                 )

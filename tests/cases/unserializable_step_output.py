@@ -83,7 +83,7 @@ def create(
         assert output == {
             "code": "unserializable_output",
             "message": '"step_1" returned unserializable data',
-            "name": "UnserializableOutput",
+            "name": "UnserializableOutputError",
         }, output
 
     if is_sync:

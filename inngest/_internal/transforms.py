@@ -22,14 +22,14 @@ def hash_signing_key(key: str) -> str:
 
 
 def hash_step_id(step_id: str) -> str:
-    return hashlib.sha1(step_id.encode("utf-8")).hexdigest()
+    return hashlib.sha1(step_id.encode("utf-8")).hexdigest()  # noqa: S324
 
 
 def dump_json(obj: object) -> result.MaybeError[str]:
     try:
         return json.dumps(obj)
     except Exception as err:
-        return errors.UnserializableOutput(str(err))
+        return errors.UnserializableOutputError(str(err))
 
 
 def remove_signing_key_prefix(key: str) -> str:
@@ -94,7 +94,7 @@ def to_duration_str(
         ms = int(ms.total_seconds() * 1000)
 
     if ms < _Duration.second():
-        return errors.InvalidConfig("duration must be at least 1 second")
+        return errors.InvalidConfigError("duration must be at least 1 second")
 
     if ms < _Duration.minute():
         return f"{ms // _Duration.second()}s"

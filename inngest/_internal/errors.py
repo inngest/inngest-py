@@ -18,7 +18,7 @@ class InternalError(Exception):
         self.code = code
 
 
-class DevServerRegistrationNotAllowed(InternalError):
+class DisallowedRegistrationError(InternalError):
     status_code: int = http.HTTPStatus.BAD_REQUEST
 
     def __init__(self, message: str | None = None) -> None:
@@ -28,7 +28,7 @@ class DevServerRegistrationNotAllowed(InternalError):
         )
 
 
-class InvalidBaseURL(InternalError):
+class InvalidBaseURLError(InternalError):
     status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 
     def __init__(self, message: str | None = None) -> None:
@@ -38,7 +38,7 @@ class InvalidBaseURL(InternalError):
         )
 
 
-class InvalidConfig(InternalError):
+class InvalidConfigError(InternalError):
     status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 
     def __init__(self, message: str | None = None) -> None:
@@ -51,7 +51,7 @@ class InvalidConfig(InternalError):
     def from_validation_error(
         cls,
         err: pydantic.ValidationError,
-    ) -> InvalidConfig:
+    ) -> InvalidConfigError:
         """
         Extract info from Pydantic's ValidationError and return our internal
         InvalidFunctionConfig error.
@@ -80,7 +80,7 @@ class InvalidConfig(InternalError):
         return cls(f"{loc[0]}: {msg}")
 
 
-class MismatchedSync(InternalError):
+class MismatchedSyncError(InternalError):
     status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 
     def __init__(self, message: str | None = None) -> None:
@@ -90,7 +90,7 @@ class MismatchedSync(InternalError):
         )
 
 
-class InvalidRequestSignature(InternalError):
+class InvalidRequestSignatureError(InternalError):
     status_code: int = http.HTTPStatus.UNAUTHORIZED
 
     def __init__(self, message: str | None = None) -> None:
@@ -100,7 +100,7 @@ class InvalidRequestSignature(InternalError):
         )
 
 
-class InvalidBody(InternalError):
+class InvalidBodyError(InternalError):
     status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 
     def __init__(self, message: str | None = None) -> None:
@@ -110,7 +110,7 @@ class InvalidBody(InternalError):
         )
 
 
-class InvalidTransform(InternalError):
+class InvalidTransformError(InternalError):
     status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 
     def __init__(self, message: str | None = None) -> None:
@@ -120,7 +120,7 @@ class InvalidTransform(InternalError):
         )
 
 
-class MissingEventKey(InternalError):
+class MissingEventKeyError(InternalError):
     status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 
     def __init__(self, message: str | None = None) -> None:
@@ -130,7 +130,7 @@ class MissingEventKey(InternalError):
         )
 
 
-class MissingFunction(InternalError):
+class MissingFunctionError(InternalError):
     status_code: int = http.HTTPStatus.BAD_REQUEST
 
     def __init__(self, message: str | None = None) -> None:
@@ -140,7 +140,7 @@ class MissingFunction(InternalError):
         )
 
 
-class MissingHeader(InternalError):
+class MissingHeaderError(InternalError):
     status_code: int = http.HTTPStatus.BAD_REQUEST
 
     def __init__(self, message: str | None = None) -> None:
@@ -150,7 +150,7 @@ class MissingHeader(InternalError):
         )
 
 
-class MissingParam(InternalError):
+class MissingParamError(InternalError):
     status_code: int = http.HTTPStatus.BAD_REQUEST
 
     def __init__(self, message: str | None = None) -> None:
@@ -160,7 +160,7 @@ class MissingParam(InternalError):
         )
 
 
-class MissingSigningKey(InternalError):
+class MissingSigningKeyError(InternalError):
     status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 
     def __init__(self, message: str | None = None) -> None:
@@ -190,7 +190,7 @@ class UnknownError(InternalError):
         )
 
 
-class UnserializableOutput(InternalError):
+class UnserializableOutputError(InternalError):
     status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 
     def __init__(self, message: str | None = None) -> None:
