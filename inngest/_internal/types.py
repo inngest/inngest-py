@@ -51,15 +51,14 @@ class BaseModel(pydantic.BaseModel):
         err: pydantic.ValidationError,
     ) -> BaseException:
         """
-        Subclasses can override this method to convert Pydantic's
+        Override this method in subclasses to convert Pydantic's
         ValidationError into a different error.
         """
-
         return err
 
     @classmethod
     def from_dict(
-        cls: typing.Type[BaseModelT],
+        cls: type[BaseModelT],
         raw: dict[str, object],
     ) -> BaseModelT:
         return cls.model_validate(raw)

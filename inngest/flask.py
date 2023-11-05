@@ -1,3 +1,5 @@
+"""Flask integration for Inngest."""
+
 import json
 
 import flask
@@ -22,6 +24,18 @@ def serve(
     base_url: str | None = None,
     signing_key: str | None = None,
 ) -> None:
+    """
+    Serve Inngest functions in a Flask app.
+
+    Args:
+    ----
+        app: Flask app.
+        client: Inngest client.
+        functions: List of functions to serve.
+
+        base_url: Base URL to serve from.
+        signing_key: Inngest signing key.
+    """
     handler = comm.CommHandler(
         base_url=base_url or client.base_url,
         client=client,
@@ -64,9 +78,7 @@ def _create_handler_async(
 
             return _to_response(
                 await handler.call_function(
-                    call=execution.Call.from_dict(
-                        json.loads(flask.request.data)
-                    ),
+                    call=execution.Call.from_dict(json.loads(flask.request.data)),
                     fn_id=fn_id,
                     req_sig=net.RequestSignature(
                         body=flask.request.data,
@@ -112,9 +124,7 @@ def _create_handler_sync(
 
             return _to_response(
                 handler.call_function_sync(
-                    call=execution.Call.from_dict(
-                        json.loads(flask.request.data)
-                    ),
+                    call=execution.Call.from_dict(json.loads(flask.request.data)),
                     fn_id=fn_id,
                     req_sig=net.RequestSignature(
                         body=flask.request.data,

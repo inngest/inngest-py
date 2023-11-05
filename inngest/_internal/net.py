@@ -25,10 +25,7 @@ def create_headers(
 
 
 def normalize_headers(headers: dict[str, str]) -> dict[str, str]:
-    """
-    Ensures that known headers are in the correct casing.
-    """
-
+    """Ensure that known headers are in the correct casing."""
     new_headers = {}
 
     for k, v in headers.items():

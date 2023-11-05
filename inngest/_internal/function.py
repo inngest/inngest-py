@@ -98,9 +98,7 @@ def create_function(
     cancel: list[function_config.Cancel] | None = None,
     debounce: function_config.Debounce | None = None,
     fn_id: str,
-    middleware: list[
-        typing.Type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]
-    ]
+    middleware: list[type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]]
     | None = None,
     name: str | None = None,
     on_failure: FunctionHandlerAsync | FunctionHandlerSync | None = None,
@@ -113,6 +111,7 @@ def create_function(
     Create an Inngest function.
 
     Args:
+    ----
         batch_events: Event batching config.
         cancel: Run cancellation config.
         debounce: Debouncing config.
@@ -160,9 +159,7 @@ class Function:
 
     @property
     def is_handler_async(self) -> bool:
-        """
-        Whether the main handler is async.
-        """
+        """Whether the main handler is async."""
         return _is_function_handler_async(self._handler)
 
     @property
@@ -171,7 +168,6 @@ class Function:
         Whether the on_failure handler is async. Returns None if there isn't an
         on_failure handler.
         """
-
         if self._opts.on_failure is None:
             return None
         return _is_function_handler_async(self._opts.on_failure)
@@ -186,9 +182,7 @@ class Function:
         trigger: function_config.TriggerCron | function_config.TriggerEvent,
         handler: FunctionHandlerAsync | FunctionHandlerSync,
         middleware: list[
-            typing.Type[
-                middleware_lib.Middleware | middleware_lib.MiddlewareSync
-            ]
+            type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]
         ]
         | None = None,
     ) -> None:
@@ -204,7 +198,7 @@ class Function:
 
             self._on_failure_fn_id = f"{opts.id}-{suffix}"
 
-    async def call(  # pylint: disable=too-many-branches
+    async def call(  # noqa: C901
         self,
         call: execution.Call,
         client: client_lib.Inngest,
@@ -284,9 +278,7 @@ class Function:
             else:
                 # Should be unreachable.
                 return execution.CallError.from_error(
-                    errors.UnknownError(
-                        "unable to determine function handler type"
-                    )
+                    errors.UnknownError("unable to determine function handler type")
                 )
 
             err = await middleware.after_execution()
@@ -321,7 +313,7 @@ class Function:
         except Exception as err:
             return execution.CallError.from_error(err)
 
-    def call_sync(  # pylint: disable=too-many-branches
+    def call_sync(  # noqa: C901
         self,
         call: execution.Call,
         client: client_lib.Inngest,

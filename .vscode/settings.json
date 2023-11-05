@@ -2,10 +2,12 @@
   "[python]": {
     "editor.codeActionsOnSave": {
       "source.organizeImports": true
-    }
+    },
+    "editor.defaultFormatter": "charliermarsh.ruff"
   },
   "editor.formatOnSave": true,
   "isort.args": ["--profile", "black"],
   "isort.check": true,
-  "mypy-type-checker.preferDaemon": true
+  "mypy-type-checker.preferDaemon": true,
+  "ruff.fixAll": true
 }

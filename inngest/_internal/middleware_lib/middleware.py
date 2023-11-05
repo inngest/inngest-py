@@ -12,7 +12,6 @@ class Middleware:
         After executing new code. Called multiple times per run when using
         steps.
         """
-
         return None
 
     async def before_execution(self) -> None:
@@ -20,7 +19,6 @@ class Middleware:
         Before executing new code. Called multiple times per run when using
         steps.
         """
-
         return None
 
     async def before_response(self) -> None:
@@ -30,7 +28,6 @@ class Middleware:
         the response is sent back to Inngest. Called multiple times per run when
         using steps. Not called for function middleware.
         """
-
         return None
 
     async def transform_input(
@@ -41,7 +38,6 @@ class Middleware:
         Before calling a function or step. Used to replace certain arguments in
         the function. Called multiple times per run when using steps.
         """
-
         return call_input
 
     async def transform_output(
@@ -53,7 +49,6 @@ class Middleware:
         Called multiple times per run when using steps. Not called when an error
         is thrown.
         """
-
         return output
 
 
@@ -68,7 +63,6 @@ class MiddlewareSync:
         After executing new code. Called multiple times per run when using
         steps.
         """
-
         return None
 
     def before_execution(self) -> None:
@@ -76,7 +70,6 @@ class MiddlewareSync:
         Before executing new code. Called multiple times per run when using
         steps.
         """
-
         return None
 
     def before_response(self) -> None:
@@ -86,7 +79,6 @@ class MiddlewareSync:
         the response is sent back to Inngest. Called multiple times per run when
         using steps. Not called for function middleware.
         """
-
         return None
 
     def transform_input(
@@ -97,7 +89,6 @@ class MiddlewareSync:
         Before calling a function or step. Used to replace certain arguments in
         the function. Called multiple times per run when using steps.
         """
-
         return call_input
 
     def transform_output(
@@ -109,5 +100,4 @@ class MiddlewareSync:
         Called multiple times per run when using steps. Not called when an error
         is thrown.
         """
-
         return output

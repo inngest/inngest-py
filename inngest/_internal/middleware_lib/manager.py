@@ -16,7 +16,7 @@ _mismatched_sync = errors.MismatchedSync(
     "encountered async middleware in non-async context"
 )
 
-DEFAULT_CLIENT_MIDDLEWARE: list[typing.Type[Middleware | MiddlewareSync]] = [
+DEFAULT_CLIENT_MIDDLEWARE: list[type[Middleware | MiddlewareSync]] = [
     LoggerMiddleware
 ]
 
@@ -37,7 +37,6 @@ class MiddlewareManager:
         Create a new manager from an Inngest client, using the middleware on the
         client.
         """
-
         mgr = cls(client)
 
         for m in DEFAULT_CLIENT_MIDDLEWARE:
@@ -54,13 +53,12 @@ class MiddlewareManager:
         Create a new manager from another manager, using the middleware on the
         passed manager. Effectively wraps a manager.
         """
-
         new_mgr = cls(manager.client)
         for m in manager.middleware:
             new_mgr._middleware = [*new_mgr._middleware, m]
         return new_mgr
 
-    def add(self, middleware: typing.Type[Middleware | MiddlewareSync]) -> None:
+    def add(self, middleware: type[Middleware | MiddlewareSync]) -> None:
         self._middleware = [*self._middleware, middleware(self.client)]
 
     async def after_execution(self) -> result.MaybeError[None]:

@@ -40,7 +40,6 @@ class Ok(typing.Generic[OkT]):
         Apply a transform function to the Ok value and return a new instance of
         Ok.
         """
-
         return Ok(fn(self.ok_value))
 
     def is_err(self) -> typing.Literal[False]:

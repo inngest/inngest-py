@@ -10,15 +10,11 @@ from . import const, errors, result, types
 
 
 def get_traceback(err: Exception) -> str:
-    return "".join(
-        traceback.format_exception(type(err), err, err.__traceback__)
-    )
+    return "".join(traceback.format_exception(type(err), err, err.__traceback__))
 
 
 def hash_signing_key(key: str) -> str:
-    return hashlib.sha256(
-        bytearray.fromhex(remove_signing_key_prefix(key))
-    ).hexdigest()
+    return hashlib.sha256(bytearray.fromhex(remove_signing_key_prefix(key))).hexdigest()
 
 
 def hash_step_id(step_id: str) -> str:
@@ -47,23 +43,15 @@ def prep_body(obj: types.T) -> types.T:
     - Remove items whose value is None.
     - Convert keys to camelCase.
     """
-
     if isinstance(obj, dict):
-        return {
-            to_camel_case(k): prep_body(v)
-            for k, v in obj.items()
-            if v is not None
-        }  # type: ignore
+        return {to_camel_case(k): prep_body(v) for k, v in obj.items() if v is not None}  # type: ignore
     if isinstance(obj, list):
         return [prep_body(v) for v in obj if v is not None]  # type: ignore
     return obj
 
 
 def to_camel_case(value: str) -> str:
-    """
-    Convert a string from snake_case to camelCase.
-    """
-
+    """Convert a string from snake_case to camelCase."""
     return "".join(
         word.title() if i else word for i, word in enumerate(value.split("_"))
     )
@@ -114,9 +102,7 @@ def to_duration_str(
 
 def to_iso_utc(value: datetime.datetime) -> str:
     return (
-        value.astimezone(datetime.timezone.utc).strftime(
-            "%Y-%m-%dT%H:%M:%S.%f"
-        )[:-3]
+        value.astimezone(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3]
         + "Z"
     )
 

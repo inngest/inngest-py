@@ -69,11 +69,9 @@ for case in _cases:
 
 class TestRegistration(unittest.TestCase):
     def test_dev_server_to_prod(self) -> None:
-        """
-        Ensure that Dev Server cannot initiate a registration request when in
+        """Ensure that Dev Server cannot initiate a registration request when in
         production mode.
         """
-
         client = inngest.Inngest(
             app_id="flask_registration",
             event_key="test",

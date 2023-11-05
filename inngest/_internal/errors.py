@@ -11,9 +11,7 @@ class InternalError(Exception):
     code: const.ErrorCode
     status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 
-    def __init__(
-        self, *, code: const.ErrorCode, message: str | None = None
-    ) -> None:
+    def __init__(self, *, code: const.ErrorCode, message: str | None = None) -> None:
         super().__init__(message)
         self.code = code
 
@@ -56,7 +54,6 @@ class InvalidConfig(InternalError):
         Extract info from Pydantic's ValidationError and return our internal
         InvalidFunctionConfig error.
         """
-
         default = cls(str(err))
 
         errors = err.errors()
@@ -206,6 +203,4 @@ class ExternalError(Exception):
 
 
 class NonRetriableError(ExternalError):
-    """
-    End users can raise this error to prevent retries.
-    """
+    """End users can raise this error to prevent retries."""

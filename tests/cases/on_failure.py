@@ -111,7 +111,7 @@ def create(
         assert state.attempt == 0
         assert isinstance(state.event, inngest.Event)
         assert isinstance(state.events, list) and len(state.events) == 1
-        assert isinstance(state.step, (inngest.Step, inngest.StepSync))
+        assert isinstance(state.step, inngest.Step | inngest.StepSync)
 
     if is_sync:
         fn = fn_sync

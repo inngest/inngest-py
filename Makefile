@@ -29,7 +29,7 @@ release:
 	@grep  "version = \"$${VERSION}\"" pyproject.toml && git tag $${VERSION} && git push origin $${VERSION} || echo "pyproject.toml version does not match"
 
 lint: check-venv
-	@pylint inngest tests
+	@ruff check .
 
 type-check: check-venv
 	@mypy inngest tests

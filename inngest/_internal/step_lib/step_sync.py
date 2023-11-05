@@ -16,11 +16,12 @@ class StepSync(base.StepBase):
         Run logic that should be retried on error and memoized after success.
 
         Args:
-            step_id: Unique step ID within the function. If the same step ID is
-                encountered multiple times then it'll get an index suffix.
+        ----
+            step_id: Durable step ID. Should usually be unique within a
+                function, but it's OK to reuse as long as your function is
+                deterministic.
             handler: The logic to run.
         """
-
         hashed_id = self._get_hashed_id(step_id)
 
         memo = self.get_memo_sync(hashed_id)
@@ -46,6 +47,13 @@ class StepSync(base.StepBase):
     ) -> list[str]:
         """
         Send an event or list of events.
+
+        Args:
+        ----
+            step_id: Durable step ID. Should usually be unique within a
+                function, but it's OK to reuse as long as your function is
+                deterministic.
+            events: An event or list of events to send.
         """
 
         def fn() -> list[str]:
@@ -62,9 +70,12 @@ class StepSync(base.StepBase):
         Sleep for a duration.
 
         Args:
+        ----
+            step_id: Durable step ID. Should usually be unique within a
+                function, but it's OK to reuse as long as your function is
+                deterministic.
             duration: The number of milliseconds to sleep.
         """
-
         if isinstance(duration, int):
             until = datetime.datetime.utcnow() + datetime.timedelta(
                 milliseconds=duration
@@ -81,8 +92,14 @@ class StepSync(base.StepBase):
     ) -> None:
         """
         Sleep until a specific time.
-        """
 
+        Args:
+        ----
+            step_id: Durable step ID. Should usually be unique within a
+                function, but it's OK to reuse as long as your function is
+                deterministic.
+            until: The time to sleep until.
+        """
         hashed_id = self._get_hashed_id(step_id)
 
         memo = self.get_memo_sync(hashed_id)
@@ -112,11 +129,14 @@ class StepSync(base.StepBase):
         Wait for an event to be sent.
 
         Args:
+        ----
+            step_id: Durable step ID. Should usually be unique within a
+                function, but it's OK to reuse as long as your function is
+                deterministic.
             event: Event name.
             if_exp: An expression to filter events.
             timeout: The maximum number of milliseconds to wait for the event.
         """
-
         hashed_id = self._get_hashed_id(step_id)
 
         memo = self.get_memo_sync(hashed_id)
