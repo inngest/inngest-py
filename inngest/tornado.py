@@ -16,6 +16,8 @@ from inngest._internal import (
     transforms,
 )
 
+FRAMEWORK = const.Framework.TORNADO
+
 
 def serve(
     app: tornado.web.Application,
@@ -40,7 +42,7 @@ def serve(
     handler = comm.CommHandler(
         base_url=base_url or client.base_url,
         client=client,
-        framework=const.Framework.TORNADO,
+        framework=FRAMEWORK,
         functions=functions,
         signing_key=signing_key,
     )
@@ -58,7 +60,17 @@ def serve(
                 server_kind = None
 
             comm_res = handler.inspect(server_kind)
-            self.write(json.dumps(comm_res.body))
+
+            body = transforms.dump_json(comm_res.body)
+            if isinstance(body, Exception):
+                comm_res = comm.CommResponse.from_error(
+                    client.logger,
+                    FRAMEWORK,
+                    body,
+                )
+                body = json.dumps(comm_res.body)
+
+            self.write(body)
             for k, v in comm_res.headers.items():
                 self.add_header(k, v)
             self.set_status(comm_res.status_code)
@@ -81,7 +93,17 @@ def serve(
                     is_production=client.is_production,
                 ),
             )
-            self.write(json.dumps(comm_res.body))
+
+            body = transforms.dump_json(comm_res.body)
+            if isinstance(body, Exception):
+                comm_res = comm.CommResponse.from_error(
+                    client.logger,
+                    FRAMEWORK,
+                    body,
+                )
+                body = json.dumps(comm_res.body)
+
+            self.write(body)
             for k, v in comm_res.headers.items():
                 self.add_header(k, v)
             self.set_status(comm_res.status_code)
@@ -98,7 +120,17 @@ def serve(
                 app_url=self.request.full_url(),
                 server_kind=server_kind,
             )
-            self.write(json.dumps(comm_res.body))
+
+            body = transforms.dump_json(comm_res.body)
+            if isinstance(body, Exception):
+                comm_res = comm.CommResponse.from_error(
+                    client.logger,
+                    FRAMEWORK,
+                    body,
+                )
+                body = json.dumps(comm_res.body)
+
+            self.write(body)
             for k, v in comm_res.headers.items():
                 self.add_header(k, v)
             self.set_status(comm_res.status_code)

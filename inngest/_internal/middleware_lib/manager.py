@@ -133,8 +133,8 @@ class MiddlewareManager:
 
     async def transform_input(
         self,
-        call_input: execution.TransformableCallInput,
-    ) -> types.MaybeError[execution.TransformableCallInput]:
+        call_input: execution.TransformableInput,
+    ) -> types.MaybeError[execution.TransformableInput]:
         try:
             for m in self._middleware:
                 call_input = await transforms.maybe_await(
@@ -146,8 +146,8 @@ class MiddlewareManager:
 
     def transform_input_sync(
         self,
-        call_input: execution.TransformableCallInput,
-    ) -> types.MaybeError[execution.TransformableCallInput]:
+        call_input: execution.TransformableInput,
+    ) -> types.MaybeError[execution.TransformableInput]:
         try:
             for m in self._middleware:
                 if isinstance(m, Middleware):

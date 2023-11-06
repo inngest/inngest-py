@@ -27,7 +27,7 @@ class CallStack(types.BaseModel):
 
 
 @dataclasses.dataclass
-class TransformableCallInput:
+class TransformableInput:
     logger: types.Logger
 
 

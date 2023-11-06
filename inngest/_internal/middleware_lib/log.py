@@ -43,8 +43,8 @@ class LoggerMiddleware(MiddlewareSync):
 
     def transform_input(
         self,
-        call_input: execution.TransformableCallInput,
-    ) -> execution.TransformableCallInput:
+        call_input: execution.TransformableInput,
+    ) -> execution.TransformableInput:
         self.logger.logger = call_input.logger
         call_input.logger = self.logger  # type: ignore
         return call_input

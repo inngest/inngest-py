@@ -90,7 +90,6 @@ def create(
                 step_id="step_1",
             )
         )
-
         assert step_1_output == [{"foo": {"bar": 1}}], step_1_output
 
     if is_sync:

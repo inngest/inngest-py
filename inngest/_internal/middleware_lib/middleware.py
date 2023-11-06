@@ -32,8 +32,8 @@ class Middleware:
 
     async def transform_input(
         self,
-        call_input: execution.TransformableCallInput,
-    ) -> execution.TransformableCallInput:
+        call_input: execution.TransformableInput,
+    ) -> execution.TransformableInput:
         """
         Before calling a function or step. Used to replace certain arguments in
         the function. Called multiple times per run when using steps.
@@ -83,8 +83,8 @@ class MiddlewareSync:
 
     def transform_input(
         self,
-        call_input: execution.TransformableCallInput,
-    ) -> execution.TransformableCallInput:
+        call_input: execution.TransformableInput,
+    ) -> execution.TransformableInput:
         """
         Before calling a function or step. Used to replace certain arguments in
         the function. Called multiple times per run when using steps.

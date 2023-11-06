@@ -1,3 +1,5 @@
+import json
+
 import inngest
 import inngest.experimental
 import tests.helper
@@ -37,8 +39,8 @@ def create(
 
             def transform_input(
                 self,
-                call_input: inngest.experimental.TransformableCallInput,
-            ) -> inngest.experimental.TransformableCallInput:
+                call_input: inngest.experimental.TransformableInput,
+            ) -> inngest.experimental.TransformableInput:
                 state.hook_list.append("transform_input")
                 return call_input
 
@@ -47,6 +49,8 @@ def create(
                 output: object,
             ) -> object:
                 state.hook_list.append("transform_output")
+                if output == "original output":
+                    return "transformed output"
                 return output
 
         middleware = _MiddlewareSync
@@ -65,8 +69,8 @@ def create(
 
             async def transform_input(
                 self,
-                call_input: inngest.experimental.TransformableCallInput,
-            ) -> inngest.experimental.TransformableCallInput:
+                call_input: inngest.experimental.TransformableInput,
+            ) -> inngest.experimental.TransformableInput:
                 state.hook_list.append("transform_input")
                 return call_input
 
@@ -75,6 +79,8 @@ def create(
                 output: object,
             ) -> object:
                 state.hook_list.append("transform_output")
+                if output == "original output":
+                    return "transformed output"
                 return output
 
         middleware = _MiddlewareAsync
@@ -91,21 +97,17 @@ def create(
         run_id: str,
         **_kwargs: object,
     ) -> None:
-        logger.info("function start")
         state.run_id = run_id
 
-        def _first_step() -> None:
-            logger.info("first_step")
+        def _step_1() -> str:
+            return "original output"
 
-        step.run("first_step", _first_step)
+        step.run("step_1", _step_1)
 
-        logger.info("between steps")
+        def _step_2() -> None:
+            pass
 
-        def _second_step() -> None:
-            logger.info("second_step")
-
-        step.run("second_step", _second_step)
-        logger.info("function end")
+        step.run("step_2", _step_2)
 
     @inngest.create_function(
         fn_id=test_name,
@@ -119,21 +121,17 @@ def create(
         run_id: str,
         **_kwargs: object,
     ) -> None:
-        logger.info("function start")
         state.run_id = run_id
 
-        def _first_step() -> None:
-            logger.info("first_step")
+        async def _step_1() -> str:
+            return "original output"
 
-        await step.run("first_step", _first_step)
+        await step.run("step_1", _step_1)
 
-        logger.info("between steps")
+        async def _step_2() -> None:
+            pass
 
-        def _second_step() -> None:
-            logger.info("second_step")
-
-        await step.run("second_step", _second_step)
-        logger.info("function end")
+        await step.run("step_2", _step_2)
 
     def run_test(self: base.TestClass) -> None:
         self.client.add_middleware(middleware)
@@ -165,6 +163,14 @@ def create(
             "transform_output",
             "before_response",
         ], state.hook_list
+
+        step_1_output = json.loads(
+            tests.helper.client.get_step_output(
+                run_id=run_id,
+                step_id="step_1",
+            )
+        )
+        assert step_1_output == "transformed output", step_1_output
 
     if is_sync:
         fn = fn_sync

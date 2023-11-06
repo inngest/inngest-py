@@ -204,7 +204,7 @@ class Function:
         call: execution.Call,
         client: client_lib.Inngest,
         fn_id: str,
-        call_input: execution.TransformableCallInput,
+        call_input: execution.TransformableInput,
         middleware: middleware_lib.MiddlewareManager,
     ) -> execution.CallResult:
         middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
@@ -216,7 +216,7 @@ class Function:
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
         transformed_input = await middleware.transform_input(
-            execution.TransformableCallInput(logger=client.logger),
+            execution.TransformableInput(logger=client.logger),
         )
         if isinstance(transformed_input, Exception):
             return execution.CallError.from_error(transformed_input)
@@ -321,7 +321,7 @@ class Function:
         call: execution.Call,
         client: client_lib.Inngest,
         fn_id: str,
-        call_input: execution.TransformableCallInput,
+        call_input: execution.TransformableInput,
         middleware: middleware_lib.MiddlewareManager,
     ) -> execution.CallResult:
         middleware = middleware_lib.MiddlewareManager.from_manager(middleware)

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import http
-import json
 import os
 import urllib.parse
 
@@ -26,17 +25,13 @@ class CommResponse:
     def __init__(
         self,
         *,
-        body: bytes | None = None,
+        body: object = None,
         headers: dict[str, str],
         status_code: int = http.HTTPStatus.OK.value,
     ) -> None:
         self.headers = headers
         self.body = body
         self.status_code = status_code
-
-    @property
-    def is_success(self) -> bool:
-        return self.status_code < 400
 
     @classmethod
     def from_call_result(
@@ -65,16 +60,8 @@ class CommResponse:
 
                 out.append(d)
 
-            body = transforms.dump_json(transforms.prep_body(out))
-            if isinstance(body, Exception):
-                return cls.from_error(
-                    logger,
-                    framework,
-                    body,
-                )
-
             return cls(
-                body=body.encode("utf-8"),
+                body=transforms.prep_body(out),
                 headers=headers,
                 status_code=http.HTTPStatus.PARTIAL_CONTENT.value,
             )
@@ -90,34 +77,18 @@ class CommResponse:
                     d,
                 )
 
-            body = transforms.dump_json(transforms.prep_body(d))
-            if isinstance(body, Exception):
-                return cls.from_error(
-                    logger,
-                    framework,
-                    body,
-                )
-
             if call_res.is_retriable is False:
                 headers[const.HeaderKey.NO_RETRY.value] = "true"
 
             return cls(
-                body=body.encode("utf-8"),
+                body=transforms.prep_body(d),
                 headers=headers,
                 status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR.value,
             )
 
         if isinstance(call_res, execution.FunctionCallResponse):
-            body = transforms.dump_json(transforms.prep_body(call_res.data))
-            if isinstance(body, Exception):
-                return cls.from_error(
-                    logger,
-                    framework,
-                    body,
-                )
-
             return cls(
-                body=body.encode("utf-8"),
+                body=call_res.data,
                 headers=headers,
             )
 
@@ -146,13 +117,11 @@ class CommResponse:
             logger.error(f"_{err!s}_")
 
         return cls(
-            body=json.dumps(
-                {
-                    "code": code,
-                    "message": str(err),
-                    "name": type(err).__name__,
-                }
-            ).encode("utf-8"),
+            body={
+                "code": code,
+                "message": str(err),
+                "name": type(err).__name__,
+            },
             headers=net.create_headers(framework=framework),
             status_code=status_code,
         )
@@ -277,7 +246,7 @@ class CommHandler:
             call,
             self._client,
             fn_id,
-            execution.TransformableCallInput(logger=self._client.logger),
+            execution.TransformableInput(logger=self._client.logger),
             middleware,
         )
 
@@ -307,7 +276,7 @@ class CommHandler:
             call,
             self._client,
             fn_id,
-            execution.TransformableCallInput(logger=self._client.logger),
+            execution.TransformableInput(logger=self._client.logger),
             middleware,
         )
 
@@ -346,13 +315,13 @@ class CommHandler:
             # Tell Dev Server to leave the app alone since it's in production
             # mode.
             return CommResponse(
-                body=json.dumps({}).encode("utf-8"),
+                body={},
                 headers={},
                 status_code=403,
             )
 
         return CommResponse(
-            body=json.dumps({}).encode("utf-8"),
+            body={},
             headers=net.create_headers(framework=self._framework),
             status_code=200,
         )
@@ -379,7 +348,7 @@ class CommHandler:
 
         if server_res.status_code < 400:
             return CommResponse(
-                body=json.dumps(server_res_body).encode("utf-8"),
+                body=server_res_body,
                 headers=net.create_headers(framework=self._framework),
                 status_code=server_res.status_code,
             )

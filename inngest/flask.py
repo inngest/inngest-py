@@ -13,7 +13,10 @@ from ._internal import (
     function,
     net,
     transforms,
+    types,
 )
+
+FRAMEWORK = const.Framework.FLASK
 
 
 def serve(
@@ -39,7 +42,7 @@ def serve(
     handler = comm.CommHandler(
         base_url=base_url or client.base_url,
         client=client,
-        framework=const.Framework.FLASK,
+        framework=FRAMEWORK,
         functions=functions,
         signing_key=signing_key,
     )
@@ -69,7 +72,10 @@ def _create_handler_async(
             server_kind = None
 
         if flask.request.method == "GET":
-            return _to_response(handler.inspect(server_kind))
+            return _to_response(
+                client.logger,
+                handler.inspect(server_kind),
+            )
 
         if flask.request.method == "POST":
             fn_id = flask.request.args.get("fnId")
@@ -77,6 +83,7 @@ def _create_handler_async(
                 raise errors.MissingParamError("fnId")
 
             return _to_response(
+                client.logger,
                 await handler.call_function(
                     call=execution.Call.from_dict(
                         json.loads(flask.request.data)
@@ -87,15 +94,16 @@ def _create_handler_async(
                         headers=headers,
                         is_production=client.is_production,
                     ),
-                )
+                ),
             )
 
         if flask.request.method == "PUT":
             return _to_response(
+                client.logger,
                 await handler.register(
                     app_url=flask.request.url,
                     server_kind=server_kind,
-                )
+                ),
             )
 
         # Should be unreachable
@@ -117,7 +125,10 @@ def _create_handler_sync(
             server_kind = None
 
         if flask.request.method == "GET":
-            return _to_response(handler.inspect(server_kind))
+            return _to_response(
+                client.logger,
+                handler.inspect(server_kind),
+            )
 
         if flask.request.method == "POST":
             fn_id = flask.request.args.get("fnId")
@@ -125,6 +136,7 @@ def _create_handler_sync(
                 raise errors.MissingParamError("fnId")
 
             return _to_response(
+                client.logger,
                 handler.call_function_sync(
                     call=execution.Call.from_dict(
                         json.loads(flask.request.data)
@@ -135,24 +147,33 @@ def _create_handler_sync(
                         headers=headers,
                         is_production=client.is_production,
                     ),
-                )
+                ),
             )
 
         if flask.request.method == "PUT":
             return _to_response(
+                client.logger,
                 handler.register_sync(
                     app_url=flask.request.url,
                     server_kind=server_kind,
-                )
+                ),
             )
 
         # Should be unreachable
         return ""
 
 
-def _to_response(comm_res: comm.CommResponse) -> flask.Response:
+def _to_response(
+    logger: types.Logger,
+    comm_res: comm.CommResponse,
+) -> flask.Response:
+    body = transforms.dump_json(comm_res.body)
+    if isinstance(body, Exception):
+        comm_res = comm.CommResponse.from_error(logger, FRAMEWORK, body)
+        body = json.dumps(comm_res.body)
+
     return flask.Response(
-        response=comm_res.body,
+        response=body.encode("utf-8"),
         headers=comm_res.headers,
         status=comm_res.status_code,
     )
