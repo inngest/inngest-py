@@ -17,7 +17,6 @@ from inngest._internal import (
     middleware_lib,
     net,
     registration,
-    result,
     transforms,
     types,
 )
@@ -214,7 +213,7 @@ class CommHandler:
     def _build_registration_request(
         self,
         app_url: str,
-    ) -> result.MaybeError[httpx.Request]:
+    ) -> types.MaybeError[httpx.Request]:
         registration_url = urllib.parse.urljoin(
             self._api_origin,
             "/fn/register",
@@ -314,7 +313,7 @@ class CommHandler:
 
         return self._respond_sync(middleware, call_res)
 
-    def _get_function(self, fn_id: str) -> result.MaybeError[function.Function]:
+    def _get_function(self, fn_id: str) -> types.MaybeError[function.Function]:
         # Look for the function ID in the list of user functions, but also
         # look for it in the list of on_failure functions.
         for _fn in self._fns.values():
@@ -328,7 +327,7 @@ class CommHandler:
     def get_function_configs(
         self,
         app_url: str,
-    ) -> result.MaybeError[list[function_config.FunctionConfig]]:
+    ) -> types.MaybeError[list[function_config.FunctionConfig]]:
         configs: list[function_config.FunctionConfig] = []
         for fn in self._fns.values():
             config = fn.get_config(app_url)
@@ -503,7 +502,7 @@ class CommHandler:
     def _validate_registration(
         self,
         server_kind: const.ServerKind | None,
-    ) -> result.MaybeError[None]:
+    ) -> types.MaybeError[None]:
         if server_kind == const.ServerKind.DEV_SERVER and self._is_production:
             return errors.DisallowedRegistrationError(
                 "Dev Server registration not allowed in production mode"

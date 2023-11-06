@@ -3,7 +3,7 @@ import hmac
 import typing
 import urllib.parse
 
-from . import const, errors, result, transforms
+from . import const, errors, transforms, types
 
 Method = typing.Literal["GET", "POST"]
 
@@ -68,7 +68,7 @@ class RequestSignature:
             if "s" in parsed:
                 self._signature = parsed["s"][0]
 
-    def validate(self, signing_key: str | None) -> result.MaybeError[None]:
+    def validate(self, signing_key: str | None) -> types.MaybeError[None]:
         if not self._is_production:
             return None
 

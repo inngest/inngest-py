@@ -5,7 +5,7 @@ import time
 
 import pydantic
 
-from inngest._internal import result, types
+from inngest._internal import types
 
 from . import dev_server, gql
 
@@ -41,8 +41,8 @@ class _Client:
         start = time.time()
         while True:
             res = self._gql.query(gql.Query(query, {"event_id": event_id}))
-            if result.is_ok(res):
-                event = res.ok_value.data.get("event")
+            if isinstance(res, gql.Response):
+                event = res.data.get("event")
                 if not isinstance(event, dict):
                     raise Exception("unexpected response")
                 runs = event.get("functionRuns")
@@ -76,8 +76,8 @@ class _Client:
         start = time.time()
         while True:
             res = self._gql.query(gql.Query(query, {"run_id": run_id}))
-            if result.is_ok(res):
-                run = res.ok_value.data.get("functionRun")
+            if isinstance(res, gql.Response):
+                run = res.data.get("functionRun")
                 if not isinstance(run, dict):
                     raise Exception("unexpected response")
                 if run["status"] == status.value:

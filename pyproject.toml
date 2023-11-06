@@ -68,7 +68,19 @@ disable = [
 exclude = [".venv"]
 
 # https://docs.astral.sh/ruff/rules
-extend-select = ['ASYNC', 'C90', 'D', 'I', 'N', 'Q', 'RUF', 'S', 'T', 'UP']
+extend-select = [
+    'ASYNC',
+    'C90',
+    'D',
+    'ERA',
+    'I',
+    'N',
+    'Q',
+    'RUF',
+    'S',
+    'T',
+    'UP',
+]
 extend-ignore = ['D202', 'D203', 'D205', 'D212']
 
 line-length = 80

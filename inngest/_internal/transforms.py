@@ -6,7 +6,7 @@ import re
 import traceback
 import typing
 
-from . import const, errors, result, types
+from . import const, errors, types
 
 
 def get_traceback(err: Exception) -> str:
@@ -25,7 +25,7 @@ def hash_step_id(step_id: str) -> str:
     return hashlib.sha1(step_id.encode("utf-8")).hexdigest()  # noqa: S324
 
 
-def dump_json(obj: object) -> result.MaybeError[str]:
+def dump_json(obj: object) -> types.MaybeError[str]:
     try:
         return json.dumps(obj)
     except Exception as err:
@@ -89,7 +89,7 @@ class _Duration:
 
 def to_duration_str(
     ms: int | datetime.timedelta,
-) -> result.MaybeError[str]:
+) -> types.MaybeError[str]:
     if isinstance(ms, datetime.timedelta):
         ms = int(ms.total_seconds() * 1000)
 

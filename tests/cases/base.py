@@ -66,7 +66,6 @@ def wait_for(
             assertion()
             return
         except Exception as err:
-            # timed_out = time.time() - start > timeout
             timed_out = datetime.datetime.now() > start + timeout
             if timed_out:
                 raise err

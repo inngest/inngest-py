@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 import typing
 
-from inngest._internal import client_lib, errors, execution, result, transforms
+from inngest._internal import client_lib, errors, execution, transforms, types
 
 from .log import LoggerMiddleware
 from .middleware import Middleware, MiddlewareSync
@@ -61,7 +61,7 @@ class MiddlewareManager:
     def add(self, middleware: type[Middleware | MiddlewareSync]) -> None:
         self._middleware = [*self._middleware, middleware(self.client)]
 
-    async def after_execution(self) -> result.MaybeError[None]:
+    async def after_execution(self) -> types.MaybeError[None]:
         try:
             for m in self._middleware:
                 await transforms.maybe_await(m.after_execution())
@@ -69,7 +69,7 @@ class MiddlewareManager:
         except Exception as err:
             return err
 
-    def after_execution_sync(self) -> result.MaybeError[None]:
+    def after_execution_sync(self) -> types.MaybeError[None]:
         try:
             for m in self._middleware:
                 if inspect.iscoroutinefunction(m.after_execution):
@@ -79,7 +79,7 @@ class MiddlewareManager:
         except Exception as err:
             return err
 
-    async def before_execution(self) -> result.MaybeError[None]:
+    async def before_execution(self) -> types.MaybeError[None]:
         hook = "before_execution"
         if hook in self._disabled_hooks:
             # Only allow before_execution to be called once. This simplifies
@@ -95,7 +95,7 @@ class MiddlewareManager:
         except Exception as err:
             return err
 
-    def before_execution_sync(self) -> result.MaybeError[None]:
+    def before_execution_sync(self) -> types.MaybeError[None]:
         hook = "before_execution"
         if hook in self._disabled_hooks:
             # Only allow before_execution to be called once. This simplifies
@@ -113,7 +113,7 @@ class MiddlewareManager:
         except Exception as err:
             return err
 
-    async def before_response(self) -> result.MaybeError[None]:
+    async def before_response(self) -> types.MaybeError[None]:
         try:
             for m in self._middleware:
                 await transforms.maybe_await(m.before_response())
@@ -121,7 +121,7 @@ class MiddlewareManager:
         except Exception as err:
             return err
 
-    def before_response_sync(self) -> result.MaybeError[None]:
+    def before_response_sync(self) -> types.MaybeError[None]:
         try:
             for m in self._middleware:
                 if inspect.iscoroutinefunction(m.before_response):
@@ -134,7 +134,7 @@ class MiddlewareManager:
     async def transform_input(
         self,
         call_input: execution.TransformableCallInput,
-    ) -> result.MaybeError[execution.TransformableCallInput]:
+    ) -> types.MaybeError[execution.TransformableCallInput]:
         try:
             for m in self._middleware:
                 call_input = await transforms.maybe_await(
@@ -147,7 +147,7 @@ class MiddlewareManager:
     def transform_input_sync(
         self,
         call_input: execution.TransformableCallInput,
-    ) -> result.MaybeError[execution.TransformableCallInput]:
+    ) -> types.MaybeError[execution.TransformableCallInput]:
         try:
             for m in self._middleware:
                 if isinstance(m, Middleware):
@@ -160,7 +160,7 @@ class MiddlewareManager:
     async def transform_output(
         self,
         output: object,
-    ) -> result.MaybeError[object]:
+    ) -> types.MaybeError[object]:
         try:
             for m in self._middleware:
                 output = await transforms.maybe_await(
@@ -173,7 +173,7 @@ class MiddlewareManager:
     def transform_output_sync(
         self,
         output: object,
-    ) -> result.MaybeError[object]:
+    ) -> types.MaybeError[object]:
         try:
             for m in self._middleware:
                 if isinstance(m, Middleware):

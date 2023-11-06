@@ -8,7 +8,7 @@ import urllib.parse
 
 import httpx
 
-from . import const, env, errors, event_lib, net, result, types
+from . import const, env, errors, event_lib, net, types
 
 if typing.TYPE_CHECKING:
     from . import middleware_lib
@@ -60,7 +60,7 @@ class Inngest:
     def _build_send_request(
         self,
         events: list[event_lib.Event],
-    ) -> result.MaybeError[httpx.Request]:
+    ) -> types.MaybeError[httpx.Request]:
         url = urllib.parse.urljoin(self._event_origin, f"/e/{self._event_key}")
         headers = net.create_headers()
 
