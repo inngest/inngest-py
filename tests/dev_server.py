@@ -70,7 +70,7 @@ class _DevServer:
         print("Waiting for Dev Server to start")
         start_time = time.time()
         while True:
-            if time.time() - start_time > 20:
+            if time.time() - start_time > 30:
                 raise Exception("timeout waiting for dev server to start")
 
             try:
