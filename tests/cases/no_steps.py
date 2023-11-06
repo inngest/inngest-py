@@ -1,3 +1,5 @@
+import json
+
 import inngest
 import tests.helper
 
@@ -19,24 +21,29 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(*, run_id: str, **_kwargs: object) -> None:
+    def fn_sync(*, run_id: str, **_kwargs: object) -> dict[str, object]:
         state.run_id = run_id
+        return {"foo": {"bar": 1}}
 
     @inngest.create_function(
         fn_id=test_name,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(*, run_id: str, **_kwargs: object) -> None:
+    async def fn_async(*, run_id: str, **_kwargs: object) -> dict[str, object]:
         state.run_id = run_id
+        return {"foo": {"bar": 1}}
 
     def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
         run_id = state.wait_for_run_id()
-        tests.helper.client.wait_for_run_status(
+        run = tests.helper.client.wait_for_run_status(
             run_id,
             tests.helper.RunStatus.COMPLETED,
         )
+        assert run.output is not None
+        output = json.loads(run.output)
+        assert output == {"foo": {"bar": 1}}, output
 
     if is_sync:
         fn = fn_sync

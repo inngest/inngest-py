@@ -16,7 +16,6 @@ from inngest._internal import (
     function_config,
     middleware_lib,
     step_lib,
-    transforms,
     types,
 )
 
@@ -386,11 +385,7 @@ class Function:
             if isinstance(output, Exception):
                 return execution.CallError.from_error(output)
 
-            output_str = transforms.dump_json(output)
-            if isinstance(output_str, Exception):
-                return execution.CallError.from_error(output_str)
-
-            return execution.FunctionCallResponse(data=output_str)
+            return execution.FunctionCallResponse(data=output)
         except step_lib.Interrupt as interrupt:
             err = middleware.after_execution_sync()
             if isinstance(err, Exception):

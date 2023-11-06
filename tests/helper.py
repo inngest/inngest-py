@@ -21,6 +21,82 @@ class _Client:
     def __init__(self) -> None:
         self._gql = gql.Client(f"http://localhost:{dev_server.PORT}/v0/gql")
 
+    def _get_history(
+        self,
+        run_id: str,
+    ) -> list[object]:
+        query = """
+        query GetHistory($run_id: ID!) {
+            functionRun(query: { functionRunId: $run_id }) {
+                history {
+                    id
+                    stepName
+                }
+            }
+        }
+        """
+        res = self._gql.query(gql.Query(query, {"run_id": run_id}))
+        if isinstance(res, gql.Error):
+            raise Exception(res.message)
+
+        run = res.data["functionRun"]
+        if not isinstance(run, dict):
+            raise Exception("unexpected response")
+
+        history = run["history"]
+        if not isinstance(history, list):
+            raise Exception("unexpected response")
+
+        return history
+
+    def get_step_output(
+        self,
+        *,
+        run_id: str,
+        step_id: str,
+    ) -> str:
+        history = self._get_history(run_id)
+        if not isinstance(history, list):
+            raise Exception("unexpected response")
+
+        history_item_id: str | None = None
+        for step in history:
+            if not isinstance(step, dict):
+                raise Exception("unexpected response")
+            if step["stepName"] == step_id:
+                history_item_id = step["id"]
+                break
+        if not history_item_id:
+            raise Exception("step not found in history")
+
+        query = """
+        query GetHistory($history_item_id: ULID!, $run_id: ID!) {
+            functionRun(query: { functionRunId: $run_id }) {
+                historyItemOutput(id: $history_item_id)
+            }
+        }
+        """
+        res = self._gql.query(
+            gql.Query(
+                query,
+                {
+                    "history_item_id": history_item_id,
+                    "run_id": run_id,
+                },
+            )
+        )
+        if isinstance(res, gql.Error):
+            raise Exception(res.message)
+
+        run = res.data["functionRun"]
+        if not isinstance(run, dict):
+            raise Exception("unexpected response")
+
+        output = run["historyItemOutput"]
+        if not isinstance(output, str):
+            raise Exception("unexpected response")
+        return output
+
     def get_run_ids_from_event_id(
         self,
         event_id: str,

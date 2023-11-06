@@ -1,3 +1,5 @@
+import json
+
 import inngest
 import tests.helper
 
@@ -32,9 +34,9 @@ def create(
     ) -> None:
         state.run_id = run_id
 
-        def step_1() -> str:
+        def step_1() -> list[dict[str, object]]:
             state.step_1_counter += 1
-            return "hi"
+            return [{"foo": {"bar": 1}}]
 
         step.run("step_1", step_1)
 
@@ -56,9 +58,9 @@ def create(
     ) -> None:
         state.run_id = run_id
 
-        async def step_1() -> str:
+        async def step_1() -> list[dict[str, object]]:
             state.step_1_counter += 1
-            return "hi"
+            return [{"foo": {"bar": 1}}]
 
         await step.run("step_1", step_1)
 
@@ -81,6 +83,15 @@ def create(
         assert (
             state.step_2_counter == 1
         ), f"step_2_counter: {state.step_2_counter}"
+
+        step_1_output = json.loads(
+            tests.helper.client.get_step_output(
+                run_id=run_id,
+                step_id="step_1",
+            )
+        )
+
+        assert step_1_output == [{"foo": {"bar": 1}}], step_1_output
 
     if is_sync:
         fn = fn_sync
