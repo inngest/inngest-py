@@ -30,7 +30,7 @@ class _Config:
 
 
 @typing.runtime_checkable
-class FunctionHandlerAsync(typing.Protocol):
+class _FunctionHandlerAsync(typing.Protocol):
     def __call__(
         self,
         *,
@@ -45,7 +45,7 @@ class FunctionHandlerAsync(typing.Protocol):
 
 
 @typing.runtime_checkable
-class FunctionHandlerSync(typing.Protocol):
+class _FunctionHandlerSync(typing.Protocol):
     def __call__(
         self,
         *,
@@ -60,18 +60,18 @@ class FunctionHandlerSync(typing.Protocol):
 
 
 def _is_function_handler_async(
-    value: FunctionHandlerAsync | FunctionHandlerSync,
-) -> typing.TypeGuard[FunctionHandlerAsync]:
+    value: _FunctionHandlerAsync | _FunctionHandlerSync,
+) -> typing.TypeGuard[_FunctionHandlerAsync]:
     return inspect.iscoroutinefunction(value)
 
 
 def _is_function_handler_sync(
-    value: FunctionHandlerAsync | FunctionHandlerSync,
-) -> typing.TypeGuard[FunctionHandlerSync]:
+    value: _FunctionHandlerAsync | _FunctionHandlerSync,
+) -> typing.TypeGuard[_FunctionHandlerSync]:
     return not inspect.iscoroutinefunction(value)
 
 
-class FunctionOpts(types.BaseModel):
+class _FunctionOpts(types.BaseModel):
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
     batch_events: function_config.Batch | None = None
@@ -79,7 +79,7 @@ class FunctionOpts(types.BaseModel):
     debounce: function_config.Debounce | None = None
     id: str
     name: str | None = None
-    on_failure: FunctionHandlerAsync | FunctionHandlerSync | None = None
+    on_failure: _FunctionHandlerAsync | _FunctionHandlerSync | None = None
     rate_limit: function_config.RateLimit | None = None
     retries: int | None = None
     throttle: function_config.Throttle | None = None
@@ -102,12 +102,12 @@ def create_function(
     ]
     | None = None,
     name: str | None = None,
-    on_failure: FunctionHandlerAsync | FunctionHandlerSync | None = None,
+    on_failure: _FunctionHandlerAsync | _FunctionHandlerSync | None = None,
     rate_limit: function_config.RateLimit | None = None,
     retries: int | None = None,
     throttle: function_config.Throttle | None = None,
     trigger: function_config.TriggerCron | function_config.TriggerEvent,
-) -> typing.Callable[[FunctionHandlerAsync | FunctionHandlerSync], Function]:
+) -> typing.Callable[[_FunctionHandlerAsync | _FunctionHandlerSync], Function]:
     """
     Create an Inngest function.
 
@@ -127,9 +127,11 @@ def create_function(
         trigger: What should trigger runs of this function.
     """
 
-    def decorator(func: FunctionHandlerAsync | FunctionHandlerSync) -> Function:
+    def decorator(
+        func: _FunctionHandlerAsync | _FunctionHandlerSync
+    ) -> Function:
         return Function(
-            FunctionOpts(
+            _FunctionOpts(
                 batch_events=batch_events,
                 cancel=cancel,
                 debounce=debounce,
@@ -149,9 +151,9 @@ def create_function(
 
 
 class Function:
-    _handler: FunctionHandlerAsync | FunctionHandlerSync
+    _handler: _FunctionHandlerAsync | _FunctionHandlerSync
     _on_failure_fn_id: str | None = None
-    _opts: FunctionOpts
+    _opts: _FunctionOpts
     _trigger: function_config.TriggerCron | function_config.TriggerEvent
 
     @property
@@ -179,9 +181,9 @@ class Function:
 
     def __init__(
         self,
-        opts: FunctionOpts,
+        opts: _FunctionOpts,
         trigger: function_config.TriggerCron | function_config.TriggerEvent,
-        handler: FunctionHandlerAsync | FunctionHandlerSync,
+        handler: _FunctionHandlerAsync | _FunctionHandlerSync,
         middleware: list[
             type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]
         ]
@@ -229,7 +231,7 @@ class Function:
                 return execution.CallError.from_error(err)
 
         try:
-            handler: FunctionHandlerAsync | FunctionHandlerSync
+            handler: _FunctionHandlerAsync | _FunctionHandlerSync
             if self.id == fn_id:
                 handler = self._handler
             elif self.on_failure_fn_id == fn_id:
@@ -277,7 +279,8 @@ class Function:
                     ),
                 )
             else:
-                # Should be unreachable.
+                # Should be unreachable but Python's custom type guards don't
+                # support negative checks :(
                 return execution.CallError.from_error(
                     errors.UnknownError(
                         "unable to determine function handler type"
@@ -342,7 +345,7 @@ class Function:
             middleware.before_execution_sync()
 
         try:
-            handler: FunctionHandlerAsync | FunctionHandlerSync
+            handler: _FunctionHandlerAsync | _FunctionHandlerSync
             if self.id == fn_id:
                 handler = self._handler
             elif self.on_failure_fn_id == fn_id:

@@ -23,10 +23,6 @@ def _equals(key: EnvKey, value: str) -> _EnvCheck:
     return _EnvCheck(expected=value, key=key, operator="equals")
 
 
-def _is_truthy(key: EnvKey) -> _EnvCheck:
-    return _EnvCheck(expected=None, key=key, operator="is_truthy")
-
-
 def _starts_with(key: EnvKey, value: str) -> _EnvCheck:
     return _EnvCheck(expected=value, key=key, operator="starts_with")
 

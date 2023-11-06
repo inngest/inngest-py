@@ -21,7 +21,6 @@ class ErrorCode(enum.Enum):
     INVALID_BODY = "invalid_body"
     INVALID_FUNCTION_CONFIG = "invalid_function_config"
     INVALID_REQUEST_SIGNATURE = "invalid_request_signature"
-    INVALID_TRANSFORM = "invalid_transform"
     MISMATCHED_SYNC = "mismatched_sync"
     MISSING_EVENT_KEY = "missing_event_key"
     MISSING_FUNCTION = "missing_function"
