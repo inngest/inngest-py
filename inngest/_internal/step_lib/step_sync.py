@@ -77,11 +77,11 @@ class StepSync(base.StepBase):
             duration: The number of milliseconds to sleep.
         """
         if isinstance(duration, int):
-            until = datetime.datetime.utcnow() + datetime.timedelta(
+            until = datetime.datetime.now() + datetime.timedelta(
                 milliseconds=duration
             )
         else:
-            until = datetime.datetime.utcnow() + duration
+            until = datetime.datetime.now() + duration
 
         return self.sleep_until(step_id, until)
 
