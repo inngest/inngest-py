@@ -41,7 +41,7 @@ class Step(base.StepBase):
         """
         hashed_id = self._get_hashed_id(step_id)
 
-        memo = await self.get_memo(hashed_id)
+        memo = await self._get_memo(hashed_id)
         if memo is not types.EmptySentinel:
             return memo  # type: ignore
 
@@ -49,12 +49,14 @@ class Step(base.StepBase):
         if isinstance(err, Exception):
             raise err
 
-        raise base.Interrupt(
-            hashed_id=hashed_id,
-            data=await transforms.maybe_await(handler()),
-            display_name=step_id,
-            op=execution.Opcode.STEP,
-            name=step_id,
+        raise base.ResponseInterrupt(
+            execution.StepResponse(
+                data=await transforms.maybe_await(handler()),
+                display_name=step_id,
+                id=hashed_id,
+                name=step_id,
+                op=execution.Opcode.STEP,
+            ),
         )
 
     async def send_event(
@@ -119,7 +121,7 @@ class Step(base.StepBase):
         """
         hashed_id = self._get_hashed_id(step_id)
 
-        memo = await self.get_memo(hashed_id)
+        memo = await self._get_memo(hashed_id)
         if memo is not types.EmptySentinel:
             return memo  # type: ignore
 
@@ -127,11 +129,14 @@ class Step(base.StepBase):
         if isinstance(err, Exception):
             raise err
 
-        raise base.Interrupt(
-            hashed_id=hashed_id,
-            display_name=step_id,
-            name=transforms.to_iso_utc(until),
-            op=execution.Opcode.SLEEP,
+        raise base.ResponseInterrupt(
+            execution.StepResponse(
+                data=None,
+                display_name=step_id,
+                id=hashed_id,
+                name=transforms.to_iso_utc(until),
+                op=execution.Opcode.SLEEP,
+            )
         )
 
     async def wait_for_event(
@@ -156,7 +161,7 @@ class Step(base.StepBase):
         """
         hashed_id = self._get_hashed_id(step_id)
 
-        memo = await self.get_memo(hashed_id)
+        memo = await self._get_memo(hashed_id)
         if memo is not types.EmptySentinel:
             if memo is None:
                 # Timeout
@@ -180,10 +185,13 @@ class Step(base.StepBase):
         if isinstance(opts, Exception):
             raise opts
 
-        raise base.Interrupt(
-            hashed_id=hashed_id,
-            display_name=step_id,
-            name=event,
-            op=execution.Opcode.WAIT_FOR_EVENT,
-            opts=opts,
+        raise base.ResponseInterrupt(
+            execution.StepResponse(
+                id=hashed_id,
+                data=None,
+                display_name=step_id,
+                name=event,
+                op=execution.Opcode.WAIT_FOR_EVENT,
+                opts=opts,
+            )
         )

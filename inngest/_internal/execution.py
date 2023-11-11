@@ -62,7 +62,7 @@ class FunctionCallResponse(types.BaseModel):
     data: object
 
 
-class StepCallResponse(types.BaseModel):
+class StepResponse(types.BaseModel):
     """When a step successfully returns."""
 
     data: object
@@ -75,14 +75,14 @@ class StepCallResponse(types.BaseModel):
 
 def is_step_call_responses(
     value: object,
-) -> typing.TypeGuard[list[StepCallResponse]]:
+) -> typing.TypeGuard[list[StepResponse]]:
     if not isinstance(value, list):
         return False
-    return all(isinstance(item, StepCallResponse) for item in value)
+    return all(isinstance(item, StepResponse) for item in value)
 
 
 CallResult: typing.TypeAlias = (
-    list[StepCallResponse] | FunctionCallResponse | CallError
+    list[StepResponse] | FunctionCallResponse | CallError
 )
 
 

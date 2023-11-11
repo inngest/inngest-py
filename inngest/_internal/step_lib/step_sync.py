@@ -24,7 +24,7 @@ class StepSync(base.StepBase):
         """
         hashed_id = self._get_hashed_id(step_id)
 
-        memo = self.get_memo_sync(hashed_id)
+        memo = self._get_memo_sync(hashed_id)
         if memo is not types.EmptySentinel:
             return memo  # type: ignore
 
@@ -32,12 +32,14 @@ class StepSync(base.StepBase):
         if isinstance(err, Exception):
             raise err
 
-        raise base.Interrupt(
-            hashed_id=hashed_id,
-            data=handler(),
-            display_name=step_id,
-            op=execution.Opcode.STEP,
-            name=step_id,
+        raise base.ResponseInterrupt(
+            execution.StepResponse(
+                data=handler(),
+                display_name=step_id,
+                id=hashed_id,
+                name=step_id,
+                op=execution.Opcode.STEP,
+            )
         )
 
     def send_event(
@@ -102,7 +104,7 @@ class StepSync(base.StepBase):
         """
         hashed_id = self._get_hashed_id(step_id)
 
-        memo = self.get_memo_sync(hashed_id)
+        memo = self._get_memo_sync(hashed_id)
         if memo is not types.EmptySentinel:
             return memo  # type: ignore
 
@@ -110,11 +112,14 @@ class StepSync(base.StepBase):
         if isinstance(err, Exception):
             raise err
 
-        raise base.Interrupt(
-            hashed_id=hashed_id,
-            display_name=step_id,
-            name=transforms.to_iso_utc(until),
-            op=execution.Opcode.SLEEP,
+        raise base.ResponseInterrupt(
+            execution.StepResponse(
+                data=None,
+                display_name=step_id,
+                id=hashed_id,
+                name=transforms.to_iso_utc(until),
+                op=execution.Opcode.SLEEP,
+            )
         )
 
     def wait_for_event(
@@ -139,7 +144,7 @@ class StepSync(base.StepBase):
         """
         hashed_id = self._get_hashed_id(step_id)
 
-        memo = self.get_memo_sync(hashed_id)
+        memo = self._get_memo_sync(hashed_id)
         if memo is not types.EmptySentinel:
             if memo is None:
                 # Timeout
@@ -163,10 +168,13 @@ class StepSync(base.StepBase):
         if isinstance(opts, Exception):
             raise opts
 
-        raise base.Interrupt(
-            hashed_id=hashed_id,
-            display_name=step_id,
-            name=event,
-            op=execution.Opcode.WAIT_FOR_EVENT,
-            opts=opts,
+        raise base.ResponseInterrupt(
+            execution.StepResponse(
+                data=None,
+                display_name=step_id,
+                id=hashed_id,
+                name=event,
+                op=execution.Opcode.WAIT_FOR_EVENT,
+                opts=opts,
+            )
         )
