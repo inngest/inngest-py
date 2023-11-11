@@ -45,7 +45,7 @@ def create(
             state.step_1b_counter += 1
             return 2
 
-        return step._parallel(
+        return step._experimental_parallel(
             (
                 lambda: step.run("1a", _step_1a),
                 lambda: step.run("1b", _step_1b),
@@ -77,7 +77,7 @@ def create(
             state.step_1b_counter += 1
             return 2
 
-        return await step._parallel(
+        return await step._experimental_parallel(
             (
                 lambda: step.run("1a", _step_1a),
                 lambda: step.run("1b", _step_1b),

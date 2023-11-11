@@ -201,7 +201,7 @@ class Function:
 
             self._on_failure_fn_id = f"{opts.id}-{suffix}"
 
-    async def call(
+    async def call(  # noqa: C901
         self,
         call: execution.Call,
         client: client_lib.Inngest,
@@ -305,7 +305,14 @@ class Function:
             if isinstance(err, Exception):
                 return execution.CallError.from_error(err)
 
-            # TODO: Transform output
+            # TODO: How should transform_output work with multiple responses?
+            if len(interrupt.responses) == 1:
+                output = await middleware.transform_output(
+                    interrupt.responses[0].data
+                )
+                if isinstance(output, Exception):
+                    return execution.CallError.from_error(output)
+                interrupt.responses[0].data = output
 
             return interrupt.responses
         except Exception as err:
@@ -388,7 +395,14 @@ class Function:
             if isinstance(err, Exception):
                 return execution.CallError.from_error(err)
 
-            # TODO: Transform output
+            # TODO: How should transform_output work with multiple responses?
+            if len(interrupt.responses) == 1:
+                output = middleware.transform_output_sync(
+                    interrupt.responses[0].data
+                )
+                if isinstance(output, Exception):
+                    return execution.CallError.from_error(output)
+                interrupt.responses[0].data = output
 
             return interrupt.responses
         except Exception as err:

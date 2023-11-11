@@ -7,7 +7,7 @@ from . import base
 
 
 class StepSync(base.StepBase):
-    def _parallel(
+    def _experimental_parallel(
         self,
         callables: tuple[typing.Callable[[], types.T], ...],
     ) -> tuple[types.T | None, ...]:
