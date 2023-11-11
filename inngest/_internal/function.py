@@ -201,13 +201,14 @@ class Function:
 
             self._on_failure_fn_id = f"{opts.id}-{suffix}"
 
-    async def call(
+    async def call(  # noqa: C901
         self,
         call: execution.Call,
         client: client_lib.Inngest,
         fn_id: str,
         call_input: execution.TransformableInput,
         middleware: middleware_lib.MiddlewareManager,
+        target_hashed_id: str | None,
     ) -> execution.CallResult:
         middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
         for m in self._middleware:
@@ -262,6 +263,7 @@ class Function:
                         memos,
                         middleware,
                         step_lib.StepIDCounter(),
+                        target_hashed_id,
                     ),
                 )
             elif _is_function_handler_sync(handler):
@@ -276,6 +278,7 @@ class Function:
                         memos,
                         middleware,
                         step_lib.StepIDCounter(),
+                        target_hashed_id,
                     ),
                 )
             else:
@@ -302,12 +305,16 @@ class Function:
             if isinstance(err, Exception):
                 return execution.CallError.from_error(err)
 
-            output = await middleware.transform_output(interrupt.response.data)
-            if isinstance(output, Exception):
-                return execution.CallError.from_error(output)
-            interrupt.response.data = output
+            # TODO: How should transform_output work with multiple responses?
+            if len(interrupt.responses) == 1:
+                output = await middleware.transform_output(
+                    interrupt.responses[0].data
+                )
+                if isinstance(output, Exception):
+                    return execution.CallError.from_error(output)
+                interrupt.responses[0].data = output
 
-            return [interrupt.response]
+            return interrupt.responses
         except Exception as err:
             return execution.CallError.from_error(err)
 
@@ -318,6 +325,7 @@ class Function:
         fn_id: str,
         call_input: execution.TransformableInput,
         middleware: middleware_lib.MiddlewareManager,
+        target_hashed_id: str | None,
     ) -> execution.CallResult:
         middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
         for m in self._middleware:
@@ -363,6 +371,7 @@ class Function:
                         memos,
                         middleware,
                         step_lib.StepIDCounter(),
+                        target_hashed_id,
                     ),
                 )
             else:
@@ -386,12 +395,16 @@ class Function:
             if isinstance(err, Exception):
                 return execution.CallError.from_error(err)
 
-            output = middleware.transform_output_sync(interrupt.response.data)
-            if isinstance(output, Exception):
-                return execution.CallError.from_error(output)
-            interrupt.response.data = output
+            # TODO: How should transform_output work with multiple responses?
+            if len(interrupt.responses) == 1:
+                output = middleware.transform_output_sync(
+                    interrupt.responses[0].data
+                )
+                if isinstance(output, Exception):
+                    return execution.CallError.from_error(output)
+                interrupt.responses[0].data = output
 
-            return [interrupt.response]
+            return interrupt.responses
         except Exception as err:
             return execution.CallError.from_error(err)
 

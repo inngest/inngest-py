@@ -62,6 +62,7 @@ def serve(
     @app.post("/api/inngest")
     async def post_inngest_api(
         fnId: str,  # noqa: N803
+        stepId: str,  # noqa: N803
         request: fastapi.Request,
     ) -> fastapi.Response:
         body = await request.body()
@@ -77,6 +78,7 @@ def serve(
                     headers=headers,
                     is_production=client.is_production,
                 ),
+                target_hashed_id=stepId,
             ),
         )
 

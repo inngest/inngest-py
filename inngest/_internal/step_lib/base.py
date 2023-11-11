@@ -42,11 +42,14 @@ class StepBase:
         memos: StepMemos,
         middleware: middleware_lib.MiddlewareManager,
         step_id_counter: StepIDCounter,
+        target_hashed_id: str | None,
     ) -> None:
         self._client = client
+        self._inside_parallel = False
         self._memos = memos
         self._middleware = middleware
         self._step_id_counter = step_id_counter
+        self._target_hashed_id = target_hashed_id
 
     def _get_hashed_id(self, step_id: str) -> str:
         id_count = self._step_id_counter.increment(step_id)
@@ -71,6 +74,15 @@ class StepBase:
             self._middleware.before_execution_sync()
 
         return memo
+
+    def _handle_targeting(self, *, hashed_id: str, step_id: str) -> None:
+        is_targeting_enabled = self._target_hashed_id is not None
+        if not is_targeting_enabled:
+            return
+
+        is_targeted = self._target_hashed_id == hashed_id
+        if not is_targeted:
+            raise SkipInterrupt()
 
 
 class StepIDCounter:
@@ -101,9 +113,15 @@ class ResponseInterrupt(BaseException):
 
     def __init__(
         self,
-        response: execution.StepResponse,
+        responses: execution.StepResponse | list[execution.StepResponse],
     ) -> None:
-        self.response = response
+        if not isinstance(responses, list):
+            responses = [responses]
+        self.responses = responses
+
+
+class SkipInterrupt(BaseException):
+    pass
 
 
 class WaitForEventOpts(types.BaseModel):

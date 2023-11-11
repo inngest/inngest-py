@@ -77,10 +77,24 @@ def serve(
 
         def post(self) -> None:
             fn_id: str | None
-            raw_fn_id = self.request.query_arguments.get("fnId")
+            raw_fn_id = self.request.query_arguments.get(
+                const.QueryParamKey.FUNCTION_ID.value
+            )
             if raw_fn_id is None or len(raw_fn_id) == 0:
-                raise errors.MissingParamError("fnId")
+                raise errors.MissingParamError(
+                    const.QueryParamKey.FUNCTION_ID.value
+                )
             fn_id = raw_fn_id[0].decode("utf-8")
+
+            step_id: str | None
+            raw_step_id = self.request.query_arguments.get(
+                const.QueryParamKey.FUNCTION_ID.value
+            )
+            if raw_step_id is None or len(raw_step_id) == 0:
+                raise errors.MissingParamError(
+                    const.QueryParamKey.FUNCTION_ID.value
+                )
+            step_id = raw_step_id[0].decode("utf-8")
 
             headers = net.normalize_headers(dict(self.request.headers.items()))
 
@@ -92,6 +106,7 @@ def serve(
                     headers=headers,
                     is_production=client.is_production,
                 ),
+                target_hashed_id=step_id,
             )
 
             body = transforms.dump_json(comm_res.body)

@@ -78,9 +78,19 @@ def _create_handler_async(
             )
 
         if flask.request.method == "POST":
-            fn_id = flask.request.args.get("fnId")
+            fn_id = flask.request.args.get(
+                const.QueryParamKey.FUNCTION_ID.value
+            )
             if fn_id is None:
-                raise errors.MissingParamError("fnId")
+                raise errors.MissingParamError(
+                    const.QueryParamKey.FUNCTION_ID.value
+                )
+
+            step_id = flask.request.args.get(const.QueryParamKey.STEP_ID.value)
+            if step_id is None:
+                raise errors.MissingParamError(
+                    const.QueryParamKey.STEP_ID.value
+                )
 
             return _to_response(
                 client.logger,
@@ -94,6 +104,7 @@ def _create_handler_async(
                         headers=headers,
                         is_production=client.is_production,
                     ),
+                    target_hashed_id=step_id,
                 ),
             )
 
@@ -131,9 +142,19 @@ def _create_handler_sync(
             )
 
         if flask.request.method == "POST":
-            fn_id = flask.request.args.get("fnId")
+            fn_id = flask.request.args.get(
+                const.QueryParamKey.FUNCTION_ID.value
+            )
             if fn_id is None:
-                raise errors.MissingParamError("fnId")
+                raise errors.MissingParamError(
+                    const.QueryParamKey.FUNCTION_ID.value
+                )
+
+            step_id = flask.request.args.get(const.QueryParamKey.STEP_ID.value)
+            if step_id is None:
+                raise errors.MissingParamError(
+                    const.QueryParamKey.STEP_ID.value
+                )
 
             return _to_response(
                 client.logger,
@@ -147,6 +168,7 @@ def _create_handler_sync(
                         headers=headers,
                         is_production=client.is_production,
                     ),
+                    target_hashed_id=step_id,
                 ),
             )
 

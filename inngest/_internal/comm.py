@@ -228,8 +228,15 @@ class CommHandler:
         call: execution.Call,
         fn_id: str,
         req_sig: net.RequestSignature,
+        target_hashed_id: str,
     ) -> CommResponse:
         """Handle a function call from the Executor."""
+
+        if target_hashed_id == execution.UNSPECIFIED_STEP_ID:
+            target_step_id = None
+        else:
+            target_step_id = target_hashed_id
+
         middleware = middleware_lib.MiddlewareManager.from_client(self._client)
 
         # Validate the request signature.
@@ -248,6 +255,7 @@ class CommHandler:
             fn_id,
             execution.TransformableInput(logger=self._client.logger),
             middleware,
+            target_step_id,
         )
 
         return await self._respond(middleware, call_res)
@@ -258,8 +266,15 @@ class CommHandler:
         call: execution.Call,
         fn_id: str,
         req_sig: net.RequestSignature,
+        target_hashed_id: str,
     ) -> CommResponse:
         """Handle a function call from the Executor."""
+
+        if target_hashed_id == execution.UNSPECIFIED_STEP_ID:
+            target_step_id = None
+        else:
+            target_step_id = target_hashed_id
+
         middleware = middleware_lib.MiddlewareManager.from_client(self._client)
 
         # Validate the request signature.
@@ -278,6 +293,7 @@ class CommHandler:
             fn_id,
             execution.TransformableInput(logger=self._client.logger),
             middleware,
+            target_step_id,
         )
 
         return self._respond_sync(middleware, call_res)
