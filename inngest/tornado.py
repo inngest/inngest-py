@@ -88,11 +88,11 @@ def serve(
 
             step_id: str | None
             raw_step_id = self.request.query_arguments.get(
-                const.QueryParamKey.FUNCTION_ID.value
+                const.QueryParamKey.STEP_ID.value
             )
             if raw_step_id is None or len(raw_step_id) == 0:
                 raise errors.MissingParamError(
-                    const.QueryParamKey.FUNCTION_ID.value
+                    const.QueryParamKey.STEP_ID.value
                 )
             step_id = raw_step_id[0].decode("utf-8")
 
