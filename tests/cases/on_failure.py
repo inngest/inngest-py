@@ -1,3 +1,6 @@
+import json
+import unittest.mock
+
 import inngest
 import tests.helper
 
@@ -20,6 +23,10 @@ class _State(base.BaseState):
         base.wait_for(assertion)
         assert self.on_failure_run_id is not None
         return self.on_failure_run_id
+
+
+class MyError(Exception):
+    pass
 
 
 def create(
@@ -73,7 +80,7 @@ def create(
         **_kwargs: object,
     ) -> None:
         state.run_id = run_id
-        raise Exception("intentional failure")
+        raise MyError("intentional failure")
 
     @inngest.create_function(
         fn_id=test_name,
@@ -88,16 +95,29 @@ def create(
         **_kwargs: object,
     ) -> None:
         state.run_id = run_id
-        raise Exception("intentional failure")
+        raise MyError("intentional failure")
 
     def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
 
         run_id = state.wait_for_run_id()
-        tests.helper.client.wait_for_run_status(
+        run = tests.helper.client.wait_for_run_status(
             run_id,
             tests.helper.RunStatus.FAILED,
         )
+
+        assert run.output is not None
+        output = json.loads(run.output)
+        assert output == {
+            "isInternal": False,
+            "isRetriable": True,
+            "message": "intentional failure",
+            "name": "MyError",
+            "stack": unittest.mock.ANY,
+        }, output
+        stack = output["stack"]
+        assert isinstance(stack, str)
+        assert stack.startswith("Traceback (most recent call last):")
 
         run_id = state.wait_for_on_failure_run_id()
         tests.helper.client.wait_for_run_status(
