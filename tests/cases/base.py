@@ -55,17 +55,6 @@ def create_test_name(
     return test_name
 
 
-def dump_event(event: inngest.Event | None) -> inngest.Serializable:
-    if not isinstance(event, inngest.Event):
-        return None
-
-    d = event.to_dict()
-    if isinstance(d, Exception):
-        raise d
-
-    return d
-
-
 def wait_for(
     assertion: typing.Callable[[], None],
     *,

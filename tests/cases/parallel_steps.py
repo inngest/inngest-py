@@ -1,4 +1,3 @@
-import datetime
 import json
 import unittest.mock
 
@@ -46,7 +45,7 @@ def create(
             state.step_1b_counter += 1
             return 2
 
-        res = step.parallel(
+        return step._parallel(
             (
                 lambda: step.run("1a", _step_1a),
                 lambda: step.run("1b", _step_1b),
@@ -54,11 +53,6 @@ def create(
                     "send", events=inngest.Event(name="noop")
                 ),
             )
-        )
-
-        return tuple(
-            item if not isinstance(item, inngest.Event) else None
-            for item in res
         )
 
     @inngest.create_function(
@@ -71,7 +65,7 @@ def create(
         run_id: str,
         step: inngest.Step,
         **_kwargs: object,
-    ) -> tuple:
+    ) -> tuple[int | list[str] | None, ...]:
         state.run_id = run_id
         state.request_counter += 1
 
@@ -83,7 +77,7 @@ def create(
             state.step_1b_counter += 1
             return 2
 
-        res = await step.parallel(
+        return await step._parallel(
             (
                 lambda: step.run("1a", _step_1a),
                 lambda: step.run("1b", _step_1b),
@@ -91,11 +85,6 @@ def create(
                     "send", events=inngest.Event(name="noop")
                 ),
             )
-        )
-
-        return tuple(
-            item if not isinstance(item, inngest.Event) else None
-            for item in res
         )
 
     def run_test(self: base.TestClass) -> None:

@@ -7,15 +7,24 @@ from . import base
 
 
 class StepSync(base.StepBase):
-    def parallel(
+    def _parallel(
         self,
-        callbacks: tuple[typing.Callable[[], types.T], ...],
+        callables: tuple[typing.Callable[[], types.T], ...],
     ) -> tuple[types.T | None, ...]:
+        """
+        Run multiple steps in parallel.
+
+        Args:
+        ----
+            callables: An arbitrary number of step callbacks to run. These are
+                callables that contain the step (e.g. `lambda: step.run("my_step", my_step_fn)`.
+        """
+
         self._inside_parallel = True
 
         outputs = tuple[types.T]()
         responses: list[execution.StepResponse] = []
-        for cb in callbacks:
+        for cb in callables:
             try:
                 output = cb()
                 outputs = (*outputs, output)
@@ -54,9 +63,11 @@ class StepSync(base.StepBase):
         is_targeting_enabled = self._target_hashed_id is not None
         is_targeted = self._target_hashed_id == hashed_id
         if is_targeting_enabled and not is_targeted:
+            # Skip this step because a different step is targeted.
             raise base.SkipInterrupt()
 
         if self._inside_parallel and not is_targeting_enabled:
+            # Plan this step because we're in parallel mode.
             raise base.ResponseInterrupt(
                 execution.StepResponse(
                     data=None,
@@ -150,6 +161,7 @@ class StepSync(base.StepBase):
         is_targeting_enabled = self._target_hashed_id is not None
         is_targeted = self._target_hashed_id == hashed_id
         if is_targeting_enabled and not is_targeted:
+            # Skip this step because a different step is targeted.
             raise base.SkipInterrupt()
 
         err = self._middleware.before_execution_sync()
@@ -200,6 +212,7 @@ class StepSync(base.StepBase):
         is_targeting_enabled = self._target_hashed_id is not None
         is_targeted = self._target_hashed_id == hashed_id
         if is_targeting_enabled and not is_targeted:
+            # Skip this step because a different step is targeted.
             raise base.SkipInterrupt()
 
         err = self._middleware.before_execution_sync()

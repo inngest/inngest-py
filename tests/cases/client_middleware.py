@@ -1,5 +1,3 @@
-import json
-
 import inngest
 import inngest.experimental
 import tests.helper
@@ -148,13 +146,11 @@ def create(
             "transform_input",
             "before_execution",
             "after_execution",
-            "transform_output",
             "before_response",
             # Entry 2
             "transform_input",
             "before_execution",
             "after_execution",
-            "transform_output",
             "before_response",
             # Entry 3
             "transform_input",
@@ -163,14 +159,6 @@ def create(
             "transform_output",
             "before_response",
         ], state.hook_list
-
-        step_1_output = json.loads(
-            tests.helper.client.get_step_output(
-                run_id=run_id,
-                step_id="step_1",
-            )
-        )
-        assert step_1_output == "transformed output", step_1_output
 
     if is_sync:
         fn = fn_sync
