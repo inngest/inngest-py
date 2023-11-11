@@ -54,7 +54,7 @@ class StepBase:
             step_id = f"{step_id}:{id_count - 1}"
         return transforms.hash_step_id(step_id)
 
-    async def get_memo(self, hashed_id: str) -> object:
+    async def _get_memo(self, hashed_id: str) -> object:
         memo = self._memos.pop(hashed_id)
 
         # If there are no more memos then all future code is new.
@@ -63,7 +63,7 @@ class StepBase:
 
         return memo
 
-    def get_memo_sync(self, hashed_id: str) -> object:
+    def _get_memo_sync(self, hashed_id: str) -> object:
         memo = self._memos.pop(hashed_id)
 
         # If there are no more memos then all future code is new.
