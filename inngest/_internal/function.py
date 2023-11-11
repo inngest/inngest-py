@@ -208,6 +208,7 @@ class Function:
         fn_id: str,
         call_input: execution.TransformableInput,
         middleware: middleware_lib.MiddlewareManager,
+        target_hashed_id: str | None,
     ) -> execution.CallResult:
         middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
         for m in self._middleware:
@@ -262,6 +263,7 @@ class Function:
                         memos,
                         middleware,
                         step_lib.StepIDCounter(),
+                        target_hashed_id,
                     ),
                 )
             elif _is_function_handler_sync(handler):
@@ -276,6 +278,7 @@ class Function:
                         memos,
                         middleware,
                         step_lib.StepIDCounter(),
+                        target_hashed_id,
                     ),
                 )
             else:
@@ -302,12 +305,9 @@ class Function:
             if isinstance(err, Exception):
                 return execution.CallError.from_error(err)
 
-            output = await middleware.transform_output(interrupt.response.data)
-            if isinstance(output, Exception):
-                return execution.CallError.from_error(output)
-            interrupt.response.data = output
+            # TODO: Transform output
 
-            return [interrupt.response]
+            return interrupt.responses
         except Exception as err:
             return execution.CallError.from_error(err)
 
@@ -318,6 +318,7 @@ class Function:
         fn_id: str,
         call_input: execution.TransformableInput,
         middleware: middleware_lib.MiddlewareManager,
+        target_hashed_id: str | None,
     ) -> execution.CallResult:
         middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
         for m in self._middleware:
@@ -363,6 +364,7 @@ class Function:
                         memos,
                         middleware,
                         step_lib.StepIDCounter(),
+                        target_hashed_id,
                     ),
                 )
             else:
@@ -386,12 +388,9 @@ class Function:
             if isinstance(err, Exception):
                 return execution.CallError.from_error(err)
 
-            output = middleware.transform_output_sync(interrupt.response.data)
-            if isinstance(output, Exception):
-                return execution.CallError.from_error(output)
-            interrupt.response.data = output
+            # TODO: Transform output
 
-            return [interrupt.response]
+            return interrupt.responses
         except Exception as err:
             return execution.CallError.from_error(err)
 

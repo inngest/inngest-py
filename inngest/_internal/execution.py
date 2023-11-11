@@ -87,6 +87,11 @@ CallResult: typing.TypeAlias = (
 
 
 class Opcode(enum.Enum):
+    PLANNED = "StepPlanned"
     SLEEP = "Sleep"
     STEP = "Step"
     WAIT_FOR_EVENT = "WaitForEvent"
+
+
+# If the Executor sends this step ID then it isn't targeting a specific step.
+UNSPECIFIED_STEP_ID = "step"

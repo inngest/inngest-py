@@ -50,6 +50,11 @@ class HeaderKey(enum.Enum):
     USER_AGENT = "User-Agent"
 
 
+class QueryParamKey(enum.Enum):
+    FUNCTION_ID = "fnId"
+    STEP_ID = "stepId"
+
+
 class InternalEvents(enum.Enum):
     FUNCTION_FAILED = "inngest/function.failed"
 

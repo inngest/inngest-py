@@ -7,6 +7,29 @@ from . import base
 
 
 class StepSync(base.StepBase):
+    def parallel(
+        self,
+        callbacks: tuple[typing.Callable[[], types.T], ...],
+    ) -> tuple[types.T | None, ...]:
+        self._inside_parallel = True
+
+        outputs = tuple[types.T]()
+        responses: list[execution.StepResponse] = []
+        for cb in callbacks:
+            try:
+                output = cb()
+                outputs = (*outputs, output)
+            except base.ResponseInterrupt as interrupt:
+                responses = [*responses, *interrupt.responses]
+            except base.SkipInterrupt:
+                pass
+
+        if len(responses) > 0:
+            raise base.ResponseInterrupt(responses)
+
+        self._inside_parallel = False
+        return outputs
+
     def run(
         self,
         step_id: str,
@@ -27,6 +50,22 @@ class StepSync(base.StepBase):
         memo = self.get_memo_sync(hashed_id)
         if memo is not types.EmptySentinel:
             return memo  # type: ignore
+
+        is_targeting_enabled = self._target_hashed_id is not None
+        is_targeted = self._target_hashed_id == hashed_id
+        if is_targeting_enabled and not is_targeted:
+            raise base.SkipInterrupt()
+
+        if self._inside_parallel and not is_targeting_enabled:
+            raise base.ResponseInterrupt(
+                execution.StepResponse(
+                    data=None,
+                    display_name=step_id,
+                    id=hashed_id,
+                    name=step_id,
+                    op=execution.Opcode.PLANNED,
+                )
+            )
 
         err = self._middleware.before_execution_sync()
         if isinstance(err, Exception):
@@ -108,6 +147,11 @@ class StepSync(base.StepBase):
         if memo is not types.EmptySentinel:
             return memo  # type: ignore
 
+        is_targeting_enabled = self._target_hashed_id is not None
+        is_targeted = self._target_hashed_id == hashed_id
+        if is_targeting_enabled and not is_targeted:
+            raise base.SkipInterrupt()
+
         err = self._middleware.before_execution_sync()
         if isinstance(err, Exception):
             raise err
@@ -152,6 +196,11 @@ class StepSync(base.StepBase):
 
             # Fulfilled by an event
             return event_lib.Event.model_validate(memo)
+
+        is_targeting_enabled = self._target_hashed_id is not None
+        is_targeted = self._target_hashed_id == hashed_id
+        if is_targeting_enabled and not is_targeted:
+            raise base.SkipInterrupt()
 
         err = self._middleware.before_execution_sync()
         if isinstance(err, Exception):
