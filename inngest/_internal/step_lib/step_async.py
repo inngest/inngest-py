@@ -64,7 +64,7 @@ class Step(base.StepBase):
         """
         hashed_id = self._get_hashed_id(step_id)
 
-        memo = await self.get_memo(hashed_id)
+        memo = await self._get_memo(hashed_id)
         if memo is not types.EmptySentinel:
             return memo  # type: ignore
 
@@ -160,7 +160,7 @@ class Step(base.StepBase):
         """
         hashed_id = self._get_hashed_id(step_id)
 
-        memo = await self.get_memo(hashed_id)
+        memo = await self._get_memo(hashed_id)
         if memo is not types.EmptySentinel:
             return memo  # type: ignore
 
@@ -205,7 +205,7 @@ class Step(base.StepBase):
         """
         hashed_id = self._get_hashed_id(step_id)
 
-        memo = await self.get_memo(hashed_id)
+        memo = await self._get_memo(hashed_id)
         if memo is not types.EmptySentinel:
             if memo is None:
                 # Timeout

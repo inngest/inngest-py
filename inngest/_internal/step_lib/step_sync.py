@@ -47,7 +47,7 @@ class StepSync(base.StepBase):
         """
         hashed_id = self._get_hashed_id(step_id)
 
-        memo = self.get_memo_sync(hashed_id)
+        memo = self._get_memo_sync(hashed_id)
         if memo is not types.EmptySentinel:
             return memo  # type: ignore
 
@@ -143,7 +143,7 @@ class StepSync(base.StepBase):
         """
         hashed_id = self._get_hashed_id(step_id)
 
-        memo = self.get_memo_sync(hashed_id)
+        memo = self._get_memo_sync(hashed_id)
         if memo is not types.EmptySentinel:
             return memo  # type: ignore
 
@@ -188,7 +188,7 @@ class StepSync(base.StepBase):
         """
         hashed_id = self._get_hashed_id(step_id)
 
-        memo = self.get_memo_sync(hashed_id)
+        memo = self._get_memo_sync(hashed_id)
         if memo is not types.EmptySentinel:
             if memo is None:
                 # Timeout
