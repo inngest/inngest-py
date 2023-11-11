@@ -28,11 +28,9 @@ class BaseState:
 
 @dataclasses.dataclass
 class Case:
-    event_name: str
     fn: inngest.Function
     name: str
     run_test: typing.Callable[[TestClass], None]
-    state: BaseState
 
 
 def create_event_name(

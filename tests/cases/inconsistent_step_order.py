@@ -1,14 +1,21 @@
+"""
+This test changes the order of steps between requests. Step order should not
+break execution.
+"""
+
 import json
+import typing
 
 import inngest
 import tests.helper
 
 from . import base
 
-_TEST_NAME = "two_steps"
+_TEST_NAME = "inconsistent_step_order"
 
 
 class _State(base.BaseState):
+    request_counter = 0
     step_1_counter = 0
     step_2_counter = 0
 
@@ -33,17 +40,26 @@ def create(
         **_kwargs: object,
     ) -> None:
         state.run_id = run_id
+        state.request_counter += 1
 
-        def step_1() -> list[dict[str, object]]:
+        def step_1() -> int:
             state.step_1_counter += 1
-            return [{"foo": {"bar": 1}}]
+            return 1
 
-        step.run("step_1", step_1)
-
-        def step_2() -> None:
+        def step_2() -> int:
             state.step_2_counter += 1
+            return 2
 
-        step.run("step_2", step_2)
+        steps: list[typing.Callable[[], int]] = [
+            lambda: step.run("step_1", step_1),
+            lambda: step.run("step_2", step_2),
+        ]
+
+        if state.request_counter % 2 == 0:
+            steps.reverse()
+
+        steps.pop()()
+        steps.pop()()
 
     @inngest.create_function(
         fn_id=test_name,
@@ -57,17 +73,26 @@ def create(
         **_kwargs: object,
     ) -> None:
         state.run_id = run_id
+        state.request_counter += 1
 
-        async def step_1() -> list[dict[str, object]]:
+        async def step_1() -> int:
             state.step_1_counter += 1
-            return [{"foo": {"bar": 1}}]
+            return 1
 
-        await step.run("step_1", step_1)
-
-        async def step_2() -> None:
+        async def step_2() -> int:
             state.step_2_counter += 1
+            return 2
 
-        await step.run("step_2", step_2)
+        steps: list[typing.Callable[[], typing.Awaitable[int]]] = [
+            lambda: step.run("step_1", step_1),
+            lambda: step.run("step_2", step_2),
+        ]
+
+        if state.request_counter % 2 == 0:
+            steps.reverse()
+
+        await steps.pop()()
+        await steps.pop()()
 
     def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
@@ -90,7 +115,15 @@ def create(
                 step_id="step_1",
             )
         )
-        assert step_1_output == [{"foo": {"bar": 1}}], step_1_output
+        assert step_1_output == 1, step_1_output
+
+        step_2_output = json.loads(
+            tests.helper.client.get_step_output(
+                run_id=run_id,
+                step_id="step_2",
+            )
+        )
+        assert step_2_output == 2, step_1_output
 
     if is_sync:
         fn = fn_sync

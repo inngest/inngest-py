@@ -83,9 +83,7 @@ def create(
         fn = fn_async
 
     return base.Case(
-        event_name=event_name,
         fn=fn,
         run_test=run_test,
-        state=state,
         name=test_name,
     )
