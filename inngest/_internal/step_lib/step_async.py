@@ -10,7 +10,7 @@ class Step(base.StepBase):
     async def _experimental_parallel(
         self,
         callables: tuple[typing.Callable[[], typing.Awaitable[types.T]], ...],
-    ) -> tuple[types.T | None, ...]:
+    ) -> tuple[types.T, ...]:
         """
         Run multiple steps in parallel.
 
