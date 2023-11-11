@@ -2,6 +2,7 @@ import os
 
 import inngest
 
+trigger: inngest.TriggerCron | inngest.TriggerEvent
 if os.getenv("ENABLE_CRONS") == "1":
     trigger = inngest.TriggerCron(cron="* * * * *")
 else:

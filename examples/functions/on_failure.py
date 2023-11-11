@@ -2,11 +2,7 @@ import inngest
 
 
 def _on_failure(
-    attempt: int,
-    event: inngest.Event,
-    events: list[inngest.Event],
-    run_id: str,
-    step: inngest.StepSync,
+    **_kwargs: object,
 ) -> None:
     print("on_failure called")
 

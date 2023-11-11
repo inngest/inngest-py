@@ -31,6 +31,9 @@ lint: check-venv
 
 type-check: check-venv
 	@mypy inngest tests
+	@mypy examples/fast_api
+	@mypy examples/flask
+	@mypy examples/tornado
 
 utest: check-venv
 	@pytest -v inngest
