@@ -1,9 +1,9 @@
-from .base import Interrupt, StepIDCounter, StepMemos
+from .base import ResponseInterrupt, StepIDCounter, StepMemos
 from .step_async import Step
 from .step_sync import StepSync
 
 __all__ = [
-    "Interrupt",
+    "ResponseInterrupt",
     "Step",
     "StepIDCounter",
     "StepMemos",

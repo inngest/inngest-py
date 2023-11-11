@@ -297,25 +297,17 @@ class Function:
             output = transformed_output
 
             return execution.FunctionCallResponse(data=output)
-        except step_lib.Interrupt as interrupt:
+        except step_lib.ResponseInterrupt as interrupt:
             err = await middleware.after_execution()
             if isinstance(err, Exception):
                 return execution.CallError.from_error(err)
 
-            output = await middleware.transform_output(interrupt.data)
+            output = await middleware.transform_output(interrupt.response.data)
             if isinstance(output, Exception):
                 return execution.CallError.from_error(output)
+            interrupt.response.data = output
 
-            return [
-                execution.StepCallResponse(
-                    data=output,
-                    display_name=interrupt.display_name,
-                    id=interrupt.hashed_id,
-                    name=interrupt.name,
-                    op=interrupt.op,
-                    opts=interrupt.opts,
-                )
-            ]
+            return [interrupt.response]
         except Exception as err:
             return execution.CallError.from_error(err)
 
@@ -389,25 +381,17 @@ class Function:
                 return execution.CallError.from_error(output)
 
             return execution.FunctionCallResponse(data=output)
-        except step_lib.Interrupt as interrupt:
+        except step_lib.ResponseInterrupt as interrupt:
             err = middleware.after_execution_sync()
             if isinstance(err, Exception):
                 return execution.CallError.from_error(err)
 
-            output = middleware.transform_output_sync(interrupt.data)
+            output = middleware.transform_output_sync(interrupt.response.data)
             if isinstance(output, Exception):
                 return execution.CallError.from_error(output)
+            interrupt.response.data = output
 
-            return [
-                execution.StepCallResponse(
-                    data=output,
-                    display_name=interrupt.display_name,
-                    id=interrupt.hashed_id,
-                    name=interrupt.name,
-                    op=interrupt.op,
-                    opts=interrupt.opts,
-                )
-            ]
+            return [interrupt.response]
         except Exception as err:
             return execution.CallError.from_error(err)
 

@@ -92,7 +92,7 @@ class StepIDCounter:
             return self._counts[hashed_id]
 
 
-class Interrupt(BaseException):
+class ResponseInterrupt(BaseException):
     """
     Extend BaseException to avoid being caught by the user's code. Users can
     still catch it if they do a "bare except", but that's a known antipattern in
@@ -101,31 +101,9 @@ class Interrupt(BaseException):
 
     def __init__(
         self,
-        *,
-        data: object = None,
-        display_name: str,
-        hashed_id: str,
-        name: str,
-        op: execution.Opcode,
-        opts: dict[str, object] | None = None,
+        response: execution.StepResponse,
     ) -> None:
-        """
-        Args:
-        ----
-            data: Any data present for this operation.
-            display_name: User-specified step ID.
-            hashed_id: Hashed step ID.
-            name: Legacy field that's only used for sleep duration.
-            op: Operation code that tells the Executor what operation to do.
-            opts: Any additional data required for this operation to send to
-                Inngest.
-        """
-        self.data = data
-        self.display_name = display_name
-        self.hashed_id = hashed_id
-        self.name = name
-        self.op = op
-        self.opts = opts
+        self.response = response
 
 
 class WaitForEventOpts(types.BaseModel):
