@@ -25,13 +25,6 @@
 
 > 🚧 Currently in beta! It hasn't been battle-tested in production environments yet.
 
-Our Python SDK is nearing feature parity with our [TypeScript SDK](https://github.com/inngest/inngest-js), but there are a few missing features:
-
-- Middleware
-- Idempotent logging
-- Parallel steps
-- Large batches
-
 We currently support the following frameworks (but adding a new framework is easy!):
 
 - FastAPI
