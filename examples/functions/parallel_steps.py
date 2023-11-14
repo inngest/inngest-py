@@ -8,7 +8,10 @@ import inngest
     fn_id="parallel_steps",
     trigger=inngest.TriggerEvent(event="app/parallel_steps"),
 )
-async def fn(*, step: inngest.Step, **_kwargs: object) -> tuple[int, ...]:
+async def fn(
+    ctx: inngest.Context,
+    step: inngest.Step,
+) -> tuple[int, ...]:
     async def _step_1a() -> int:
         await asyncio.sleep(2)
         return 1
@@ -29,7 +32,10 @@ async def fn(*, step: inngest.Step, **_kwargs: object) -> tuple[int, ...]:
     fn_id="parallel_steps",
     trigger=inngest.TriggerEvent(event="app/parallel_steps"),
 )
-def fn_sync(*, step: inngest.StepSync, **_kwargs: object) -> tuple[int, ...]:
+def fn_sync(
+    ctx: inngest.Context,
+    step: inngest.StepSync,
+) -> tuple[int, ...]:
     def _step_1a() -> int:
         time.sleep(2)
         return 1

@@ -12,12 +12,10 @@ import inngest
     trigger=inngest.TriggerEvent(event="app/batch"),
 )
 def fn_sync(
-    *,
-    events: list[inngest.Event],
+    ctx: inngest.Context,
     step: inngest.StepSync,
-    **_kwargs: object,
 ) -> None:
     def _print_events() -> None:
-        print(len(events))
+        print(len(ctx.events))
 
     step.run("print_events", _print_events)

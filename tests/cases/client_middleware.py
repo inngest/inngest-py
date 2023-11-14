@@ -91,13 +91,10 @@ def create(
         trigger=inngest.TriggerEvent(event=event_name),
     )
     def fn_sync(
-        *,
-        logger: inngest.Logger,
+        ctx: inngest.Context,
         step: inngest.StepSync,
-        run_id: str,
-        **_kwargs: object,
     ) -> None:
-        state.run_id = run_id
+        state.run_id = ctx.run_id
 
         def _step_1() -> str:
             return "original output"
@@ -115,13 +112,10 @@ def create(
         trigger=inngest.TriggerEvent(event=event_name),
     )
     async def fn_async(
-        *,
-        logger: inngest.Logger,
+        ctx: inngest.Context,
         step: inngest.Step,
-        run_id: str,
-        **_kwargs: object,
     ) -> None:
-        state.run_id = run_id
+        state.run_id = ctx.run_id
 
         async def _step_1() -> str:
             return "original output"

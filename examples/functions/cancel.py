@@ -8,5 +8,8 @@ import inngest
     fn_id="cancel",
     trigger=inngest.TriggerEvent(event="app/cancel"),
 )
-def fn_sync(*, run_id: str, **_kwargs: object) -> None:
+def fn_sync(
+    ctx: inngest.Context,
+    step: inngest.StepSync,
+) -> None:
     time.sleep(5)

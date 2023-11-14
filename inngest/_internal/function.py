@@ -21,6 +21,15 @@ from inngest._internal import (
 
 
 @dataclasses.dataclass
+class Context:
+    attempt: int
+    event: event_lib.Event
+    events: list[event_lib.Event]
+    logger: types.Logger
+    run_id: str
+
+
+@dataclasses.dataclass
 class _Config:
     # The user-defined function
     main: function_config.FunctionConfig
@@ -33,12 +42,7 @@ class _Config:
 class _FunctionHandlerAsync(typing.Protocol):
     def __call__(
         self,
-        *,
-        attempt: int,
-        event: event_lib.Event,
-        events: list[event_lib.Event],
-        logger: types.Logger,
-        run_id: str,
+        ctx: Context,
         step: step_lib.Step,
     ) -> typing.Awaitable[types.Serializable]:
         ...
@@ -48,12 +52,7 @@ class _FunctionHandlerAsync(typing.Protocol):
 class _FunctionHandlerSync(typing.Protocol):
     def __call__(
         self,
-        *,
-        attempt: int,
-        event: event_lib.Event,
-        events: list[event_lib.Event],
-        logger: types.Logger,
-        run_id: str,
+        ctx: Context,
         step: step_lib.StepSync,
     ) -> types.Serializable:
         ...
@@ -253,11 +252,13 @@ class Function:
             # # handler is sync.
             if _is_function_handler_async(handler):
                 output = await handler(
-                    attempt=call.ctx.attempt,
-                    event=call.event,
-                    events=call.events,
-                    logger=call_input.logger,
-                    run_id=call.ctx.run_id,
+                    ctx=Context(
+                        attempt=call.ctx.attempt,
+                        event=call.event,
+                        events=call.events,
+                        logger=call_input.logger,
+                        run_id=call.ctx.run_id,
+                    ),
                     step=step_lib.Step(
                         client,
                         memos,
@@ -268,11 +269,13 @@ class Function:
                 )
             elif _is_function_handler_sync(handler):
                 output = handler(
-                    attempt=call.ctx.attempt,
-                    event=call.event,
-                    events=call.events,
-                    logger=call_input.logger,
-                    run_id=call.ctx.run_id,
+                    ctx=Context(
+                        attempt=call.ctx.attempt,
+                        event=call.event,
+                        events=call.events,
+                        logger=call_input.logger,
+                        run_id=call.ctx.run_id,
+                    ),
                     step=step_lib.StepSync(
                         client,
                         memos,
@@ -361,11 +364,13 @@ class Function:
 
             if _is_function_handler_sync(handler):
                 output: object = handler(
-                    attempt=call.ctx.attempt,
-                    event=call.event,
-                    events=call.events,
-                    logger=call_input.logger,
-                    run_id=call.ctx.run_id,
+                    ctx=Context(
+                        attempt=call.ctx.attempt,
+                        event=call.event,
+                        events=call.events,
+                        logger=call_input.logger,
+                        run_id=call.ctx.run_id,
+                    ),
                     step=step_lib.StepSync(
                         client,
                         memos,

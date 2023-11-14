@@ -42,7 +42,10 @@ class Test_get_function_configs(unittest.TestCase):
             ),
             trigger=inngest.TriggerEvent(event="app/fn"),
         )
-        def fn(**_kwargs: object) -> int:
+        def fn(
+            ctx: inngest.Context,
+            step: inngest.StepSync,
+        ) -> int:
             return 1
 
         handler = comm.CommHandler(

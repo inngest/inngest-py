@@ -27,18 +27,13 @@ def create(
         trigger=inngest.TriggerEvent(event=event_name),
     )
     def fn_sync(
-        *,
-        attempt: int,
-        event: inngest.Event,
-        events: list[inngest.Event],
-        logger: inngest.Logger,
-        run_id: str,
+        ctx: inngest.Context,
         step: inngest.StepSync,
     ) -> None:
-        state.attempt = attempt
-        state.event = event
-        state.events = events
-        state.run_id = run_id
+        state.attempt = ctx.attempt
+        state.event = ctx.event
+        state.events = ctx.events
+        state.run_id = ctx.run_id
         state.step = step
 
     @inngest.create_function(
@@ -47,18 +42,13 @@ def create(
         trigger=inngest.TriggerEvent(event=event_name),
     )
     async def fn_async(
-        *,
-        attempt: int,
-        event: inngest.Event,
-        events: list[inngest.Event],
-        logger: inngest.Logger,
-        run_id: str,
+        ctx: inngest.Context,
         step: inngest.Step,
     ) -> None:
-        state.attempt = attempt
-        state.event = event
-        state.events = events
-        state.run_id = run_id
+        state.attempt = ctx.attempt
+        state.event = ctx.event
+        state.events = ctx.events
+        state.run_id = ctx.run_id
         state.step = step
 
     def run_test(self: base.TestClass) -> None:

@@ -30,12 +30,10 @@ def create(
         trigger=inngest.TriggerEvent(event=event_name),
     )
     def fn_sync(
-        *,
-        run_id: str,
+        ctx: inngest.Context,
         step: inngest.StepSync,
-        **_kwargs: object,
     ) -> None:
-        state.run_id = run_id
+        state.run_id = ctx.run_id
 
         if state.before_sleep is None:
             state.before_sleep = datetime.datetime.now()
@@ -51,12 +49,10 @@ def create(
         trigger=inngest.TriggerEvent(event=event_name),
     )
     async def fn_async(
-        *,
-        run_id: str,
+        ctx: inngest.Context,
         step: inngest.Step,
-        **_kwargs: object,
     ) -> None:
-        state.run_id = run_id
+        state.run_id = ctx.run_id
 
         if state.before_sleep is None:
             state.before_sleep = datetime.datetime.now()

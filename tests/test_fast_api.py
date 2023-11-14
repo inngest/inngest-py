@@ -97,7 +97,10 @@ class TestRegistration(unittest.TestCase):
             retries=0,
             trigger=inngest.TriggerEvent(event="app/foo"),
         )
-        async def fn(**_kwargs: object) -> None:
+        async def fn(
+            ctx: inngest.Context,
+            step: inngest.Step,
+        ) -> None:
             pass
 
         app = fastapi.FastAPI()

@@ -26,12 +26,10 @@ def create(
         trigger=inngest.TriggerEvent(event=event_name),
     )
     def fn_sync(
-        *,
-        run_id: str,
+        ctx: inngest.Context,
         step: inngest.StepSync,
-        **_kwargs: object,
     ) -> None:
-        state.run_id = run_id
+        state.run_id = ctx.run_id
 
         state.result = step.wait_for_event(
             "wait",
@@ -45,12 +43,10 @@ def create(
         trigger=inngest.TriggerEvent(event=event_name),
     )
     async def fn_async(
-        *,
-        run_id: str,
+        ctx: inngest.Context,
         step: inngest.Step,
-        **_kwargs: object,
     ) -> None:
-        state.run_id = run_id
+        state.run_id = ctx.run_id
 
         state.result = await step.wait_for_event(
             "wait",

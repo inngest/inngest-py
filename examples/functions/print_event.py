@@ -6,17 +6,18 @@ import inngest
     trigger=inngest.TriggerEvent(event="app/print_event"),
 )
 async def fn(
-    *, event: inngest.Event, step: inngest.Step, **_kwargs: object
+    ctx: inngest.Context,
+    step: inngest.Step,
 ) -> None:
     async def _print_data() -> dict[str, object]:
-        print(event.data)
-        return event.data
+        print(ctx.event.data)
+        return ctx.event.data
 
     await step.run("print_data", _print_data)
 
     async def _print_user() -> dict[str, object]:
-        print(event.user)
-        return event.user
+        print(ctx.event.user)
+        return ctx.event.user
 
     await step.run("print_user", _print_user)
 
@@ -26,16 +27,17 @@ async def fn(
     trigger=inngest.TriggerEvent(event="app/print_event_sync"),
 )
 def fn_sync(
-    *, event: inngest.Event, step: inngest.StepSync, **_kwargs: object
+    ctx: inngest.Context,
+    step: inngest.StepSync,
 ) -> None:
     def _print_data() -> dict[str, object]:
-        print(event.data)
-        return event.data
+        print(ctx.event.data)
+        return ctx.event.data
 
     step.run("print_data", _print_data)
 
     def _print_user() -> dict[str, object]:
-        print(event.user)
-        return event.user
+        print(ctx.event.user)
+        return ctx.event.user
 
     step.run("print_user", _print_user)

@@ -21,16 +21,22 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(*, run_id: str, **_kwargs: object) -> None:
-        state.run_id = run_id
+    def fn_sync(
+        ctx: inngest.Context,
+        step: inngest.StepSync,
+    ) -> None:
+        state.run_id = ctx.run_id
 
     @inngest.create_function(
         fn_id=test_name,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(*, run_id: str, **_kwargs: object) -> None:
-        state.run_id = run_id
+    async def fn_async(
+        ctx: inngest.Context,
+        step: inngest.Step,
+    ) -> None:
+        state.run_id = ctx.run_id
 
     def run_test(self: base.TestClass) -> None:
         asyncio.run(self.client.send(inngest.Event(name=event_name)))

@@ -37,27 +37,24 @@ def create(
         trigger=inngest.TriggerEvent(event=event_name),
     )
     def fn_sync(
-        *,
-        logger: inngest.Logger,
+        ctx: inngest.Context,
         step: inngest.StepSync,
-        run_id: str,
-        **_kwargs: object,
     ) -> None:
-        logger.info("function start")
-        state.run_id = run_id
+        ctx.logger.info("function start")
+        state.run_id = ctx.run_id
 
         def _first_step() -> None:
-            logger.info("first_step")
+            ctx.logger.info("first_step")
 
         step.run("first_step", _first_step)
 
-        logger.info("between steps")
+        ctx.logger.info("between steps")
 
         def _second_step() -> None:
-            logger.info("second_step")
+            ctx.logger.info("second_step")
 
         step.run("second_step", _second_step)
-        logger.info("function end")
+        ctx.logger.info("function end")
 
     @inngest.create_function(
         fn_id=test_name,
@@ -65,27 +62,24 @@ def create(
         trigger=inngest.TriggerEvent(event=event_name),
     )
     async def fn_async(
-        *,
-        logger: inngest.Logger,
+        ctx: inngest.Context,
         step: inngest.Step,
-        run_id: str,
-        **_kwargs: object,
     ) -> None:
-        logger.info("function start")
-        state.run_id = run_id
+        ctx.logger.info("function start")
+        state.run_id = ctx.run_id
 
         def _first_step() -> None:
-            logger.info("first_step")
+            ctx.logger.info("first_step")
 
         await step.run("first_step", _first_step)
 
-        logger.info("between steps")
+        ctx.logger.info("between steps")
 
         def _second_step() -> None:
-            logger.info("second_step")
+            ctx.logger.info("second_step")
 
         await step.run("second_step", _second_step)
-        logger.info("function end")
+        ctx.logger.info("function end")
 
     def run_test(self: base.TestClass) -> None:
         self.client.set_logger(_logger)

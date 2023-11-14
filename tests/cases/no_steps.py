@@ -21,8 +21,11 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(*, run_id: str, **_kwargs: object) -> dict[str, object]:
-        state.run_id = run_id
+    def fn_sync(
+        ctx: inngest.Context,
+        step: inngest.StepSync,
+    ) -> dict[str, object]:
+        state.run_id = ctx.run_id
         return {"foo": {"bar": 1}}
 
     @inngest.create_function(
@@ -30,8 +33,11 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(*, run_id: str, **_kwargs: object) -> dict[str, object]:
-        state.run_id = run_id
+    async def fn_async(
+        ctx: inngest.Context,
+        step: inngest.Step,
+    ) -> dict[str, object]:
+        state.run_id = ctx.run_id
         return {"foo": {"bar": 1}}
 
     def run_test(self: base.TestClass) -> None:

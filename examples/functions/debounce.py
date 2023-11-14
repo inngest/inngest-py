@@ -8,5 +8,8 @@ import inngest
     fn_id="debounce",
     trigger=inngest.TriggerEvent(event="app/debounce"),
 )
-def fn_sync(*, run_id: str, **_kwargs: object) -> None:
-    print(run_id)
+def fn_sync(
+    ctx: inngest.Context,
+    step: inngest.StepSync,
+) -> None:
+    print(ctx.run_id)
