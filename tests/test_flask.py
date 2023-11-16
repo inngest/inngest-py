@@ -83,7 +83,10 @@ class TestRegistration(unittest.TestCase):
             retries=0,
             trigger=inngest.TriggerEvent(event="app/foo"),
         )
-        def fn(**_kwargs: object) -> None:
+        def fn(
+            ctx: inngest.Context,
+            step: inngest.StepSync,
+        ) -> None:
             pass
 
         app = flask.Flask(__name__)

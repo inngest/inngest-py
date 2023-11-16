@@ -33,9 +33,10 @@ def create(
         trigger=inngest.TriggerEvent(event=event_name),
     )
     def fn_sync(
-        *, run_id: str, step: inngest.StepSync, **_kwargs: object
+        ctx: inngest.Context,
+        step: inngest.StepSync,
     ) -> None:
-        state.run_id = run_id
+        state.run_id = ctx.run_id
 
         # Wait a little bit to allow the cancel event to be sent.
         time.sleep(3)
@@ -57,9 +58,10 @@ def create(
         trigger=inngest.TriggerEvent(event=event_name),
     )
     async def fn_async(
-        *, run_id: str, step: inngest.Step, **_kwargs: object
+        ctx: inngest.Context,
+        step: inngest.Step,
     ) -> None:
-        state.run_id = run_id
+        state.run_id = ctx.run_id
 
         # Wait a little bit to allow the cancel event to be sent.
         await asyncio.sleep(3)

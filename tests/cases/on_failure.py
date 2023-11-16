@@ -38,33 +38,23 @@ def create(
     state = _State()
 
     def on_failure_sync(
-        *,
-        attempt: int,
-        event: inngest.Event,
-        events: list[inngest.Event],
-        logger: inngest.Logger,
-        run_id: str,
+        ctx: inngest.Context,
         step: inngest.StepSync,
     ) -> None:
-        state.attempt = attempt
-        state.event = event
-        state.events = events
-        state.on_failure_run_id = run_id
+        state.attempt = ctx.attempt
+        state.event = ctx.event
+        state.events = ctx.events
+        state.on_failure_run_id = ctx.run_id
         state.step = step
 
     async def on_failure_async(
-        *,
-        attempt: int,
-        event: inngest.Event,
-        events: list[inngest.Event],
-        logger: inngest.Logger,
-        run_id: str,
+        ctx: inngest.Context,
         step: inngest.Step,
     ) -> None:
-        state.attempt = attempt
-        state.event = event
-        state.events = events
-        state.on_failure_run_id = run_id
+        state.attempt = ctx.attempt
+        state.event = ctx.event
+        state.events = ctx.events
+        state.on_failure_run_id = ctx.run_id
         state.step = step
 
     @inngest.create_function(
@@ -74,12 +64,10 @@ def create(
         trigger=inngest.TriggerEvent(event=event_name),
     )
     def fn_sync(
-        *,
-        run_id: str,
+        ctx: inngest.Context,
         step: inngest.StepSync,
-        **_kwargs: object,
     ) -> None:
-        state.run_id = run_id
+        state.run_id = ctx.run_id
         raise MyError("intentional failure")
 
     @inngest.create_function(
@@ -89,12 +77,10 @@ def create(
         trigger=inngest.TriggerEvent(event=event_name),
     )
     async def fn_async(
-        *,
-        run_id: str,
+        ctx: inngest.Context,
         step: inngest.Step,
-        **_kwargs: object,
     ) -> None:
-        state.run_id = run_id
+        state.run_id = ctx.run_id
         raise MyError("intentional failure")
 
     def run_test(self: base.TestClass) -> None:

@@ -24,10 +24,11 @@ def create(
         trigger=inngest.TriggerEvent(event=event_name),
     )
     def fn_sync(
-        *, event: inngest.Event, run_id: str, **_kwargs: object
+        ctx: inngest.Context,
+        step: inngest.StepSync,
     ) -> None:
-        state.event = event
-        state.run_id = run_id
+        state.event = ctx.event
+        state.run_id = ctx.run_id
 
     @inngest.create_function(
         fn_id=test_name,
@@ -35,10 +36,11 @@ def create(
         trigger=inngest.TriggerEvent(event=event_name),
     )
     async def fn_async(
-        *, event: inngest.Event, run_id: str, **_kwargs: object
+        ctx: inngest.Context,
+        step: inngest.Step,
     ) -> None:
-        state.event = event
-        state.run_id = run_id
+        state.event = ctx.event
+        state.run_id = ctx.run_id
 
     def run_test(self: base.TestClass) -> None:
         self.client.send_sync(

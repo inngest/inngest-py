@@ -13,7 +13,10 @@ else:
     fn_id="cron",
     trigger=trigger,
 )
-async def fn(**_kwargs: object) -> None:
+async def fn(
+    ctx: inngest.Context,
+    step: inngest.Step,
+) -> None:
     pass
 
 
@@ -21,5 +24,8 @@ async def fn(**_kwargs: object) -> None:
     fn_id="cron_sync",
     trigger=trigger,
 )
-def fn_sync(**_kwargs: object) -> None:
+def fn_sync(
+    ctx: inngest.Context,
+    step: inngest.StepSync,
+) -> None:
     pass

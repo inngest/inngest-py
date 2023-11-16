@@ -10,7 +10,10 @@ class MyError(Exception):
     retries=0,
     trigger=inngest.TriggerEvent(event="app/error_step"),
 )
-def fn_sync(*, step: inngest.StepSync, **_kwargs: object) -> None:
+def fn_sync(
+    ctx: inngest.Context,
+    step: inngest.StepSync,
+) -> None:
     step.run("first_step", lambda: None)
 
     def _second_step() -> None:

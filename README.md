@@ -71,12 +71,10 @@ import requests
     trigger=inngest.TriggerEvent(event="app/person.find"),
 )
 def fetch_person(
-    *,
-    event: inngest.Event,
+    ctx: inngest.Context,
     step: inngest.StepSync,
-    **_kwargs: object,
 ) -> dict:
-    person_id = event.data["person_id"]
+    person_id = ctx.event.data["person_id"]
     res = requests.get(f"https://swapi.dev/api/people/{person_id}")
     return res.json()
 
@@ -108,16 +106,14 @@ The following example registers a function that will:
     trigger=inngest.TriggerEvent(event="app/ships.find"),
 )
 def fetch_ships(
-    *,
-    event: inngest.Event,
+    ctx: inngest.Context,
     step: inngest.StepSync,
-    **_kwargs: object,
 ) -> dict:
     """
     Find all the ships a person has.
     """
 
-    person_id = event.data["person_id"]
+    person_id = ctx.event.data["person_id"]
 
     def _fetch_person() -> dict:
         res = requests.get(f"https://swapi.dev/api/people/{person_id}")
@@ -151,12 +147,10 @@ def fetch_ships(
     trigger=inngest.TriggerEvent(event="app/person.find"),
 )
 async def fetch_person(
-    *,
-    event: inngest.Event,
+    ctx: inngest.Context,
     step: inngest.Step,
-    **_kwargs: object,
 ) -> dict:
-    person_id = event.data["person_id"]
+    person_id = ctx.event.data["person_id"]
     async with httpx.AsyncClient() as client:
         res = await client.get(f"https://swapi.dev/api/people/{person_id}")
         return res.json()

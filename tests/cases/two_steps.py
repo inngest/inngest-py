@@ -27,12 +27,10 @@ def create(
         trigger=inngest.TriggerEvent(event=event_name),
     )
     def fn_sync(
-        *,
-        run_id: str,
+        ctx: inngest.Context,
         step: inngest.StepSync,
-        **_kwargs: object,
     ) -> None:
-        state.run_id = run_id
+        state.run_id = ctx.run_id
 
         def step_1() -> list[dict[str, object]]:
             state.step_1_counter += 1
@@ -51,12 +49,10 @@ def create(
         trigger=inngest.TriggerEvent(event=event_name),
     )
     async def fn_async(
-        *,
-        run_id: str,
+        ctx: inngest.Context,
         step: inngest.Step,
-        **_kwargs: object,
     ) -> None:
-        state.run_id = run_id
+        state.run_id = ctx.run_id
 
         async def step_1() -> list[dict[str, object]]:
             state.step_1_counter += 1
