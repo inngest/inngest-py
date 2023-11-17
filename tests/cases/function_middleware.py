@@ -36,10 +36,10 @@ def create(
 
         def transform_input(
             self,
-            call_input: inngest.experimental.TransformableInput,
-        ) -> inngest.experimental.TransformableInput:
+            ctx: inngest.Context,
+        ) -> inngest.Context:
             state.hook_list.append("transform_input")
-            return call_input
+            return ctx
 
         def transform_output(
             self,
@@ -64,10 +64,10 @@ def create(
 
         async def transform_input(
             self,
-            call_input: inngest.experimental.TransformableInput,
-        ) -> inngest.experimental.TransformableInput:
+            ctx: inngest.Context,
+        ) -> inngest.Context:
             state.hook_list.append("transform_input")
-            return call_input
+            return ctx
 
         async def transform_output(
             self,

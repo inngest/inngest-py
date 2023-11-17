@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from inngest._internal import client_lib, execution, types
+from inngest._internal import client_lib, function, types
 
 from .middleware import MiddlewareSync
 
@@ -43,8 +43,8 @@ class LoggerMiddleware(MiddlewareSync):
 
     def transform_input(
         self,
-        call_input: execution.TransformableInput,
-    ) -> execution.TransformableInput:
-        self.logger.logger = call_input.logger
-        call_input.logger = self.logger  # type: ignore
-        return call_input
+        ctx: function.Context,
+    ) -> function.Context:
+        self.logger.logger = ctx.logger
+        ctx.logger = self.logger  # type: ignore
+        return ctx

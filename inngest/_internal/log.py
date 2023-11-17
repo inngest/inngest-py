@@ -1,15 +1,6 @@
 from __future__ import annotations
 
-import logging
-import typing
-
-from . import client_lib, execution, middleware_lib, types
-
-# https://github.com/python/typeshed/issues/7855#issuecomment-1128857842
-if typing.TYPE_CHECKING:
-    _LoggerAdapter = logging.LoggerAdapter[types.Logger]
-else:
-    _LoggerAdapter = logging.LoggerAdapter
+from . import client_lib, function, middleware_lib, types
 
 
 class LoggerProxy:
@@ -57,8 +48,8 @@ class LoggerMiddleware(middleware_lib.MiddlewareSync):
 
     def transform_input(
         self,
-        call_input: execution.TransformableInput,
-    ) -> execution.TransformableInput:
-        self.logger.logger = call_input.logger
-        call_input.logger = self.logger  # type: ignore
-        return call_input
+        ctx: function.Context,
+    ) -> function.Context:
+        self.logger.logger = ctx.logger
+        ctx.logger = self.logger  # type: ignore
+        return ctx

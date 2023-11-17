@@ -204,8 +204,8 @@ class Function:
         self,
         call: execution.Call,
         client: client_lib.Inngest,
+        ctx: Context,
         fn_id: str,
-        call_input: execution.TransformableInput,
         middleware: middleware_lib.MiddlewareManager,
         target_hashed_id: str | None,
     ) -> execution.CallResult:
@@ -217,12 +217,10 @@ class Function:
 
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
-        transformed_input = await middleware.transform_input(
-            execution.TransformableInput(logger=client.logger),
-        )
-        if isinstance(transformed_input, Exception):
-            return execution.CallError.from_error(transformed_input)
-        call_input = transformed_input
+        new_ctx = await middleware.transform_input(ctx)
+        if isinstance(new_ctx, Exception):
+            return execution.CallError.from_error(new_ctx)
+        ctx = new_ctx
 
         # No memoized data means we're calling the function for the first time.
         if memos.size == 0:
@@ -252,13 +250,7 @@ class Function:
             # # handler is sync.
             if _is_function_handler_async(handler):
                 output = await handler(
-                    ctx=Context(
-                        attempt=call.ctx.attempt,
-                        event=call.event,
-                        events=call.events,
-                        logger=call_input.logger,
-                        run_id=call.ctx.run_id,
-                    ),
+                    ctx=ctx,
                     step=step_lib.Step(
                         client,
                         memos,
@@ -269,13 +261,7 @@ class Function:
                 )
             elif _is_function_handler_sync(handler):
                 output = handler(
-                    ctx=Context(
-                        attempt=call.ctx.attempt,
-                        event=call.event,
-                        events=call.events,
-                        logger=call_input.logger,
-                        run_id=call.ctx.run_id,
-                    ),
+                    ctx=ctx,
                     step=step_lib.StepSync(
                         client,
                         memos,
@@ -330,8 +316,8 @@ class Function:
         self,
         call: execution.Call,
         client: client_lib.Inngest,
+        ctx: Context,
         fn_id: str,
-        call_input: execution.TransformableInput,
         middleware: middleware_lib.MiddlewareManager,
         target_hashed_id: str | None,
     ) -> execution.CallResult:
@@ -343,10 +329,10 @@ class Function:
 
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
-        transformed = middleware.transform_input_sync(call_input)
-        if isinstance(transformed, Exception):
-            return execution.CallError.from_error(transformed)
-        call_input = transformed
+        new_ctx = middleware.transform_input_sync(ctx)
+        if isinstance(new_ctx, Exception):
+            return execution.CallError.from_error(new_ctx)
+        ctx = new_ctx
 
         # No memoized data means we're calling the function for the first time.
         if memos.size == 0:
@@ -369,13 +355,7 @@ class Function:
 
             if _is_function_handler_sync(handler):
                 output: object = handler(
-                    ctx=Context(
-                        attempt=call.ctx.attempt,
-                        event=call.event,
-                        events=call.events,
-                        logger=call_input.logger,
-                        run_id=call.ctx.run_id,
-                    ),
+                    ctx=ctx,
                     step=step_lib.StepSync(
                         client,
                         memos,
