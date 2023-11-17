@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from inngest._internal import client_lib, execution
+from inngest._internal import client_lib, execution, function
 
 
 class Middleware:
@@ -32,13 +32,13 @@ class Middleware:
 
     async def transform_input(
         self,
-        call_input: execution.TransformableInput,
-    ) -> execution.TransformableInput:
+        ctx: function.Context,
+    ) -> function.Context:
         """
         Before calling a function or step. Used to replace certain arguments in
         the function. Called multiple times per run when using steps.
         """
-        return call_input
+        return ctx
 
     async def transform_output(
         self,
@@ -83,13 +83,13 @@ class MiddlewareSync:
 
     def transform_input(
         self,
-        call_input: execution.TransformableInput,
-    ) -> execution.TransformableInput:
+        ctx: function.Context,
+    ) -> function.Context:
         """
         Before calling a function or step. Used to replace certain arguments in
         the function. Called multiple times per run when using steps.
         """
-        return call_input
+        return ctx
 
     def transform_output(
         self,

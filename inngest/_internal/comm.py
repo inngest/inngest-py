@@ -252,8 +252,14 @@ class CommHandler:
         call_res = await fn.call(
             call,
             self._client,
+            function.Context(
+                attempt=call.ctx.attempt,
+                event=call.event,
+                events=call.events,
+                logger=self._client.logger,
+                run_id=call.ctx.run_id,
+            ),
             fn_id,
-            execution.TransformableInput(logger=self._client.logger),
             middleware,
             target_step_id,
         )
@@ -290,8 +296,14 @@ class CommHandler:
         call_res = fn.call_sync(
             call,
             self._client,
+            function.Context(
+                attempt=call.ctx.attempt,
+                event=call.event,
+                events=call.events,
+                logger=self._client.logger,
+                run_id=call.ctx.run_id,
+            ),
             fn_id,
-            execution.TransformableInput(logger=self._client.logger),
             middleware,
             target_step_id,
         )

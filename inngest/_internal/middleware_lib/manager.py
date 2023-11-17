@@ -3,7 +3,14 @@ from __future__ import annotations
 import inspect
 import typing
 
-from inngest._internal import client_lib, errors, execution, transforms, types
+from inngest._internal import (
+    client_lib,
+    errors,
+    execution,
+    function,
+    transforms,
+    types,
+)
 
 from .log import LoggerMiddleware
 from .middleware import Middleware, MiddlewareSync
@@ -133,27 +140,27 @@ class MiddlewareManager:
 
     async def transform_input(
         self,
-        call_input: execution.TransformableInput,
-    ) -> types.MaybeError[execution.TransformableInput]:
+        ctx: function.Context,
+    ) -> types.MaybeError[function.Context]:
         try:
             for m in self._middleware:
-                call_input = await transforms.maybe_await(
-                    m.transform_input(call_input),
+                ctx = await transforms.maybe_await(
+                    m.transform_input(ctx),
                 )
-            return call_input
+            return ctx
         except Exception as err:
             return err
 
     def transform_input_sync(
         self,
-        call_input: execution.TransformableInput,
-    ) -> types.MaybeError[execution.TransformableInput]:
+        ctx: function.Context,
+    ) -> types.MaybeError[function.Context]:
         try:
             for m in self._middleware:
                 if isinstance(m, Middleware):
                     return _mismatched_sync
-                call_input = m.transform_input(call_input)
-            return call_input
+                ctx = m.transform_input(ctx)
+            return ctx
         except Exception as err:
             return err
 

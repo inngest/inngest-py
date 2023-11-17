@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import enum
 import typing
 
@@ -24,11 +23,6 @@ class CallContext(types.BaseModel):
 
 class CallStack(types.BaseModel):
     stack: list[str]
-
-
-@dataclasses.dataclass
-class TransformableInput:
-    logger: types.Logger
 
 
 class CallError(types.BaseModel):
