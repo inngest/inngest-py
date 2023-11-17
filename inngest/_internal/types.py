@@ -7,7 +7,12 @@ import pydantic
 
 T = typing.TypeVar("T")
 
-EmptySentinel = object()
+
+class EmptySentinel:
+    pass
+
+
+empty_sentinel = EmptySentinel()
 
 Serializable = (
     bool
@@ -46,11 +51,14 @@ class BaseModel(pydantic.BaseModel):
         return err
 
     @classmethod
-    def from_dict(
+    def from_raw(
         cls: type[BaseModelT],
-        raw: dict[str, object],
-    ) -> BaseModelT:
-        return cls.model_validate(raw)
+        raw: object,
+    ) -> BaseModelT | Exception:
+        try:
+            return cls.model_validate(raw)
+        except Exception as err:
+            return err
 
     def to_dict(self) -> MaybeError[dict[str, object]]:
         try:

@@ -74,8 +74,8 @@ class Step(base.StepBase):
         hashed_id = self._get_hashed_id(step_id)
 
         memo = await self._get_memo(hashed_id)
-        if memo is not types.EmptySentinel:
-            return memo  # type: ignore
+        if not isinstance(memo, types.EmptySentinel):
+            return memo.data  # type: ignore
 
         is_targeting_enabled = self._target_hashed_id is not None
         is_targeted = self._target_hashed_id == hashed_id
@@ -87,7 +87,6 @@ class Step(base.StepBase):
             # Plan this step because we're in parallel mode.
             raise base.ResponseInterrupt(
                 execution.StepResponse(
-                    data=None,
                     display_name=step_id,
                     id=hashed_id,
                     name=step_id,
@@ -101,7 +100,9 @@ class Step(base.StepBase):
 
         raise base.ResponseInterrupt(
             execution.StepResponse(
-                data=await transforms.maybe_await(handler()),
+                data=execution.Output(
+                    data=await transforms.maybe_await(handler())
+                ),
                 display_name=step_id,
                 id=hashed_id,
                 name=step_id,
@@ -172,8 +173,8 @@ class Step(base.StepBase):
         hashed_id = self._get_hashed_id(step_id)
 
         memo = await self._get_memo(hashed_id)
-        if memo is not types.EmptySentinel:
-            return memo  # type: ignore
+        if not isinstance(memo, types.EmptySentinel):
+            return memo.data  # type: ignore
 
         is_targeting_enabled = self._target_hashed_id is not None
         is_targeted = self._target_hashed_id == hashed_id
@@ -187,7 +188,6 @@ class Step(base.StepBase):
 
         raise base.ResponseInterrupt(
             execution.StepResponse(
-                data=None,
                 display_name=step_id,
                 id=hashed_id,
                 name=transforms.to_iso_utc(until),
@@ -218,13 +218,13 @@ class Step(base.StepBase):
         hashed_id = self._get_hashed_id(step_id)
 
         memo = await self._get_memo(hashed_id)
-        if memo is not types.EmptySentinel:
-            if memo is None:
+        if not isinstance(memo, types.EmptySentinel):
+            if memo.data is None:
                 # Timeout
                 return None
 
             # Fulfilled by an event
-            return event_lib.Event.model_validate(memo)
+            return event_lib.Event.model_validate(memo.data)
 
         is_targeting_enabled = self._target_hashed_id is not None
         is_targeted = self._target_hashed_id == hashed_id
@@ -250,7 +250,6 @@ class Step(base.StepBase):
         raise base.ResponseInterrupt(
             execution.StepResponse(
                 id=hashed_id,
-                data=None,
                 display_name=step_id,
                 name=event,
                 op=execution.Opcode.WAIT_FOR_EVENT,

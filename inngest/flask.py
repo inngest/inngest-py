@@ -92,12 +92,19 @@ def _create_handler_async(
                     const.QueryParamKey.STEP_ID.value
                 )
 
+            call = execution.Call.from_raw(json.loads(flask.request.data))
+            if isinstance(call, Exception):
+                return _to_response(
+                    client.logger,
+                    comm.CommResponse.from_error(
+                        client.logger, FRAMEWORK, call
+                    ),
+                )
+
             return _to_response(
                 client.logger,
                 await handler.call_function(
-                    call=execution.Call.from_dict(
-                        json.loads(flask.request.data)
-                    ),
+                    call=call,
                     fn_id=fn_id,
                     req_sig=net.RequestSignature(
                         body=flask.request.data,
@@ -156,12 +163,19 @@ def _create_handler_sync(
                     const.QueryParamKey.STEP_ID.value
                 )
 
+            call = execution.Call.from_raw(json.loads(flask.request.data))
+            if isinstance(call, Exception):
+                return _to_response(
+                    client.logger,
+                    comm.CommResponse.from_error(
+                        client.logger, FRAMEWORK, call
+                    ),
+                )
+
             return _to_response(
                 client.logger,
                 handler.call_function_sync(
-                    call=execution.Call.from_dict(
-                        json.loads(flask.request.data)
-                    ),
+                    call=call,
                     fn_id=fn_id,
                     req_sig=net.RequestSignature(
                         body=flask.request.data,

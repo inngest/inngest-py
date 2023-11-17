@@ -213,7 +213,7 @@ class Function:
         for m in self._middleware:
             middleware.add(m)
 
-        memos = step_lib.StepMemos(call.steps)
+        memos = step_lib.StepMemos.from_raw(call.steps)
 
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
@@ -297,12 +297,17 @@ class Function:
             if isinstance(err, Exception):
                 return execution.CallError.from_error(err)
 
-            transformed_output = await middleware.transform_output(output)
-            if isinstance(transformed_output, Exception):
-                return execution.CallError.from_error(transformed_output)
-            output = transformed_output
+            output = await middleware.transform_output(
+                # Function output isn't wrapped in an Output object, so we need
+                # to wrap it to make it compatible with middleware.
+                execution.Output(data=output)
+            )
+            if isinstance(output, Exception):
+                return execution.CallError.from_error(output)
 
-            return execution.FunctionCallResponse(data=output)
+            if output is None:
+                return execution.FunctionCallResponse(data=None)
+            return execution.FunctionCallResponse(data=output.data)
         except step_lib.ResponseInterrupt as interrupt:
             err = await middleware.after_execution()
             if isinstance(err, Exception):
@@ -334,7 +339,7 @@ class Function:
         for m in self._middleware:
             middleware.add(m)
 
-        memos = step_lib.StepMemos(call.steps)
+        memos = step_lib.StepMemos.from_raw(call.steps)
 
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
@@ -390,11 +395,17 @@ class Function:
             if isinstance(err, Exception):
                 return execution.CallError.from_error(err)
 
-            output = middleware.transform_output_sync(output)
+            output = middleware.transform_output_sync(
+                # Function output isn't wrapped in an Output object, so we need
+                # to wrap it to make it compatible with middleware.
+                execution.Output(data=output)
+            )
             if isinstance(output, Exception):
                 return execution.CallError.from_error(output)
 
-            return execution.FunctionCallResponse(data=output)
+            if output is None:
+                return execution.FunctionCallResponse(data=None)
+            return execution.FunctionCallResponse(data=output.data)
         except step_lib.ResponseInterrupt as interrupt:
             err = middleware.after_execution_sync()
             if isinstance(err, Exception):

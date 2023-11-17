@@ -43,11 +43,11 @@ def create(
 
         def transform_output(
             self,
-            output: object,
-        ) -> object:
+            output: inngest.Output,
+        ) -> inngest.Output:
             state.hook_list.append("transform_output")
-            if output == "original output":
-                return "transformed output"
+            if output.data == "original output":
+                output.data = "transformed output"
             return output
 
     class _MiddlewareAsync(inngest.experimental.Middleware):
@@ -71,11 +71,11 @@ def create(
 
         async def transform_output(
             self,
-            output: object,
-        ) -> object:
+            output: inngest.Output,
+        ) -> inngest.Output:
             state.hook_list.append("transform_output")
-            if output == "original output":
-                return "transformed output"
+            if output.data == "original output":
+                output.data = "transformed output"
             return output
 
     @inngest.create_function(
@@ -155,7 +155,7 @@ def create(
                 step_id="step_1",
             )
         )
-        assert step_1_output == "transformed output", step_1_output
+        assert step_1_output == {"data": "transformed output"}, step_1_output
 
     if is_sync:
         fn = fn_sync
