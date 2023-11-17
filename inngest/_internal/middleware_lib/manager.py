@@ -159,8 +159,12 @@ class MiddlewareManager:
 
     async def transform_output(
         self,
-        output: object,
-    ) -> types.MaybeError[object]:
+        output: execution.Output | None,
+    ) -> types.MaybeError[execution.Output | None]:
+        # Nothing to transform
+        if output is None:
+            return None
+
         try:
             for m in self._middleware:
                 output = await transforms.maybe_await(
@@ -172,8 +176,12 @@ class MiddlewareManager:
 
     def transform_output_sync(
         self,
-        output: object,
-    ) -> types.MaybeError[object]:
+        output: execution.Output | None,
+    ) -> types.MaybeError[execution.Output | None]:
+        # Nothing to transform
+        if output is None:
+            return None
+
         try:
             for m in self._middleware:
                 if isinstance(m, Middleware):

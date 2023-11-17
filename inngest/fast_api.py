@@ -68,10 +68,17 @@ def serve(
         body = await request.body()
         headers = net.normalize_headers(dict(request.headers.items()))
 
+        call = execution.Call.from_raw(json.loads(body))
+        if isinstance(call, Exception):
+            return _to_response(
+                client.logger,
+                comm.CommResponse.from_error(client.logger, FRAMEWORK, call),
+            )
+
         return _to_response(
             client.logger,
             await handler.call_function(
-                call=execution.Call.from_dict(json.loads(body)),
+                call=call,
                 fn_id=fnId,
                 req_sig=net.RequestSignature(
                     body=body,

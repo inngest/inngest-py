@@ -1,7 +1,7 @@
 import datetime
 import typing
 
-from inngest._internal import event_lib, execution, transforms, types
+from inngest._internal import errors, event_lib, execution, transforms, types
 
 from . import base
 
@@ -57,8 +57,8 @@ class StepSync(base.StepBase):
         hashed_id = self._get_hashed_id(step_id)
 
         memo = self._get_memo_sync(hashed_id)
-        if memo is not types.EmptySentinel:
-            return memo  # type: ignore
+        if not isinstance(memo, types.EmptySentinel):
+            return memo.data  # type: ignore
 
         is_targeting_enabled = self._target_hashed_id is not None
         is_targeted = self._target_hashed_id == hashed_id
@@ -70,7 +70,6 @@ class StepSync(base.StepBase):
             # Plan this step because we're in parallel mode.
             raise base.ResponseInterrupt(
                 execution.StepResponse(
-                    data=None,
                     display_name=step_id,
                     id=hashed_id,
                     name=step_id,
@@ -84,7 +83,7 @@ class StepSync(base.StepBase):
 
         raise base.ResponseInterrupt(
             execution.StepResponse(
-                data=handler(),
+                data=execution.Output(data=handler()),
                 display_name=step_id,
                 id=hashed_id,
                 name=step_id,
@@ -155,8 +154,8 @@ class StepSync(base.StepBase):
         hashed_id = self._get_hashed_id(step_id)
 
         memo = self._get_memo_sync(hashed_id)
-        if memo is not types.EmptySentinel:
-            return memo  # type: ignore
+        if not isinstance(memo, types.EmptySentinel):
+            return memo.data  # type: ignore
 
         is_targeting_enabled = self._target_hashed_id is not None
         is_targeted = self._target_hashed_id == hashed_id
@@ -170,7 +169,6 @@ class StepSync(base.StepBase):
 
         raise base.ResponseInterrupt(
             execution.StepResponse(
-                data=None,
                 display_name=step_id,
                 id=hashed_id,
                 name=transforms.to_iso_utc(until),
@@ -201,13 +199,16 @@ class StepSync(base.StepBase):
         hashed_id = self._get_hashed_id(step_id)
 
         memo = self._get_memo_sync(hashed_id)
-        if memo is not types.EmptySentinel:
-            if memo is None:
+        if not isinstance(memo, types.EmptySentinel):
+            if memo.data is None:
                 # Timeout
                 return None
 
             # Fulfilled by an event
-            return event_lib.Event.model_validate(memo)
+            event_obj = event_lib.Event.from_raw(memo.data)
+            if isinstance(event_obj, Exception):
+                raise errors.UnknownError("invalid event shape") from event_obj
+            return event_obj
 
         is_targeting_enabled = self._target_hashed_id is not None
         is_targeted = self._target_hashed_id == hashed_id
@@ -232,7 +233,6 @@ class StepSync(base.StepBase):
 
         raise base.ResponseInterrupt(
             execution.StepResponse(
-                data=None,
                 display_name=step_id,
                 id=hashed_id,
                 name=event,

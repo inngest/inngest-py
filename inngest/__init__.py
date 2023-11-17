@@ -4,6 +4,7 @@
 from ._internal.client_lib import Inngest
 from ._internal.errors import NonRetriableError
 from ._internal.event_lib import Event
+from ._internal.execution import Output
 from ._internal.function import Context, Function, create_function
 from ._internal.function_config import (
     Batch,
@@ -27,6 +28,7 @@ __all__ = [
     "Inngest",
     "Logger",
     "NonRetriableError",
+    "Output",
     "RateLimit",
     "Serializable",
     "Step",

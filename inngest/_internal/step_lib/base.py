@@ -14,10 +14,14 @@ from inngest._internal import (
 class StepMemos:
     """Holds memoized step output."""
 
-    def __init__(self, memos: dict[str, object]) -> None:
+    @property
+    def size(self) -> int:
+        return len(self._memos)
+
+    def __init__(self, memos: dict[str, execution.Output]) -> None:
         self._memos = memos
 
-    def pop(self, hashed_id: str) -> object:
+    def pop(self, hashed_id: str) -> execution.Output | types.EmptySentinel:
         if hashed_id in self._memos:
             memo = self._memos[hashed_id]
 
@@ -28,11 +32,22 @@ class StepMemos:
 
             return memo
 
-        return types.EmptySentinel
+        return types.empty_sentinel
 
-    @property
-    def size(self) -> int:
-        return len(self._memos)
+    @classmethod
+    def from_raw(cls, raw: dict[str, object]) -> StepMemos:
+        memos = {}
+        for k, v in raw.items():
+            output = execution.Output.from_raw(v)
+            if isinstance(output, Exception):
+                # Not all steps nest their output in an Output-compatible object
+                # (i.e. they don't nest output in a data field). For example,
+                # `step.run` nests its output in a data field but
+                # `step.waitForEvent` will not nest its fulfilling event.
+                output = execution.Output(data=v)
+
+            memos[k] = output
+        return cls(memos)
 
 
 class StepBase:
@@ -57,7 +72,10 @@ class StepBase:
             step_id = f"{step_id}:{id_count - 1}"
         return transforms.hash_step_id(step_id)
 
-    async def _get_memo(self, hashed_id: str) -> object:
+    async def _get_memo(
+        self,
+        hashed_id: str,
+    ) -> execution.Output | types.EmptySentinel:
         memo = self._memos.pop(hashed_id)
 
         # If there are no more memos then all future code is new.
@@ -66,7 +84,10 @@ class StepBase:
 
         return memo
 
-    def _get_memo_sync(self, hashed_id: str) -> object:
+    def _get_memo_sync(
+        self,
+        hashed_id: str,
+    ) -> execution.Output | types.EmptySentinel:
         memo = self._memos.pop(hashed_id)
 
         # If there are no more memos then all future code is new.

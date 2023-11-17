@@ -63,14 +63,19 @@ class FunctionCallResponse(types.BaseModel):
 
 
 class StepResponse(types.BaseModel):
-    """When a step successfully returns."""
-
-    data: object
+    data: Output | None = None
     display_name: str
     id: str
     name: str
     op: Opcode
     opts: dict[str, object] | None = None
+
+
+class Output(types.BaseModel):
+    model_config = pydantic.ConfigDict(extra="forbid")
+
+    data: object = None
+    error: object = None
 
 
 def is_step_call_responses(

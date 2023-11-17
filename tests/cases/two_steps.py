@@ -10,6 +10,7 @@ _TEST_NAME = "two_steps"
 
 class _State(base.BaseState):
     step_1_counter = 0
+    step_1_output: object = None
     step_2_counter = 0
 
 
@@ -36,7 +37,7 @@ def create(
             state.step_1_counter += 1
             return [{"foo": {"bar": 1}}]
 
-        step.run("step_1", step_1)
+        state.step_1_output = step.run("step_1", step_1)
 
         def step_2() -> None:
             state.step_2_counter += 1
@@ -58,7 +59,7 @@ def create(
             state.step_1_counter += 1
             return [{"foo": {"bar": 1}}]
 
-        await step.run("step_1", step_1)
+        state.step_1_output = await step.run("step_1", step_1)
 
         async def step_2() -> None:
             state.step_2_counter += 1
@@ -79,14 +80,17 @@ def create(
         assert (
             state.step_2_counter == 1
         ), f"step_2_counter: {state.step_2_counter}"
+        assert state.step_1_output == [{"foo": {"bar": 1}}], state.step_1_output
 
-        step_1_output = json.loads(
+        step_1_output_in_api = json.loads(
             tests.helper.client.get_step_output(
                 run_id=run_id,
                 step_id="step_1",
             )
         )
-        assert step_1_output == [{"foo": {"bar": 1}}], step_1_output
+        assert step_1_output_in_api == {
+            "data": [{"foo": {"bar": 1}}]
+        }, step_1_output_in_api
 
     if is_sync:
         fn = fn_sync

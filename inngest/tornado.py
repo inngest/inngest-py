@@ -61,19 +61,7 @@ def serve(
 
             comm_res = handler.inspect(server_kind)
 
-            body = transforms.dump_json(comm_res.body)
-            if isinstance(body, Exception):
-                comm_res = comm.CommResponse.from_error(
-                    client.logger,
-                    FRAMEWORK,
-                    body,
-                )
-                body = json.dumps(comm_res.body)
-
-            self.write(body)
-            for k, v in comm_res.headers.items():
-                self.add_header(k, v)
-            self.set_status(comm_res.status_code)
+            self._write_comm_response(comm_res)
 
         def post(self) -> None:
             fn_id: str | None
@@ -98,8 +86,16 @@ def serve(
 
             headers = net.normalize_headers(dict(self.request.headers.items()))
 
+            call = execution.Call.from_raw(json.loads(self.request.body))
+            if isinstance(call, Exception):
+                return self._write_comm_response(
+                    comm.CommResponse.from_error(
+                        client.logger, FRAMEWORK, call
+                    ),
+                )
+
             comm_res = handler.call_function_sync(
-                call=execution.Call.from_dict(json.loads(self.request.body)),
+                call=call,
                 fn_id=fn_id,
                 req_sig=net.RequestSignature(
                     body=self.request.body,
@@ -109,19 +105,7 @@ def serve(
                 target_hashed_id=step_id,
             )
 
-            body = transforms.dump_json(comm_res.body)
-            if isinstance(body, Exception):
-                comm_res = comm.CommResponse.from_error(
-                    client.logger,
-                    FRAMEWORK,
-                    body,
-                )
-                body = json.dumps(comm_res.body)
-
-            self.write(body)
-            for k, v in comm_res.headers.items():
-                self.add_header(k, v)
-            self.set_status(comm_res.status_code)
+            self._write_comm_response(comm_res)
 
         def put(self) -> None:
             headers = net.normalize_headers(dict(self.request.headers.items()))
@@ -136,6 +120,9 @@ def serve(
                 server_kind=server_kind,
             )
 
+            self._write_comm_response(comm_res)
+
+        def _write_comm_response(self, comm_res: comm.CommResponse) -> None:
             body = transforms.dump_json(comm_res.body)
             if isinstance(body, Exception):
                 comm_res = comm.CommResponse.from_error(

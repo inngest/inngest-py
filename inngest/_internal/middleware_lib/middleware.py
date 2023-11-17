@@ -42,8 +42,8 @@ class Middleware:
 
     async def transform_output(
         self,
-        output: object,
-    ) -> object:
+        output: execution.Output,
+    ) -> execution.Output:
         """
         After a function or step returns. Used to modify the returned data.
         Called multiple times per run when using steps. Not called when an error
@@ -93,8 +93,8 @@ class MiddlewareSync:
 
     def transform_output(
         self,
-        output: object,
-    ) -> object:
+        output: execution.Output,
+    ) -> execution.Output:
         """
         After a function or step returns. Used to modify the returned data.
         Called multiple times per run when using steps. Not called when an error
