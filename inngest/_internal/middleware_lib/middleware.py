@@ -5,7 +5,7 @@ from inngest._internal import client_lib, execution, function
 
 class Middleware:
     def __init__(self, client: client_lib.Inngest) -> None:
-        self.client = client
+        self._client = client
 
     async def after_execution(self) -> None:
         """
