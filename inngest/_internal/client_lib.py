@@ -33,7 +33,11 @@ class Inngest:
         | None = None,
     ) -> None:
         self.app_id = app_id
-        self.is_production = is_production or env.is_prod()
+
+        self.is_production = (
+            is_production if is_production is not None else env.is_prod()
+        )
+
         self.logger = logger or logging.getLogger(__name__)
         self.middleware = middleware or []
 
