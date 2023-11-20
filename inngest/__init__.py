@@ -16,7 +16,6 @@ from ._internal.function_config import (
     TriggerEvent,
 )
 from ._internal.step_lib import Step, StepSync
-from ._internal.types import Logger, Serializable
 
 __all__ = [
     "Batch",
@@ -26,11 +25,9 @@ __all__ = [
     "Event",
     "Function",
     "Inngest",
-    "Logger",
     "NonRetriableError",
     "Output",
     "RateLimit",
-    "Serializable",
     "Step",
     "StepSync",
     "Throttle",

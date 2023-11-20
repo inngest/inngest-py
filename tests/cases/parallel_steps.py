@@ -31,7 +31,7 @@ def create(
     def fn_sync(
         ctx: inngest.Context,
         step: inngest.StepSync,
-    ) -> tuple[inngest.Serializable, ...]:
+    ) -> tuple[int | list[str], ...]:
         state.run_id = ctx.run_id
         state.request_counter += 1
 
