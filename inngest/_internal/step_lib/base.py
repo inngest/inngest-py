@@ -96,15 +96,6 @@ class StepBase:
 
         return memo
 
-    def _handle_targeting(self, *, hashed_id: str, step_id: str) -> None:
-        is_targeting_enabled = self._target_hashed_id is not None
-        if not is_targeting_enabled:
-            return
-
-        is_targeted = self._target_hashed_id == hashed_id
-        if not is_targeted:
-            raise SkipInterrupt()
-
 
 class StepIDCounter:
     """

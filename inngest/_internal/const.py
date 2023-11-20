@@ -25,7 +25,6 @@ class ErrorCode(enum.Enum):
     MISSING_EVENT_KEY = "missing_event_key"
     MISSING_FUNCTION = "missing_function"
     MISSING_HEADER = "missing_header"
-    MISSING_PARAM = "missing_param"
     MISSING_SIGNING_KEY = "missing_signing_key"
     REGISTRATION_ERROR = "registration_error"
     UNKNOWN = "unknown"
@@ -40,7 +39,6 @@ class Framework(enum.Enum):
 
 class HeaderKey(enum.Enum):
     CONTENT_TYPE = "Content-Type"
-    FORWARDED_FOR = "X-Forwarded-For"
     FRAMEWORK = "X-Inngest-Framework"
     NO_RETRY = "X-Inngest-No-Retry"
     SDK = "X-Inngest-SDK"
