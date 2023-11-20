@@ -21,16 +21,18 @@ class TestFlask(unittest.TestCase):
 
     def setUp(self) -> None:
         super().setUp()
+        dev_server_origin = f"http://{net.HOST}:{dev_server.PORT}"
         app = flask.Flask(__name__)
         self.client = inngest.Inngest(
             app_id="flask",
-            base_url=f"http://{net.HOST}:{dev_server.PORT}",
+            event_api_base_url=dev_server_origin,
         )
 
         inngest.flask.serve(
             app,
             self.client,
             [case.fn for case in _cases],
+            api_base_url=dev_server_origin,
         )
         self.app = app.test_client()
         self.proxy = http_proxy.Proxy(self.on_proxy_request).start()

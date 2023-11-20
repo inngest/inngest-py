@@ -49,7 +49,7 @@ class Test_get_function_configs(unittest.TestCase):
             return 1
 
         handler = comm.CommHandler(
-            base_url="http://foo.bar",
+            api_base_url="http://foo.bar",
             client=self.client,
             framework=const.Framework.FLASK,
             functions=[fn],
@@ -64,7 +64,7 @@ class Test_get_function_configs(unittest.TestCase):
         functions: list[inngest.Function] = []
 
         handler = comm.CommHandler(
-            base_url="http://foo.bar",
+            api_base_url="http://foo.bar",
             client=self.client,
             framework=const.Framework.FLASK,
             functions=functions,

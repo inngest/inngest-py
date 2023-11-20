@@ -29,14 +29,16 @@ class TestTornado(tornado.testing.AsyncHTTPTestCase):
         self.app = tornado.web.Application()
 
         super().setUp()
+        dev_server_origin = f"http://{net.HOST}:{dev_server.PORT}"
         self.client = inngest.Inngest(
             app_id="tornado",
-            base_url=f"http://{net.HOST}:{dev_server.PORT}",
+            event_api_base_url=dev_server_origin,
         )
         inngest.tornado.serve(
             self.app,
             self.client,
             [case.fn for case in _cases],
+            api_base_url=dev_server_origin,
         )
         self.proxy = http_proxy.Proxy(self.on_proxy_request).start()
         base.register(self.proxy.port)

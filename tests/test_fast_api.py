@@ -22,16 +22,18 @@ class TestFastAPI(unittest.TestCase):
 
     def setUp(self) -> None:
         super().setUp()
+        dev_server_origin = f"http://{net.HOST}:{dev_server.PORT}"
         self.app = fastapi.FastAPI()
         self.client = inngest.Inngest(
             app_id="fast_api",
-            base_url=f"http://{net.HOST}:{dev_server.PORT}",
+            event_api_base_url=dev_server_origin,
         )
 
         inngest.fast_api.serve(
             self.app,
             self.client,
             [case.fn for case in _cases],
+            api_base_url=dev_server_origin,
         )
         self.fast_api_client = fastapi.testclient.TestClient(self.app)
         self.proxy = http_proxy.Proxy(self.on_proxy_request).start()

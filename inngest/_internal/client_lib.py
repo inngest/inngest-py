@@ -23,7 +23,7 @@ class Inngest:
         self,
         *,
         app_id: str,
-        base_url: str | None = None,
+        event_api_base_url: str | None = None,
         event_key: str | None = None,
         is_production: bool | None = None,
         logger: types.Logger | None = None,
@@ -33,7 +33,6 @@ class Inngest:
         | None = None,
     ) -> None:
         self.app_id = app_id
-        self.base_url = base_url
         self.is_production = is_production or env.is_prod()
         self.logger = logger or logging.getLogger(__name__)
         self.middleware = middleware or []
@@ -48,20 +47,22 @@ class Inngest:
             raise errors.MissingEventKeyError()
         self._event_key = event_key
 
-        event_origin = base_url
+        event_origin = event_api_base_url
         if event_origin is None:
             if not self.is_production:
                 self.logger.info("Defaulting event origin to Dev Server")
                 event_origin = const.DEV_SERVER_ORIGIN
             else:
                 event_origin = const.DEFAULT_EVENT_ORIGIN
-        self._event_origin = event_origin
+        self._event_api_origin = event_origin
 
     def _build_send_request(
         self,
         events: list[event_lib.Event],
     ) -> types.MaybeError[httpx.Request]:
-        url = urllib.parse.urljoin(self._event_origin, f"/e/{self._event_key}")
+        url = urllib.parse.urljoin(
+            self._event_api_origin, f"/e/{self._event_key}"
+        )
         headers = net.create_headers()
 
         body = []
