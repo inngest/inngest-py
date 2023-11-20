@@ -24,7 +24,7 @@ def serve(
     client: client_lib.Inngest,
     functions: list[function.Function],
     *,
-    base_url: str | None = None,
+    api_base_url: str | None = None,
     signing_key: str | None = None,
 ) -> None:
     """
@@ -36,11 +36,11 @@ def serve(
         client: Inngest client.
         functions: List of functions to serve.
 
-        base_url: Base URL to serve from.
+        api_base_url: Origin for the Inngest API.
         signing_key: Inngest signing key.
     """
     handler = comm.CommHandler(
-        base_url=base_url or client.base_url,
+        api_base_url=api_base_url,
         client=client,
         framework=FRAMEWORK,
         functions=functions,

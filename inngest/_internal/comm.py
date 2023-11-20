@@ -138,7 +138,7 @@ class CommHandler:
     def __init__(
         self,
         *,
-        base_url: str | None = None,
+        api_base_url: str | None = None,
         client: client_lib.Inngest,
         framework: const.Framework,
         functions: list[function.Function],
@@ -155,16 +155,18 @@ class CommHandler:
         if not self._is_production:
             self._client.logger.info("Dev Server mode enabled")
 
-        base_url = base_url or os.getenv(const.EnvKey.BASE_URL.value)
-        if base_url is None:
+        api_base_url = api_base_url or os.getenv(
+            const.EnvKey.API_BASE_URL.value
+        )
+        if api_base_url is None:
             if not self._is_production:
                 self._client.logger.info("Defaulting API origin to Dev Server")
-                base_url = const.DEV_SERVER_ORIGIN
+                api_base_url = const.DEV_SERVER_ORIGIN
             else:
-                base_url = const.DEFAULT_API_ORIGIN
+                api_base_url = const.DEFAULT_API_ORIGIN
 
         try:
-            self._api_origin = net.parse_url(base_url)
+            self._api_origin = net.parse_url(api_base_url)
         except Exception as err:
             raise errors.InvalidBaseURLError() from err
 
