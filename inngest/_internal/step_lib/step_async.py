@@ -127,7 +127,7 @@ class Step(base.StepBase):
         """
 
         async def fn() -> list[str]:
-            return await self._client.send(events)
+            return await self._client.send(events, self._server_kind)
 
         return await self.run(step_id, fn)
 

@@ -40,6 +40,7 @@ class Framework(enum.Enum):
 
 class HeaderKey(enum.Enum):
     CONTENT_TYPE = "Content-Type"
+    EXPECTED_SERVER_KIND = "X-Inngest-Expected-Server-Kind"
     FRAMEWORK = "X-Inngest-Framework"
     NO_RETRY = "X-Inngest-No-Retry"
     SDK = "X-Inngest-SDK"

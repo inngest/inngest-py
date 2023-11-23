@@ -63,11 +63,17 @@ class Inngest:
     def _build_send_request(
         self,
         events: list[event_lib.Event],
+        server_kind: const.ServerKind | None,
     ) -> types.MaybeError[httpx.Request]:
         url = urllib.parse.urljoin(
             self._event_api_origin, f"/e/{self._event_key}"
         )
+
         headers = net.create_headers()
+        if server_kind is not None:
+            headers[
+                const.HeaderKey.EXPECTED_SERVER_KIND.value
+            ] = server_kind.value
 
         body = []
         for event in events:
@@ -100,12 +106,13 @@ class Inngest:
     async def send(
         self,
         events: event_lib.Event | list[event_lib.Event],
+        _server_kind: const.ServerKind | None = None,
     ) -> list[str]:
         if not isinstance(events, list):
             events = [events]
 
         async with httpx.AsyncClient() as client:
-            req = self._build_send_request(events)
+            req = self._build_send_request(events, _server_kind)
             if isinstance(req, Exception):
                 raise req
             return _extract_ids((await client.send(req)).json())
@@ -113,12 +120,13 @@ class Inngest:
     def send_sync(
         self,
         events: event_lib.Event | list[event_lib.Event],
+        _server_kind: const.ServerKind | None = None,
     ) -> list[str]:
         if not isinstance(events, list):
             events = [events]
 
         with httpx.Client() as client:
-            req = self._build_send_request(events)
+            req = self._build_send_request(events, _server_kind)
             if isinstance(req, Exception):
                 raise req
             return _extract_ids((client.send(req)).json())

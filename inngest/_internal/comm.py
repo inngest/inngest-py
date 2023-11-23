@@ -184,6 +184,7 @@ class CommHandler:
     def _build_registration_request(
         self,
         app_url: str,
+        server_kind: const.ServerKind | None,
     ) -> types.MaybeError[httpx.Request]:
         registration_url = urllib.parse.urljoin(
             self._api_origin,
@@ -210,11 +211,17 @@ class CommHandler:
         if isinstance(body, Exception):
             return body
 
-        headers = net.create_headers(framework=self._framework)
+        headers = {
+            **net.create_headers(framework=self._framework),
+        }
         if self._signing_key:
             headers[
                 "Authorization"
             ] = f"Bearer {transforms.hash_signing_key(self._signing_key)}"
+        if server_kind is not None:
+            headers[
+                const.HeaderKey.EXPECTED_SERVER_KIND.value
+            ] = server_kind.value
 
         return httpx.Client().build_request(
             "POST",
@@ -230,6 +237,7 @@ class CommHandler:
         call: execution.Call,
         fn_id: str,
         req_sig: net.RequestSignature,
+        server_kind: const.ServerKind | None,
         target_hashed_id: str,
     ) -> CommResponse:
         """Handle a function call from the Executor."""
@@ -263,6 +271,7 @@ class CommHandler:
             ),
             fn_id,
             middleware,
+            server_kind,
             target_step_id,
         )
 
@@ -274,6 +283,7 @@ class CommHandler:
         call: execution.Call,
         fn_id: str,
         req_sig: net.RequestSignature,
+        server_kind: const.ServerKind | None,
         target_hashed_id: str,
     ) -> CommResponse:
         """Handle a function call from the Executor."""
@@ -307,6 +317,7 @@ class CommHandler:
             ),
             fn_id,
             middleware,
+            server_kind,
             target_step_id,
         )
 
@@ -410,7 +421,7 @@ class CommHandler:
             )
 
         async with httpx.AsyncClient() as client:
-            req = self._build_registration_request(app_url)
+            req = self._build_registration_request(app_url, server_kind)
             if isinstance(req, Exception):
                 return CommResponse.from_error(
                     self._client.logger,
@@ -436,7 +447,7 @@ class CommHandler:
             )
 
         with httpx.Client() as client:
-            req = self._build_registration_request(app_url)
+            req = self._build_registration_request(app_url, server_kind)
             if isinstance(req, Exception):
                 return CommResponse.from_error(
                     self._client.logger,

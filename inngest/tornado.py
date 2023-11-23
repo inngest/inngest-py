@@ -86,6 +86,11 @@ def serve(
 
             headers = net.normalize_headers(dict(self.request.headers.items()))
 
+            server_kind = transforms.get_server_kind(headers)
+            if isinstance(server_kind, Exception):
+                client.logger.error(server_kind)
+                server_kind = None
+
             call = execution.Call.from_raw(json.loads(self.request.body))
             if isinstance(call, Exception):
                 return self._write_comm_response(
@@ -102,6 +107,7 @@ def serve(
                     headers=headers,
                     is_production=client.is_production,
                 ),
+                server_kind=server_kind,
                 target_hashed_id=step_id,
             )
 

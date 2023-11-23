@@ -111,6 +111,7 @@ def _create_handler_async(
                         headers=headers,
                         is_production=client.is_production,
                     ),
+                    server_kind=server_kind,
                     target_hashed_id=step_id,
                 ),
             )
@@ -182,6 +183,7 @@ def _create_handler_sync(
                         headers=headers,
                         is_production=client.is_production,
                     ),
+                    server_kind=server_kind,
                     target_hashed_id=step_id,
                 ),
             )
