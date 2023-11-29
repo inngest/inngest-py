@@ -93,3 +93,7 @@ mccabe = { max-complexity = 16 }
 [tool.ruff.lint]
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
+
+[tool.setuptools.package-data]
+# Makes py.typed appear when users install the inngest package.
+inngest = ["py.typed"]
