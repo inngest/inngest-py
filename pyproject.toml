@@ -93,3 +93,6 @@ mccabe = { max-complexity = 16 }
 [tool.ruff.lint]
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
+
+[tool.setuptools.package-data]
+inngest = ["py.typed"]
