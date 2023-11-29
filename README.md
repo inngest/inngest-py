@@ -27,6 +27,7 @@
 
 We currently support the following frameworks (but adding a new framework is easy!):
 
+- Django
 - FastAPI
 - Flask
 - Tornado

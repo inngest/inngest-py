@@ -5,6 +5,7 @@ description = "Python SDK for Inngest"
 readme = "README.md"
 classifiers = [
     "Development Status :: 4 - Beta",
+    "Framework :: Django",
     "Framework :: FastAPI",
     "Framework :: Flask",
     "Intended Audience :: Developers",
