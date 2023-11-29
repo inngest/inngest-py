@@ -5,6 +5,7 @@ description = "Python SDK for Inngest"
 readme = "README.md"
 classifiers = [
     "Development Status :: 4 - Beta",
+    "Framework :: Django",
     "Framework :: FastAPI",
     "Framework :: Flask",
     "Intended Audience :: Developers",
@@ -18,11 +19,14 @@ dependencies = ["httpx>=0.24.0", "pydantic>=2.1.1"]
 
 [project.optional-dependencies]
 extra = [
+    "Django==4.2.7",
     "Flask==3.0.0",
     "build==1.0.3",
+    "django-types==0.19.1",
     "fastapi==0.104.0",
     "mypy==1.6.1",
     "pytest==7.4.2",
+    "pytest-django==4.7.0",
     "pytest-xdist[psutil]==3.3.1",
     "ruff==0.1.4",
     "toml==0.10.2",

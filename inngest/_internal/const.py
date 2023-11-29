@@ -33,6 +33,7 @@ class ErrorCode(enum.Enum):
 
 
 class Framework(enum.Enum):
+    DJANGO = "django"
     FAST_API = "fast_api"
     FLASK = "flask"
     TORNADO = "tornado"
