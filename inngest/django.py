@@ -1,4 +1,6 @@
-"""Flask integration for Inngest."""
+"""
+Django integration for Inngest.
+"""
 
 import http
 import json
