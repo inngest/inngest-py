@@ -57,7 +57,11 @@ def serve(
             client.logger.error(server_kind)
             server_kind = None
 
-        return _to_response(client.logger, handler.inspect(server_kind))
+        return _to_response(
+            client.logger,
+            handler.inspect(server_kind),
+            server_kind,
+        )
 
     @app.post("/api/inngest")
     async def post_inngest_api(
@@ -77,7 +81,8 @@ def serve(
         if isinstance(call, Exception):
             return _to_response(
                 client.logger,
-                comm.CommResponse.from_error(client.logger, FRAMEWORK, call),
+                comm.CommResponse.from_error(client.logger, call),
+                server_kind,
             )
 
         return _to_response(
@@ -90,9 +95,9 @@ def serve(
                     headers=headers,
                     is_production=client.is_production,
                 ),
-                server_kind=server_kind,
                 target_hashed_id=stepId,
             ),
+            server_kind,
         )
 
     @app.put("/api/inngest")
@@ -110,19 +115,25 @@ def serve(
                 app_url=str(request.url),
                 server_kind=server_kind,
             ),
+            server_kind,
         )
 
 
 def _to_response(
-    logger: types.Logger, comm_res: comm.CommResponse
+    logger: types.Logger,
+    comm_res: comm.CommResponse,
+    server_kind: const.ServerKind | None,
 ) -> fastapi.responses.Response:
     body = transforms.dump_json(comm_res.body)
     if isinstance(body, Exception):
-        comm_res = comm.CommResponse.from_error(logger, FRAMEWORK, body)
+        comm_res = comm.CommResponse.from_error(logger, body)
         body = json.dumps(comm_res.body)
 
     return fastapi.responses.Response(
         content=body.encode("utf-8"),
-        headers=comm_res.headers,
+        headers={
+            **comm_res.headers,
+            **net.create_headers(FRAMEWORK, server_kind),
+        },
         status_code=comm_res.status_code,
     )

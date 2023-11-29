@@ -9,9 +9,14 @@ Method = typing.Literal["GET", "POST"]
 
 
 def create_headers(
-    *,
-    framework: const.Framework | None = None,
+    framework: const.Framework | None,
+    server_kind: const.ServerKind | None,
 ) -> dict[str, str]:
+    """
+    Create standard headers that should exist on every possible outgoing
+    request.
+    """
+
     headers = {
         const.HeaderKey.CONTENT_TYPE.value: "application/json",
         const.HeaderKey.SDK.value: f"inngest-{const.LANGUAGE}:v{const.VERSION}",
@@ -20,12 +25,17 @@ def create_headers(
 
     if framework is not None:
         headers[const.HeaderKey.FRAMEWORK.value] = framework.value
+    if server_kind is not None:
+        headers[const.HeaderKey.EXPECTED_SERVER_KIND.value] = server_kind.value
 
     return headers
 
 
 def normalize_headers(headers: dict[str, str]) -> dict[str, str]:
-    """Ensure that known headers are in the correct casing."""
+    """
+    Ensure that known headers are in the correct casing.
+    """
+
     new_headers = {}
 
     for k, v in headers.items():

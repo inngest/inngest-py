@@ -61,7 +61,7 @@ def serve(
 
             comm_res = handler.inspect(server_kind)
 
-            self._write_comm_response(comm_res)
+            self._write_comm_response(comm_res, server_kind)
 
         def post(self) -> None:
             fn_id: str | None
@@ -94,9 +94,8 @@ def serve(
             call = execution.Call.from_raw(json.loads(self.request.body))
             if isinstance(call, Exception):
                 return self._write_comm_response(
-                    comm.CommResponse.from_error(
-                        client.logger, FRAMEWORK, call
-                    ),
+                    comm.CommResponse.from_error(client.logger, call),
+                    server_kind,
                 )
 
             comm_res = handler.call_function_sync(
@@ -107,11 +106,10 @@ def serve(
                     headers=headers,
                     is_production=client.is_production,
                 ),
-                server_kind=server_kind,
                 target_hashed_id=step_id,
             )
 
-            self._write_comm_response(comm_res)
+            self._write_comm_response(comm_res, server_kind)
 
         def put(self) -> None:
             headers = net.normalize_headers(dict(self.request.headers.items()))
@@ -126,21 +124,25 @@ def serve(
                 server_kind=server_kind,
             )
 
-            self._write_comm_response(comm_res)
+            self._write_comm_response(comm_res, server_kind)
 
-        def _write_comm_response(self, comm_res: comm.CommResponse) -> None:
+        def _write_comm_response(
+            self,
+            comm_res: comm.CommResponse,
+            server_kind: const.ServerKind | None,
+        ) -> None:
             body = transforms.dump_json(comm_res.body)
             if isinstance(body, Exception):
-                comm_res = comm.CommResponse.from_error(
-                    client.logger,
-                    FRAMEWORK,
-                    body,
-                )
+                comm_res = comm.CommResponse.from_error(client.logger, body)
                 body = json.dumps(comm_res.body)
 
             self.write(body)
+
             for k, v in comm_res.headers.items():
                 self.add_header(k, v)
+            for k, v in net.create_headers(FRAMEWORK, server_kind).items():
+                self.add_header(k, v)
+
             self.set_status(comm_res.status_code)
 
     app.add_handlers(r".*", [("/api/inngest", InngestHandler)])

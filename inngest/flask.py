@@ -75,6 +75,7 @@ def _create_handler_async(
             return _to_response(
                 client.logger,
                 handler.inspect(server_kind),
+                server_kind,
             )
 
         if flask.request.method == "POST":
@@ -96,9 +97,8 @@ def _create_handler_async(
             if isinstance(call, Exception):
                 return _to_response(
                     client.logger,
-                    comm.CommResponse.from_error(
-                        client.logger, FRAMEWORK, call
-                    ),
+                    comm.CommResponse.from_error(client.logger, call),
+                    server_kind,
                 )
 
             return _to_response(
@@ -111,9 +111,9 @@ def _create_handler_async(
                         headers=headers,
                         is_production=client.is_production,
                     ),
-                    server_kind=server_kind,
                     target_hashed_id=step_id,
                 ),
+                server_kind,
             )
 
         if flask.request.method == "PUT":
@@ -123,6 +123,7 @@ def _create_handler_async(
                     app_url=flask.request.url,
                     server_kind=server_kind,
                 ),
+                server_kind,
             )
 
         # Should be unreachable
@@ -147,6 +148,7 @@ def _create_handler_sync(
             return _to_response(
                 client.logger,
                 handler.inspect(server_kind),
+                server_kind,
             )
 
         if flask.request.method == "POST":
@@ -168,9 +170,8 @@ def _create_handler_sync(
             if isinstance(call, Exception):
                 return _to_response(
                     client.logger,
-                    comm.CommResponse.from_error(
-                        client.logger, FRAMEWORK, call
-                    ),
+                    comm.CommResponse.from_error(client.logger, call),
+                    server_kind,
                 )
 
             return _to_response(
@@ -183,9 +184,9 @@ def _create_handler_sync(
                         headers=headers,
                         is_production=client.is_production,
                     ),
-                    server_kind=server_kind,
                     target_hashed_id=step_id,
                 ),
+                server_kind,
             )
 
         if flask.request.method == "PUT":
@@ -195,6 +196,7 @@ def _create_handler_sync(
                     app_url=flask.request.url,
                     server_kind=server_kind,
                 ),
+                server_kind,
             )
 
         # Should be unreachable
@@ -204,14 +206,18 @@ def _create_handler_sync(
 def _to_response(
     logger: types.Logger,
     comm_res: comm.CommResponse,
+    server_kind: const.ServerKind | None,
 ) -> flask.Response:
     body = transforms.dump_json(comm_res.body)
     if isinstance(body, Exception):
-        comm_res = comm.CommResponse.from_error(logger, FRAMEWORK, body)
+        comm_res = comm.CommResponse.from_error(logger, body)
         body = json.dumps(comm_res.body)
 
     return flask.Response(
+        headers={
+            **comm_res.headers,
+            **net.create_headers(FRAMEWORK, server_kind),
+        },
         response=body.encode("utf-8"),
-        headers=comm_res.headers,
         status=comm_res.status_code,
     )

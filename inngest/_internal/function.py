@@ -207,7 +207,6 @@ class Function:
         ctx: Context,
         fn_id: str,
         middleware: middleware_lib.MiddlewareManager,
-        server_kind: const.ServerKind | None,
         target_hashed_id: str | None,
     ) -> execution.CallResult:
         middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
@@ -256,7 +255,6 @@ class Function:
                         client,
                         memos,
                         middleware,
-                        server_kind,
                         step_lib.StepIDCounter(),
                         target_hashed_id,
                     ),
@@ -268,7 +266,6 @@ class Function:
                         client,
                         memos,
                         middleware,
-                        server_kind,
                         step_lib.StepIDCounter(),
                         target_hashed_id,
                     ),
@@ -322,7 +319,6 @@ class Function:
         ctx: Context,
         fn_id: str,
         middleware: middleware_lib.MiddlewareManager,
-        server_kind: const.ServerKind | None,
         target_hashed_id: str | None,
     ) -> execution.CallResult:
         middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
@@ -364,7 +360,6 @@ class Function:
                         client,
                         memos,
                         middleware,
-                        server_kind,
                         step_lib.StepIDCounter(),
                         target_hashed_id,
                     ),

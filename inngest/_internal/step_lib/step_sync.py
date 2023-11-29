@@ -108,7 +108,7 @@ class StepSync(base.StepBase):
         """
 
         def fn() -> list[str]:
-            return self._client.send_sync(events, self._server_kind)
+            return self._client.send_sync(events)
 
         return self.run(step_id, fn)
 

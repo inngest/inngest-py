@@ -32,6 +32,18 @@ class Inngest:
         ]
         | None = None,
     ) -> None:
+        """
+        Args:
+        ----
+            app_id: Unique Inngest ID. Changing this ID will make Inngest think
+                it's a different app.
+            event_api_base_url: Origin for the Inngest Event API.
+            event_key: Inngest event key.
+            is_production: Whether the app is in production.
+            logger: Logger to use.
+            middleware: List of middleware to use.
+        """
+
         self.app_id = app_id
 
         self.is_production = (
@@ -63,17 +75,19 @@ class Inngest:
     def _build_send_request(
         self,
         events: list[event_lib.Event],
-        server_kind: const.ServerKind | None,
     ) -> types.MaybeError[httpx.Request]:
         url = urllib.parse.urljoin(
             self._event_api_origin, f"/e/{self._event_key}"
         )
 
-        headers = net.create_headers()
-        if server_kind is not None:
-            headers[
-                const.HeaderKey.EXPECTED_SERVER_KIND.value
-            ] = server_kind.value
+        # The client is irrespective of framework.
+        framework = None
+
+        # It'd be nice to know the expected server kind, but it's unclear how to
+        # do that.
+        server_kind = None
+
+        headers = net.create_headers(framework, server_kind)
 
         body = []
         for event in events:
@@ -106,13 +120,20 @@ class Inngest:
     async def send(
         self,
         events: event_lib.Event | list[event_lib.Event],
-        _server_kind: const.ServerKind | None = None,
     ) -> list[str]:
+        """
+        Send one or more events. This method is asynchronous.
+
+        Args:
+        ----
+            events: An event or list of events to send.
+        """
+
         if not isinstance(events, list):
             events = [events]
 
         async with httpx.AsyncClient() as client:
-            req = self._build_send_request(events, _server_kind)
+            req = self._build_send_request(events)
             if isinstance(req, Exception):
                 raise req
             return _extract_ids((await client.send(req)).json())
@@ -120,13 +141,20 @@ class Inngest:
     def send_sync(
         self,
         events: event_lib.Event | list[event_lib.Event],
-        _server_kind: const.ServerKind | None = None,
     ) -> list[str]:
+        """
+        Send one or more events. This method is synchronous.
+
+        Args:
+        ----
+            events: An event or list of events to send.
+        """
+
         if not isinstance(events, list):
             events = [events]
 
         with httpx.Client() as client:
-            req = self._build_send_request(events, _server_kind)
+            req = self._build_send_request(events)
             if isinstance(req, Exception):
                 raise req
             return _extract_ids((client.send(req)).json())

@@ -4,7 +4,6 @@ import threading
 
 from inngest._internal import (
     client_lib,
-    const,
     execution,
     middleware_lib,
     transforms,
@@ -57,7 +56,6 @@ class StepBase:
         client: client_lib.Inngest,
         memos: StepMemos,
         middleware: middleware_lib.MiddlewareManager,
-        server_kind: const.ServerKind | None,
         step_id_counter: StepIDCounter,
         target_hashed_id: str | None,
     ) -> None:
@@ -65,7 +63,6 @@ class StepBase:
         self._inside_parallel = False
         self._memos = memos
         self._middleware = middleware
-        self._server_kind = server_kind
         self._step_id_counter = step_id_counter
         self._target_hashed_id = target_hashed_id
 
