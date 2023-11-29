@@ -26,10 +26,10 @@ class CommResponse:
         self,
         *,
         body: object = None,
-        headers: dict[str, str],
+        headers: dict[str, str] | None = None,
         status_code: int = http.HTTPStatus.OK.value,
     ) -> None:
-        self.headers = headers
+        self.headers = headers or {}
         self.body = body
         self.status_code = status_code
 
@@ -37,11 +37,9 @@ class CommResponse:
     def from_call_result(
         cls,
         logger: types.Logger,
-        framework: const.Framework,
         call_res: execution.CallResult,
     ) -> CommResponse:
         headers = {
-            **net.create_headers(framework=framework),
             const.HeaderKey.SERVER_TIMING.value: "handler",
         }
 
@@ -52,7 +50,6 @@ class CommResponse:
                 if isinstance(d, Exception):
                     return cls.from_error(
                         logger,
-                        framework,
                         errors.UnserializableOutputError(
                             f'"{item.display_name}" returned unserializable data'
                         ),
@@ -71,11 +68,7 @@ class CommResponse:
 
             d = call_res.to_dict()
             if isinstance(d, Exception):
-                return cls.from_error(
-                    logger,
-                    framework,
-                    d,
-                )
+                return cls.from_error(logger, d)
 
             if call_res.is_retriable is False:
                 headers[const.HeaderKey.NO_RETRY.value] = "true"
@@ -94,7 +87,6 @@ class CommResponse:
 
         return cls.from_error(
             logger,
-            framework,
             errors.UnknownError("unknown call result"),
         )
 
@@ -102,7 +94,6 @@ class CommResponse:
     def from_error(
         cls,
         logger: types.Logger,
-        framework: const.Framework,
         err: Exception,
     ) -> CommResponse:
         code: str | None = None
@@ -122,7 +113,6 @@ class CommResponse:
                 "message": str(err),
                 "name": type(err).__name__,
             },
-            headers=net.create_headers(framework=framework),
             status_code=status_code,
         )
 
@@ -184,6 +174,7 @@ class CommHandler:
     def _build_registration_request(
         self,
         app_url: str,
+        server_kind: const.ServerKind | None,
     ) -> types.MaybeError[httpx.Request]:
         registration_url = urllib.parse.urljoin(
             self._api_origin,
@@ -210,7 +201,7 @@ class CommHandler:
         if isinstance(body, Exception):
             return body
 
-        headers = net.create_headers(framework=self._framework)
+        headers = net.create_headers(self._framework, server_kind)
         if self._signing_key:
             headers[
                 "Authorization"
@@ -352,34 +343,33 @@ class CommHandler:
 
         return CommResponse(
             body={},
-            headers=net.create_headers(framework=self._framework),
+            headers=net.create_headers(self._framework, server_kind),
             status_code=200,
         )
 
     def _parse_registration_response(
         self,
         server_res: httpx.Response,
+        server_kind: const.ServerKind | None,
     ) -> CommResponse:
         try:
             server_res_body = server_res.json()
         except Exception:
             return CommResponse.from_error(
                 self._client.logger,
-                self._framework,
                 errors.RegistrationError("response is not valid JSON"),
             )
 
         if not isinstance(server_res_body, dict):
             return CommResponse.from_error(
                 self._client.logger,
-                self._framework,
                 errors.RegistrationError("response is not an object"),
             )
 
         if server_res.status_code < 400:
             return CommResponse(
                 body=server_res_body,
-                headers=net.create_headers(framework=self._framework),
+                headers=net.create_headers(self._framework, server_kind),
                 status_code=server_res.status_code,
             )
 
@@ -388,7 +378,6 @@ class CommHandler:
             msg = "registration failed"
         comm_res = CommResponse.from_error(
             self._client.logger,
-            self._framework,
             errors.RegistrationError(msg.strip()),
         )
         comm_res.status_code = server_res.status_code
@@ -403,22 +392,17 @@ class CommHandler:
         """Handle a registration call."""
         err = self._validate_registration(server_kind)
         if isinstance(err, Exception):
-            return CommResponse.from_error(
-                self._client.logger,
-                self._framework,
-                err,
-            )
+            return CommResponse.from_error(self._client.logger, err)
 
         async with httpx.AsyncClient() as client:
-            req = self._build_registration_request(app_url)
+            req = self._build_registration_request(app_url, server_kind)
             if isinstance(req, Exception):
-                return CommResponse.from_error(
-                    self._client.logger,
-                    self._framework,
-                    req,
-                )
+                return CommResponse.from_error(self._client.logger, req)
 
-            return self._parse_registration_response(await client.send(req))
+            return self._parse_registration_response(
+                await client.send(req),
+                server_kind,
+            )
 
     def register_sync(
         self,
@@ -429,22 +413,17 @@ class CommHandler:
         """Handle a registration call."""
         err = self._validate_registration(server_kind)
         if isinstance(err, Exception):
-            return CommResponse.from_error(
-                self._client.logger,
-                self._framework,
-                err,
-            )
+            return CommResponse.from_error(self._client.logger, err)
 
         with httpx.Client() as client:
-            req = self._build_registration_request(app_url)
+            req = self._build_registration_request(app_url, server_kind)
             if isinstance(req, Exception):
-                return CommResponse.from_error(
-                    self._client.logger,
-                    self._framework,
-                    req,
-                )
+                return CommResponse.from_error(self._client.logger, req)
 
-            return self._parse_registration_response(client.send(req))
+            return self._parse_registration_response(
+                client.send(req),
+                server_kind,
+            )
 
     async def _respond(
         self,
@@ -453,24 +432,12 @@ class CommHandler:
     ) -> CommResponse:
         err = await middleware.before_response()
         if isinstance(err, Exception):
-            return CommResponse.from_error(
-                self._client.logger,
-                self._framework,
-                err,
-            )
+            return CommResponse.from_error(self._client.logger, err)
 
         if isinstance(value, Exception):
-            return CommResponse.from_error(
-                self._client.logger,
-                self._framework,
-                value,
-            )
+            return CommResponse.from_error(self._client.logger, value)
 
-        return CommResponse.from_call_result(
-            self._client.logger,
-            self._framework,
-            value,
-        )
+        return CommResponse.from_call_result(self._client.logger, value)
 
     def _respond_sync(
         self,
@@ -479,24 +446,12 @@ class CommHandler:
     ) -> CommResponse:
         err = middleware.before_response_sync()
         if isinstance(err, Exception):
-            return CommResponse.from_error(
-                self._client.logger,
-                self._framework,
-                err,
-            )
+            return CommResponse.from_error(self._client.logger, err)
 
         if isinstance(value, Exception):
-            return CommResponse.from_error(
-                self._client.logger,
-                self._framework,
-                value,
-            )
+            return CommResponse.from_error(self._client.logger, value)
 
-        return CommResponse.from_call_result(
-            self._client.logger,
-            self._framework,
-            value,
-        )
+        return CommResponse.from_call_result(self._client.logger, value)
 
     def _validate_registration(
         self,

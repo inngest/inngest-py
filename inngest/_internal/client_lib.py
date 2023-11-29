@@ -32,6 +32,18 @@ class Inngest:
         ]
         | None = None,
     ) -> None:
+        """
+        Args:
+        ----
+            app_id: Unique Inngest ID. Changing this ID will make Inngest think
+                it's a different app.
+            event_api_base_url: Origin for the Inngest Event API.
+            event_key: Inngest event key.
+            is_production: Whether the app is in production.
+            logger: Logger to use.
+            middleware: List of middleware to use.
+        """
+
         self.app_id = app_id
 
         self.is_production = (
@@ -67,7 +79,15 @@ class Inngest:
         url = urllib.parse.urljoin(
             self._event_api_origin, f"/e/{self._event_key}"
         )
-        headers = net.create_headers()
+
+        # The client is irrespective of framework.
+        framework = None
+
+        # It'd be nice to know the expected server kind, but it's unclear how to
+        # do that.
+        server_kind = None
+
+        headers = net.create_headers(framework, server_kind)
 
         body = []
         for event in events:
@@ -101,6 +121,14 @@ class Inngest:
         self,
         events: event_lib.Event | list[event_lib.Event],
     ) -> list[str]:
+        """
+        Send one or more events. This method is asynchronous.
+
+        Args:
+        ----
+            events: An event or list of events to send.
+        """
+
         if not isinstance(events, list):
             events = [events]
 
@@ -114,6 +142,14 @@ class Inngest:
         self,
         events: event_lib.Event | list[event_lib.Event],
     ) -> list[str]:
+        """
+        Send one or more events. This method is synchronous.
+
+        Args:
+        ----
+            events: An event or list of events to send.
+        """
+
         if not isinstance(events, list):
             events = [events]
 

@@ -80,7 +80,7 @@ extend-select = [
     'T',
     'UP',
 ]
-extend-ignore = ['D202', 'D203', 'D205', 'D212']
+extend-ignore = ['D200', 'D202', 'D203', 'D205', 'D212']
 
 line-length = 80
 mccabe = { max-complexity = 16 }
