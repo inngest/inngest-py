@@ -33,14 +33,8 @@ class Case:
     run_test: typing.Callable[[TestClass], None]
 
 
-def create_event_name(
-    framework: str,
-    test_name: str,
-    is_sync: bool,
-) -> str:
+def create_event_name(framework: str, test_name: str) -> str:
     event_name = f"{framework}/{test_name}"
-    if is_sync:
-        event_name += "_sync"
     return event_name
 
 

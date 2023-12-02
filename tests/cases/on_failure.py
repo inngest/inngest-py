@@ -34,7 +34,7 @@ def create(
     is_sync: bool,
 ) -> base.Case:
     test_name = base.create_test_name(_TEST_NAME, is_sync)
-    event_name = base.create_event_name(framework, test_name, is_sync)
+    event_name = base.create_event_name(framework, test_name)
     state = _State()
 
     def on_failure_sync(
@@ -84,7 +84,7 @@ def create(
         raise MyError("intentional failure")
 
     def run_test(self: base.TestClass) -> None:
-        self.client.send_sync(inngest.Event(name=event_name))
+        self.client.send_sync(inngest.Event(data={"foo": 1}, name=event_name))
 
         run_id = state.wait_for_run_id()
         run = tests.helper.client.wait_for_run_status(
@@ -116,6 +116,28 @@ def create(
 
         assert state.attempt == 0
         assert isinstance(state.event, inngest.Event)
+
+        # The serialized error
+        # Assert that the error in the failure event is correct
+        error = state.event.data["error"]
+        assert isinstance(error, dict)
+        assert error["isInternal"] is False
+        assert error["isRetriable"] is True
+        assert error["message"] == "intentional failure"
+        assert error["name"] == "MyError"
+        assert isinstance(error["stack"], str)
+
+        assert state.event.data["function_id"] == test_name
+        assert state.event.data["run_id"] == state.run_id
+
+        # The original event should be in the failure event data
+        event = inngest.Event.from_raw(state.event.data["event"])
+        assert not isinstance(event, Exception)
+        assert event.data == {"foo": 1}
+        assert len(event.id) > 0
+        assert event.name == event_name
+        assert event.ts > 0
+
         assert isinstance(state.events, list) and len(state.events) == 1
         assert isinstance(state.step, inngest.Step | inngest.StepSync)
 

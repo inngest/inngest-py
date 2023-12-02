@@ -18,7 +18,7 @@ def create(
     is_sync: bool,
 ) -> base.Case:
     test_name = base.create_test_name(_TEST_NAME, is_sync)
-    event_name = base.create_event_name(framework, test_name, is_sync)
+    event_name = base.create_event_name(framework, test_name)
     state = _State()
 
     @inngest.create_function(
