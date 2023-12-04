@@ -1,5 +1,6 @@
 import json
 
+import tornado.httpclient
 import tornado.log
 import tornado.testing
 import tornado.web
@@ -41,6 +42,8 @@ class TestTornado(tornado.testing.AsyncHTTPTestCase):
             api_base_url=dev_server_origin,
         )
         self.proxy = http_proxy.Proxy(self.on_proxy_request).start()
+
+        # TODO: Stop registering on every test
         base.register(self.proxy.port)
 
     def tearDown(self) -> None:

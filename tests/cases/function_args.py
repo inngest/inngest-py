@@ -19,10 +19,11 @@ def create(
 ) -> base.Case:
     test_name = base.create_test_name(_TEST_NAME, is_sync)
     event_name = base.create_event_name(framework, test_name)
+    fn_id = base.create_fn_id(test_name)
     state = _State()
 
     @inngest.create_function(
-        fn_id=test_name,
+        fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
@@ -37,7 +38,7 @@ def create(
         state.step = step
 
     @inngest.create_function(
-        fn_id=test_name,
+        fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )

@@ -35,6 +35,7 @@ def create(
 ) -> base.Case:
     test_name = base.create_test_name(_TEST_NAME, is_sync)
     event_name = base.create_event_name(framework, test_name)
+    fn_id = base.create_fn_id(test_name)
     state = _State()
 
     def on_failure_sync(
@@ -58,7 +59,7 @@ def create(
         state.step = step
 
     @inngest.create_function(
-        fn_id=test_name,
+        fn_id=fn_id,
         on_failure=on_failure_sync,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
@@ -71,7 +72,7 @@ def create(
         raise MyError("intentional failure")
 
     @inngest.create_function(
-        fn_id=test_name,
+        fn_id=fn_id,
         on_failure=on_failure_async,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
@@ -132,7 +133,7 @@ def create(
         assert error.get("name") == "MyError", error
         assert isinstance(error.get("stack"), str), error
 
-        assert state.event.data["function_id"] == test_name
+        assert state.event.data["function_id"] == fn_id
         assert state.event.data["run_id"] == state.run_id
 
         # The original event should be in the failure event data
