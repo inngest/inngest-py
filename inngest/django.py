@@ -30,6 +30,8 @@ def serve(
     *,
     api_base_url: str | None = None,
     async_mode: bool = False,
+    serve_origin: str | None = None,
+    serve_path: str | None = None,
     signing_key: str | None = None,
 ) -> django.urls.URLPattern:
     """
@@ -42,6 +44,8 @@ def serve(
 
         api_base_url: Origin for the Inngest API.
         async_mode: Whether to serve functions asynchronously.
+        serve_origin: Origin to serve Inngest from.
+        serve_path: Path to serve Inngest from.
         signing_key: Inngest signing key.
     """
 
@@ -54,14 +58,27 @@ def serve(
     )
 
     if async_mode:
-        return _create_handler_async(client, handler)
+        return _create_handler_async(
+            client,
+            handler,
+            serve_origin=serve_origin,
+            serve_path=serve_path,
+        )
     else:
-        return _create_handler_sync(client, handler)
+        return _create_handler_sync(
+            client,
+            handler,
+            serve_origin=serve_origin,
+            serve_path=serve_path,
+        )
 
 
 def _create_handler_sync(
     client: client_lib.Inngest,
     handler: comm.CommHandler,
+    *,
+    serve_origin: str | None,
+    serve_path: str | None,
 ) -> django.urls.URLPattern:
     def inngest_api(
         request: django.http.HttpRequest
@@ -120,7 +137,11 @@ def _create_handler_sync(
             return _to_response(
                 client.logger,
                 handler.register_sync(
-                    app_url=request.build_absolute_uri(),
+                    app_url=net.create_serve_url(
+                        request_url=request.build_absolute_uri(),
+                        serve_origin=serve_origin,
+                        serve_path=serve_path,
+                    ),
                     server_kind=server_kind,
                 ),
                 server_kind,
@@ -137,6 +158,9 @@ def _create_handler_sync(
 def _create_handler_async(
     client: client_lib.Inngest,
     handler: comm.CommHandler,
+    *,
+    serve_origin: str | None,
+    serve_path: str | None,
 ) -> django.urls.URLPattern:
     async def inngest_api(
         request: django.http.HttpRequest
@@ -195,7 +219,11 @@ def _create_handler_async(
             return _to_response(
                 client.logger,
                 await handler.register(
-                    app_url=request.build_absolute_uri(),
+                    app_url=net.create_serve_url(
+                        request_url=request.build_absolute_uri(),
+                        serve_origin=serve_origin,
+                        serve_path=serve_path,
+                    ),
                     server_kind=server_kind,
                 ),
                 server_kind,
