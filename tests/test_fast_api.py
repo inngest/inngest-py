@@ -20,31 +20,34 @@ class TestFastAPI(unittest.TestCase):
     fast_api_client: fastapi.testclient.TestClient
     proxy: http_proxy.Proxy
 
-    def setUp(self) -> None:
-        super().setUp()
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
         dev_server_origin = f"http://{net.HOST}:{dev_server.PORT}"
-        self.app = fastapi.FastAPI()
-        self.client = inngest.Inngest(
+        cls.app = fastapi.FastAPI()
+        cls.client = inngest.Inngest(
             app_id="fast_api",
             event_api_base_url=dev_server_origin,
         )
 
         inngest.fast_api.serve(
-            self.app,
-            self.client,
+            cls.app,
+            cls.client,
             [case.fn for case in _cases],
             api_base_url=dev_server_origin,
         )
-        self.fast_api_client = fastapi.testclient.TestClient(self.app)
-        self.proxy = http_proxy.Proxy(self.on_proxy_request).start()
-        base.register(self.proxy.port)
+        cls.fast_api_client = fastapi.testclient.TestClient(cls.app)
+        cls.proxy = http_proxy.Proxy(cls.on_proxy_request).start()
+        base.register(cls.proxy.port)
 
-    def tearDown(self) -> None:
-        super().tearDown()
-        self.proxy.stop()
+    @classmethod
+    def tearDownClass(cls) -> None:
+        super().tearDownClass()
+        cls.proxy.stop()
 
+    @classmethod
     def on_proxy_request(
-        self,
+        cls,
         *,
         body: bytes | None,
         headers: dict[str, list[str]],
@@ -57,13 +60,13 @@ class TestFastAPI(unittest.TestCase):
         new_headers = {key: value[0] for key, value in headers.items()}
 
         if method == "POST":
-            res = self.fast_api_client.post(
+            res = cls.fast_api_client.post(
                 path,
                 content=body,
                 headers=new_headers,
             )
         elif method == "PUT":
-            res = self.fast_api_client.put(
+            res = cls.fast_api_client.put(
                 path,
                 content=body,
                 headers=new_headers,

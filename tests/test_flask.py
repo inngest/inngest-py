@@ -19,38 +19,41 @@ class TestFlask(unittest.TestCase):
     dev_server_port: int
     proxy: http_proxy.Proxy
 
-    def setUp(self) -> None:
-        super().setUp()
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
         dev_server_origin = f"http://{net.HOST}:{dev_server.PORT}"
         app = flask.Flask(__name__)
-        self.client = inngest.Inngest(
+        cls.client = inngest.Inngest(
             app_id="flask",
             event_api_base_url=dev_server_origin,
         )
 
         inngest.flask.serve(
             app,
-            self.client,
+            cls.client,
             [case.fn for case in _cases],
             api_base_url=dev_server_origin,
         )
-        self.app = app.test_client()
-        self.proxy = http_proxy.Proxy(self.on_proxy_request).start()
-        base.register(self.proxy.port)
+        cls.app = app.test_client()
+        cls.proxy = http_proxy.Proxy(cls.on_proxy_request).start()
+        base.register(cls.proxy.port)
 
-    def tearDown(self) -> None:
-        super().tearDown()
-        self.proxy.stop()
+    @classmethod
+    def tearDownClass(cls) -> None:
+        super().tearDownClass()
+        cls.proxy.stop()
 
+    @classmethod
     def on_proxy_request(
-        self,
+        cls,
         *,
         body: bytes | None,
         headers: dict[str, list[str]],
         method: str,
         path: str,
     ) -> http_proxy.Response:
-        res = self.app.open(
+        res = cls.app.open(
             method=method,
             path=path,
             headers=headers,
