@@ -35,6 +35,7 @@ def create(
 ) -> base.Case:
     test_name = base.create_test_name(_TEST_NAME, is_sync)
     event_name = base.create_event_name(framework, test_name)
+    fn_id = base.create_fn_id(test_name)
     state = _State()
 
     def on_failure_sync(
@@ -58,7 +59,7 @@ def create(
         state.step = step
 
     @inngest.create_function(
-        fn_id=test_name,
+        fn_id=fn_id,
         on_failure=on_failure_sync,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
@@ -71,7 +72,7 @@ def create(
         raise MyError("intentional failure")
 
     @inngest.create_function(
-        fn_id=test_name,
+        fn_id=fn_id,
         on_failure=on_failure_async,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
@@ -91,6 +92,11 @@ def create(
             run_id,
             tests.helper.RunStatus.FAILED,
         )
+
+        def assert_is_done() -> None:
+            assert state.attempt == 0
+
+        base.wait_for(assert_is_done)
 
         assert run.output is not None
         output = json.loads(run.output)
@@ -114,28 +120,28 @@ def create(
         # The on_failure handler has a different run ID than the original run.
         assert state.run_id != state.on_failure_run_id
 
-        assert state.attempt == 0
+        assert state.attempt == 0, state.attempt
         assert isinstance(state.event, inngest.Event)
 
         # The serialized error
         # Assert that the error in the failure event is correct
-        error = state.event.data["error"]
-        assert isinstance(error, dict)
-        assert error["isInternal"] is False
-        assert error["isRetriable"] is True
-        assert error["message"] == "intentional failure"
-        assert error["name"] == "MyError"
-        assert isinstance(error["stack"], str)
+        error = state.event.data.get("error")
+        assert isinstance(error, dict), error
+        assert error.get("isInternal") is False, error
+        assert error.get("isRetriable") is True, error
+        assert error.get("message") == "intentional failure", error
+        assert error.get("name") == "MyError", error
+        assert isinstance(error.get("stack"), str), error
 
-        assert state.event.data["function_id"] == test_name
+        assert state.event.data["function_id"] == fn_id
         assert state.event.data["run_id"] == state.run_id
 
         # The original event should be in the failure event data
         event = inngest.Event.from_raw(state.event.data["event"])
         assert not isinstance(event, Exception)
-        assert event.data == {"foo": 1}
+        assert event.data == {"foo": 1}, event.data
         assert len(event.id) > 0
-        assert event.name == event_name
+        assert event.name == event_name, event.name
         assert event.ts > 0
 
         assert isinstance(state.events, list) and len(state.events) == 1

@@ -4,6 +4,7 @@ ran into some "Settings already configured" errors when we had separate files
 for async and sync, likely due to django.conf.settings being a singleton.
 """
 
+import threading
 import unittest
 
 import django.conf
@@ -13,6 +14,13 @@ import inngest
 import inngest.django
 
 from . import base, cases, dev_server, http_proxy, net
+
+
+class SetupState:
+    is_setup = False
+    is_torn_down = False
+    mutex = threading.Lock()
+
 
 _cases = cases.create_cases_sync("django")
 
@@ -42,19 +50,26 @@ urlpatterns = [
 
 
 class TestDjango(unittest.TestCase):
-    def setUp(self) -> None:
-        super().setUp()
-        self.client = inngest_client
-        self.django_client = django.test.Client()
-        self.proxy = http_proxy.Proxy(self.on_proxy_request).start()
-        base.register(self.proxy.port)
+    client: inngest.Inngest
+    django_client: django.test.Client
+    proxy: http_proxy.Proxy
 
-    def tearDown(self) -> None:
-        super().tearDown()
-        self.proxy.stop()
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        cls.client = inngest_client
+        cls.django_client = django.test.Client()
+        cls.proxy = http_proxy.Proxy(cls.on_proxy_request).start()
+        base.register(cls.proxy.port)
 
+    @classmethod
+    def tearDownClass(cls) -> None:
+        super().tearDownClass()
+        cls.proxy.stop()
+
+    @classmethod
     def on_proxy_request(
-        self,
+        cls,
         *,
         body: bytes | None,
         headers: dict[str, list[str]],
@@ -63,7 +78,7 @@ class TestDjango(unittest.TestCase):
     ) -> http_proxy.Response:
         new_headers = {key: value[0] for key, value in headers.items()}
 
-        res = self.django_client.generic(
+        res = cls.django_client.generic(
             method=method,
             path=path,
             headers=new_headers,  # type: ignore

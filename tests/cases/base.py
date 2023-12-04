@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+import os
 import time
 import typing
 
@@ -34,8 +35,21 @@ class Case:
 
 
 def create_event_name(framework: str, test_name: str) -> str:
-    event_name = f"{framework}/{test_name}"
-    return event_name
+    suffix = ""
+    worker_id = os.getenv("PYTEST_XDIST_WORKER")
+    if worker_id:
+        suffix += f"-{worker_id}"
+
+    return f"{framework}/{test_name}{suffix}"
+
+
+def create_fn_id(test_name: str) -> str:
+    suffix = ""
+    worker_id = os.getenv("PYTEST_XDIST_WORKER")
+    if worker_id:
+        suffix += f"-{worker_id}"
+
+    return test_name + suffix
 
 
 def create_test_name(
