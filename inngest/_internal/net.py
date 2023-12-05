@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import os
 import typing
 import urllib.parse
 
@@ -29,6 +30,50 @@ def create_headers(
         headers[const.HeaderKey.EXPECTED_SERVER_KIND.value] = server_kind.value
 
     return headers
+
+
+def create_serve_url(
+    *,
+    request_url: str,
+    serve_origin: str | None,
+    serve_path: str | None,
+) -> str:
+    """
+    Create the serve URL, which is the URL that the Executor will use to reach
+    the SDK.
+
+    Args:
+    ----
+        request_url: The URL that the Executor is using to reach the SDK.
+        serve_origin: User-specified override for the serve origin.
+        serve_path: User-specified override for the serve path.
+    """
+
+    # User can also specify these via env vars. The env vars take precedence.
+    serve_origin = os.getenv(const.EnvKey.SERVE_ORIGIN.value, serve_origin)
+    serve_path = os.getenv(const.EnvKey.SERVE_PATH.value, serve_path)
+
+    parsed_url = urllib.parse.urlparse(request_url)
+    new_scheme = parsed_url.scheme
+    new_netloc = parsed_url.netloc
+    new_path = parsed_url.path
+
+    if serve_origin is not None:
+        has_scheme = "://" in serve_origin
+        if has_scheme:
+            parsed_origin = urllib.parse.urlparse(serve_origin)
+            new_scheme = parsed_origin.scheme or new_scheme
+            new_netloc = parsed_origin.netloc or new_netloc
+        else:
+            new_scheme = "https"
+            new_netloc = serve_origin
+
+    if serve_path is not None:
+        new_path = serve_path
+
+    return urllib.parse.urlunparse(
+        (new_scheme, new_netloc, new_path, "", "", "")
+    )
 
 
 def normalize_headers(headers: dict[str, str]) -> dict[str, str]:

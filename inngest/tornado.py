@@ -25,6 +25,8 @@ def serve(
     functions: list[function.Function],
     *,
     api_base_url: str | None = None,
+    serve_origin: str | None = None,
+    serve_path: str | None = None,
     signing_key: str | None = None,
 ) -> None:
     """
@@ -37,6 +39,8 @@ def serve(
         functions: List of functions to serve.
 
         api_base_url: Origin for the Inngest API.
+        serve_origin: Origin to serve the functions from.
+        serve_path: Path to serve the functions from.
         signing_key: Inngest signing key.
     """
     handler = comm.CommHandler(
@@ -120,7 +124,11 @@ def serve(
                 server_kind = None
 
             comm_res = handler.register_sync(
-                app_url=self.request.full_url(),
+                app_url=net.create_serve_url(
+                    request_url=self.request.full_url(),
+                    serve_origin=serve_origin,
+                    serve_path=serve_path,
+                ),
                 server_kind=server_kind,
             )
 

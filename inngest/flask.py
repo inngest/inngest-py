@@ -25,6 +25,8 @@ def serve(
     functions: list[function.Function],
     *,
     api_base_url: str | None = None,
+    serve_origin: str | None = None,
+    serve_path: str | None = None,
     signing_key: str | None = None,
 ) -> None:
     """
@@ -37,6 +39,8 @@ def serve(
         functions: List of functions to serve.
 
         api_base_url: Origin for the Inngest API.
+        serve_origin: Origin to serve the functions from.
+        serve_path: Path to serve the functions from.
         signing_key: Inngest signing key.
     """
     handler = comm.CommHandler(
@@ -52,15 +56,30 @@ def serve(
         for function in functions
     )
     if async_mode:
-        _create_handler_async(app, client, handler)
+        _create_handler_async(
+            app,
+            client,
+            handler,
+            serve_origin=serve_origin,
+            serve_path=serve_path,
+        )
     else:
-        _create_handler_sync(app, client, handler)
+        _create_handler_sync(
+            app,
+            client,
+            handler,
+            serve_origin=serve_origin,
+            serve_path=serve_path,
+        )
 
 
 def _create_handler_async(
     app: flask.Flask,
     client: client_lib.Inngest,
     handler: comm.CommHandler,
+    *,
+    serve_origin: str | None,
+    serve_path: str | None,
 ) -> None:
     @app.route("/api/inngest", methods=["GET", "POST", "PUT"])
     async def inngest_api() -> flask.Response | str:
@@ -120,7 +139,11 @@ def _create_handler_async(
             return _to_response(
                 client.logger,
                 await handler.register(
-                    app_url=flask.request.url,
+                    app_url=net.create_serve_url(
+                        request_url=flask.request.url,
+                        serve_origin=serve_origin,
+                        serve_path=serve_path,
+                    ),
                     server_kind=server_kind,
                 ),
                 server_kind,
@@ -134,6 +157,9 @@ def _create_handler_sync(
     app: flask.Flask,
     client: client_lib.Inngest,
     handler: comm.CommHandler,
+    *,
+    serve_origin: str | None,
+    serve_path: str | None,
 ) -> None:
     @app.route("/api/inngest", methods=["GET", "POST", "PUT"])
     def inngest_api() -> flask.Response | str:
@@ -193,7 +219,11 @@ def _create_handler_sync(
             return _to_response(
                 client.logger,
                 handler.register_sync(
-                    app_url=flask.request.url,
+                    app_url=net.create_serve_url(
+                        request_url=flask.request.url,
+                        serve_origin=serve_origin,
+                        serve_path=serve_path,
+                    ),
                     server_kind=server_kind,
                 ),
                 server_kind,
