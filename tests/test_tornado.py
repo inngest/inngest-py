@@ -1,6 +1,9 @@
 import json
+import threading
+import unittest
 
 import tornado.httpclient
+import tornado.ioloop
 import tornado.log
 import tornado.testing
 import tornado.web
@@ -9,75 +12,51 @@ import inngest
 import inngest.tornado
 from inngest._internal import const
 
-from . import base, cases, dev_server, http_proxy, net
+from . import base, cases, dev_server, net
 
 _cases = cases.create_cases_sync("tornado")
 
+_dev_server_origin = f"http://{net.HOST}:{dev_server.PORT}"
+_client = inngest.Inngest(
+    app_id=base.create_app_id("tornado"),
+    event_api_base_url=_dev_server_origin,
+)
 
-class TestTornado(tornado.testing.AsyncHTTPTestCase):
-    app: tornado.web.Application
-    client: inngest.Inngest
-    dev_server_port: int
-    proxy: http_proxy.Proxy
 
-    def get_app(self) -> tornado.web.Application:
-        return self.app
+# Not using tornado.testing.AsyncHTTPTestCase because it:
+# - Does not accept requests to localhost (only 127.0.0.1). This won't work with
+#   the Dev Server since sometimes it converts 127.0.0.1 to localhost.
+# - Binds to a different random port for each test, which necessitates
+#   registration on each test.
+class TestTornado(unittest.TestCase):
+    client = _client
+    tornado_thread: threading.Thread
 
-    def setUp(self) -> None:
-        # Set self.app before calling parent setUp(), since the Tornado test
-        # class expects it to be set. Can't set it in setUpClass() because then
-        # the same app would be shared between tests.
-        self.app = tornado.web.Application()
+    @classmethod
+    def setUpClass(cls) -> None:
+        port = net.get_available_port()
 
-        super().setUp()
-        dev_server_origin = f"http://{net.HOST}:{dev_server.PORT}"
-        self.client = inngest.Inngest(
-            app_id="tornado",
-            event_api_base_url=dev_server_origin,
-        )
-        inngest.tornado.serve(
-            self.app,
-            self.client,
-            [case.fn for case in _cases],
-            api_base_url=dev_server_origin,
-        )
-        self.proxy = http_proxy.Proxy(self.on_proxy_request).start()
+        def start_app() -> None:
+            app = tornado.web.Application()
+            app.listen(port)
+            inngest.tornado.serve(
+                app,
+                _client,
+                [case.fn for case in _cases],
+                api_base_url=_dev_server_origin,
+            )
+            tornado.ioloop.IOLoop.current().start()
 
-        # TODO: Stop registering on every test
-        base.register(self.proxy.port)
+        cls.tornado_thread = threading.Thread(daemon=True, target=start_app)
+        cls.tornado_thread.start()
+        base.register(port)
 
-    def tearDown(self) -> None:
-        super().tearDown()
-        self.proxy.stop()
-
-    def on_proxy_request(
-        self,
-        *,
-        body: bytes | None,
-        headers: dict[str, list[str]],
-        method: str,
-        path: str,
-    ) -> http_proxy.Response:
-        res = self.fetch(
-            path,
-            method=method,
-            headers={k: v[0] for k, v in headers.items()},
-            body=body,
-        )
-
-        return http_proxy.Response(
-            body=res.body,
-            headers=dict(res.headers.items()),
-            status_code=res.code,
-        )
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.tornado_thread.join(timeout=1)
 
 
 for case in _cases:
-    # TODO: Fix the on_failure test flakiness. We're only skipping it because
-    # it's flaky.
-    if case.name.startswith("on_failure"):
-        continue
-
     test_name = f"test_{case.name}"
     setattr(TestTornado, test_name, case.run_test)
 
