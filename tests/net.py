@@ -5,6 +5,8 @@ import typing
 
 HOST: typing.Final = "0.0.0.0"
 
+_used_ports: set[int] = set()
+
 
 def get_available_port() -> int:
     start_time = time.time()
@@ -14,8 +16,19 @@ def get_available_port() -> int:
             raise Exception("timeout finding available port")
 
         port = random.randint(9000, 9999)
-        if _is_port_available(port):
-            return port
+
+        if port in _used_ports:
+            continue
+
+        if not _is_port_available(port):
+            continue
+
+        _used_ports.add(port)
+        return port
+
+        # if port in _used_ports or _is_port_available(port):
+        #     _used_ports.add(port)
+        #     return port
 
 
 def _is_port_available(port: int) -> bool:

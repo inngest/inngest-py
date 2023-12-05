@@ -1,3 +1,4 @@
+import os
 import typing
 
 import httpx
@@ -20,6 +21,15 @@ class _FrameworkTestCase(typing.Protocol):
         ...
 
 
+def create_app_id(framework: str) -> str:
+    suffix = ""
+    worker_id = os.getenv("PYTEST_XDIST_WORKER")
+    if worker_id:
+        suffix += f"-{worker_id}"
+
+    return framework + suffix
+
+
 def register(app_port: int) -> None:
     res = httpx.put(
         f"http://{net.HOST}:{app_port}/api/inngest",
@@ -33,4 +43,5 @@ def set_up(case: _FrameworkTestCase) -> None:
 
 
 def tear_down(case: _FrameworkTestCase) -> None:
+    case.proxy.stop()
     case.proxy.stop()
