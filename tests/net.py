@@ -26,10 +26,6 @@ def get_available_port() -> int:
         _used_ports.add(port)
         return port
 
-        # if port in _used_ports or _is_port_available(port):
-        #     _used_ports.add(port)
-        #     return port
-
 
 def _is_port_available(port: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
