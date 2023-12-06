@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-import hashlib
 import inspect
 import typing
 
@@ -194,11 +193,7 @@ class Function:
         self._trigger = trigger
 
         if opts.on_failure is not None:
-            # Create a random suffix to avoid collisions with the main
-            # function's ID.
-            suffix = hashlib.sha1(opts.id.encode("utf-8")).hexdigest()[:8]  # noqa: S324
-
-            self._on_failure_fn_id = f"{opts.id}-{suffix}"
+            self._on_failure_fn_id = f"{opts.id}-failure"
 
     async def call(  # noqa: C901
         self,
@@ -442,7 +437,7 @@ class Function:
         if self.on_failure_fn_id is not None:
             on_failure = function_config.FunctionConfig(
                 id=self.on_failure_fn_id,
-                name=f"{name} (on_failure handler)",
+                name=f"{name} (failure)",
                 steps={
                     const.ROOT_STEP_ID: function_config.Step(
                         id=const.ROOT_STEP_ID,
