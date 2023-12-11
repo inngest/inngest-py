@@ -8,6 +8,7 @@ import json
 import django
 import django.http
 import django.urls
+import django.views.decorators.csrf
 
 from ._internal import (
     client_lib,
@@ -152,7 +153,10 @@ def _create_handler_sync(
             status=http.HTTPStatus.METHOD_NOT_ALLOWED,
         )
 
-    return django.urls.path("api/inngest", inngest_api)
+    return django.urls.path(
+        "api/inngest",
+        django.views.decorators.csrf.csrf_exempt(inngest_api),
+    )
 
 
 def _create_handler_async(
@@ -234,7 +238,10 @@ def _create_handler_async(
             status=http.HTTPStatus.METHOD_NOT_ALLOWED,
         )
 
-    return django.urls.path("api/inngest", inngest_api)
+    return django.urls.path(
+        "api/inngest",
+        django.views.decorators.csrf.csrf_exempt(inngest_api),
+    )
 
 
 def _to_response(

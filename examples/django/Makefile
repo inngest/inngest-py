@@ -9,6 +9,3 @@ dev: check-venv
 
 install: check-venv
 	@pip install .
-
-prod: check-venv
-	./scripts/start.sh
