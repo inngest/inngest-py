@@ -14,6 +14,10 @@ if typing.TYPE_CHECKING:
     from . import middleware_lib
 
 
+# Dummy value
+_DEV_SERVER_EVENT_KEY = "NO_EVENT_KEY_SET"
+
+
 class Inngest:
     middleware: list[
         type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]
@@ -66,18 +70,9 @@ class Inngest:
         self.logger = logger or logging.getLogger(__name__)
         self.middleware = middleware or []
 
-        if event_key is None:
-            if not self.is_production:
-                event_key = "NO_EVENT_KEY_SET"
-            else:
-                event_key = os.getenv(const.EnvKey.EVENT_KEY.value)
-        if event_key is None:
-            self.logger.error("missing event key")
-            raise errors.MissingEventKeyError()
-        self._event_key = event_key
+        self._event_key = event_key or os.getenv(const.EnvKey.EVENT_KEY.value)
 
         if signing_key is None and self.is_production:
-            self.logger.error("missing signing key")
             raise errors.MissingSigningKeyError()
         self._signing_key = signing_key
 
@@ -101,9 +96,16 @@ class Inngest:
         self,
         events: list[event_lib.Event],
     ) -> types.MaybeError[httpx.Request]:
-        url = urllib.parse.urljoin(
-            self._event_api_origin, f"/e/{self._event_key}"
-        )
+        event_key: str
+        if self._event_key is not None:
+            event_key = self._event_key
+        else:
+            if not self.is_production:
+                event_key = _DEV_SERVER_EVENT_KEY
+            else:
+                return errors.MissingEventKeyError()
+
+        url = urllib.parse.urljoin(self._event_api_origin, f"/e/{event_key}")
 
         # The client is irrespective of framework.
         framework = None
