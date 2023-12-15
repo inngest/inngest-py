@@ -63,7 +63,8 @@ class Inngest:
                 it's a different app.
             event_api_base_url: Origin for the Inngest Event API.
             event_key: Inngest event key.
-            is_production: Whether the app is in production.
+            is_production: Whether the app is in production. This affects
+                request signature verification and default Inngest server URLs.
             logger: Logger to use.
             middleware: List of middleware to use.
             signing_key: Inngest signing key.
