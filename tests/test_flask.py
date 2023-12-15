@@ -14,8 +14,10 @@ _framework = "flask"
 _dev_server_origin = f"http://{net.HOST}:{dev_server.PORT}"
 
 _client = inngest.Inngest(
+    api_base_url=_dev_server_origin,
     app_id=_framework,
     event_api_base_url=_dev_server_origin,
+    is_production=False,
 )
 
 _cases = cases.create_sync_cases(_client, _framework)
@@ -43,7 +45,6 @@ class TestFlask(unittest.TestCase):
             app,
             cls.client,
             _fns,
-            api_base_url=_dev_server_origin,
         )
         cls.app = app.test_client()
         cls.proxy = http_proxy.Proxy(cls.on_proxy_request).start()
@@ -90,7 +91,7 @@ class TestRegistration(unittest.TestCase):
         client = inngest.Inngest(
             app_id=f"{_framework}_registration",
             event_key="test",
-            is_production=True,
+            signing_key="signkey-prod-0486c9",
         )
 
         @client.create_function(
@@ -109,7 +110,6 @@ class TestRegistration(unittest.TestCase):
             app,
             client,
             [fn],
-            signing_key="signkey-prod-0486c9",
         )
         flask_client = app.test_client()
         res = flask_client.put(
