@@ -8,7 +8,16 @@ import urllib.parse
 
 import httpx
 
-from . import const, errors, event_lib, function, function_config, net, types
+from . import (
+    const,
+    env,
+    errors,
+    event_lib,
+    function,
+    function_config,
+    net,
+    types,
+)
 
 if typing.TYPE_CHECKING:
     from . import middleware_lib
@@ -63,13 +72,15 @@ class Inngest:
         self.app_id = app_id
 
         if is_production is None:
-            # TODO: Check an env var. Maybe INNGEST_DEV?
-            is_production = True
+            is_production = env.is_truthy(
+                const.EnvKey.DEV,
+                # Default to prod for security reasons
+                default=True,
+            )
         self.is_production = is_production
 
         self.logger = logger or logging.getLogger(__name__)
         self.middleware = middleware or []
-
         self._event_key = event_key or os.getenv(const.EnvKey.EVENT_KEY.value)
 
         if signing_key is None and self.is_production:
