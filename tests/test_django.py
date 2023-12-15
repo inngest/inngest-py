@@ -31,6 +31,12 @@ _client = inngest.Inngest(
 )
 
 _cases = cases.create_sync_cases(_client, _framework)
+_fns: list[inngest.Function] = []
+for case in _cases:
+    if isinstance(case.fn, list):
+        _fns.extend(case.fn)
+    else:
+        _fns.append(case.fn)
 
 
 django.conf.settings.configure(
@@ -45,7 +51,7 @@ django.conf.settings.configure(
 urlpatterns = [
     inngest.django.serve(
         _client,
-        [case.fn for case in _cases],
+        _fns,
         api_base_url=_dev_server_origin,
     ),
 ]

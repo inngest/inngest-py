@@ -18,7 +18,13 @@ _client = inngest.Inngest(
     event_api_base_url=_dev_server_origin,
 )
 
-_cases = cases.create_async_cases(_client, _framework)
+_cases = cases.create_sync_cases(_client, _framework)
+_fns: list[inngest.Function] = []
+for case in _cases:
+    if isinstance(case.fn, list):
+        _fns.extend(case.fn)
+    else:
+        _fns.append(case.fn)
 
 
 class TestFlask(unittest.TestCase):
@@ -36,7 +42,7 @@ class TestFlask(unittest.TestCase):
         inngest.flask.serve(
             app,
             cls.client,
-            [case.fn for case in _cases],
+            _fns,
             api_base_url=_dev_server_origin,
         )
         cls.app = app.test_client()
