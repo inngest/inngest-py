@@ -1,7 +1,6 @@
 import json
 
 import inngest
-import inngest.experimental
 import tests.helper
 
 from . import base
@@ -24,7 +23,7 @@ def create(
     fn_id = base.create_fn_id(test_name)
     state = _State()
 
-    class _MiddlewareSync(inngest.experimental.MiddlewareSync):
+    class _MiddlewareSync(inngest.MiddlewareSync):
         def after_execution(self) -> None:
             state.hook_list.append("after_execution")
 
@@ -52,7 +51,7 @@ def create(
                 output.data = "transformed output"
             return output
 
-    class _MiddlewareAsync(inngest.experimental.Middleware):
+    class _MiddlewareAsync(inngest.Middleware):
         async def after_execution(self) -> None:
             state.hook_list.append("after_execution")
 

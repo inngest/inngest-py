@@ -21,7 +21,7 @@ def create_async_function(client: inngest.Inngest) -> inngest.Function:
             await asyncio.sleep(2)
             return 2
 
-        return await step._experimental_parallel(
+        return await step.parallel(
             (
                 lambda: step.run("1a", _step_1a),
                 lambda: step.run("1b", _step_1b),
@@ -48,7 +48,7 @@ def create_sync_function(client: inngest.Inngest) -> inngest.Function:
             time.sleep(2)
             return 2
 
-        return step._experimental_parallel(
+        return step.parallel(
             (
                 lambda: step.run("1a", _step_1a),
                 lambda: step.run("1b", _step_1b),
