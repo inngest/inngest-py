@@ -15,6 +15,7 @@ class _State(base.BaseState):
 
 
 def create(
+    client: inngest.Inngest,
     framework: str,
     is_sync: bool,
 ) -> base.Case:
@@ -79,7 +80,7 @@ def create(
                 output.data = "transformed output"
             return output
 
-    @inngest.create_function(
+    @client.create_function(
         fn_id=fn_id,
         middleware=[_MiddlewareSync],
         retries=0,
@@ -101,7 +102,7 @@ def create(
 
         step.run("step_2", _step_2)
 
-    @inngest.create_function(
+    @client.create_function(
         fn_id=fn_id,
         middleware=[_MiddlewareAsync],
         retries=0,

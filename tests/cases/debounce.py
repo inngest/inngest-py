@@ -13,6 +13,7 @@ class _State(base.BaseState):
 
 
 def create(
+    client: inngest.Inngest,
     framework: str,
     is_sync: bool,
 ) -> base.Case:
@@ -21,7 +22,7 @@ def create(
     fn_id = base.create_fn_id(test_name)
     state = _State()
 
-    @inngest.create_function(
+    @client.create_function(
         debounce=inngest.Debounce(
             period=datetime.timedelta(seconds=2),
         ),
@@ -36,7 +37,7 @@ def create(
         state.run_count += 1
         state.run_id = ctx.run_id
 
-    @inngest.create_function(
+    @client.create_function(
         debounce=inngest.Debounce(
             period=datetime.timedelta(seconds=2),
         ),

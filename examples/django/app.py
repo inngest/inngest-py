@@ -24,7 +24,7 @@ inngest_client = inngest.Inngest(
 urlpatterns = [
     inngest.django.serve(
         inngest_client,
-        functions.functions_sync,
+        functions.create_sync_functions(inngest_client),
     ),
 ]
 

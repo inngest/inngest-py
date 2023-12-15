@@ -14,6 +14,7 @@ class _State(base.BaseState):
 
 
 def create(
+    client: inngest.Inngest,
     framework: str,
     is_sync: bool,
 ) -> base.Case:
@@ -22,7 +23,7 @@ def create(
     fn_id = base.create_fn_id(test_name)
     state = _State()
 
-    @inngest.create_function(
+    @client.create_function(
         cancel=[
             inngest.Cancel(
                 event=f"{event_name}.cancel",
@@ -47,7 +48,7 @@ def create(
         # still running after the test is done.
         state.is_done = True
 
-    @inngest.create_function(
+    @client.create_function(
         cancel=[
             inngest.Cancel(
                 event=f"{event_name}.cancel",
