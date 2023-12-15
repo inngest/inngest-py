@@ -197,10 +197,6 @@ class CommHandler:
         if isinstance(body, Exception):
             return body
 
-        body = transforms.prep_body(body)
-        if isinstance(body, Exception):
-            return body
-
         headers = net.create_headers(self._framework, server_kind)
         if self._signing_key:
             headers[
@@ -211,7 +207,7 @@ class CommHandler:
             "POST",
             registration_url,
             headers=headers,
-            json=body,
+            json=transforms.prep_body(body),
             timeout=30,
         )
 

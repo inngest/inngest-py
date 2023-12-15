@@ -23,6 +23,12 @@ _client = inngest.Inngest(
 )
 
 _cases = cases.create_sync_cases(_client, _framework)
+_fns: list[inngest.Function] = []
+for case in _cases:
+    if isinstance(case.fn, list):
+        _fns.extend(case.fn)
+    else:
+        _fns.append(case.fn)
 
 
 # Not using tornado.testing.AsyncHTTPTestCase because it:
@@ -44,7 +50,7 @@ class TestTornado(unittest.TestCase):
             inngest.tornado.serve(
                 app,
                 _client,
-                [case.fn for case in _cases],
+                _fns,
                 api_base_url=_dev_server_origin,
             )
             tornado.ioloop.IOLoop.current().start()

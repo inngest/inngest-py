@@ -102,8 +102,8 @@ def create(
         assert run.output is not None
         output = json.loads(run.output)
         assert output == {
-            "isInternal": False,
-            "isRetriable": True,
+            "is_internal": False,
+            "is_retriable": True,
             "message": "intentional failure",
             "name": "MyError",
             "stack": unittest.mock.ANY,
@@ -128,8 +128,8 @@ def create(
         # Assert that the error in the failure event is correct
         error = state.event.data.get("error")
         assert isinstance(error, dict), error
-        assert error.get("isInternal") is False, error
-        assert error.get("isRetriable") is True, error
+        assert error.get("is_internal") is False, error
+        assert error.get("is_retriable") is True, error
         assert error.get("message") == "intentional failure", error
         assert error.get("name") == "MyError", error
         assert isinstance(error.get("stack"), str), error

@@ -71,8 +71,8 @@ def create(
             output = json.loads(run.output)
 
             assert output == {
-                "isInternal": False,
-                "isRetriable": False,
+                "is_internal": False,
+                "is_retriable": False,
                 "message": "foo",
                 "name": "NonRetriableError",
                 "stack": unittest.mock.ANY,

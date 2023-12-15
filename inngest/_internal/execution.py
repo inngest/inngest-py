@@ -58,7 +58,7 @@ class FunctionCallResponse(types.BaseModel):
 
 class StepResponse(types.BaseModel):
     data: Output | None = None
-    display_name: str
+    display_name: str = pydantic.Field(..., serialization_alias="displayName")
     id: str
     name: str
     op: Opcode
@@ -86,6 +86,7 @@ CallResult: typing.TypeAlias = (
 
 
 class Opcode(enum.Enum):
+    INVOKE = "InvokeFunction"
     PLANNED = "StepPlanned"
     SLEEP = "Sleep"
     STEP = "Step"

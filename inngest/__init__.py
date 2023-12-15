@@ -15,7 +15,7 @@ from ._internal.function_config import (
     TriggerCron,
     TriggerEvent,
 )
-from ._internal.step_lib import Step, StepSync
+from ._internal.step_lib import FunctionID, Step, StepSync
 
 __all__ = [
     "Batch",
@@ -24,6 +24,7 @@ __all__ = [
     "Debounce",
     "Event",
     "Function",
+    "FunctionID",
     "Inngest",
     "NonRetriableError",
     "Output",

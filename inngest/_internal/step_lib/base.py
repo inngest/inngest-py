@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import threading
 
 from inngest._internal import (
@@ -134,6 +135,23 @@ class ResponseInterrupt(BaseException):
 
 class SkipInterrupt(BaseException):
     pass
+
+
+@dataclasses.dataclass
+class FunctionID:
+    app_id: str
+    function_id: str
+
+
+class InvokeOpts(types.BaseModel):
+    function_id: str
+    payload: InvokeOptsPayload
+
+
+class InvokeOptsPayload(types.BaseModel):
+    data: object
+    user: object
+    v: str | None
 
 
 class WaitForEventOpts(types.BaseModel):
