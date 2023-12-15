@@ -9,6 +9,8 @@ from inngest._internal import const, errors
 
 from . import comm
 
+client = inngest.Inngest(app_id="test")
+
 
 class Test_get_function_configs(unittest.TestCase):
     def setUp(self) -> None:
@@ -23,7 +25,7 @@ class Test_get_function_configs(unittest.TestCase):
         fully-specified config.
         """
 
-        @inngest.create_function(
+        @client.create_function(
             batch_events=inngest.Batch(
                 max_size=2, timeout=datetime.timedelta(minutes=1)
             ),

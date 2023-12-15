@@ -30,6 +30,7 @@ class MyError(Exception):
 
 
 def create(
+    client: inngest.Inngest,
     framework: str,
     is_sync: bool,
 ) -> base.Case:
@@ -58,7 +59,7 @@ def create(
         state.on_failure_run_id = ctx.run_id
         state.step = step
 
-    @inngest.create_function(
+    @client.create_function(
         fn_id=fn_id,
         on_failure=on_failure_sync,
         retries=0,
@@ -71,7 +72,7 @@ def create(
         state.run_id = ctx.run_id
         raise MyError("intentional failure")
 
-    @inngest.create_function(
+    @client.create_function(
         fn_id=fn_id,
         on_failure=on_failure_async,
         retries=0,
@@ -133,7 +134,7 @@ def create(
         assert error.get("name") == "MyError", error
         assert isinstance(error.get("stack"), str), error
 
-        assert state.event.data["function_id"] == fn_id
+        assert state.event.data["function_id"] == fn_sync.id
         assert state.event.data["run_id"] == state.run_id
 
         # The original event should be in the failure event data

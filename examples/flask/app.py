@@ -11,6 +11,6 @@ inngest_client.set_logger(app.logger)
 inngest.flask.serve(
     app,
     inngest_client,
-    functions.functions_sync,
+    functions.create_sync_functions(inngest_client),
 )
 app.run(port=8000)

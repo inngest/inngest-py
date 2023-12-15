@@ -10,7 +10,15 @@ from inngest._internal import const
 
 from . import base, cases, dev_server, http_proxy, net
 
-_cases = cases.create_cases_sync("flask")
+_framework = "flask"
+_dev_server_origin = f"http://{net.HOST}:{dev_server.PORT}"
+
+_client = inngest.Inngest(
+    app_id=_framework,
+    event_api_base_url=_dev_server_origin,
+)
+
+_cases = cases.create_async_cases(_client, _framework)
 
 
 class TestFlask(unittest.TestCase):
@@ -22,18 +30,14 @@ class TestFlask(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
-        dev_server_origin = f"http://{net.HOST}:{dev_server.PORT}"
         app = flask.Flask(__name__)
-        cls.client = inngest.Inngest(
-            app_id="flask",
-            event_api_base_url=dev_server_origin,
-        )
+        cls.client = _client
 
         inngest.flask.serve(
             app,
             cls.client,
             [case.fn for case in _cases],
-            api_base_url=dev_server_origin,
+            api_base_url=_dev_server_origin,
         )
         cls.app = app.test_client()
         cls.proxy = http_proxy.Proxy(cls.on_proxy_request).start()
@@ -78,12 +82,12 @@ class TestRegistration(unittest.TestCase):
         production mode.
         """
         client = inngest.Inngest(
-            app_id="flask_registration",
+            app_id=f"{_framework}_registration",
             event_key="test",
             is_production=True,
         )
 
-        @inngest.create_function(
+        @client.create_function(
             fn_id="foo",
             retries=0,
             trigger=inngest.TriggerEvent(event="app/foo"),

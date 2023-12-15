@@ -8,7 +8,16 @@ import urllib.parse
 
 import httpx
 
-from . import const, env, errors, event_lib, net, types
+from . import (
+    const,
+    env,
+    errors,
+    event_lib,
+    function,
+    function_config,
+    net,
+    types,
+)
 
 if typing.TYPE_CHECKING:
     from . import middleware_lib
@@ -116,6 +125,72 @@ class Inngest:
         ],
     ) -> None:
         self.middleware = [*self.middleware, middleware]
+
+    def create_function(
+        self,
+        *,
+        batch_events: function_config.Batch | None = None,
+        cancel: list[function_config.Cancel] | None = None,
+        debounce: function_config.Debounce | None = None,
+        fn_id: str,
+        middleware: list[
+            type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]
+        ]
+        | None = None,
+        name: str | None = None,
+        on_failure: function.FunctionHandlerAsync
+        | function.FunctionHandlerSync
+        | None = None,
+        rate_limit: function_config.RateLimit | None = None,
+        retries: int | None = None,
+        throttle: function_config.Throttle | None = None,
+        trigger: function_config.TriggerCron | function_config.TriggerEvent,
+    ) -> typing.Callable[
+        [function.FunctionHandlerAsync | function.FunctionHandlerSync],
+        function.Function,
+    ]:
+        """
+        Create an Inngest function.
+
+        Args:
+        ----
+            batch_events: Event batching config.
+            cancel: Run cancellation config.
+            debounce: Debouncing config.
+            fn_id: Function ID. Changing this ID will make Inngest think this is a
+                new function.
+            middleware: Middleware to apply to this function.
+            name: Human-readable function name. (Defaults to the function ID).
+            on_failure: Function to call when this function fails.
+            rate_limit: Rate limiting config.
+            retries: Number of times to retry this function.
+            throttle: Throttling config.
+            trigger: What should trigger runs of this function.
+        """
+
+        fully_qualified_fn_id = f"{self.app_id}-{fn_id}"
+
+        def decorator(
+            func: function.FunctionHandlerAsync | function.FunctionHandlerSync
+        ) -> function.Function:
+            return function.Function(
+                function.FunctionOpts(
+                    batch_events=batch_events,
+                    cancel=cancel,
+                    debounce=debounce,
+                    id=fully_qualified_fn_id,
+                    name=name,
+                    on_failure=on_failure,
+                    rate_limit=rate_limit,
+                    retries=retries,
+                    throttle=throttle,
+                ),
+                trigger,
+                func,
+                middleware,
+            )
+
+        return decorator
 
     async def send(
         self,

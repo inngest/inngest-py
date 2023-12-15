@@ -1,17 +1,17 @@
 import fastapi
-import src.inngest
 import uvicorn
+from src.inngest import inngest_client
 
-import examples.functions
 import inngest.fast_api
+from examples import functions
 
 app = fastapi.FastAPI()
 
 
 inngest.fast_api.serve(
     app,
-    src.inngest.inngest_client,
-    examples.functions.functions,
+    inngest_client,
+    functions.create_async_functions(inngest_client),
 )
 
 if __name__ == "__main__":
