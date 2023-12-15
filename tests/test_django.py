@@ -26,8 +26,10 @@ _framework = "django"
 _dev_server_origin = f"http://{net.HOST}:{dev_server.PORT}"
 
 _client = inngest.Inngest(
+    api_base_url=_dev_server_origin,
     app_id=_framework,
     event_api_base_url=_dev_server_origin,
+    is_production=False,
 )
 
 _cases = cases.create_sync_cases(_client, _framework)
@@ -52,7 +54,6 @@ urlpatterns = [
     inngest.django.serve(
         _client,
         _fns,
-        api_base_url=_dev_server_origin,
     ),
 ]
 

@@ -18,8 +18,10 @@ _framework = "tornado"
 _dev_server_origin = f"http://{net.HOST}:{dev_server.PORT}"
 
 _client = inngest.Inngest(
+    api_base_url=_dev_server_origin,
     app_id=_framework,
     event_api_base_url=_dev_server_origin,
+    is_production=False,
 )
 
 _cases = cases.create_sync_cases(_client, _framework)
@@ -51,7 +53,6 @@ class TestTornado(unittest.TestCase):
                 app,
                 _client,
                 _fns,
-                api_base_url=_dev_server_origin,
             )
             tornado.ioloop.IOLoop.current().start()
 
@@ -84,7 +85,7 @@ class TestTornadoRegistration(tornado.testing.AsyncHTTPTestCase):
         client = inngest.Inngest(
             app_id=f"{_framework}_registration",
             event_key="test",
-            is_production=True,
+            signing_key="signkey-prod-0486c9",
         )
 
         @client.create_function(
@@ -102,7 +103,6 @@ class TestTornadoRegistration(tornado.testing.AsyncHTTPTestCase):
             self.get_app(),
             client,
             [fn],
-            signing_key="signkey-prod-0486c9",
         )
         res = self.fetch(
             "/api/inngest",

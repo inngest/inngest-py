@@ -8,16 +8,7 @@ import urllib.parse
 
 import httpx
 
-from . import (
-    const,
-    env,
-    errors,
-    event_lib,
-    function,
-    function_config,
-    net,
-    types,
-)
+from . import const, errors, event_lib, function, function_config, net, types
 
 if typing.TYPE_CHECKING:
     from . import middleware_lib
@@ -28,9 +19,18 @@ class Inngest:
         type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]
     ]
 
+    @property
+    def api_origin(self) -> str:
+        return self._api_origin
+
+    @property
+    def signing_key(self) -> str | None:
+        return self._signing_key
+
     def __init__(
         self,
         *,
+        api_base_url: str | None = None,
         app_id: str,
         event_api_base_url: str | None = None,
         event_key: str | None = None,
@@ -40,10 +40,12 @@ class Inngest:
             type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]
         ]
         | None = None,
+        signing_key: str | None = None,
     ) -> None:
         """
         Args:
         ----
+            api_base_url: Origin for the Inngest REST API.
             app_id: Unique Inngest ID. Changing this ID will make Inngest think
                 it's a different app.
             event_api_base_url: Origin for the Inngest Event API.
@@ -51,13 +53,15 @@ class Inngest:
             is_production: Whether the app is in production.
             logger: Logger to use.
             middleware: List of middleware to use.
+            signing_key: Inngest signing key.
         """
 
         self.app_id = app_id
 
-        self.is_production = (
-            is_production if is_production is not None else env.is_prod()
-        )
+        if is_production is None:
+            # TODO: Check an env var. Maybe INNGEST_DEV?
+            is_production = True
+        self.is_production = is_production
 
         self.logger = logger or logging.getLogger(__name__)
         self.middleware = middleware or []
@@ -72,10 +76,22 @@ class Inngest:
             raise errors.MissingEventKeyError()
         self._event_key = event_key
 
+        if signing_key is None and self.is_production:
+            self.logger.error("missing signing key")
+            raise errors.MissingSigningKeyError()
+        self._signing_key = signing_key
+
+        api_origin = api_base_url
+        if api_origin is None:
+            if not self.is_production:
+                api_origin = const.DEV_SERVER_ORIGIN
+            else:
+                api_origin = const.DEFAULT_API_ORIGIN
+        self._api_origin = api_origin
+
         event_origin = event_api_base_url
         if event_origin is None:
             if not self.is_production:
-                self.logger.info("Defaulting event origin to Dev Server")
                 event_origin = const.DEV_SERVER_ORIGIN
             else:
                 event_origin = const.DEFAULT_EVENT_ORIGIN

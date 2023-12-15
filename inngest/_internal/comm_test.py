@@ -9,7 +9,9 @@ from inngest._internal import const, errors
 
 from . import comm
 
-client = inngest.Inngest(app_id="test")
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+client = inngest.Inngest(app_id="test", is_production=False, logger=logger)
 
 
 class Test_get_function_configs(unittest.TestCase):
@@ -17,7 +19,6 @@ class Test_get_function_configs(unittest.TestCase):
         super().setUp()
         logger = logging.getLogger(__name__)
         logger.setLevel(logging.DEBUG)
-        self.client = inngest.Inngest(app_id="test", logger=logger)
 
     def test_full_config(self) -> None:
         """
@@ -52,7 +53,7 @@ class Test_get_function_configs(unittest.TestCase):
 
         handler = comm.CommHandler(
             api_base_url="http://foo.bar",
-            client=self.client,
+            client=client,
             framework=const.Framework.FLASK,
             functions=[fn],
         )
@@ -67,7 +68,7 @@ class Test_get_function_configs(unittest.TestCase):
 
         handler = comm.CommHandler(
             api_base_url="http://foo.bar",
-            client=self.client,
+            client=client,
             framework=const.Framework.FLASK,
             functions=functions,
         )
