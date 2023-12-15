@@ -60,21 +60,25 @@ def create(
     def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
         run_id = state.wait_for_run_id()
-        run = tests.helper.client.wait_for_run_status(
-            run_id,
-            tests.helper.RunStatus.FAILED,
-        )
 
-        assert run.output is not None
-        output = json.loads(run.output)
+        def assert_output() -> None:
+            run = tests.helper.client.wait_for_run_status(
+                run_id,
+                tests.helper.RunStatus.FAILED,
+            )
 
-        assert output == {
-            "isInternal": False,
-            "isRetriable": False,
-            "message": "foo",
-            "name": "NonRetriableError",
-            "stack": unittest.mock.ANY,
-        }, output
+            assert run.output is not None
+            output = json.loads(run.output)
+
+            assert output == {
+                "isInternal": False,
+                "isRetriable": False,
+                "message": "foo",
+                "name": "NonRetriableError",
+                "stack": unittest.mock.ANY,
+            }, output
+
+        base.wait_for(assert_output)
 
         assert state.attempt == 0
 
