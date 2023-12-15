@@ -1,7 +1,6 @@
 import json
 
 import inngest
-import inngest.experimental
 import tests.helper
 
 from . import base
@@ -24,12 +23,10 @@ def create(
     fn_id = base.create_fn_id(test_name)
     state = _State()
 
-    middleware: type[
-        inngest.experimental.Middleware | inngest.experimental.MiddlewareSync
-    ]
+    middleware: type[inngest.Middleware | inngest.MiddlewareSync]
     if is_sync:
 
-        class _MiddlewareSync(inngest.experimental.MiddlewareSync):
+        class _MiddlewareSync(inngest.MiddlewareSync):
             def after_execution(self) -> None:
                 state.hook_list.append("after_execution")
 
@@ -59,7 +56,7 @@ def create(
 
     else:
 
-        class _MiddlewareAsync(inngest.experimental.Middleware):
+        class _MiddlewareAsync(inngest.Middleware):
             async def after_execution(self) -> None:
                 state.hook_list.append("after_execution")
 

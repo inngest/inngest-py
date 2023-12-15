@@ -13,7 +13,7 @@ else:
 
 
 class Step(base.StepBase):
-    async def _experimental_invoke(
+    async def invoke(
         self,
         step_id: str,
         *,
@@ -97,7 +97,7 @@ class Step(base.StepBase):
             )
         )
 
-    async def _experimental_parallel(
+    async def parallel(
         self,
         callables: tuple[typing.Callable[[], typing.Awaitable[types.T]], ...],
     ) -> tuple[types.T, ...]:

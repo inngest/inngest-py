@@ -13,7 +13,7 @@ else:
 
 
 class StepSync(base.StepBase):
-    def _experimental_invoke(
+    def invoke(
         self,
         step_id: str,
         *,
@@ -97,7 +97,7 @@ class StepSync(base.StepBase):
             )
         )
 
-    def _experimental_parallel(
+    def parallel(
         self,
         callables: tuple[typing.Callable[[], types.T], ...],
     ) -> tuple[types.T, ...]:

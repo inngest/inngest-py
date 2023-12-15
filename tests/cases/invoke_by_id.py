@@ -41,7 +41,7 @@ def create(
         step: inngest.StepSync,
     ) -> None:
         state.run_id = ctx.run_id
-        state.step_output = step._experimental_invoke(
+        state.step_output = step.invoke(
             "invoke",
             app_id=framework,
             function=f"{fn_id}/invokee",
@@ -68,7 +68,7 @@ def create(
         step: inngest.Step,
     ) -> None:
         state.run_id = ctx.run_id
-        state.step_output = await step._experimental_invoke(
+        state.step_output = await step.invoke(
             "invoke",
             app_id=framework,
             function=f"{fn_id}/invokee",
