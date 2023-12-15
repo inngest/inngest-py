@@ -37,6 +37,14 @@ class Inngest:
         return self._api_origin
 
     @property
+    def event_api_origin(self) -> str:
+        return self._event_api_origin
+
+    @property
+    def event_key(self) -> str | None:
+        return self._event_key
+
+    @property
     def signing_key(self) -> str | None:
         return self._signing_key
 
@@ -84,11 +92,13 @@ class Inngest:
         self.middleware = middleware or []
         self._event_key = event_key or os.getenv(const.EnvKey.EVENT_KEY.value)
 
-        if signing_key is None and self.is_production:
+        self._signing_key = signing_key or os.getenv(
+            const.EnvKey.SIGNING_KEY.value
+        )
+        if self._signing_key is None and self.is_production:
             raise errors.MissingSigningKeyError()
-        self._signing_key = signing_key
 
-        api_origin = api_base_url
+        api_origin = api_base_url or os.getenv(const.EnvKey.API_BASE_URL.value)
         if api_origin is None:
             if not self.is_production:
                 api_origin = const.DEV_SERVER_ORIGIN
@@ -96,7 +106,9 @@ class Inngest:
                 api_origin = const.DEFAULT_API_ORIGIN
         self._api_origin = api_origin
 
-        event_origin = event_api_base_url
+        event_origin = event_api_base_url or os.getenv(
+            const.EnvKey.EVENT_API_BASE_URL.value
+        )
         if event_origin is None:
             if not self.is_production:
                 event_origin = const.DEV_SERVER_ORIGIN
