@@ -5,6 +5,31 @@ from . import (
     cancel,
     client_middleware,
     client_send,
+    crazy_ids,
+    debounce,
+    event_payload,
+    function_args,
+    function_middleware,
+    inconsistent_step_order,
+    invoke_by_id,
+    invoke_by_object,
+    logger,
+    no_steps,
+    non_retriable_error,
+    on_failure,
+    parallel_steps,
+    sleep_until,
+    two_steps,
+    unserializable_step_output,
+    wait_for_event_fulfill,
+    wait_for_event_timeout,
+)
+
+_modules = (
+    cancel,
+    client_middleware,
+    client_send,
+    crazy_ids,
     debounce,
     event_payload,
     function_args,
@@ -30,29 +55,7 @@ def create_async_cases(
     framework: str,
 ) -> list[base.Case]:
     return [
-        case.create(client, framework, is_sync=False)
-        for case in (
-            cancel,
-            client_middleware,
-            client_send,
-            debounce,
-            event_payload,
-            function_args,
-            function_middleware,
-            inconsistent_step_order,
-            invoke_by_id,
-            invoke_by_object,
-            logger,
-            no_steps,
-            non_retriable_error,
-            on_failure,
-            parallel_steps,
-            sleep_until,
-            two_steps,
-            unserializable_step_output,
-            wait_for_event_fulfill,
-            wait_for_event_timeout,
-        )
+        module.create(client, framework, is_sync=False) for module in _modules
     ]
 
 
@@ -61,29 +64,7 @@ def create_sync_cases(
     framework: str,
 ) -> list[base.Case]:
     return [
-        case.create(client, framework, is_sync=True)
-        for case in (
-            cancel,
-            client_middleware,
-            client_send,
-            debounce,
-            event_payload,
-            function_args,
-            function_middleware,
-            inconsistent_step_order,
-            invoke_by_id,
-            invoke_by_object,
-            logger,
-            no_steps,
-            non_retriable_error,
-            on_failure,
-            parallel_steps,
-            sleep_until,
-            two_steps,
-            unserializable_step_output,
-            wait_for_event_fulfill,
-            wait_for_event_timeout,
-        )
+        module.create(client, framework, is_sync=True) for module in _modules
     ]
 
 
