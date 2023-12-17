@@ -76,7 +76,7 @@ class FunctionOpts(types.BaseModel):
     cancel: list[function_config.Cancel] | None = None
     debounce: function_config.Debounce | None = None
     id: str
-    name: str | None = None
+    name: str
     on_failure: FunctionHandlerAsync | FunctionHandlerSync | None = None
     rate_limit: function_config.RateLimit | None = None
     retries: int | None = None
@@ -342,10 +342,7 @@ class Function:
 
     def get_config(self, app_url: str) -> _Config:
         fn_id = self._opts.id
-
-        name = fn_id
-        if self._opts.name is not None:
-            name = self._opts.name
+        name = self._opts.name
 
         if self._opts.retries is not None:
             retries = function_config.Retries(attempts=self._opts.retries)

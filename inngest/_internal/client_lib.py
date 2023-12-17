@@ -221,7 +221,7 @@ class Inngest:
                     cancel=cancel,
                     debounce=debounce,
                     id=fully_qualified_fn_id,
-                    name=name,
+                    name=name or fn_id,
                     on_failure=on_failure,
                     rate_limit=rate_limit,
                     retries=retries,
