@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import inspect
 import typing
+import urllib.parse
 
 import pydantic
 
@@ -349,6 +350,17 @@ class Function:
         else:
             retries = None
 
+        url = (
+            app_url
+            + "?"
+            + urllib.parse.urlencode(
+                {
+                    "fnId": fn_id,
+                    "stepId": const.ROOT_STEP_ID,
+                }
+            )
+        )
+
         main = function_config.FunctionConfig(
             batch_events=self._opts.batch_events,
             cancel=self._opts.cancel,
@@ -363,7 +375,7 @@ class Function:
                     retries=retries,
                     runtime=function_config.Runtime(
                         type="http",
-                        url=f"{app_url}?fnId={fn_id}&stepId={const.ROOT_STEP_ID}",
+                        url=url,
                     ),
                 ),
             },
@@ -373,6 +385,17 @@ class Function:
 
         on_failure = None
         if self.on_failure_fn_id is not None:
+            url = (
+                app_url
+                + "?"
+                + urllib.parse.urlencode(
+                    {
+                        "fnId": self.on_failure_fn_id,
+                        "stepId": const.ROOT_STEP_ID,
+                    }
+                )
+            )
+
             on_failure = function_config.FunctionConfig(
                 id=self.on_failure_fn_id,
                 name=f"{name} (failure)",
@@ -383,7 +406,7 @@ class Function:
                         retries=function_config.Retries(attempts=0),
                         runtime=function_config.Runtime(
                             type="http",
-                            url=f"{app_url}?fnId={self.on_failure_fn_id}&stepId={const.ROOT_STEP_ID}",
+                            url=url,
                         ),
                     )
                 },
