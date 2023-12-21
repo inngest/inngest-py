@@ -17,8 +17,7 @@ class StepSync(base.StepBase):
         self,
         step_id: str,
         *,
-        app_id: str | None = None,
-        function: Function | str,
+        function: Function,
         data: types.Serializable | None = None,
         user: types.Serializable | None = None,
         v: str | None = None,
@@ -26,10 +25,6 @@ class StepSync(base.StepBase):
         """
         Invoke an Inngest function with data. Returns the result of the returned
         value of the function or `None` if the function does not return a value.
-
-        Functions can be invoked by passing their object or specifying their ID
-        string. If a function ID string is passed then it is assumed to be in
-        the same app as the current function unless an app ID is specified.
 
         If a function isn't found or otherwise errors, the step will fail and
         raise a `NonRetriableError`.
@@ -40,11 +35,7 @@ class StepSync(base.StepBase):
                 function, but it's OK to reuse as long as your function is
                 deterministic.
 
-            app_id: The app ID of the function to invoke. Not necessary if this
-                function and the invoked function are in the same app. Ignored
-                if `function` is an object.
-            function: The function to invoke. Can be a function object or a
-                function ID.
+            function: The function object to invoke.
             data: Will become `event.data` in the invoked function. Must be JSON
                 serializable.
             user: Will become `event.user` in the invoked function. Must be JSON
@@ -68,16 +59,81 @@ class StepSync(base.StepBase):
         if isinstance(err, Exception):
             raise err
 
-        fn_id: str
-        if isinstance(function, str):
-            if app_id is None:
-                app_id = self._client.app_id
-            fn_id = f"{app_id}-{function}"
-        else:
-            fn_id = function.id
+        opts = base.InvokeOpts(
+            function_id=function.id,
+            payload=base.InvokeOptsPayload(
+                data=data,
+                user=user,
+                v=v,
+            ),
+        ).to_dict()
+        if isinstance(opts, Exception):
+            raise opts
+
+        raise base.ResponseInterrupt(
+            execution.StepResponse(
+                display_name=step_id,
+                id=hashed_id,
+                name=step_id,
+                op=execution.Opcode.INVOKE,
+                opts=opts,
+            )
+        )
+
+    def invoke_by_id(
+        self,
+        step_id: str,
+        *,
+        app_id: str | None = None,
+        function_id: str,
+        data: types.Serializable | None = None,
+        user: types.Serializable | None = None,
+        v: str | None = None,
+    ) -> object:
+        """
+        Invoke an Inngest function with data. Returns the result of the returned
+        value of the function or `None` if the function does not return a value.
+
+        If app ID is not specified, the invoked function must be in the same
+        app.
+
+        If a function isn't found or otherwise errors, the step will fail and
+        raise a `NonRetriableError`.
+
+        Args:
+        ----
+            step_id: Durable step ID. Should usually be unique within a
+                function, but it's OK to reuse as long as your function is
+                deterministic.
+
+            app_id: The app ID of the function to invoke. Not necessary if this
+                function and the invoked function are in the same app.
+            function_id: The ID of the function to invoke.
+            data: Will become `event.data` in the invoked function. Must be JSON
+                serializable.
+            user: Will become `event.user` in the invoked function. Must be JSON
+                serializable.
+            v: Will become `event.v` in the invoked function.
+        """
+
+        hashed_id = self._get_hashed_id(step_id)
+
+        memo = self._get_memo_sync(hashed_id)
+        if not isinstance(memo, types.EmptySentinel):
+            return memo.data
+
+        is_targeting_enabled = self._target_hashed_id is not None
+        is_targeted = self._target_hashed_id == hashed_id
+        if is_targeting_enabled and not is_targeted:
+            # Skip this step because a different step is targeted.
+            raise base.SkipInterrupt()
+
+        err = self._middleware.before_execution_sync()
+        if isinstance(err, Exception):
+            raise err
 
         opts = base.InvokeOpts(
-            function_id=fn_id,
+            function_id=f"{app_id}-{function_id}",
             payload=base.InvokeOptsPayload(
                 data=data,
                 user=user,
