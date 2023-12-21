@@ -26,10 +26,6 @@ class StepSync(base.StepBase):
         Invoke an Inngest function with data. Returns the result of the returned
         value of the function or `None` if the function does not return a value.
 
-        Functions can be invoked by passing their object or specifying their ID
-        string. If a function ID string is passed then it is assumed to be in
-        the same app as the current function unless an app ID is specified.
-
         If a function isn't found or otherwise errors, the step will fail and
         raise a `NonRetriableError`.
 
@@ -98,9 +94,8 @@ class StepSync(base.StepBase):
         Invoke an Inngest function with data. Returns the result of the returned
         value of the function or `None` if the function does not return a value.
 
-        Functions can be invoked by passing their object or specifying their ID
-        string. If a function ID string is passed then it is assumed to be in
-        the same app as the current function unless an app ID is specified.
+        If app ID is not specified, the invoked function must be in the same
+        app.
 
         If a function isn't found or otherwise errors, the step will fail and
         raise a `NonRetriableError`.
