@@ -41,10 +41,10 @@ def create(
         step: inngest.StepSync,
     ) -> None:
         state.run_id = ctx.run_id
-        state.step_output = step.invoke(
+        state.step_output = step.invoke_by_id(
             "invoke",
             app_id=framework,
-            function=f"{fn_id}/invokee",
+            function_id=f"{fn_id}/invokee",
         )
 
     @client.create_function(
@@ -68,10 +68,10 @@ def create(
         step: inngest.Step,
     ) -> None:
         state.run_id = ctx.run_id
-        state.step_output = await step.invoke(
+        state.step_output = await step.invoke_by_id(
             "invoke",
             app_id=framework,
-            function=f"{fn_id}/invokee",
+            function_id=f"{fn_id}/invokee",
         )
 
     def run_test(self: base.TestClass) -> None:
