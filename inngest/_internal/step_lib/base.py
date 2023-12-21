@@ -97,6 +97,21 @@ class StepBase:
 
         return memo
 
+    def _handle_skip(
+        self,
+        hashed_id: str,
+    ) -> None:
+        """
+        Handle a skip interrupt. Step targeting is enabled and this step is not
+        the target then skip the step.
+        """
+
+        is_targeting_enabled = self._target_hashed_id is not None
+        is_targeted = self._target_hashed_id == hashed_id
+        if is_targeting_enabled and not is_targeted:
+            # Skip this step because a different step is targeted.
+            raise SkipInterrupt()
+
 
 class StepIDCounter:
     """
