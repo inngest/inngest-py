@@ -213,7 +213,7 @@ class Inngest:
         fully_qualified_fn_id = f"{self.app_id}-{fn_id}"
 
         def decorator(
-            func: function.FunctionHandlerAsync | function.FunctionHandlerSync
+            func: function.FunctionHandlerAsync | function.FunctionHandlerSync,
         ) -> function.Function:
             return function.Function(
                 function.FunctionOpts(

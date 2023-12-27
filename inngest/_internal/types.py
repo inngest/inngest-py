@@ -5,6 +5,12 @@ import typing
 
 import pydantic
 
+if typing.TYPE_CHECKING:
+    # https://github.com/python/typeshed/issues/7855
+    Logger = logging.Logger | logging.LoggerAdapter[logging.Logger]
+else:
+    Logger = object
+
 T = typing.TypeVar("T")
 
 
@@ -68,7 +74,5 @@ class BaseModel(pydantic.BaseModel):
 
 
 BaseModelT = typing.TypeVar("BaseModelT", bound=BaseModel)
-
-Logger: typing.TypeAlias = logging.Logger | logging.LoggerAdapter
 
 MaybeError: typing.TypeAlias = T | Exception
