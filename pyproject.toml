@@ -67,6 +67,9 @@ disable = [
     'unused-argument',
 ]
 
+[tool.pytest.ini_options]
+filterwarnings = ['ignore::pytest.PytestAssertRewriteWarning']
+
 [tool.ruff]
 exclude = [".venv"]
 

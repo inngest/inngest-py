@@ -9,6 +9,7 @@ from . import const
 
 class InternalError(Exception):
     code: const.ErrorCode
+    include_stack: bool = True
     status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 
     def __init__(
@@ -176,6 +177,17 @@ class UnknownError(InternalError):
     def __init__(self, message: str | None = None) -> None:
         super().__init__(
             code=const.ErrorCode.UNKNOWN,
+            message=message,
+        )
+
+
+class UnexpectedStepError(InternalError):
+    include_stack = False
+    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
+
+    def __init__(self, message: str | None = None) -> None:
+        super().__init__(
+            code=const.ErrorCode.UNEXPECTED_STEP,
             message=message,
         )
 

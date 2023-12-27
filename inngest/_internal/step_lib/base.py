@@ -99,7 +99,9 @@ class StepBase:
 
     def _handle_skip(
         self,
+        *,
         hashed_id: str,
+        step_id: str,
     ) -> None:
         """
         Handle a skip interrupt. Step targeting is enabled and this step is not
@@ -110,7 +112,7 @@ class StepBase:
         is_targeted = self._target_hashed_id == hashed_id
         if is_targeting_enabled and not is_targeted:
             # Skip this step because a different step is targeted.
-            raise SkipInterrupt()
+            raise SkipInterrupt(step_id)
 
 
 class StepIDCounter:
@@ -149,7 +151,8 @@ class ResponseInterrupt(BaseException):
 
 
 class SkipInterrupt(BaseException):
-    pass
+    def __init__(self, step_id: str) -> None:
+        self.step_id = step_id
 
 
 @dataclasses.dataclass

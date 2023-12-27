@@ -8,6 +8,7 @@
   "editor.formatOnSave": true,
   "isort.args": ["--profile", "black"],
   "isort.check": true,
+  "mypy-type-checker.importStrategy": "fromEnvironment",
   "mypy-type-checker.preferDaemon": true,
   "ruff.fixAll": true
 }

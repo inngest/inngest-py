@@ -49,7 +49,7 @@ class StepSync(base.StepBase):
         if not isinstance(memo, types.EmptySentinel):
             return memo.data
 
-        self._handle_skip(hashed_id)
+        self._handle_skip(hashed_id=hashed_id, step_id=step_id)
 
         err = self._middleware.before_execution_sync()
         if isinstance(err, Exception):
@@ -118,7 +118,7 @@ class StepSync(base.StepBase):
         if not isinstance(memo, types.EmptySentinel):
             return memo.data
 
-        self._handle_skip(hashed_id)
+        self._handle_skip(hashed_id=hashed_id, step_id=step_id)
 
         err = self._middleware.before_execution_sync()
         if isinstance(err, Exception):
@@ -198,7 +198,7 @@ class StepSync(base.StepBase):
         if not isinstance(memo, types.EmptySentinel):
             return memo.data  # type: ignore
 
-        self._handle_skip(hashed_id)
+        self._handle_skip(hashed_id=hashed_id, step_id=step_id)
 
         is_targeting_enabled = self._target_hashed_id is not None
         if self._inside_parallel and not is_targeting_enabled:
@@ -292,7 +292,7 @@ class StepSync(base.StepBase):
         if not isinstance(memo, types.EmptySentinel):
             return memo.data  # type: ignore
 
-        self._handle_skip(hashed_id)
+        self._handle_skip(hashed_id=hashed_id, step_id=step_id)
 
         err = self._middleware.before_execution_sync()
         if isinstance(err, Exception):
@@ -341,7 +341,7 @@ class StepSync(base.StepBase):
                 raise errors.UnknownError("invalid event shape") from event_obj
             return event_obj
 
-        self._handle_skip(hashed_id)
+        self._handle_skip(hashed_id=hashed_id, step_id=step_id)
 
         err = self._middleware.before_execution_sync()
         if isinstance(err, Exception):
