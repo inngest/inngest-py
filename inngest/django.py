@@ -78,7 +78,7 @@ def _create_handler_sync(
     serve_path: str | None,
 ) -> django.urls.URLPattern:
     def inngest_api(
-        request: django.http.HttpRequest
+        request: django.http.HttpRequest,
     ) -> django.http.HttpResponse:
         headers = net.normalize_headers(dict(request.headers.items()))
 
@@ -163,7 +163,7 @@ def _create_handler_async(
     serve_path: str | None,
 ) -> django.urls.URLPattern:
     async def inngest_api(
-        request: django.http.HttpRequest
+        request: django.http.HttpRequest,
     ) -> django.http.HttpResponse:
         headers = net.normalize_headers(dict(request.headers.items()))
 
