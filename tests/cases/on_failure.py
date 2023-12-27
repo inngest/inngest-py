@@ -139,10 +139,7 @@ def create(
         assert "inngest/_internal" not in stack
 
         # User code is in the traceback.
-        assert (
-            'File "/Users/aharper/inngest/inngest-py/tests/cases/on_failure.py", line'
-            in stack
-        )
+        assert '/inngest-py/tests/cases/on_failure.py", line' in stack
 
         assert state.event.data["function_id"] == fn_id
         assert state.event.data["run_id"] == state.run_id
