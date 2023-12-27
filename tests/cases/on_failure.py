@@ -131,7 +131,18 @@ def create(
         assert error.get("isRetriable") is True, error
         assert error.get("message") == "intentional failure", error
         assert error.get("name") == "MyError", error
-        assert isinstance(error.get("stack"), str), error
+        stack = error.get("stack")
+        assert isinstance(stack, str), error
+
+        # The SDK's internal code doesn't appear in the traceback since the
+        # error occurred in user code.
+        assert "inngest/_internal" not in stack
+
+        # User code is in the traceback.
+        assert (
+            'File "/Users/aharper/inngest/inngest-py/tests/cases/on_failure.py", line'
+            in stack
+        )
 
         assert state.event.data["function_id"] == fn_id
         assert state.event.data["run_id"] == state.run_id
