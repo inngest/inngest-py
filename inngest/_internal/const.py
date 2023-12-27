@@ -31,6 +31,7 @@ class ErrorCode(enum.Enum):
     MISSING_HEADER = "missing_header"
     MISSING_SIGNING_KEY = "missing_signing_key"
     REGISTRATION_ERROR = "registration_error"
+    UNEXPECTED_STEP = "unexpected_step"
     UNKNOWN = "unknown"
     UNSERIALIZABLE_OUTPUT = "unserializable_output"
 

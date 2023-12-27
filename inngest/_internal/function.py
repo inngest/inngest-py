@@ -246,10 +246,20 @@ class Function:
                 interrupt.responses[0].data = output
 
             return interrupt.responses
+        except step_lib.SkipInterrupt as err:
+            # This should only happen in a non-deterministic scenario, where
+            # step targeting is enabled and an unexpected step is encountered.
+            # We don't currently have a way to recover from this scenario.
+
+            return execution.CallError.from_error(
+                errors.UnexpectedStepError(
+                    f'found step "{err.step_id}" when targeting a different step'
+                )
+            )
         except Exception as err:
             return execution.CallError.from_error(err)
 
-    def call_sync(
+    def call_sync(  # noqa: C901
         self,
         call: execution.Call,
         client: client_lib.Inngest,
@@ -338,6 +348,16 @@ class Function:
                 interrupt.responses[0].data = output
 
             return interrupt.responses
+        except step_lib.SkipInterrupt as err:
+            # This should only happen in a non-deterministic scenario, where
+            # step targeting is enabled and an unexpected step is encountered.
+            # We don't currently have a way to recover from this scenario.
+
+            return execution.CallError.from_error(
+                errors.UnexpectedStepError(
+                    f'found step "{err.step_id}" when targeting a different step'
+                )
+            )
         except Exception as err:
             return execution.CallError.from_error(err)
 
