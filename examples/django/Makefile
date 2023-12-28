@@ -5,7 +5,10 @@ check-venv:
 	fi
 
 dev: check-venv
-	./scripts/start.sh
+	@export INNGEST_DEV=1 && ./scripts/start.sh
 
 install: check-venv
 	@pip install .
+
+prod: check-venv
+	@sh ./scripts/start.sh

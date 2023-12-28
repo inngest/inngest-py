@@ -5,7 +5,9 @@ import inngest.flask
 from examples import functions
 
 app = flask.Flask(__name__)
-inngest_client.set_logger(app.logger)
+inngest_client.set_logger(
+    app.logger,
+)
 
 
 inngest.flask.serve(
