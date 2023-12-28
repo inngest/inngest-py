@@ -67,12 +67,6 @@ class StepBase:
         self._step_id_counter = step_id_counter
         self._target_hashed_id = target_hashed_id
 
-    def _get_hashed_id(self, step_id: str) -> str:
-        id_count = self._step_id_counter.increment(step_id)
-        if id_count > 1:
-            step_id = f"{step_id}:{id_count - 1}"
-        return transforms.hash_step_id(step_id)
-
     async def _get_memo(
         self,
         hashed_id: str,
@@ -99,9 +93,7 @@ class StepBase:
 
     def _handle_skip(
         self,
-        *,
-        hashed_id: str,
-        step_id: str,
+        parsed_step_id: _ParsedStepID,
     ) -> None:
         """
         Handle a skip interrupt. Step targeting is enabled and this step is not
@@ -109,10 +101,31 @@ class StepBase:
         """
 
         is_targeting_enabled = self._target_hashed_id is not None
-        is_targeted = self._target_hashed_id == hashed_id
+        is_targeted = self._target_hashed_id == parsed_step_id.hashed
         if is_targeting_enabled and not is_targeted:
             # Skip this step because a different step is targeted.
-            raise SkipInterrupt(step_id)
+            raise SkipInterrupt(parsed_step_id.user_facing)
+
+    def _parse_step_id(self, step_id: str) -> _ParsedStepID:
+        """
+        Parse a user-specified step ID into a hashed ID and a deduped
+        user-facing step ID.
+        """
+
+        id_count = self._step_id_counter.increment(step_id)
+        if id_count > 1:
+            step_id = f"{step_id}:{id_count - 1}"
+
+        return _ParsedStepID(
+            hashed=transforms.hash_step_id(step_id),
+            user_facing=step_id,
+        )
+
+
+@dataclasses.dataclass
+class _ParsedStepID:
+    hashed: str
+    user_facing: str
 
 
 class StepIDCounter:

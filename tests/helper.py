@@ -67,7 +67,7 @@ class _Client:
                 history_item_id = step["id"]
                 break
         if not history_item_id:
-            raise Exception("step not found in history")
+            raise Exception(f'step "{step_id}" not found in history')
 
         query = """
         query GetHistory($history_item_id: ULID!, $run_id: ID!) {

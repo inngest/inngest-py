@@ -76,7 +76,7 @@ def create(
                 "message": "foo",
                 "name": "NonRetriableError",
                 "stack": unittest.mock.ANY,
-            }, output
+            }
 
         base.wait_for(assert_output)
 
