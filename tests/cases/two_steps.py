@@ -82,7 +82,7 @@ def create(
         assert (
             state.step_2_counter == 1
         ), f"step_2_counter: {state.step_2_counter}"
-        assert state.step_1_output == [{"foo": {"bar": 1}}], state.step_1_output
+        assert state.step_1_output == [{"foo": {"bar": 1}}]
 
         step_1_output_in_api = json.loads(
             tests.helper.client.get_step_output(

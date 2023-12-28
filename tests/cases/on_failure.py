@@ -128,26 +128,26 @@ def create(
         # The on_failure handler has a different run ID than the original run.
         assert state.run_id != state.on_failure_run_id
 
-        assert state.attempt == 0, state.attempt
+        assert state.attempt == 0
         assert isinstance(state.event, inngest.Event)
 
         # The serialized error
         # Assert that the error in the failure event is correct
         error = state.event.data.get("error")
-        assert isinstance(error, dict), error
-        assert error.get("is_internal") is False, error
-        assert error.get("is_retriable") is True, error
-        assert error.get("message") == "intentional failure", error
-        assert error.get("name") == "MyError", error
+        assert isinstance(error, dict)
+        assert error.get("is_internal") is False
+        assert error.get("is_retriable") is True
+        assert error.get("message") == "intentional failure"
+        assert error.get("name") == "MyError"
         assert state.event.data["function_id"] == fn_sync.id
         assert state.event.data["run_id"] == state.run_id
 
         # The original event should be in the failure event data
         event = inngest.Event.from_raw(state.event.data["event"])
         assert not isinstance(event, Exception)
-        assert event.data == {"foo": 1}, event.data
+        assert event.data == {"foo": 1}
         assert len(event.id) > 0
-        assert event.name == event_name, event.name
+        assert event.name == event_name
         assert event.ts > 0
 
         assert isinstance(state.events, list) and len(state.events) == 1

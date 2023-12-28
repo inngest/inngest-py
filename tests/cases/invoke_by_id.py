@@ -81,7 +81,7 @@ def create(
             run_id,
             tests.helper.RunStatus.COMPLETED,
         )
-        assert state.step_output == {"foo": {"bar": 1}}, state.step_output
+        assert state.step_output == {"foo": {"bar": 1}}
 
     if is_sync:
         fn = [fn_receiver_sync, fn_sender_sync]

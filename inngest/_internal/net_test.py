@@ -21,7 +21,7 @@ class Test_create_serve_url(unittest.TestCase):
             serve_path=None,
         )
         expected = "https://foo.test/api/inngest"
-        assert actual == expected, actual
+        assert actual == expected
 
     def test_serve_origin(self) -> None:
         actual = net.create_serve_url(
@@ -30,7 +30,7 @@ class Test_create_serve_url(unittest.TestCase):
             serve_path=None,
         )
         expected = "https://bar.test/api/inngest"
-        assert actual == expected, actual
+        assert actual == expected
 
     def test_serve_origin_env_var(self) -> None:
         os.environ[const.EnvKey.SERVE_ORIGIN.value] = "https://bar-env.test"
@@ -41,7 +41,7 @@ class Test_create_serve_url(unittest.TestCase):
             serve_path=None,
         )
         expected = "https://bar-env.test/api/inngest"
-        assert actual == expected, actual
+        assert actual == expected
 
     def test_serve_origin_missing_scheme(self) -> None:
         actual = net.create_serve_url(
@@ -50,7 +50,7 @@ class Test_create_serve_url(unittest.TestCase):
             serve_path=None,
         )
         expected = "https://bar.test/api/inngest"
-        assert actual == expected, actual
+        assert actual == expected
 
     def test_serve_origin_port(self) -> None:
         actual = net.create_serve_url(
@@ -59,7 +59,7 @@ class Test_create_serve_url(unittest.TestCase):
             serve_path=None,
         )
         expected = "https://bar.test:8080/api/inngest"
-        assert actual == expected, actual
+        assert actual == expected
 
     def test_serve_path(self) -> None:
         actual = net.create_serve_url(
@@ -68,7 +68,7 @@ class Test_create_serve_url(unittest.TestCase):
             serve_path="/custom/path",
         )
         expected = "https://foo.test/custom/path"
-        assert actual == expected, actual
+        assert actual == expected
 
     def test_serve_path_env_var(self) -> None:
         os.environ[const.EnvKey.SERVE_PATH.value] = "/env/path"
@@ -79,7 +79,7 @@ class Test_create_serve_url(unittest.TestCase):
             serve_path="/custom/path",
         )
         expected = "https://foo.test/env/path"
-        assert actual == expected, actual
+        assert actual == expected
 
     def test_serve_origin_and_path(self) -> None:
         actual = net.create_serve_url(
@@ -88,7 +88,7 @@ class Test_create_serve_url(unittest.TestCase):
             serve_path="/custom/path",
         )
         expected = "https://bar.test/custom/path"
-        assert actual == expected, actual
+        assert actual == expected
 
 
 def test_success() -> None:
@@ -127,6 +127,4 @@ def _sign(body: bytes, signing_key: str, unix_ms: int) -> str:
         hashlib.sha256,
     )
     mac.update(str(unix_ms).encode("utf-8"))
-    return mac.hexdigest()
-    return mac.hexdigest()
     return mac.hexdigest()
