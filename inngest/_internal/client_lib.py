@@ -81,10 +81,13 @@ class Inngest:
         self.app_id = app_id
 
         if is_production is None:
-            is_production = env.is_truthy(
-                const.EnvKey.DEV,
-                # Default to prod for security reasons
-                default=True,
+            is_production = (
+                env.is_truthy(
+                    const.EnvKey.DEV,
+                    # Default to prod for security reasons
+                    default=False,
+                )
+                is False
             )
         self.is_production = is_production
 

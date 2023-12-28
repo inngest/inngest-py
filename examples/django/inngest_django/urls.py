@@ -10,6 +10,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     inngest.django.serve(
         inngest_client,
-        functions.functions_sync,
+        functions.create_async_functions(inngest_client),
     ),
 ]

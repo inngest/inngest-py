@@ -18,7 +18,6 @@ class Test(unittest.TestCase):
 
         client_lib.Inngest(
             app_id="test",
-            signing_key="foo",
         )
 
     def test_event_key_env_var(self) -> None:
