@@ -1,20 +1,20 @@
 import asyncio
 
-import src.inngest
 import tornado
 import tornado.autoreload
 import tornado.web
+from src.inngest import inngest_client
 
-import examples.functions
 import inngest.tornado
+from examples import functions
 
 
 async def main() -> None:
     app = tornado.web.Application()
     inngest.tornado.serve(
         app,
-        src.inngest.inngest_client,
-        examples.functions.functions_sync,
+        inngest_client,
+        functions.create_sync_functions(inngest_client),
     )
 
     app.listen(8000)

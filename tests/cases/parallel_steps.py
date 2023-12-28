@@ -16,6 +16,7 @@ class _State(base.BaseState):
 
 
 def create(
+    client: inngest.Inngest,
     framework: str,
     is_sync: bool,
 ) -> base.Case:
@@ -24,7 +25,7 @@ def create(
     fn_id = base.create_fn_id(test_name)
     state = _State()
 
-    @inngest.create_function(
+    @client.create_function(
         fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
@@ -44,7 +45,7 @@ def create(
             state.step_1b_counter += 1
             return 2
 
-        return step._experimental_parallel(
+        return step.parallel(
             (
                 lambda: step.run("1a", _step_1a),
                 lambda: step.run("1b", _step_1b),
@@ -54,7 +55,7 @@ def create(
             )
         )
 
-    @inngest.create_function(
+    @client.create_function(
         fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
@@ -74,7 +75,7 @@ def create(
             state.step_1b_counter += 1
             return 2
 
-        return await step._experimental_parallel(
+        return await step.parallel(
             (
                 lambda: step.run("1a", _step_1a),
                 lambda: step.run("1b", _step_1b),

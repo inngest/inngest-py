@@ -9,23 +9,29 @@ else:
     trigger = inngest.TriggerEvent(event="cron")
 
 
-@inngest.create_function(
-    fn_id="cron",
-    trigger=trigger,
-)
-async def fn(
-    ctx: inngest.Context,
-    step: inngest.Step,
-) -> None:
-    pass
+def create_async_function(client: inngest.Inngest) -> inngest.Function:
+    @client.create_function(
+        fn_id="cron",
+        trigger=trigger,
+    )
+    async def fn(
+        ctx: inngest.Context,
+        step: inngest.Step,
+    ) -> None:
+        pass
+
+    return fn
 
 
-@inngest.create_function(
-    fn_id="cron_sync",
-    trigger=trigger,
-)
-def fn_sync(
-    ctx: inngest.Context,
-    step: inngest.StepSync,
-) -> None:
-    pass
+def create_sync_function(client: inngest.Inngest) -> inngest.Function:
+    @client.create_function(
+        fn_id="cron_sync",
+        trigger=trigger,
+    )
+    def fn(
+        ctx: inngest.Context,
+        step: inngest.StepSync,
+    ) -> None:
+        pass
+
+    return fn

@@ -1,11 +1,11 @@
-import json
-
 import inngest
 import tests.helper
 
 from . import base
 
-_TEST_NAME = "no_steps"
+_TEST_NAME = "crazy_ids"
+
+_crazy = "%$^&*(_+{|:<?☃️"
 
 
 def create(
@@ -15,7 +15,7 @@ def create(
 ) -> base.Case:
     test_name = base.create_test_name(_TEST_NAME, is_sync)
     event_name = base.create_event_name(framework, test_name)
-    fn_id = base.create_fn_id(test_name)
+    fn_id = base.create_fn_id(test_name) + _crazy
     state = base.BaseState()
 
     @client.create_function(
@@ -26,9 +26,9 @@ def create(
     def fn_sync(
         ctx: inngest.Context,
         step: inngest.StepSync,
-    ) -> dict[str, object]:
+    ) -> None:
         state.run_id = ctx.run_id
-        return {"foo": {"bar": 1}}
+        step.run(_crazy, lambda: None)
 
     @client.create_function(
         fn_id=fn_id,
@@ -38,20 +38,17 @@ def create(
     async def fn_async(
         ctx: inngest.Context,
         step: inngest.Step,
-    ) -> dict[str, object]:
+    ) -> None:
         state.run_id = ctx.run_id
-        return {"foo": {"bar": 1}}
+        await step.run(_crazy, lambda: None)
 
     def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
         run_id = state.wait_for_run_id()
-        run = tests.helper.client.wait_for_run_status(
+        tests.helper.client.wait_for_run_status(
             run_id,
             tests.helper.RunStatus.COMPLETED,
         )
-        assert run.output is not None
-        output = json.loads(run.output)
-        assert output == {"foo": {"bar": 1}}, output
 
     if is_sync:
         fn = fn_sync

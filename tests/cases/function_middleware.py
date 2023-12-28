@@ -1,7 +1,6 @@
 import json
 
 import inngest
-import inngest.experimental
 import tests.helper
 
 from . import base
@@ -15,6 +14,7 @@ class _State(base.BaseState):
 
 
 def create(
+    client: inngest.Inngest,
     framework: str,
     is_sync: bool,
 ) -> base.Case:
@@ -23,7 +23,7 @@ def create(
     fn_id = base.create_fn_id(test_name)
     state = _State()
 
-    class _MiddlewareSync(inngest.experimental.MiddlewareSync):
+    class _MiddlewareSync(inngest.MiddlewareSync):
         def after_execution(self) -> None:
             state.hook_list.append("after_execution")
 
@@ -51,7 +51,7 @@ def create(
                 output.data = "transformed output"
             return output
 
-    class _MiddlewareAsync(inngest.experimental.Middleware):
+    class _MiddlewareAsync(inngest.Middleware):
         async def after_execution(self) -> None:
             state.hook_list.append("after_execution")
 
@@ -79,7 +79,7 @@ def create(
                 output.data = "transformed output"
             return output
 
-    @inngest.create_function(
+    @client.create_function(
         fn_id=fn_id,
         middleware=[_MiddlewareSync],
         retries=0,
@@ -101,7 +101,7 @@ def create(
 
         step.run("step_2", _step_2)
 
-    @inngest.create_function(
+    @client.create_function(
         fn_id=fn_id,
         middleware=[_MiddlewareAsync],
         retries=0,

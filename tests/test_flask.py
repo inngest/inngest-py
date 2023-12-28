@@ -10,7 +10,23 @@ from inngest._internal import const
 
 from . import base, cases, dev_server, http_proxy, net
 
-_cases = cases.create_cases_sync("flask")
+_framework = "flask"
+_dev_server_origin = f"http://{net.HOST}:{dev_server.PORT}"
+
+_client = inngest.Inngest(
+    api_base_url=_dev_server_origin,
+    app_id=_framework,
+    event_api_base_url=_dev_server_origin,
+    is_production=False,
+)
+
+_cases = cases.create_sync_cases(_client, _framework)
+_fns: list[inngest.Function] = []
+for case in _cases:
+    if isinstance(case.fn, list):
+        _fns.extend(case.fn)
+    else:
+        _fns.append(case.fn)
 
 
 class TestFlask(unittest.TestCase):
@@ -22,18 +38,13 @@ class TestFlask(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
-        dev_server_origin = f"http://{net.HOST}:{dev_server.PORT}"
         app = flask.Flask(__name__)
-        cls.client = inngest.Inngest(
-            app_id="flask",
-            event_api_base_url=dev_server_origin,
-        )
+        cls.client = _client
 
         inngest.flask.serve(
             app,
             cls.client,
-            [case.fn for case in _cases],
-            api_base_url=dev_server_origin,
+            _fns,
         )
         cls.app = app.test_client()
         cls.proxy = http_proxy.Proxy(cls.on_proxy_request).start()
@@ -78,12 +89,12 @@ class TestRegistration(unittest.TestCase):
         production mode.
         """
         client = inngest.Inngest(
-            app_id="flask_registration",
+            app_id=f"{_framework}_registration",
             event_key="test",
-            is_production=True,
+            signing_key="signkey-prod-0486c9",
         )
 
-        @inngest.create_function(
+        @client.create_function(
             fn_id="foo",
             retries=0,
             trigger=inngest.TriggerEvent(event="app/foo"),
@@ -99,7 +110,6 @@ class TestRegistration(unittest.TestCase):
             app,
             client,
             [fn],
-            signing_key="signkey-prod-0486c9",
         )
         flask_client = app.test_client()
         res = flask_client.put(

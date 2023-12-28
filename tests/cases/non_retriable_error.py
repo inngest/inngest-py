@@ -14,6 +14,7 @@ class _State(base.BaseState):
 
 
 def create(
+    client: inngest.Inngest,
     framework: str,
     is_sync: bool,
 ) -> base.Case:
@@ -22,7 +23,7 @@ def create(
     fn_id = base.create_fn_id(test_name)
     state = _State()
 
-    @inngest.create_function(
+    @client.create_function(
         fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
@@ -39,7 +40,7 @@ def create(
 
         step.run("step_1", step_1)
 
-    @inngest.create_function(
+    @client.create_function(
         fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
@@ -59,21 +60,25 @@ def create(
     def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
         run_id = state.wait_for_run_id()
-        run = tests.helper.client.wait_for_run_status(
-            run_id,
-            tests.helper.RunStatus.FAILED,
-        )
 
-        assert run.output is not None
-        output = json.loads(run.output)
+        def assert_output() -> None:
+            run = tests.helper.client.wait_for_run_status(
+                run_id,
+                tests.helper.RunStatus.FAILED,
+            )
 
-        assert output == {
-            "isInternal": False,
-            "isRetriable": False,
-            "message": "foo",
-            "name": "NonRetriableError",
-            "stack": unittest.mock.ANY,
-        }, output
+            assert run.output is not None
+            output = json.loads(run.output)
+
+            assert output == {
+                "is_internal": False,
+                "is_retriable": False,
+                "message": "foo",
+                "name": "NonRetriableError",
+                "stack": unittest.mock.ANY,
+            }, output
+
+        base.wait_for(assert_output)
 
         assert state.attempt == 0
 

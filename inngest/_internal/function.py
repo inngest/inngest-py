@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import inspect
 import typing
+import urllib.parse
 
 import pydantic
 
@@ -38,7 +39,7 @@ class _Config:
 
 
 @typing.runtime_checkable
-class _FunctionHandlerAsync(typing.Protocol):
+class FunctionHandlerAsync(typing.Protocol):
     def __call__(
         self,
         ctx: Context,
@@ -48,7 +49,7 @@ class _FunctionHandlerAsync(typing.Protocol):
 
 
 @typing.runtime_checkable
-class _FunctionHandlerSync(typing.Protocol):
+class FunctionHandlerSync(typing.Protocol):
     def __call__(
         self,
         ctx: Context,
@@ -58,26 +59,26 @@ class _FunctionHandlerSync(typing.Protocol):
 
 
 def _is_function_handler_async(
-    value: _FunctionHandlerAsync | _FunctionHandlerSync,
-) -> typing.TypeGuard[_FunctionHandlerAsync]:
+    value: FunctionHandlerAsync | FunctionHandlerSync,
+) -> typing.TypeGuard[FunctionHandlerAsync]:
     return inspect.iscoroutinefunction(value)
 
 
 def _is_function_handler_sync(
-    value: _FunctionHandlerAsync | _FunctionHandlerSync,
-) -> typing.TypeGuard[_FunctionHandlerSync]:
+    value: FunctionHandlerAsync | FunctionHandlerSync,
+) -> typing.TypeGuard[FunctionHandlerSync]:
     return not inspect.iscoroutinefunction(value)
 
 
-class _FunctionOpts(types.BaseModel):
+class FunctionOpts(types.BaseModel):
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
     batch_events: function_config.Batch | None = None
     cancel: list[function_config.Cancel] | None = None
     debounce: function_config.Debounce | None = None
     id: str
-    name: str | None = None
-    on_failure: _FunctionHandlerAsync | _FunctionHandlerSync | None = None
+    name: str
+    on_failure: FunctionHandlerAsync | FunctionHandlerSync | None = None
     rate_limit: function_config.RateLimit | None = None
     retries: int | None = None
     throttle: function_config.Throttle | None = None
@@ -89,69 +90,10 @@ class _FunctionOpts(types.BaseModel):
         return errors.InvalidConfigError.from_validation_error(err)
 
 
-def create_function(
-    *,
-    batch_events: function_config.Batch | None = None,
-    cancel: list[function_config.Cancel] | None = None,
-    debounce: function_config.Debounce | None = None,
-    fn_id: str,
-    middleware: list[
-        type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]
-    ]
-    | None = None,
-    name: str | None = None,
-    on_failure: _FunctionHandlerAsync | _FunctionHandlerSync | None = None,
-    rate_limit: function_config.RateLimit | None = None,
-    retries: int | None = None,
-    throttle: function_config.Throttle | None = None,
-    trigger: function_config.TriggerCron | function_config.TriggerEvent,
-) -> typing.Callable[[_FunctionHandlerAsync | _FunctionHandlerSync], Function]:
-    """
-    Create an Inngest function.
-
-    Args:
-    ----
-        batch_events: Event batching config.
-        cancel: Run cancellation config.
-        debounce: Debouncing config.
-        fn_id: Function ID. Changing this ID will make Inngest think this is a
-            new function.
-        middleware: Middleware to apply to this function.
-        name: Human-readable function name. (Defaults to the function ID).
-        on_failure: Function to call when this function fails.
-        rate_limit: Rate limiting config.
-        retries: Number of times to retry this function.
-        throttle: Throttling config.
-        trigger: What should trigger runs of this function.
-    """
-
-    def decorator(
-        func: _FunctionHandlerAsync | _FunctionHandlerSync
-    ) -> Function:
-        return Function(
-            _FunctionOpts(
-                batch_events=batch_events,
-                cancel=cancel,
-                debounce=debounce,
-                id=fn_id,
-                name=name,
-                on_failure=on_failure,
-                rate_limit=rate_limit,
-                retries=retries,
-                throttle=throttle,
-            ),
-            trigger,
-            func,
-            middleware,
-        )
-
-    return decorator
-
-
 class Function:
-    _handler: _FunctionHandlerAsync | _FunctionHandlerSync
+    _handler: FunctionHandlerAsync | FunctionHandlerSync
     _on_failure_fn_id: str | None = None
-    _opts: _FunctionOpts
+    _opts: FunctionOpts
     _trigger: function_config.TriggerCron | function_config.TriggerEvent
 
     @property
@@ -179,9 +121,9 @@ class Function:
 
     def __init__(
         self,
-        opts: _FunctionOpts,
+        opts: FunctionOpts,
         trigger: function_config.TriggerCron | function_config.TriggerEvent,
-        handler: _FunctionHandlerAsync | _FunctionHandlerSync,
+        handler: FunctionHandlerAsync | FunctionHandlerSync,
         middleware: list[
             type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]
         ]
@@ -224,7 +166,7 @@ class Function:
                 return execution.CallError.from_error(err)
 
         try:
-            handler: _FunctionHandlerAsync | _FunctionHandlerSync
+            handler: FunctionHandlerAsync | FunctionHandlerSync
             if self.id == fn_id:
                 handler = self._handler
             elif self.on_failure_fn_id == fn_id:
@@ -310,6 +252,16 @@ class Function:
             return interrupt.responses
         except _UserError as err:
             return execution.CallError.from_error(err.err)
+        except step_lib.SkipInterrupt as err:
+            # This should only happen in a non-deterministic scenario, where
+            # step targeting is enabled and an unexpected step is encountered.
+            # We don't currently have a way to recover from this scenario.
+
+            return execution.CallError.from_error(
+                errors.UnexpectedStepError(
+                    f'found step "{err.step_id}" when targeting a different step'
+                )
+            )
         except Exception as err:
             return execution.CallError.from_error(err)
 
@@ -340,7 +292,7 @@ class Function:
             middleware.before_execution_sync()
 
         try:
-            handler: _FunctionHandlerAsync | _FunctionHandlerSync
+            handler: FunctionHandlerAsync | FunctionHandlerSync
             if self.id == fn_id:
                 handler = self._handler
             elif self.on_failure_fn_id == fn_id:
@@ -408,20 +360,38 @@ class Function:
             return interrupt.responses
         except _UserError as err:
             return execution.CallError.from_error(err.err)
+        except step_lib.SkipInterrupt as err:
+            # This should only happen in a non-deterministic scenario, where
+            # step targeting is enabled and an unexpected step is encountered.
+            # We don't currently have a way to recover from this scenario.
+
+            return execution.CallError.from_error(
+                errors.UnexpectedStepError(
+                    f'found step "{err.step_id}" when targeting a different step'
+                )
+            )
         except Exception as err:
             return execution.CallError.from_error(err)
 
     def get_config(self, app_url: str) -> _Config:
         fn_id = self._opts.id
-
-        name = fn_id
-        if self._opts.name is not None:
-            name = self._opts.name
+        name = self._opts.name
 
         if self._opts.retries is not None:
             retries = function_config.Retries(attempts=self._opts.retries)
         else:
             retries = None
+
+        url = (
+            app_url
+            + "?"
+            + urllib.parse.urlencode(
+                {
+                    "fnId": fn_id,
+                    "stepId": const.ROOT_STEP_ID,
+                }
+            )
+        )
 
         main = function_config.FunctionConfig(
             batch_events=self._opts.batch_events,
@@ -437,7 +407,7 @@ class Function:
                     retries=retries,
                     runtime=function_config.Runtime(
                         type="http",
-                        url=f"{app_url}?fnId={fn_id}&stepId={const.ROOT_STEP_ID}",
+                        url=url,
                     ),
                 ),
             },
@@ -447,6 +417,17 @@ class Function:
 
         on_failure = None
         if self.on_failure_fn_id is not None:
+            url = (
+                app_url
+                + "?"
+                + urllib.parse.urlencode(
+                    {
+                        "fnId": self.on_failure_fn_id,
+                        "stepId": const.ROOT_STEP_ID,
+                    }
+                )
+            )
+
             on_failure = function_config.FunctionConfig(
                 id=self.on_failure_fn_id,
                 name=f"{name} (failure)",
@@ -457,7 +438,7 @@ class Function:
                         retries=function_config.Retries(attempts=0),
                         runtime=function_config.Runtime(
                             type="http",
-                            url=f"{app_url}?fnId={self.on_failure_fn_id}&stepId={const.ROOT_STEP_ID}",
+                            url=url,
                         ),
                     )
                 },

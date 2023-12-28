@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import threading
 
 from inngest._internal import (
@@ -96,6 +97,23 @@ class StepBase:
 
         return memo
 
+    def _handle_skip(
+        self,
+        *,
+        hashed_id: str,
+        step_id: str,
+    ) -> None:
+        """
+        Handle a skip interrupt. Step targeting is enabled and this step is not
+        the target then skip the step.
+        """
+
+        is_targeting_enabled = self._target_hashed_id is not None
+        is_targeted = self._target_hashed_id == hashed_id
+        if is_targeting_enabled and not is_targeted:
+            # Skip this step because a different step is targeted.
+            raise SkipInterrupt(step_id)
+
 
 class StepIDCounter:
     """
@@ -133,7 +151,25 @@ class ResponseInterrupt(BaseException):
 
 
 class SkipInterrupt(BaseException):
-    pass
+    def __init__(self, step_id: str) -> None:
+        self.step_id = step_id
+
+
+@dataclasses.dataclass
+class FunctionID:
+    app_id: str
+    function_id: str
+
+
+class InvokeOpts(types.BaseModel):
+    function_id: str
+    payload: InvokeOptsPayload
+
+
+class InvokeOptsPayload(types.BaseModel):
+    data: object
+    user: object
+    v: str | None
 
 
 class WaitForEventOpts(types.BaseModel):

@@ -49,8 +49,8 @@ def test_serialization() -> None:
         raise data
 
     assert data == {
-        "batch_events": {
-            "max_size": 10,
+        "batchEvents": {
+            "maxSize": 10,
             "timeout": "1m",
         },
         "cancel": [
@@ -66,7 +66,7 @@ def test_serialization() -> None:
         },
         "id": "foo",
         "name": "foo",
-        "rate_limit": {
+        "rateLimit": {
             "key": "foo",
             "limit": 1,
             "period": "1m",

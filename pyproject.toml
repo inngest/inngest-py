@@ -1,6 +1,6 @@
 [project]
 name = "inngest"
-version = "0.2.3"
+version = "0.3.0a2"
 description = "Python SDK for Inngest"
 readme = "README.md"
 classifiers = [
@@ -24,11 +24,11 @@ extra = [
     "build==1.0.3",
     "django-types==0.19.1",
     "fastapi==0.104.0",
-    "mypy==1.6.1",
+    "mypy==1.8.0",
     "pytest==7.4.2",
     "pytest-django==4.7.0",
     "pytest-xdist[psutil]==3.3.1",
-    "ruff==0.1.4",
+    "ruff==0.1.9",
     "toml==0.10.2",
     "tornado==6.3.3",
     "types-toml==0.10.8.7",
@@ -87,7 +87,7 @@ extend-select = [
     'T',
     'UP',
 ]
-extend-ignore = ['D200', 'D202', 'D203', 'D205', 'D212']
+extend-ignore = ['D200', 'D202', 'D203', 'D205', 'D212', 'D400', 'D415']
 
 line-length = 80
 mccabe = { max-complexity = 16 }

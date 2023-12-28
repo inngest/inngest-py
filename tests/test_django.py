@@ -22,7 +22,23 @@ class SetupState:
     mutex = threading.Lock()
 
 
-_cases = cases.create_cases_sync("django")
+_framework = "django"
+_dev_server_origin = f"http://{net.HOST}:{dev_server.PORT}"
+
+_client = inngest.Inngest(
+    api_base_url=_dev_server_origin,
+    app_id=_framework,
+    event_api_base_url=_dev_server_origin,
+    is_production=False,
+)
+
+_cases = cases.create_sync_cases(_client, _framework)
+_fns: list[inngest.Function] = []
+for case in _cases:
+    if isinstance(case.fn, list):
+        _fns.extend(case.fn)
+    else:
+        _fns.append(case.fn)
 
 
 django.conf.settings.configure(
@@ -32,19 +48,12 @@ django.conf.settings.configure(
     SECRET_KEY="fake",
 )
 
-dev_server_origin = f"http://{net.HOST}:{dev_server.PORT}"
-
-inngest_client = inngest.Inngest(
-    app_id="django",
-    event_api_base_url=dev_server_origin,
-)
 
 # Magic export required by Django
 urlpatterns = [
     inngest.django.serve(
-        inngest_client,
-        [case.fn for case in _cases],
-        api_base_url=dev_server_origin,
+        _client,
+        _fns,
     ),
 ]
 
@@ -57,7 +66,7 @@ class TestDjango(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
-        cls.client = inngest_client
+        cls.client = _client
         cls.django_client = django.test.Client()
         cls.proxy = http_proxy.Proxy(cls.on_proxy_request).start()
         base.register(cls.proxy.port)

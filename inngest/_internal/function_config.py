@@ -17,7 +17,7 @@ class _BaseConfig(types.BaseModel):
 
 
 class Batch(_BaseConfig):
-    max_size: int
+    max_size: int = pydantic.Field(..., serialization_alias="maxSize")
     timeout: int | datetime.timedelta | None = None
 
     @pydantic.field_serializer("timeout")
@@ -69,12 +69,16 @@ class Debounce(_BaseConfig):
 
 
 class FunctionConfig(_BaseConfig):
-    batch_events: Batch | None = None
+    batch_events: Batch | None = pydantic.Field(
+        default=None, serialization_alias="batchEvents"
+    )
     cancel: list[Cancel] | None = None
     debounce: Debounce | None = None
     id: str
     name: str | None = None
-    rate_limit: RateLimit | None = None
+    rate_limit: RateLimit | None = pydantic.Field(
+        default=None, serialization_alias="rateLimit"
+    )
     steps: dict[str, Step]
     throttle: Throttle | None = None
     triggers: list[TriggerCron | TriggerEvent]
