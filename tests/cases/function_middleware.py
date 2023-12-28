@@ -156,7 +156,7 @@ def create(
                 step_id="step_1",
             )
         )
-        assert step_1_output == {"data": "transformed output"}, step_1_output
+        assert step_1_output == {"data": "transformed output"}
 
     if is_sync:
         fn = fn_sync

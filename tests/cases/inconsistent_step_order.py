@@ -113,7 +113,7 @@ def create(
                 step_id="step_1",
             )
         )
-        assert step_1_output == {"data": 1}, step_1_output
+        assert step_1_output == {"data": 1}
 
         step_2_output = json.loads(
             tests.helper.client.get_step_output(
@@ -121,7 +121,7 @@ def create(
                 step_id="step_2",
             )
         )
-        assert step_2_output == {"data": 2}, step_1_output
+        assert step_2_output == {"data": 2}
 
     if is_sync:
         fn = fn_sync

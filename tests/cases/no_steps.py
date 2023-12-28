@@ -51,7 +51,7 @@ def create(
         )
         assert run.output is not None
         output = json.loads(run.output)
-        assert output == {"foo": {"bar": 1}}, output
+        assert output == {"foo": {"bar": 1}}
 
     if is_sync:
         fn = fn_sync

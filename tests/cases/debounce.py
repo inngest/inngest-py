@@ -64,7 +64,7 @@ def create(
             run_id,
             tests.helper.RunStatus.COMPLETED,
         )
-        assert state.run_count == 1, f"Expected 1 run but got {state.run_count}"
+        assert state.run_count == 1
 
     if is_sync:
         fn = fn_sync
