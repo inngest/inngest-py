@@ -182,39 +182,43 @@ class Function:
 
             output: object
 
-            # # Determine whether the handler is async (i.e. if we need to await
-            # # it). Sync functions are OK in async contexts, so it's OK if the
-            # # handler is sync.
-            if _is_function_handler_async(handler):
-                output = await handler(
-                    ctx=ctx,
-                    step=step_lib.Step(
-                        client,
-                        memos,
-                        middleware,
-                        step_lib.StepIDCounter(),
-                        target_hashed_id,
-                    ),
-                )
-            elif _is_function_handler_sync(handler):
-                output = handler(
-                    ctx=ctx,
-                    step=step_lib.StepSync(
-                        client,
-                        memos,
-                        middleware,
-                        step_lib.StepIDCounter(),
-                        target_hashed_id,
-                    ),
-                )
-            else:
-                # Should be unreachable but Python's custom type guards don't
-                # support negative checks :(
-                return execution.CallError.from_error(
-                    errors.UnknownError(
-                        "unable to determine function handler type"
+            try:
+                # # Determine whether the handler is async (i.e. if we need to await
+                # # it). Sync functions are OK in async contexts, so it's OK if the
+                # # handler is sync.
+                if _is_function_handler_async(handler):
+                    output = await handler(
+                        ctx=ctx,
+                        step=step_lib.Step(
+                            client,
+                            memos,
+                            middleware,
+                            step_lib.StepIDCounter(),
+                            target_hashed_id,
+                        ),
                     )
-                )
+                elif _is_function_handler_sync(handler):
+                    output = handler(
+                        ctx=ctx,
+                        step=step_lib.StepSync(
+                            client,
+                            memos,
+                            middleware,
+                            step_lib.StepIDCounter(),
+                            target_hashed_id,
+                        ),
+                    )
+                else:
+                    # Should be unreachable but Python's custom type guards don't
+                    # support negative checks :(
+                    return execution.CallError.from_error(
+                        errors.UnknownError(
+                            "unable to determine function handler type"
+                        )
+                    )
+            except Exception as user_err:
+                _remove_first_traceback_frame(user_err)
+                raise _UserError(user_err)
 
             err = await middleware.after_execution()
             if isinstance(err, Exception):
@@ -246,6 +250,8 @@ class Function:
                 interrupt.responses[0].data = output
 
             return interrupt.responses
+        except _UserError as err:
+            return execution.CallError.from_error(err.err)
         except step_lib.SkipInterrupt as err:
             # This should only happen in a non-deterministic scenario, where
             # step targeting is enabled and an unexpected step is encountered.
@@ -301,16 +307,20 @@ class Function:
                 )
 
             if _is_function_handler_sync(handler):
-                output: object = handler(
-                    ctx=ctx,
-                    step=step_lib.StepSync(
-                        client,
-                        memos,
-                        middleware,
-                        step_lib.StepIDCounter(),
-                        target_hashed_id,
-                    ),
-                )
+                try:
+                    output: object = handler(
+                        ctx=ctx,
+                        step=step_lib.StepSync(
+                            client,
+                            memos,
+                            middleware,
+                            step_lib.StepIDCounter(),
+                            target_hashed_id,
+                        ),
+                    )
+                except Exception as user_err:
+                    _remove_first_traceback_frame(user_err)
+                    raise _UserError(user_err)
             else:
                 return execution.CallError.from_error(
                     errors.MismatchedSyncError(
@@ -348,6 +358,8 @@ class Function:
                 interrupt.responses[0].data = output
 
             return interrupt.responses
+        except _UserError as err:
+            return execution.CallError.from_error(err.err)
         except step_lib.SkipInterrupt as err:
             # This should only happen in a non-deterministic scenario, where
             # step targeting is enabled and an unexpected step is encountered.
@@ -442,3 +454,22 @@ class Function:
 
     def get_id(self) -> str:
         return self._opts.id
+
+
+class _UserError(Exception):
+    """
+    Wrap an error that occurred in user code.
+    """
+
+    def __init__(self, err: Exception) -> None:
+        self.err = err
+
+
+def _remove_first_traceback_frame(err: Exception) -> None:
+    """
+    Remove the first frame from the traceback, since we don't want our internal
+    code to appear in the traceback.
+    """
+
+    if err.__traceback__:
+        err.__traceback__ = err.__traceback__.tb_next
