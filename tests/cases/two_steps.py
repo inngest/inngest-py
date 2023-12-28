@@ -76,12 +76,8 @@ def create(
             tests.helper.RunStatus.COMPLETED,
         )
 
-        assert (
-            state.step_1_counter == 1
-        ), f"step_1_counter: {state.step_1_counter}"
-        assert (
-            state.step_2_counter == 1
-        ), f"step_2_counter: {state.step_2_counter}"
+        assert state.step_1_counter == 1
+        assert state.step_2_counter == 1
         assert state.step_1_output == [{"foo": {"bar": 1}}]
 
         step_1_output_in_api = json.loads(
@@ -90,9 +86,7 @@ def create(
                 step_id="step_1",
             )
         )
-        assert step_1_output_in_api == {
-            "data": [{"foo": {"bar": 1}}]
-        }, step_1_output_in_api
+        assert step_1_output_in_api == {"data": [{"foo": {"bar": 1}}]}
 
     if is_sync:
         fn = fn_sync

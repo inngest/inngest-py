@@ -98,7 +98,7 @@ def create(
             "between steps",
             "second_step",
             "function end",
-        ], _logger.info_calls
+        ]
 
     if is_sync:
         fn = fn_sync

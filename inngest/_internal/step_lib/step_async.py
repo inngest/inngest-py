@@ -43,13 +43,13 @@ class Step(base.StepBase):
             v: Will become `event.v` in the invoked function.
         """
 
-        hashed_id = self._get_hashed_id(step_id)
+        parsed_step_id = self._parse_step_id(step_id)
 
-        memo = await self._get_memo(hashed_id)
+        memo = await self._get_memo(parsed_step_id.hashed)
         if not isinstance(memo, types.EmptySentinel):
             return memo.data
 
-        self._handle_skip(hashed_id=hashed_id, step_id=step_id)
+        self._handle_skip(parsed_step_id)
 
         err = await self._middleware.before_execution()
         if isinstance(err, Exception):
@@ -68,9 +68,9 @@ class Step(base.StepBase):
 
         raise base.ResponseInterrupt(
             execution.StepResponse(
-                display_name=step_id,
-                id=hashed_id,
-                name=step_id,
+                display_name=parsed_step_id.user_facing,
+                id=parsed_step_id.hashed,
+                name=parsed_step_id.user_facing,
                 op=execution.Opcode.INVOKE,
                 opts=opts,
             )
@@ -112,13 +112,13 @@ class Step(base.StepBase):
             v: Will become `event.v` in the invoked function.
         """
 
-        hashed_id = self._get_hashed_id(step_id)
+        parsed_step_id = self._parse_step_id(step_id)
 
-        memo = await self._get_memo(hashed_id)
+        memo = await self._get_memo(parsed_step_id.hashed)
         if not isinstance(memo, types.EmptySentinel):
             return memo.data
 
-        self._handle_skip(hashed_id=hashed_id, step_id=step_id)
+        self._handle_skip(parsed_step_id)
 
         err = await self._middleware.before_execution()
         if isinstance(err, Exception):
@@ -137,9 +137,9 @@ class Step(base.StepBase):
 
         raise base.ResponseInterrupt(
             execution.StepResponse(
-                display_name=step_id,
-                id=hashed_id,
-                name=step_id,
+                display_name=parsed_step_id.user_facing,
+                id=parsed_step_id.hashed,
+                name=parsed_step_id.user_facing,
                 op=execution.Opcode.INVOKE,
                 opts=opts,
             )
@@ -209,22 +209,23 @@ class Step(base.StepBase):
                 deterministic.
             handler: The logic to run.
         """
-        hashed_id = self._get_hashed_id(step_id)
 
-        memo = await self._get_memo(hashed_id)
+        parsed_step_id = self._parse_step_id(step_id)
+
+        memo = await self._get_memo(parsed_step_id.hashed)
         if not isinstance(memo, types.EmptySentinel):
             return memo.data  # type: ignore
 
-        self._handle_skip(hashed_id=hashed_id, step_id=step_id)
+        self._handle_skip(parsed_step_id)
 
         is_targeting_enabled = self._target_hashed_id is not None
         if self._inside_parallel and not is_targeting_enabled:
             # Plan this step because we're in parallel mode.
             raise base.ResponseInterrupt(
                 execution.StepResponse(
-                    display_name=step_id,
-                    id=hashed_id,
-                    name=step_id,
+                    display_name=parsed_step_id.user_facing,
+                    id=parsed_step_id.hashed,
+                    name=parsed_step_id.user_facing,
                     op=execution.Opcode.PLANNED,
                 )
             )
@@ -238,9 +239,9 @@ class Step(base.StepBase):
                 data=execution.Output(
                     data=await transforms.maybe_await(handler())
                 ),
-                display_name=step_id,
-                id=hashed_id,
-                name=step_id,
+                display_name=parsed_step_id.user_facing,
+                id=parsed_step_id.hashed,
+                name=parsed_step_id.user_facing,
                 op=execution.Opcode.STEP,
             ),
         )
@@ -305,13 +306,14 @@ class Step(base.StepBase):
                 deterministic.
             until: The time to sleep until.
         """
-        hashed_id = self._get_hashed_id(step_id)
 
-        memo = await self._get_memo(hashed_id)
+        parsed_step_id = self._parse_step_id(step_id)
+
+        memo = await self._get_memo(parsed_step_id.hashed)
         if not isinstance(memo, types.EmptySentinel):
             return memo.data  # type: ignore
 
-        self._handle_skip(hashed_id=hashed_id, step_id=step_id)
+        self._handle_skip(parsed_step_id)
 
         err = await self._middleware.before_execution()
         if isinstance(err, Exception):
@@ -319,8 +321,8 @@ class Step(base.StepBase):
 
         raise base.ResponseInterrupt(
             execution.StepResponse(
-                display_name=step_id,
-                id=hashed_id,
+                display_name=parsed_step_id.user_facing,
+                id=parsed_step_id.hashed,
                 name=transforms.to_iso_utc(until),
                 op=execution.Opcode.SLEEP,
             )
@@ -346,9 +348,10 @@ class Step(base.StepBase):
             if_exp: An expression to filter events.
             timeout: The maximum number of milliseconds to wait for the event.
         """
-        hashed_id = self._get_hashed_id(step_id)
 
-        memo = await self._get_memo(hashed_id)
+        parsed_step_id = self._parse_step_id(step_id)
+
+        memo = await self._get_memo(parsed_step_id.hashed)
         if not isinstance(memo, types.EmptySentinel):
             if memo.data is None:
                 # Timeout
@@ -357,7 +360,7 @@ class Step(base.StepBase):
             # Fulfilled by an event
             return event_lib.Event.model_validate(memo.data)
 
-        self._handle_skip(hashed_id=hashed_id, step_id=step_id)
+        self._handle_skip(parsed_step_id)
 
         err = await self._middleware.before_execution()
         if isinstance(err, Exception):
@@ -376,8 +379,8 @@ class Step(base.StepBase):
 
         raise base.ResponseInterrupt(
             execution.StepResponse(
-                id=hashed_id,
-                display_name=step_id,
+                id=parsed_step_id.hashed,
+                display_name=parsed_step_id.user_facing,
                 name=event,
                 op=execution.Opcode.WAIT_FOR_EVENT,
                 opts=opts,

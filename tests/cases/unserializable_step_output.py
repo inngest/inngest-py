@@ -82,7 +82,7 @@ def create(
             "code": "unserializable_output",
             "message": '"step_1" returned unserializable data',
             "name": "UnserializableOutputError",
-        }, output
+        }
 
     if is_sync:
         fn = fn_sync

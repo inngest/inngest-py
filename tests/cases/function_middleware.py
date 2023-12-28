@@ -148,7 +148,7 @@ def create(
             "before_execution",
             "after_execution",
             "transform_output",
-        ], state.hook_list
+        ]
 
         step_1_output = json.loads(
             tests.helper.client.get_step_output(
