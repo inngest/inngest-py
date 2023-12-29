@@ -59,9 +59,7 @@ class Test_get_function_configs(unittest.TestCase):
         )
 
         configs = handler.get_function_configs("http://foo.bar")
-        assert not isinstance(
-            configs, Exception
-        ), f"Unexpected error: {configs}"
+        assert not isinstance(configs, Exception)
 
     def test_no_functions(self) -> None:
         functions: list[inngest.Function] = []
