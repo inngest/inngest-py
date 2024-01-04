@@ -1,0 +1,126 @@
+"""
+When an invoked function fails, `step.invoke` raises a NonRetriableError.
+"""
+
+import json
+import unittest.mock
+
+import inngest
+import tests.helper
+
+from . import base
+
+_TEST_NAME = "invoke_failure"
+
+
+class _State(base.BaseState):
+    raised_error: inngest.NonRetriableError | None = None
+
+
+class MyException(Exception):
+    pass
+
+
+def create(
+    client: inngest.Inngest,
+    framework: str,
+    is_sync: bool,
+) -> base.Case:
+    test_name = base.create_test_name(_TEST_NAME, is_sync)
+    event_name = base.create_event_name(framework, test_name)
+    fn_id = base.create_fn_id(test_name)
+    state = _State()
+
+    @client.create_function(
+        fn_id=f"{fn_id}/invokee",
+        retries=0,
+        trigger=inngest.TriggerEvent(event="never"),
+    )
+    def fn_receiver_sync(
+        ctx: inngest.Context,
+        step: inngest.StepSync,
+    ) -> None:
+        raise MyException("oh no")
+
+    @client.create_function(
+        fn_id=fn_id,
+        retries=0,
+        trigger=inngest.TriggerEvent(event=event_name),
+    )
+    def fn_sender_sync(
+        ctx: inngest.Context,
+        step: inngest.StepSync,
+    ) -> None:
+        state.run_id = ctx.run_id
+
+        try:
+            step.invoke(
+                "invoke",
+                function=fn_receiver_sync,
+            )
+        except inngest.NonRetriableError as err:
+            state.raised_error = err
+            raise err
+
+    @client.create_function(
+        fn_id=f"{fn_id}/invokee",
+        retries=0,
+        trigger=inngest.TriggerEvent(event="never"),
+    )
+    async def fn_receiver_async(
+        ctx: inngest.Context,
+        step: inngest.Step,
+    ) -> None:
+        raise MyException("oh no")
+
+    @client.create_function(
+        fn_id=fn_id,
+        retries=0,
+        trigger=inngest.TriggerEvent(event=event_name),
+    )
+    async def fn_sender_async(
+        ctx: inngest.Context,
+        step: inngest.Step,
+    ) -> None:
+        state.run_id = ctx.run_id
+
+        try:
+            await step.invoke(
+                "invoke",
+                function=fn_receiver_async,
+            )
+        except inngest.NonRetriableError as err:
+            state.raised_error = err
+            raise err
+
+    def run_test(self: base.TestClass) -> None:
+        self.client.send_sync(inngest.Event(name=event_name))
+        run_id = state.wait_for_run_id()
+        run = tests.helper.client.wait_for_run_status(
+            run_id,
+            tests.helper.RunStatus.FAILED,
+        )
+        assert run.output is not None
+        output = json.loads(run.output)
+        assert output["message"] == "invoked function failed: oh no"
+        assert output["name"] == "NonRetriableError"
+
+        # `step.invoke` raises an error that contains details about the invoked
+        # function's error.
+        assert state.raised_error is not None
+        assert state.raised_error.cause == {
+            "message": "oh no",
+            "name": "MyException",
+            "stack": unittest.mock.ANY,
+        }
+
+    if is_sync:
+        fn = [fn_receiver_sync, fn_sender_sync]
+    else:
+        fn = [fn_receiver_async, fn_sender_async]
+
+    return base.Case(
+        fn=fn,
+        run_test=run_test,
+        name=test_name,
+    )
