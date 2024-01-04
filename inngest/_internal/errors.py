@@ -208,3 +208,11 @@ class ExternalError(Exception):
 
 class NonRetriableError(ExternalError):
     """End users can raise this error to prevent retries."""
+
+    def __init__(
+        self,
+        message: str | None = None,
+        cause: dict[str, object] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.cause = cause

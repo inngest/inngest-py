@@ -1,7 +1,7 @@
 import datetime
 import typing
 
-from inngest._internal import event_lib, execution, transforms, types
+from inngest._internal import errors, event_lib, execution, transforms, types
 
 from . import base
 
@@ -47,6 +47,19 @@ class Step(base.StepBase):
 
         memo = await self._get_memo(parsed_step_id.hashed)
         if not isinstance(memo, types.EmptySentinel):
+            if memo.error is not None:
+                cause = None
+                msg = "invoked function failed"
+                if isinstance(memo.error, dict):
+                    cause = {
+                        "message": memo.error.get("message"),
+                        "name": memo.error.get("name"),
+                        "stack": memo.error.get("stack"),
+                    }
+                    msg += f": {cause.get('message') or ''}"
+
+                # Invoked function failed so also fail the invoker.
+                raise errors.NonRetriableError(msg, cause)
             return memo.data
 
         self._handle_skip(parsed_step_id)
