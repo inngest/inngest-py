@@ -29,11 +29,9 @@ def serve(
     client: client_lib.Inngest,
     functions: list[function.Function],
     *,
-    api_base_url: str | None = None,
     async_mode: bool = False,
     serve_origin: str | None = None,
     serve_path: str | None = None,
-    signing_key: str | None = None,
 ) -> django.urls.URLPattern:
     """
     Serve Inngest functions in a Django app.
@@ -43,19 +41,17 @@ def serve(
         client: Inngest client.
         functions: List of functions to serve.
 
-        api_base_url: Origin for the Inngest API.
         async_mode: Whether to serve functions asynchronously.
         serve_origin: Origin to serve Inngest from.
         serve_path: Path to serve Inngest from.
-        signing_key: Inngest signing key.
     """
 
     handler = comm.CommHandler(
-        api_base_url=api_base_url,
+        api_base_url=client.api_origin,
         client=client,
         framework=FRAMEWORK,
         functions=functions,
-        signing_key=signing_key,
+        signing_key=client.signing_key,
     )
 
     if async_mode:
@@ -82,7 +78,7 @@ def _create_handler_sync(
     serve_path: str | None,
 ) -> django.urls.URLPattern:
     def inngest_api(
-        request: django.http.HttpRequest
+        request: django.http.HttpRequest,
     ) -> django.http.HttpResponse:
         headers = net.normalize_headers(dict(request.headers.items()))
 
@@ -167,7 +163,7 @@ def _create_handler_async(
     serve_path: str | None,
 ) -> django.urls.URLPattern:
     async def inngest_api(
-        request: django.http.HttpRequest
+        request: django.http.HttpRequest,
     ) -> django.http.HttpResponse:
         headers = net.normalize_headers(dict(request.headers.items()))
 

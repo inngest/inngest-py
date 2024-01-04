@@ -36,17 +36,21 @@ class CallError(types.BaseModel):
     message: str
     name: str
     original_error: object = pydantic.Field(exclude=True)
-    stack: str
+    stack: str | None
 
     @classmethod
     def from_error(cls, err: Exception) -> CallError:
+        stack: str | None = transforms.get_traceback(err)
+        if isinstance(err, errors.InternalError) and err.include_stack is False:
+            stack = None
+
         return cls(
             is_internal=isinstance(err, errors.InternalError),
             is_retriable=isinstance(err, errors.NonRetriableError) is False,
             message=str(err),
             name=type(err).__name__,
             original_error=err,
-            stack=transforms.get_traceback(err),
+            stack=stack,
         )
 
 
@@ -58,7 +62,7 @@ class FunctionCallResponse(types.BaseModel):
 
 class StepResponse(types.BaseModel):
     data: Output | None = None
-    display_name: str
+    display_name: str = pydantic.Field(..., serialization_alias="displayName")
     id: str
     name: str
     op: Opcode
@@ -86,6 +90,7 @@ CallResult: typing.TypeAlias = (
 
 
 class Opcode(enum.Enum):
+    INVOKE = "InvokeFunction"
     PLANNED = "StepPlanned"
     SLEEP = "Sleep"
     STEP = "Step"

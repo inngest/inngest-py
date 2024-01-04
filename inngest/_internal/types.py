@@ -5,6 +5,12 @@ import typing
 
 import pydantic
 
+if typing.TYPE_CHECKING:
+    # https://github.com/python/typeshed/issues/7855
+    Logger = logging.Logger | logging.LoggerAdapter[logging.Logger]
+else:
+    Logger = object
+
 T = typing.TypeVar("T")
 
 
@@ -62,13 +68,11 @@ class BaseModel(pydantic.BaseModel):
 
     def to_dict(self) -> MaybeError[dict[str, object]]:
         try:
-            return self.model_dump(mode="json")
+            return self.model_dump(by_alias=True, mode="json")
         except Exception as err:
             return err
 
 
 BaseModelT = typing.TypeVar("BaseModelT", bound=BaseModel)
-
-Logger: typing.TypeAlias = logging.Logger | logging.LoggerAdapter
 
 MaybeError: typing.TypeAlias = T | Exception

@@ -8,14 +8,17 @@ def _on_failure(
     print("on_failure called")
 
 
-@inngest.create_function(
-    fn_id="on_failure",
-    on_failure=_on_failure,
-    retries=0,
-    trigger=inngest.TriggerEvent(event="app/on_failure"),
-)
-def fn_sync(
-    ctx: inngest.Context,
-    step: inngest.StepSync,
-) -> None:
-    raise Exception("intentional error")
+def create_sync_function(client: inngest.Inngest) -> inngest.Function:
+    @client.create_function(
+        fn_id="on_failure",
+        on_failure=_on_failure,
+        retries=0,
+        trigger=inngest.TriggerEvent(event="app/on_failure"),
+    )
+    def fn(
+        ctx: inngest.Context,
+        step: inngest.StepSync,
+    ) -> None:
+        raise Exception("intentional error")
+
+    return fn

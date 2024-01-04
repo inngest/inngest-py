@@ -23,10 +23,8 @@ def serve(
     client: client_lib.Inngest,
     functions: list[function.Function],
     *,
-    api_base_url: str | None = None,
     serve_origin: str | None = None,
     serve_path: str | None = None,
-    signing_key: str | None = None,
 ) -> None:
     """
     Serve Inngest functions in a FastAPI app.
@@ -37,17 +35,16 @@ def serve(
         client: Inngest client.
         functions: List of functions to serve.
 
-        api_base_url: Origin for the Inngest API.
         serve_origin: Origin to serve the functions from.
         serve_path: Path to serve the functions from.
-        signing_key: Inngest signing key.
     """
+
     handler = comm.CommHandler(
-        api_base_url=api_base_url,
+        api_base_url=client.api_origin,
         client=client,
         framework=FRAMEWORK,
         functions=functions,
-        signing_key=signing_key,
+        signing_key=client.signing_key,
     )
 
     @app.get("/api/inngest")

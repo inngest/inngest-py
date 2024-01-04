@@ -9,6 +9,7 @@ from . import const
 
 class InternalError(Exception):
     code: const.ErrorCode
+    include_stack: bool = True
     status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 
     def __init__(
@@ -180,6 +181,17 @@ class UnknownError(InternalError):
         )
 
 
+class UnexpectedStepError(InternalError):
+    include_stack = False
+    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
+
+    def __init__(self, message: str | None = None) -> None:
+        super().__init__(
+            code=const.ErrorCode.UNEXPECTED_STEP,
+            message=message,
+        )
+
+
 class UnserializableOutputError(InternalError):
     status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
 
@@ -196,3 +208,11 @@ class ExternalError(Exception):
 
 class NonRetriableError(ExternalError):
     """End users can raise this error to prevent retries."""
+
+    def __init__(
+        self,
+        message: str | None = None,
+        cause: dict[str, object] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.cause = cause

@@ -23,7 +23,7 @@
 
 # Inngest Python SDK
 
-> 🚧 Currently in beta! It hasn't been battle-tested in production environments yet.
+> 🚧 Currently in beta! Users have deployed our Python SDK in their production environments but it isn't as battle-tested as our TypeScript SDK.
 
 We currently support the following frameworks (but adding a new framework is easy!):
 
@@ -67,7 +67,12 @@ import flask
 import inngest.flask
 import requests
 
-@inngest.create_function(
+inngest_client = inngest.Inngest(
+    app_id="flask_example",
+    is_production=False,
+)
+
+@inngest_client.create_function(
     fn_id="find_person",
     trigger=inngest.TriggerEvent(event="app/person.find"),
 )
@@ -80,7 +85,6 @@ def fetch_person(
     return res.json()
 
 app = flask.Flask(__name__)
-inngest_client = inngest.Inngest(app_id="flask_example")
 
 # Register functions with the Inngest server
 inngest.flask.serve(
@@ -90,6 +94,17 @@ inngest.flask.serve(
 )
 
 app.run(port=8000)
+```
+
+Send the following event in the Dev Server UI and the `fetch_person` function will run:
+
+```json
+{
+  "name": "app/person.find",
+  "data": {
+    "person_id": 1
+  }
+}
 ```
 
 ### Step run
@@ -102,7 +117,7 @@ The following example registers a function that will:
 1. Return a summary dict
 
 ```py
-@inngest.create_function(
+@inngest_client.create_function(
     fn_id="find_ships",
     trigger=inngest.TriggerEvent(event="app/ships.find"),
 )
@@ -140,10 +155,21 @@ def fetch_ships(
     }
 ```
 
+Send the following event in the Dev Server UI and the `fetch_person` function will run:
+
+```json
+{
+  "name": "app/ships.find",
+  "data": {
+    "person_id": 1
+  }
+}
+```
+
 ### Async function
 
 ```py
-@inngest.create_function(
+@inngest_client.create_function(
     fn_id="find_person",
     trigger=inngest.TriggerEvent(event="app/person.find"),
 )
@@ -162,22 +188,26 @@ async def fetch_person(
 Sometimes you want to send an event from a normal, non-Inngest function. You can do that using the client:
 
 ```py
-import inngest.flask
-
-inngest_client = inngest.Inngest(app_id="flask_example")
 inngest_client.send_sync(inngest.Event(name="app/test", data={"person_id": 1}))
 ```
 
 If you prefer `async` then use the `send` method instead:
 
 ```py
-import asyncio
-import inngest.flask
+await inngest_client.send(inngest.Event(name="app/test", data={"person_id": 1}))
+```
 
-inngest_client = inngest.Inngest(app_id="flask_example")
+## Using in production
 
-async def main():
-    await inngest_client.send(inngest.Event(name="app/test", data={"person_id": 1}))
+The Dev Server is not used in production. [Inngest Cloud](https://app.inngest.com) is used instead.
 
-asyncio.run(main())
+The `INNGEST_EVENT_KEY` and `INNGEST_SIGNING_KEY` environment variables must be set. These secrets establish trust between Inngest Cloud and your app. We also use request signature verification to mitigate man-in-the-middle attacks. You can read more about [environment variables](https://www.inngest.com/docs/reference/python/overview/env-vars) in our docs.
+
+Your Inngest client must be in production mode. This is typically done with an environment variable:
+
+```py
+inngest_client = inngest.Inngest(
+    app_id="my_app",
+    is_production=os.getenv("INNGEST_DEV") is None,
+)
 ```

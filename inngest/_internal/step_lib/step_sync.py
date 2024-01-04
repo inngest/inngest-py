@@ -5,9 +5,160 @@ from inngest._internal import errors, event_lib, execution, transforms, types
 
 from . import base
 
+# Avoid circular import at runtime
+if typing.TYPE_CHECKING:
+    from inngest._internal.function import Function
+else:
+    Function = object
+
 
 class StepSync(base.StepBase):
-    def _experimental_parallel(
+    def invoke(
+        self,
+        step_id: str,
+        *,
+        function: Function,
+        data: types.Serializable | None = None,
+        user: types.Serializable | None = None,
+        v: str | None = None,
+    ) -> object:
+        """
+        Invoke an Inngest function with data. Returns the result of the returned
+        value of the function or `None` if the function does not return a value.
+
+        If a function isn't found or otherwise errors, the step will fail and
+        raise a `NonRetriableError`.
+
+        Args:
+        ----
+            step_id: Durable step ID. Should usually be unique within a
+                function, but it's OK to reuse as long as your function is
+                deterministic.
+
+            function: The function object to invoke.
+            data: Will become `event.data` in the invoked function. Must be JSON
+                serializable.
+            user: Will become `event.user` in the invoked function. Must be JSON
+                serializable.
+            v: Will become `event.v` in the invoked function.
+        """
+
+        parsed_step_id = self._parse_step_id(step_id)
+
+        memo = self._get_memo_sync(parsed_step_id.hashed)
+        if not isinstance(memo, types.EmptySentinel):
+            if memo.error is not None:
+                cause = None
+                msg = "invoked function failed"
+                if isinstance(memo.error, dict):
+                    cause = {
+                        "message": memo.error.get("message"),
+                        "name": memo.error.get("name"),
+                        "stack": memo.error.get("stack"),
+                    }
+                    msg += f": {cause.get('message') or ''}"
+
+                # Invoked function failed so also fail the invoker.
+                raise errors.NonRetriableError(msg, cause)
+            return memo.data
+
+        self._handle_skip(parsed_step_id)
+
+        err = self._middleware.before_execution_sync()
+        if isinstance(err, Exception):
+            raise err
+
+        opts = base.InvokeOpts(
+            function_id=function.id,
+            payload=base.InvokeOptsPayload(
+                data=data,
+                user=user,
+                v=v,
+            ),
+        ).to_dict()
+        if isinstance(opts, Exception):
+            raise opts
+
+        raise base.ResponseInterrupt(
+            execution.StepResponse(
+                display_name=parsed_step_id.user_facing,
+                id=parsed_step_id.hashed,
+                name=parsed_step_id.user_facing,
+                op=execution.Opcode.INVOKE,
+                opts=opts,
+            )
+        )
+
+    def invoke_by_id(
+        self,
+        step_id: str,
+        *,
+        app_id: str | None = None,
+        function_id: str,
+        data: types.Serializable | None = None,
+        user: types.Serializable | None = None,
+        v: str | None = None,
+    ) -> object:
+        """
+        Invoke an Inngest function with data. Returns the result of the returned
+        value of the function or `None` if the function does not return a value.
+
+        If app ID is not specified, the invoked function must be in the same
+        app.
+
+        If a function isn't found or otherwise errors, the step will fail and
+        raise a `NonRetriableError`.
+
+        Args:
+        ----
+            step_id: Durable step ID. Should usually be unique within a
+                function, but it's OK to reuse as long as your function is
+                deterministic.
+
+            app_id: The app ID of the function to invoke. Not necessary if this
+                function and the invoked function are in the same app.
+            function_id: The ID of the function to invoke.
+            data: Will become `event.data` in the invoked function. Must be JSON
+                serializable.
+            user: Will become `event.user` in the invoked function. Must be JSON
+                serializable.
+            v: Will become `event.v` in the invoked function.
+        """
+
+        parsed_step_id = self._parse_step_id(step_id)
+
+        memo = self._get_memo_sync(parsed_step_id.hashed)
+        if not isinstance(memo, types.EmptySentinel):
+            return memo.data
+
+        self._handle_skip(parsed_step_id)
+
+        err = self._middleware.before_execution_sync()
+        if isinstance(err, Exception):
+            raise err
+
+        opts = base.InvokeOpts(
+            function_id=f"{app_id}-{function_id}",
+            payload=base.InvokeOptsPayload(
+                data=data,
+                user=user,
+                v=v,
+            ),
+        ).to_dict()
+        if isinstance(opts, Exception):
+            raise opts
+
+        raise base.ResponseInterrupt(
+            execution.StepResponse(
+                display_name=parsed_step_id.user_facing,
+                id=parsed_step_id.hashed,
+                name=parsed_step_id.user_facing,
+                op=execution.Opcode.INVOKE,
+                opts=opts,
+            )
+        )
+
+    def parallel(
         self,
         callables: tuple[typing.Callable[[], types.T], ...],
     ) -> tuple[types.T, ...]:
@@ -54,25 +205,23 @@ class StepSync(base.StepBase):
                 deterministic.
             handler: The logic to run.
         """
-        hashed_id = self._get_hashed_id(step_id)
 
-        memo = self._get_memo_sync(hashed_id)
+        parsed_step_id = self._parse_step_id(step_id)
+
+        memo = self._get_memo_sync(parsed_step_id.hashed)
         if not isinstance(memo, types.EmptySentinel):
             return memo.data  # type: ignore
 
-        is_targeting_enabled = self._target_hashed_id is not None
-        is_targeted = self._target_hashed_id == hashed_id
-        if is_targeting_enabled and not is_targeted:
-            # Skip this step because a different step is targeted.
-            raise base.SkipInterrupt()
+        self._handle_skip(parsed_step_id)
 
+        is_targeting_enabled = self._target_hashed_id is not None
         if self._inside_parallel and not is_targeting_enabled:
             # Plan this step because we're in parallel mode.
             raise base.ResponseInterrupt(
                 execution.StepResponse(
-                    display_name=step_id,
-                    id=hashed_id,
-                    name=step_id,
+                    display_name=parsed_step_id.user_facing,
+                    id=parsed_step_id.hashed,
+                    name=parsed_step_id.user_facing,
                     op=execution.Opcode.PLANNED,
                 )
             )
@@ -84,9 +233,9 @@ class StepSync(base.StepBase):
         raise base.ResponseInterrupt(
             execution.StepResponse(
                 data=execution.Output(data=handler()),
-                display_name=step_id,
-                id=hashed_id,
-                name=step_id,
+                display_name=parsed_step_id.user_facing,
+                id=parsed_step_id.hashed,
+                name=parsed_step_id.user_facing,
                 op=execution.Opcode.STEP,
             )
         )
@@ -151,17 +300,14 @@ class StepSync(base.StepBase):
                 deterministic.
             until: The time to sleep until.
         """
-        hashed_id = self._get_hashed_id(step_id)
 
-        memo = self._get_memo_sync(hashed_id)
+        parsed_step_id = self._parse_step_id(step_id)
+
+        memo = self._get_memo_sync(parsed_step_id.hashed)
         if not isinstance(memo, types.EmptySentinel):
             return memo.data  # type: ignore
 
-        is_targeting_enabled = self._target_hashed_id is not None
-        is_targeted = self._target_hashed_id == hashed_id
-        if is_targeting_enabled and not is_targeted:
-            # Skip this step because a different step is targeted.
-            raise base.SkipInterrupt()
+        self._handle_skip(parsed_step_id)
 
         err = self._middleware.before_execution_sync()
         if isinstance(err, Exception):
@@ -169,8 +315,8 @@ class StepSync(base.StepBase):
 
         raise base.ResponseInterrupt(
             execution.StepResponse(
-                display_name=step_id,
-                id=hashed_id,
+                display_name=parsed_step_id.user_facing,
+                id=parsed_step_id.hashed,
                 name=transforms.to_iso_utc(until),
                 op=execution.Opcode.SLEEP,
             )
@@ -196,9 +342,10 @@ class StepSync(base.StepBase):
             if_exp: An expression to filter events.
             timeout: The maximum number of milliseconds to wait for the event.
         """
-        hashed_id = self._get_hashed_id(step_id)
 
-        memo = self._get_memo_sync(hashed_id)
+        parsed_step_id = self._parse_step_id(step_id)
+
+        memo = self._get_memo_sync(parsed_step_id.hashed)
         if not isinstance(memo, types.EmptySentinel):
             if memo.data is None:
                 # Timeout
@@ -210,11 +357,7 @@ class StepSync(base.StepBase):
                 raise errors.UnknownError("invalid event shape") from event_obj
             return event_obj
 
-        is_targeting_enabled = self._target_hashed_id is not None
-        is_targeted = self._target_hashed_id == hashed_id
-        if is_targeting_enabled and not is_targeted:
-            # Skip this step because a different step is targeted.
-            raise base.SkipInterrupt()
+        self._handle_skip(parsed_step_id)
 
         err = self._middleware.before_execution_sync()
         if isinstance(err, Exception):
@@ -233,8 +376,8 @@ class StepSync(base.StepBase):
 
         raise base.ResponseInterrupt(
             execution.StepResponse(
-                display_name=step_id,
-                id=hashed_id,
+                display_name=parsed_step_id.user_facing,
+                id=parsed_step_id.hashed,
                 name=event,
                 op=execution.Opcode.WAIT_FOR_EVENT,
                 opts=opts,

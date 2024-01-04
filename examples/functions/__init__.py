@@ -1,3 +1,5 @@
+import inngest
+
 from . import (
     batch,
     cancel,
@@ -14,28 +16,32 @@ from . import (
     wait_for_event,
 )
 
-functions = [
-    cron.fn,
-    parallel_steps.fn,
-    print_event.fn,
-    two_steps_and_sleep.fn,
-]
 
-functions_sync = [
-    batch.fn_sync,
-    cancel.fn_sync,
-    cron.fn_sync,
-    debounce.fn_sync,
-    duplicate_step_name.fn_sync,
-    error_step.fn_sync,
-    no_steps.fn_sync,
-    on_failure.fn_sync,
-    parallel_steps.fn_sync,
-    print_event.fn_sync,
-    send_event.fn_sync,
-    two_steps_and_sleep.fn_sync,
-    wait_for_event.fn_sync,
-]
+def create_async_functions(client: inngest.Inngest) -> list[inngest.Function]:
+    return [
+        cron.create_async_function(client),
+        parallel_steps.create_async_function(client),
+        print_event.create_async_function(client),
+        two_steps_and_sleep.create_async_function(client),
+    ]
 
 
-__all__ = ["functions", "functions_sync"]
+def create_sync_functions(client: inngest.Inngest) -> list[inngest.Function]:
+    return [
+        batch.create_sync_function(client),
+        cancel.create_sync_function(client),
+        cron.create_sync_function(client),
+        debounce.create_sync_function(client),
+        duplicate_step_name.create_sync_function(client),
+        error_step.create_sync_function(client),
+        no_steps.create_sync_function(client),
+        on_failure.create_sync_function(client),
+        parallel_steps.create_sync_function(client),
+        print_event.create_sync_function(client),
+        send_event.create_sync_function(client),
+        two_steps_and_sleep.create_sync_function(client),
+        wait_for_event.create_sync_function(client),
+    ]
+
+
+__all__ = ["create_async_functions", "create_sync_functions"]

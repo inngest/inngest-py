@@ -14,13 +14,23 @@ from inngest._internal import const
 
 from . import base, cases, dev_server, net
 
-_cases = cases.create_cases_sync("tornado")
-
+_framework = "tornado"
 _dev_server_origin = f"http://{net.HOST}:{dev_server.PORT}"
+
 _client = inngest.Inngest(
-    app_id=base.create_app_id("tornado"),
+    api_base_url=_dev_server_origin,
+    app_id=_framework,
     event_api_base_url=_dev_server_origin,
+    is_production=False,
 )
+
+_cases = cases.create_sync_cases(_client, _framework)
+_fns: list[inngest.Function] = []
+for case in _cases:
+    if isinstance(case.fn, list):
+        _fns.extend(case.fn)
+    else:
+        _fns.append(case.fn)
 
 
 # Not using tornado.testing.AsyncHTTPTestCase because it:
@@ -42,8 +52,7 @@ class TestTornado(unittest.TestCase):
             inngest.tornado.serve(
                 app,
                 _client,
-                [case.fn for case in _cases],
-                api_base_url=_dev_server_origin,
+                _fns,
             )
             tornado.ioloop.IOLoop.current().start()
 
@@ -74,12 +83,12 @@ class TestTornadoRegistration(tornado.testing.AsyncHTTPTestCase):
         """
 
         client = inngest.Inngest(
-            app_id="tornado",
+            app_id=f"{_framework}_registration",
             event_key="test",
-            is_production=True,
+            signing_key="signkey-prod-0486c9",
         )
 
-        @inngest.create_function(
+        @client.create_function(
             fn_id="foo",
             retries=0,
             trigger=inngest.TriggerEvent(event="app/foo"),
@@ -94,7 +103,6 @@ class TestTornadoRegistration(tornado.testing.AsyncHTTPTestCase):
             self.get_app(),
             client,
             [fn],
-            signing_key="signkey-prod-0486c9",
         )
         res = self.fetch(
             "/api/inngest",

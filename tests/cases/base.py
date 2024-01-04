@@ -29,7 +29,7 @@ class BaseState:
 
 @dataclasses.dataclass
 class Case:
-    fn: inngest.Function
+    fn: inngest.Function | list[inngest.Function]
     name: str
     run_test: typing.Callable[[TestClass], None]
 

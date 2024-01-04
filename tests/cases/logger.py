@@ -22,6 +22,7 @@ class StatefulLogger(logging.Logger):
 
 
 def create(
+    client: inngest.Inngest,
     framework: str,
     is_sync: bool,
 ) -> base.Case:
@@ -32,7 +33,7 @@ def create(
 
     _logger = StatefulLogger()
 
-    @inngest.create_function(
+    @client.create_function(
         fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
@@ -57,7 +58,7 @@ def create(
         step.run("second_step", _second_step)
         ctx.logger.info("function end")
 
-    @inngest.create_function(
+    @client.create_function(
         fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
@@ -97,7 +98,7 @@ def create(
             "between steps",
             "second_step",
             "function end",
-        ], _logger.info_calls
+        ]
 
     if is_sync:
         fn = fn_sync

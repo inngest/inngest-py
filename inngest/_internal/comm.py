@@ -197,10 +197,6 @@ class CommHandler:
         if isinstance(body, Exception):
             return body
 
-        body = transforms.prep_body(body)
-        if isinstance(body, Exception):
-            return body
-
         headers = net.create_headers(self._framework, server_kind)
         if self._signing_key:
             headers[
@@ -211,7 +207,7 @@ class CommHandler:
             "POST",
             registration_url,
             headers=headers,
-            json=body,
+            json=transforms.prep_body(body),
             timeout=30,
         )
 
@@ -310,6 +306,18 @@ class CommHandler:
             if _fn.get_id() == fn_id:
                 return _fn
             if _fn.on_failure_fn_id == fn_id:
+                return _fn
+
+        # If we didn't find the function ID, it might be because the function ID
+        # in the request uses the old format that didn't include the app ID.
+        # We'll prefix the function ID with the app ID and try again. This logic
+        # can be deleted when no one is using Python SDK versions below 0.3.0
+        # anymore.
+        app_and_fn_id = f"{self._client.app_id}-{fn_id}"
+        for _fn in self._fns.values():
+            if _fn.get_id() == app_and_fn_id:
+                return _fn
+            if _fn.on_failure_fn_id == app_and_fn_id:
                 return _fn
 
         return errors.MissingFunctionError(f"function {fn_id} not found")

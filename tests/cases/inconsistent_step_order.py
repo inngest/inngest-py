@@ -21,6 +21,7 @@ class _State(base.BaseState):
 
 
 def create(
+    client: inngest.Inngest,
     framework: str,
     is_sync: bool,
 ) -> base.Case:
@@ -29,7 +30,7 @@ def create(
     fn_id = base.create_fn_id(test_name)
     state = _State()
 
-    @inngest.create_function(
+    @client.create_function(
         fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
@@ -60,7 +61,7 @@ def create(
         steps.pop()()
         steps.pop()()
 
-    @inngest.create_function(
+    @client.create_function(
         fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
@@ -99,12 +100,8 @@ def create(
             tests.helper.RunStatus.COMPLETED,
         )
 
-        assert (
-            state.step_1_counter == 1
-        ), f"step_1_counter: {state.step_1_counter}"
-        assert (
-            state.step_2_counter == 1
-        ), f"step_2_counter: {state.step_2_counter}"
+        assert state.step_1_counter == 1
+        assert state.step_2_counter == 1
 
         step_1_output = json.loads(
             tests.helper.client.get_step_output(
@@ -112,7 +109,7 @@ def create(
                 step_id="step_1",
             )
         )
-        assert step_1_output == {"data": 1}, step_1_output
+        assert step_1_output == {"data": 1}
 
         step_2_output = json.loads(
             tests.helper.client.get_step_output(
@@ -120,7 +117,7 @@ def create(
                 step_id="step_2",
             )
         )
-        assert step_2_output == {"data": 2}, step_1_output
+        assert step_2_output == {"data": 2}
 
     if is_sync:
         fn = fn_sync

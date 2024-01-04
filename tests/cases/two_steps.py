@@ -15,6 +15,7 @@ class _State(base.BaseState):
 
 
 def create(
+    client: inngest.Inngest,
     framework: str,
     is_sync: bool,
 ) -> base.Case:
@@ -23,7 +24,7 @@ def create(
     fn_id = base.create_fn_id(test_name)
     state = _State()
 
-    @inngest.create_function(
+    @client.create_function(
         fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
@@ -45,7 +46,7 @@ def create(
 
         step.run("step_2", step_2)
 
-    @inngest.create_function(
+    @client.create_function(
         fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
@@ -75,13 +76,9 @@ def create(
             tests.helper.RunStatus.COMPLETED,
         )
 
-        assert (
-            state.step_1_counter == 1
-        ), f"step_1_counter: {state.step_1_counter}"
-        assert (
-            state.step_2_counter == 1
-        ), f"step_2_counter: {state.step_2_counter}"
-        assert state.step_1_output == [{"foo": {"bar": 1}}], state.step_1_output
+        assert state.step_1_counter == 1
+        assert state.step_2_counter == 1
+        assert state.step_1_output == [{"foo": {"bar": 1}}]
 
         step_1_output_in_api = json.loads(
             tests.helper.client.get_step_output(
@@ -89,9 +86,7 @@ def create(
                 step_id="step_1",
             )
         )
-        assert step_1_output_in_api == {
-            "data": [{"foo": {"bar": 1}}]
-        }, step_1_output_in_api
+        assert step_1_output_in_api == {"data": [{"foo": {"bar": 1}}]}
 
     if is_sync:
         fn = fn_sync

@@ -9,13 +9,16 @@ from inngest._internal import const, errors
 
 from . import comm
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+client = inngest.Inngest(app_id="test", is_production=False, logger=logger)
+
 
 class Test_get_function_configs(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
         logger = logging.getLogger(__name__)
         logger.setLevel(logging.DEBUG)
-        self.client = inngest.Inngest(app_id="test", logger=logger)
 
     def test_full_config(self) -> None:
         """
@@ -23,7 +26,7 @@ class Test_get_function_configs(unittest.TestCase):
         fully-specified config.
         """
 
-        @inngest.create_function(
+        @client.create_function(
             batch_events=inngest.Batch(
                 max_size=2, timeout=datetime.timedelta(minutes=1)
             ),
@@ -50,7 +53,7 @@ class Test_get_function_configs(unittest.TestCase):
 
         handler = comm.CommHandler(
             api_base_url="http://foo.bar",
-            client=self.client,
+            client=client,
             framework=const.Framework.FLASK,
             functions=[fn],
         )
@@ -65,7 +68,7 @@ class Test_get_function_configs(unittest.TestCase):
 
         handler = comm.CommHandler(
             api_base_url="http://foo.bar",
-            client=self.client,
+            client=client,
             framework=const.Framework.FLASK,
             functions=functions,
         )

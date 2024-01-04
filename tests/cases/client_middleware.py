@@ -1,7 +1,6 @@
 import json
 
 import inngest
-import inngest.experimental
 import tests.helper
 
 from . import base
@@ -15,6 +14,7 @@ class _State(base.BaseState):
 
 
 def create(
+    client: inngest.Inngest,
     framework: str,
     is_sync: bool,
 ) -> base.Case:
@@ -23,12 +23,10 @@ def create(
     fn_id = base.create_fn_id(test_name)
     state = _State()
 
-    middleware: type[
-        inngest.experimental.Middleware | inngest.experimental.MiddlewareSync
-    ]
+    middleware: type[inngest.Middleware | inngest.MiddlewareSync]
     if is_sync:
 
-        class _MiddlewareSync(inngest.experimental.MiddlewareSync):
+        class _MiddlewareSync(inngest.MiddlewareSync):
             def after_execution(self) -> None:
                 state.hook_list.append("after_execution")
 
@@ -58,7 +56,7 @@ def create(
 
     else:
 
-        class _MiddlewareAsync(inngest.experimental.Middleware):
+        class _MiddlewareAsync(inngest.Middleware):
             async def after_execution(self) -> None:
                 state.hook_list.append("after_execution")
 
@@ -86,7 +84,7 @@ def create(
 
         middleware = _MiddlewareAsync
 
-    @inngest.create_function(
+    @client.create_function(
         fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
@@ -107,7 +105,7 @@ def create(
 
         step.run("step_2", _step_2)
 
-    @inngest.create_function(
+    @client.create_function(
         fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
@@ -157,7 +155,7 @@ def create(
             "after_execution",
             "transform_output",
             "before_response",
-        ], state.hook_list
+        ]
 
         step_1_output = json.loads(
             tests.helper.client.get_step_output(
@@ -165,7 +163,7 @@ def create(
                 step_id="step_1",
             )
         )
-        assert step_1_output == {"data": "transformed output"}, step_1_output
+        assert step_1_output == {"data": "transformed output"}
 
     if is_sync:
         fn = fn_sync

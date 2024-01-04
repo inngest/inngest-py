@@ -1,16 +1,13 @@
-import datetime
-import time
-
 import inngest
 import tests.helper
 
 from . import base
 
-_TEST_NAME = "wait_for_event_fulfill"
+_TEST_NAME = "invoke_by_id"
 
 
 class _State(base.BaseState):
-    result: inngest.Event | None = None
+    step_output: object = None
 
 
 def create(
@@ -24,61 +21,72 @@ def create(
     state = _State()
 
     @client.create_function(
-        fn_id=fn_id,
+        fn_id=f"{fn_id}/invokee",
         retries=0,
-        trigger=inngest.TriggerEvent(event=event_name),
+        trigger=inngest.TriggerEvent(event="never"),
     )
-    def fn_sync(
+    def fn_receiver_sync(
         ctx: inngest.Context,
         step: inngest.StepSync,
-    ) -> None:
-        state.run_id = ctx.run_id
-
-        state.result = step.wait_for_event(
-            "wait",
-            event=f"{event_name}.fulfill",
-            timeout=datetime.timedelta(minutes=1),
-        )
+    ) -> dict[str, object]:
+        return {"foo": {"bar": 1}}
 
     @client.create_function(
         fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
+    def fn_sender_sync(
+        ctx: inngest.Context,
+        step: inngest.StepSync,
+    ) -> None:
+        state.run_id = ctx.run_id
+        state.step_output = step.invoke_by_id(
+            "invoke",
+            app_id=framework,
+            function_id=f"{fn_id}/invokee",
+        )
+
+    @client.create_function(
+        fn_id=f"{fn_id}/invokee",
+        retries=0,
+        trigger=inngest.TriggerEvent(event="never"),
+    )
+    async def fn_receiver_async(
+        ctx: inngest.Context,
+        step: inngest.Step,
+    ) -> dict[str, object]:
+        return {"foo": {"bar": 1}}
+
+    @client.create_function(
+        fn_id=fn_id,
+        retries=0,
+        trigger=inngest.TriggerEvent(event=event_name),
+    )
+    async def fn_sender_async(
         ctx: inngest.Context,
         step: inngest.Step,
     ) -> None:
         state.run_id = ctx.run_id
-
-        state.result = await step.wait_for_event(
-            "wait",
-            event=f"{event_name}.fulfill",
-            timeout=datetime.timedelta(minutes=1),
+        state.step_output = await step.invoke_by_id(
+            "invoke",
+            app_id=framework,
+            function_id=f"{fn_id}/invokee",
         )
 
     def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
         run_id = state.wait_for_run_id()
-
-        # Sleep long enough for the wait_for_event to register.
-        time.sleep(0.5)
-
-        self.client.send_sync(inngest.Event(name=f"{event_name}.fulfill"))
         tests.helper.client.wait_for_run_status(
             run_id,
             tests.helper.RunStatus.COMPLETED,
         )
-
-        assert isinstance(state.result, inngest.Event)
-        assert state.result.id != ""
-        assert state.result.name == f"{event_name}.fulfill"
-        assert state.result.ts > 0
+        assert state.step_output == {"foo": {"bar": 1}}
 
     if is_sync:
-        fn = fn_sync
+        fn = [fn_receiver_sync, fn_sender_sync]
     else:
-        fn = fn_async
+        fn = [fn_receiver_async, fn_sender_async]
 
     return base.Case(
         fn=fn,

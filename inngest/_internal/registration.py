@@ -10,7 +10,7 @@ class DeployType(enum.Enum):
 
 
 class RegisterRequest(types.BaseModel):
-    app_name: str
+    app_name: str = pydantic.Field(..., serialization_alias="appname")
     deploy_type: DeployType
     framework: const.Framework
     functions: list[function_config.FunctionConfig] = pydantic.Field(
