@@ -378,7 +378,7 @@ class CommHandler:
             return CommResponse(
                 body=server_res_body,
                 headers=net.create_headers(self._framework, server_kind),
-                status_code=server_res.status_code,
+                status_code=http.HTTPStatus.OK,
             )
 
         msg = server_res_body.get("error")
