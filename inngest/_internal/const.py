@@ -58,6 +58,7 @@ class HeaderKey(enum.Enum):
 class QueryParamKey(enum.Enum):
     FUNCTION_ID = "fnId"
     STEP_ID = "stepId"
+    SYNC_ID = "deployId"
 
 
 class InternalEvents(enum.Enum):

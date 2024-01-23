@@ -213,6 +213,8 @@ def _create_handler_sync(
             )
 
         if flask.request.method == "PUT":
+            sync_id = flask.request.args.get(const.QueryParamKey.SYNC_ID.value)
+
             return _to_response(
                 client.logger,
                 handler.register_sync(
@@ -222,6 +224,7 @@ def _create_handler_sync(
                         serve_path=serve_path,
                     ),
                     server_kind=server_kind,
+                    sync_id=sync_id,
                 ),
                 server_kind,
             )

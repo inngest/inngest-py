@@ -119,6 +119,13 @@ def serve(
                 client.logger.error(server_kind)
                 server_kind = None
 
+            sync_id: str | None = None
+            raw_sync_id = self.request.query_arguments.get(
+                const.QueryParamKey.SYNC_ID.value
+            )
+            if raw_sync_id is not None:
+                sync_id = raw_sync_id[0].decode("utf-8")
+
             comm_res = handler.register_sync(
                 app_url=net.create_serve_url(
                     request_url=self.request.full_url(),
@@ -126,6 +133,7 @@ def serve(
                     serve_path=serve_path,
                 ),
                 server_kind=server_kind,
+                sync_id=sync_id,
             )
 
             self._write_comm_response(comm_res, server_kind)

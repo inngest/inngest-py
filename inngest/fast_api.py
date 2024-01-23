@@ -102,13 +102,17 @@ def serve(
         )
 
     @app.put("/api/inngest")
-    async def put_inngest_api(request: fastapi.Request) -> fastapi.Response:
+    async def put_inngest_api(
+        request: fastapi.Request,
+    ) -> fastapi.Response:
         headers = net.normalize_headers(dict(request.headers.items()))
 
         server_kind = transforms.get_server_kind(headers)
         if isinstance(server_kind, Exception):
             client.logger.error(server_kind)
             server_kind = None
+
+        sync_id = request.query_params.get(const.QueryParamKey.SYNC_ID.value)
 
         return _to_response(
             client.logger,
@@ -119,6 +123,7 @@ def serve(
                     serve_path=serve_path,
                 ),
                 server_kind=server_kind,
+                sync_id=sync_id,
             ),
             server_kind,
         )
