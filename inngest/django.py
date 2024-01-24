@@ -131,6 +131,8 @@ def _create_handler_sync(
             )
 
         if request.method == "PUT":
+            sync_id = request.GET.get(const.QueryParamKey.SYNC_ID.value)
+
             return _to_response(
                 client.logger,
                 handler.register_sync(
@@ -140,6 +142,7 @@ def _create_handler_sync(
                         serve_path=serve_path,
                     ),
                     server_kind=server_kind,
+                    sync_id=sync_id,
                 ),
                 server_kind,
             )
@@ -216,6 +219,8 @@ def _create_handler_async(
             )
 
         if request.method == "PUT":
+            sync_id = request.GET.get(const.QueryParamKey.SYNC_ID.value)
+
             return _to_response(
                 client.logger,
                 await handler.register(
@@ -225,6 +230,7 @@ def _create_handler_async(
                         serve_path=serve_path,
                     ),
                     server_kind=server_kind,
+                    sync_id=sync_id,
                 ),
                 server_kind,
             )

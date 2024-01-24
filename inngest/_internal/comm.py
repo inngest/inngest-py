@@ -173,8 +173,10 @@ class CommHandler:
 
     def _build_registration_request(
         self,
+        *,
         app_url: str,
         server_kind: const.ServerKind | None,
+        sync_id: str | None,
     ) -> types.MaybeError[httpx.Request]:
         registration_url = urllib.parse.urljoin(
             self._api_origin,
@@ -208,6 +210,9 @@ class CommHandler:
             registration_url,
             headers=headers,
             json=transforms.prep_body(body),
+            params={
+                const.QueryParamKey.SYNC_ID.value: sync_id,
+            },
             timeout=30,
         )
 
@@ -396,6 +401,7 @@ class CommHandler:
         *,
         app_url: str,
         server_kind: const.ServerKind | None,
+        sync_id: str | None = None,
     ) -> CommResponse:
         """Handle a registration call."""
         err = self._validate_registration(server_kind)
@@ -403,7 +409,11 @@ class CommHandler:
             return CommResponse.from_error(self._client.logger, err)
 
         async with httpx.AsyncClient() as client:
-            req = self._build_registration_request(app_url, server_kind)
+            req = self._build_registration_request(
+                app_url=app_url,
+                server_kind=server_kind,
+                sync_id=sync_id,
+            )
             if isinstance(req, Exception):
                 return CommResponse.from_error(self._client.logger, req)
 
@@ -417,6 +427,7 @@ class CommHandler:
         *,
         app_url: str,
         server_kind: const.ServerKind | None,
+        sync_id: str | None,
     ) -> CommResponse:
         """Handle a registration call."""
         err = self._validate_registration(server_kind)
@@ -424,7 +435,11 @@ class CommHandler:
             return CommResponse.from_error(self._client.logger, err)
 
         with httpx.Client() as client:
-            req = self._build_registration_request(app_url, server_kind)
+            req = self._build_registration_request(
+                app_url=app_url,
+                server_kind=server_kind,
+                sync_id=sync_id,
+            )
             if isinstance(req, Exception):
                 return CommResponse.from_error(self._client.logger, req)
 
