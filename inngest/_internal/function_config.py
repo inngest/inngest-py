@@ -51,6 +51,12 @@ class Cancel(_BaseConfig):
         return out
 
 
+class Concurrency(_BaseConfig):
+    key: str | None = None
+    limit: int
+    scope: typing.Literal["account", "env", "fn"] | None = None
+
+
 class Debounce(_BaseConfig):
     key: str | None = None
     period: int | datetime.timedelta
@@ -73,6 +79,7 @@ class FunctionConfig(_BaseConfig):
         default=None, serialization_alias="batchEvents"
     )
     cancel: list[Cancel] | None = None
+    concurrency: list[Concurrency] | None = None
     debounce: Debounce | None = None
     id: str
     name: str | None = None
