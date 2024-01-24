@@ -16,6 +16,13 @@ def test_serialization() -> None:
                 timeout=datetime.timedelta(seconds=60),
             )
         ],
+        concurrency=[
+            function_config.Concurrency(
+                key="foo",
+                limit=1,
+                scope="account",
+            )
+        ],
         debounce=function_config.Debounce(
             key="foo",
             period=datetime.timedelta(seconds=60),
@@ -58,6 +65,13 @@ def test_serialization() -> None:
                 "event": "foo",
                 "if_exp": "foo",
                 "timeout": "1m",
+            }
+        ],
+        "concurrency": [
+            {
+                "key": "foo",
+                "limit": 1,
+                "scope": "account",
             }
         ],
         "debounce": {

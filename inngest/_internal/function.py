@@ -75,6 +75,7 @@ class FunctionOpts(types.BaseModel):
 
     batch_events: function_config.Batch | None = None
     cancel: list[function_config.Cancel] | None = None
+    concurrency: list[function_config.Concurrency] | None = None
     debounce: function_config.Debounce | None = None
     id: str
     name: str
@@ -396,6 +397,7 @@ class Function:
         main = function_config.FunctionConfig(
             batch_events=self._opts.batch_events,
             cancel=self._opts.cancel,
+            concurrency=self._opts.concurrency,
             debounce=self._opts.debounce,
             id=fn_id,
             name=name,

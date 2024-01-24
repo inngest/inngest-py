@@ -9,6 +9,7 @@ from ._internal.function import Context, Function
 from ._internal.function_config import (
     Batch,
     Cancel,
+    Concurrency,
     Debounce,
     RateLimit,
     Throttle,
@@ -21,6 +22,7 @@ from ._internal.step_lib import FunctionID, Step, StepSync
 __all__ = [
     "Batch",
     "Cancel",
+    "Concurrency",
     "Context",
     "Debounce",
     "Event",

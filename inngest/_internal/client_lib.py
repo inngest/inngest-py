@@ -176,6 +176,7 @@ class Inngest:
         *,
         batch_events: function_config.Batch | None = None,
         cancel: list[function_config.Cancel] | None = None,
+        concurrency: list[function_config.Concurrency] | None = None,
         debounce: function_config.Debounce | None = None,
         fn_id: str,
         middleware: list[
@@ -201,6 +202,7 @@ class Inngest:
         ----
             batch_events: Event batching config.
             cancel: Run cancellation config.
+            concurrency: Concurrency config.
             debounce: Debouncing config.
             fn_id: Function ID. Changing this ID will make Inngest think this is a
                 new function.
@@ -222,6 +224,7 @@ class Inngest:
                 function.FunctionOpts(
                     batch_events=batch_events,
                     cancel=cancel,
+                    concurrency=concurrency,
                     debounce=debounce,
                     id=fully_qualified_fn_id,
                     name=name or fn_id,
