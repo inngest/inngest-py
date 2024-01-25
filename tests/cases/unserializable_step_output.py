@@ -80,6 +80,7 @@ def create(
 
         assert output == {
             "code": "unserializable_output",
+            "error": "invalid status code: 500",
             "message": '"step_1" returned unserializable data',
             "name": "UnserializableOutputError",
         }
