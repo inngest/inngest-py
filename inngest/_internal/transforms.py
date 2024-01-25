@@ -127,3 +127,13 @@ async def maybe_await(
         return await value  # type: ignore
 
     return value  # type: ignore
+
+
+def remove_first_traceback_frame(err: Exception) -> None:
+    """
+    Remove the first frame from the traceback, since we don't want our internal
+    code to appear in the traceback.
+    """
+
+    if err.__traceback__:
+        err.__traceback__ = err.__traceback__.tb_next

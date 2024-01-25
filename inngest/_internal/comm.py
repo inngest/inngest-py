@@ -58,13 +58,10 @@ class CommResponse:
                 # Unnest data and error fields to work with the StepRun opcode.
                 # They should probably be unnested lower in the code, but this
                 # is a quick fix that doesn't break middleware contracts
-                data = None
-                error = None
-                if item.data is not None:
-                    data = item.data.data
-                    error = item.data.error
-                d["data"] = data
-                d["error"] = error
+                nested_data = d.get("data")
+                if isinstance(nested_data, dict):
+                    d["data"] = nested_data.get("data")
+                    d["error"] = nested_data.get("error")
 
                 out.append(d)
 

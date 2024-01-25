@@ -3,6 +3,7 @@ import inngest
 from . import (
     base,
     cancel,
+    change_step_error,
     client_middleware,
     client_send,
     crazy_ids,
@@ -30,6 +31,7 @@ from . import (
 
 _modules = (
     cancel,
+    change_step_error,
     client_middleware,
     client_send,
     crazy_ids,

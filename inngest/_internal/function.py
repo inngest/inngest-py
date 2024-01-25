@@ -16,6 +16,7 @@ from inngest._internal import (
     function_config,
     middleware_lib,
     step_lib,
+    transforms,
     types,
 )
 
@@ -218,7 +219,7 @@ class Function:
                         )
                     )
             except Exception as user_err:
-                _remove_first_traceback_frame(user_err)
+                transforms.remove_first_traceback_frame(user_err)
                 raise _UserError(user_err)
 
             err = await middleware.after_execution()
@@ -320,7 +321,7 @@ class Function:
                         ),
                     )
                 except Exception as user_err:
-                    _remove_first_traceback_frame(user_err)
+                    transforms.remove_first_traceback_frame(user_err)
                     raise _UserError(user_err)
             else:
                 return execution.CallError.from_error(
@@ -465,13 +466,3 @@ class _UserError(Exception):
 
     def __init__(self, err: Exception) -> None:
         self.err = err
-
-
-def _remove_first_traceback_frame(err: Exception) -> None:
-    """
-    Remove the first frame from the traceback, since we don't want our internal
-    code to appear in the traceback.
-    """
-
-    if err.__traceback__:
-        err.__traceback__ = err.__traceback__.tb_next

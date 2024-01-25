@@ -1,7 +1,7 @@
 {
   "[python]": {
     "editor.codeActionsOnSave": {
-      "source.organizeImports": true
+      "source.organizeImports": "explicit"
     },
     "editor.defaultFormatter": "charliermarsh.ruff"
   },
@@ -10,5 +10,7 @@
   "isort.check": true,
   "mypy-type-checker.importStrategy": "fromEnvironment",
   "mypy-type-checker.preferDaemon": true,
+  "python.analysis.typeCheckingMode": "basic",
+  "python.languageServer": "Pylance",
   "ruff.fixAll": true
 }

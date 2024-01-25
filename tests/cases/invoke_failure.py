@@ -3,7 +3,6 @@ When an invoked function fails, `step.invoke` raises a NonRetriableError.
 """
 
 import json
-import unittest.mock
 
 import inngest
 import tests.helper
@@ -14,7 +13,7 @@ _TEST_NAME = "invoke_failure"
 
 
 class _State(base.BaseState):
-    raised_error: inngest.NonRetriableError | None = None
+    raised_error: inngest.StepError | None = None
 
 
 class MyException(Exception):
@@ -58,7 +57,7 @@ def create(
                 "invoke",
                 function=fn_receiver_sync,
             )
-        except inngest.NonRetriableError as err:
+        except inngest.StepError as err:
             state.raised_error = err
             raise err
 
@@ -89,7 +88,7 @@ def create(
                 "invoke",
                 function=fn_receiver_async,
             )
-        except inngest.NonRetriableError as err:
+        except inngest.StepError as err:
             state.raised_error = err
             raise err
 
@@ -102,17 +101,15 @@ def create(
         )
         assert run.output is not None
         output = json.loads(run.output)
-        assert output["message"] == "invoked function failed: oh no"
-        assert output["name"] == "NonRetriableError"
+        assert output["message"] == "oh no"
+        assert output["name"] == "MyException"
 
         # `step.invoke` raises an error that contains details about the invoked
         # function's error.
         assert state.raised_error is not None
-        assert state.raised_error.cause == {
-            "message": "oh no",
-            "name": "MyException",
-            "stack": unittest.mock.ANY,
-        }
+        assert state.raised_error.message == "oh no"
+        assert state.raised_error.name == "MyException"
+        assert isinstance(state.raised_error.stack, str)
 
     if is_sync:
         fn = [fn_receiver_sync, fn_sender_sync]
