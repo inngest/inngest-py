@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import http
+import typing
 
 import pydantic
 
@@ -212,7 +213,8 @@ class NonRetriableError(ExternalError):
     def __init__(
         self,
         message: str | None = None,
-        cause: dict[str, object] | None = None,
+        cause: typing.Mapping[str, object] | None = None,
     ) -> None:
         super().__init__(message)
+        self.cause = cause
         self.cause = cause

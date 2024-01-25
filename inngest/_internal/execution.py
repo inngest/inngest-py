@@ -93,7 +93,7 @@ class Opcode(enum.Enum):
     INVOKE = "InvokeFunction"
     PLANNED = "StepPlanned"
     SLEEP = "Sleep"
-    STEP = "Step"
+    STEP_RUN = "StepRun"
     WAIT_FOR_EVENT = "WaitForEvent"
 
 

@@ -55,6 +55,17 @@ class CommResponse:
                         ),
                     )
 
+                # Unnest data and error fields to work with the StepRun opcode.
+                # They should probably be unnested lower in the code, but this
+                # is a quick fix that doesn't break middleware contracts
+                data = None
+                error = None
+                if item.data is not None:
+                    data = item.data.data
+                    error = item.data.error
+                d["data"] = data
+                d["error"] = error
+
                 out.append(d)
 
             return cls(

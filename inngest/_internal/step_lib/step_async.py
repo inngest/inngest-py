@@ -255,7 +255,7 @@ class Step(base.StepBase):
                 display_name=parsed_step_id.user_facing,
                 id=parsed_step_id.hashed,
                 name=parsed_step_id.user_facing,
-                op=execution.Opcode.STEP,
+                op=execution.Opcode.STEP_RUN,
             ),
         )
 
