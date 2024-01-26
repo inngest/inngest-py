@@ -100,6 +100,8 @@ class MemoizedError(types.BaseModel):
 
 
 class Output(types.BaseModel):
+    # Fail validation if any extra fields exist, because this will prevent
+    # accidentally assuming user data is nested data
     model_config = pydantic.ConfigDict(extra="forbid")
 
     data: object = None
