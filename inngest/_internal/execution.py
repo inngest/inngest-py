@@ -37,20 +37,33 @@ class CallError(types.BaseModel):
     name: str
     original_error: object = pydantic.Field(exclude=True)
     stack: str | None
+    step_id: str | None
 
     @classmethod
-    def from_error(cls, err: Exception) -> CallError:
-        stack: str | None = transforms.get_traceback(err)
-        if isinstance(err, errors.InternalError) and err.include_stack is False:
-            stack = None
+    def from_error(
+        cls,
+        err: Exception,
+        step_id: str | None = None,
+    ) -> CallError:
+        if isinstance(err, errors.Error):
+            is_retriable = err.is_retriable
+            message = err.message
+            name = err.name
+            stack = err.stack
+        else:
+            is_retriable = True
+            message = str(err)
+            name = type(err).__name__
+            stack = transforms.get_traceback(err)
 
         return cls(
             is_internal=isinstance(err, errors.InternalError),
-            is_retriable=isinstance(err, errors.NonRetriableError) is False,
-            message=str(err),
-            name=type(err).__name__,
+            is_retriable=is_retriable,
+            message=message,
+            name=name,
             original_error=err,
             stack=stack,
+            step_id=step_id,
         )
 
 
@@ -64,16 +77,38 @@ class StepResponse(types.BaseModel):
     data: Output | None = None
     display_name: str = pydantic.Field(..., serialization_alias="displayName")
     id: str
-    name: str
+
+    # Deprecated
+    name: str | None = None
+
     op: Opcode
     opts: dict[str, object] | None = None
 
 
+class MemoizedError(types.BaseModel):
+    message: str
+    name: str
+    stack: str | None
+
+    @classmethod
+    def from_error(cls, err: Exception) -> MemoizedError:
+        return cls(
+            message=str(err),
+            name=type(err).__name__,
+            stack=transforms.get_traceback(err),
+        )
+
+
 class Output(types.BaseModel):
+    # Fail validation if any extra fields exist, because this will prevent
+    # accidentally assuming user data is nested data
     model_config = pydantic.ConfigDict(extra="forbid")
 
     data: object = None
-    error: object = None
+
+    # TODO: Change the type to MemoizedError. But that requires a breaking
+    # change, so do it in version 0.4
+    error: dict[str, object] | None = None
 
 
 def is_step_call_responses(
@@ -94,6 +129,7 @@ class Opcode(enum.Enum):
     PLANNED = "StepPlanned"
     SLEEP = "Sleep"
     STEP_RUN = "StepRun"
+    STEP_ERROR = "StepError"
     WAIT_FOR_EVENT = "WaitForEvent"
 
 

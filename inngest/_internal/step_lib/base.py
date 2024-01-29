@@ -5,6 +5,7 @@ import threading
 
 from inngest._internal import (
     client_lib,
+    errors,
     execution,
     middleware_lib,
     transforms,
@@ -77,6 +78,20 @@ class StepBase:
         if self._memos.size == 0:
             await self._middleware.before_execution()
 
+        if not isinstance(memo, types.EmptySentinel):
+            if memo.error is not None:
+                error = execution.MemoizedError.from_raw(memo.error)
+                if isinstance(error, Exception):
+                    raise error
+
+                # If there's a memoized error then raise an error, since the
+                # step exhausted its retries
+                raise errors.StepError(
+                    message=error.message,
+                    name=error.name,
+                    stack=error.stack,
+                )
+
         return memo
 
     def _get_memo_sync(
@@ -88,6 +103,20 @@ class StepBase:
         # If there are no more memos then all future code is new.
         if self._memos.size == 0:
             self._middleware.before_execution_sync()
+
+        if not isinstance(memo, types.EmptySentinel):
+            if memo.error is not None:
+                error = execution.MemoizedError.from_raw(memo.error)
+                if isinstance(error, Exception):
+                    raise error
+
+                # If there's a memoized error then raise an error, since the
+                # step exhausted its retries
+                raise errors.StepError(
+                    message=error.message,
+                    name=error.name,
+                    stack=error.stack,
+                )
 
         return memo
 

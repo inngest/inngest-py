@@ -108,7 +108,7 @@ def create(
             "message": "intentional failure",
             "name": "MyError",
             "stack": unittest.mock.ANY,
-        }, output
+        }
         stack = output["stack"]
         assert isinstance(stack, str)
         assert stack.startswith("Traceback (most recent call last):")

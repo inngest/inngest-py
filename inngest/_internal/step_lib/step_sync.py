@@ -230,15 +230,33 @@ class StepSync(base.StepBase):
         if isinstance(err, Exception):
             raise err
 
-        raise base.ResponseInterrupt(
-            execution.StepResponse(
-                data=execution.Output(data=handler()),
-                display_name=parsed_step_id.user_facing,
-                id=parsed_step_id.hashed,
-                name=parsed_step_id.user_facing,
-                op=execution.Opcode.STEP_RUN,
+        try:
+            output = handler()
+
+            raise base.ResponseInterrupt(
+                execution.StepResponse(
+                    data=execution.Output(data=output),
+                    display_name=parsed_step_id.user_facing,
+                    id=parsed_step_id.hashed,
+                    name=parsed_step_id.user_facing,
+                    op=execution.Opcode.STEP_RUN,
+                )
             )
-        )
+        except Exception as err:
+            transforms.remove_first_traceback_frame(err)
+
+            error_dict = execution.MemoizedError.from_error(err).to_dict()
+            if isinstance(error_dict, Exception):
+                raise error_dict
+
+            raise base.ResponseInterrupt(
+                execution.StepResponse(
+                    display_name=parsed_step_id.user_facing,
+                    data=execution.Output(error=error_dict),
+                    id=parsed_step_id.hashed,
+                    op=execution.Opcode.STEP_ERROR,
+                )
+            )
 
     def send_event(
         self,
