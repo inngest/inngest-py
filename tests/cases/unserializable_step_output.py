@@ -40,10 +40,7 @@ def create(
             return Foo()
 
         try:
-            step.run(
-                "step_1",
-                step_1,  # type: ignore
-            )
+            step.run("step_1", step_1)
         except BaseException as err:
             state.error = err
             raise
@@ -65,7 +62,7 @@ def create(
         async def step_1() -> Foo:
             return Foo()
 
-        await step.run("step_1", step_1)  # type: ignore
+        await step.run("step_1", step_1)
 
     def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))

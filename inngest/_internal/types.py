@@ -20,16 +20,10 @@ class EmptySentinel:
 
 empty_sentinel = EmptySentinel()
 
-Serializable = (
-    bool
-    | float
-    | int
-    | str
-    | dict[typing.Any, typing.Any]
-    | list[typing.Any]
-    | tuple[typing.Any, ...]
-    | None
-)
+# TODO: Make this a real representation of JSON serializable types. It probably
+# needs to be a recursive union
+Serializable: typing.TypeAlias = object
+
 SerializableT = typing.TypeVar("SerializableT", bound=Serializable)
 
 

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import typing
+
 from . import types
 
 
 class Event(types.BaseModel):
-    data: dict[str, object] = {}  # noqa: RUF012
+    data: typing.Mapping[str, object] = {}
     id: str = ""
     name: str
     ts: int = 0
-    user: dict[str, object] = {}  # noqa: RUF012
+    user: typing.Mapping[str, object] = {}
