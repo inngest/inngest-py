@@ -4,6 +4,7 @@ import logging
 import typing
 
 import pydantic
+import typing_extensions
 
 if typing.TYPE_CHECKING:
     # https://github.com/python/typeshed/issues/7855
@@ -20,11 +21,32 @@ class EmptySentinel:
 
 empty_sentinel = EmptySentinel()
 
-# TODO: Make this a real representation of JSON serializable types. It probably
-# needs to be a recursive union
-Serializable: typing.TypeAlias = object
 
-SerializableT = typing.TypeVar("SerializableT", bound=Serializable)
+# Type checking conditional is necessary because of some mutual exclusivity
+# between Mypy and Pydantic. Seems like recursive types are finicky right now,
+# but hopefully we can simplify this code as support improves
+if typing.TYPE_CHECKING:
+    # Mypy uses this statically. Pydantic can't use this at runtime since it'll
+    # error with "name 'JSON' is not defined"
+    JSON = (
+        bool
+        | float
+        | int
+        | str
+        | typing.Mapping[str, "JSON"]
+        | typing.Sequence["JSON"]
+        | None
+    )
+else:
+    # Pydantic uses this at runtime. Mypy can't use this since it'll error with
+    # "possible cyclic definition"
+    JSON = typing_extensions.TypeAliasType(
+        "JSON",
+        bool | int | float | str | None | list["JSON"] | dict[str, "JSON"],
+    )
+
+
+JSONT = typing.TypeVar("JSONT", bound=JSON)
 
 
 class BaseModel(pydantic.BaseModel):

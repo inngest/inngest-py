@@ -5,7 +5,7 @@ file is purely for static type analysis
 
 import inngest
 
-client = inngest.Inngest(app_id="foo")
+client = inngest.Inngest(app_id="foo", is_production=False)
 
 
 def sync_fn_with_sync_step() -> None:

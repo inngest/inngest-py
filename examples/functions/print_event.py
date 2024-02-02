@@ -12,13 +12,13 @@ def create_async_function(client: inngest.Inngest) -> inngest.Function:
         ctx: inngest.Context,
         step: inngest.Step,
     ) -> None:
-        async def _print_data() -> typing.Mapping[str, object]:
+        async def _print_data() -> typing.Mapping[str, inngest.JSON]:
             print(ctx.event.data)
             return ctx.event.data
 
         await step.run("print_data", _print_data)
 
-        async def _print_user() -> typing.Mapping[str, object]:
+        async def _print_user() -> typing.Mapping[str, inngest.JSON]:
             print(ctx.event.user)
             return ctx.event.user
 
@@ -36,13 +36,13 @@ def create_sync_function(client: inngest.Inngest) -> inngest.Function:
         ctx: inngest.Context,
         step: inngest.StepSync,
     ) -> None:
-        def _print_data() -> typing.Mapping[str, object]:
+        def _print_data() -> typing.Mapping[str, inngest.JSON]:
             print(ctx.event.data)
             return ctx.event.data
 
         step.run("print_data", _print_data)
 
-        def _print_user() -> typing.Mapping[str, object]:
+        def _print_user() -> typing.Mapping[str, inngest.JSON]:
             print(ctx.event.user)
             return ctx.event.user
 

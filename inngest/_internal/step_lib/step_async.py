@@ -18,8 +18,8 @@ class Step(base.StepBase):
         step_id: str,
         *,
         function: Function,
-        data: types.Serializable | None = None,
-        user: types.Serializable | None = None,
+        data: types.JSON | None = None,
+        user: types.JSON | None = None,
         v: str | None = None,
     ) -> object:
         """
@@ -95,8 +95,8 @@ class Step(base.StepBase):
         *,
         app_id: str | None = None,
         function_id: str,
-        data: types.Serializable | None = None,
-        user: types.Serializable | None = None,
+        data: types.JSON | None = None,
+        user: types.JSON | None = None,
         v: str | None = None,
     ) -> object:
         """
@@ -194,24 +194,24 @@ class Step(base.StepBase):
     async def run(
         self,
         step_id: str,
-        handler: typing.Callable[[], typing.Awaitable[types.SerializableT]],
-    ) -> types.SerializableT:
+        handler: typing.Callable[[], typing.Awaitable[types.JSONT]],
+    ) -> types.JSONT:
         ...
 
     @typing.overload
     async def run(
         self,
         step_id: str,
-        handler: typing.Callable[[], types.SerializableT],
-    ) -> types.SerializableT:
+        handler: typing.Callable[[], types.JSONT],
+    ) -> types.JSONT:
         ...
 
     async def run(
         self,
         step_id: str,
-        handler: typing.Callable[[], typing.Awaitable[types.SerializableT]]
-        | typing.Callable[[], types.SerializableT],
-    ) -> types.SerializableT:
+        handler: typing.Callable[[], typing.Awaitable[types.JSONT]]
+        | typing.Callable[[], types.JSONT],
+    ) -> types.JSONT:
         """
         Run logic that should be retried on error and memoized after success.
 
