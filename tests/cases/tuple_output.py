@@ -1,3 +1,7 @@
+"""
+Tuple outputs actually become lists, since tuples are serialized as lists
+"""
+
 import json
 
 import inngest
