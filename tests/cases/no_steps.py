@@ -26,7 +26,7 @@ def create(
     def fn_sync(
         ctx: inngest.Context,
         step: inngest.StepSync,
-    ) -> dict[str, object]:
+    ) -> dict[str, dict[str, int]]:
         state.run_id = ctx.run_id
         return {"foo": {"bar": 1}}
 
@@ -38,7 +38,7 @@ def create(
     async def fn_async(
         ctx: inngest.Context,
         step: inngest.Step,
-    ) -> dict[str, object]:
+    ) -> dict[str, dict[str, int]]:
         state.run_id = ctx.run_id
         return {"foo": {"bar": 1}}
 

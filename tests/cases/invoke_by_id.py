@@ -28,7 +28,7 @@ def create(
     def fn_receiver_sync(
         ctx: inngest.Context,
         step: inngest.StepSync,
-    ) -> dict[str, object]:
+    ) -> dict[str, dict[str, int]]:
         return {"foo": {"bar": 1}}
 
     @client.create_function(
@@ -55,7 +55,7 @@ def create(
     async def fn_receiver_async(
         ctx: inngest.Context,
         step: inngest.Step,
-    ) -> dict[str, object]:
+    ) -> dict[str, dict[str, int]]:
         return {"foo": {"bar": 1}}
 
     @client.create_function(

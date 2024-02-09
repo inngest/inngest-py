@@ -1,13 +1,19 @@
+"""
+Tuple outputs actually become lists, since tuples are serialized as lists
+"""
+
+import json
+
 import inngest
 import tests.helper
 
 from . import base
 
-_TEST_NAME = "invoke_by_object"
+_TEST_NAME = "tuple_output"
 
 
 class _State(base.BaseState):
-    step_output: object = None
+    step_1_output: object = None
 
 
 def create(
@@ -21,56 +27,36 @@ def create(
     state = _State()
 
     @client.create_function(
-        fn_id=f"{fn_id}/invokee",
+        fn_id=fn_id,
         retries=0,
-        trigger=inngest.TriggerEvent(event="never"),
+        trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_receiver_sync(
+    def fn_sync(
         ctx: inngest.Context,
         step: inngest.StepSync,
-    ) -> dict[str, dict[str, int]]:
-        return {"foo": {"bar": 1}}
+    ) -> None:
+        state.run_id = ctx.run_id
+
+        def step_1() -> tuple[int, int]:
+            return (1, 2)
+
+        state.step_1_output = step.run("step_1", step_1)
 
     @client.create_function(
         fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sender_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
-        state.run_id = ctx.run_id
-        state.step_output = step.invoke(
-            "invoke",
-            function=fn_receiver_sync,
-        )
-
-    @client.create_function(
-        fn_id=f"{fn_id}/invokee",
-        retries=0,
-        trigger=inngest.TriggerEvent(event="never"),
-    )
-    async def fn_receiver_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> dict[str, dict[str, int]]:
-        return {"foo": {"bar": 1}}
-
-    @client.create_function(
-        fn_id=fn_id,
-        retries=0,
-        trigger=inngest.TriggerEvent(event=event_name),
-    )
-    async def fn_sender_async(
+    async def fn_async(
         ctx: inngest.Context,
         step: inngest.Step,
     ) -> None:
         state.run_id = ctx.run_id
-        state.step_output = await step.invoke(
-            "invoke",
-            function=fn_receiver_async,
-        )
+
+        def step_1() -> tuple[int, int]:
+            return (1, 2)
+
+        state.step_1_output = await step.run("step_1", step_1)
 
     def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
@@ -79,12 +65,21 @@ def create(
             run_id,
             tests.helper.RunStatus.COMPLETED,
         )
-        assert state.step_output == {"foo": {"bar": 1}}
+
+        assert state.step_1_output == [1, 2]
+
+        step_1_output_in_api = json.loads(
+            tests.helper.client.get_step_output(
+                run_id=run_id,
+                step_id="step_1",
+            )
+        )
+        assert step_1_output_in_api == {"data": [1, 2]}
 
     if is_sync:
-        fn = [fn_receiver_sync, fn_sender_sync]
+        fn = fn_sync
     else:
-        fn = [fn_receiver_async, fn_sender_async]
+        fn = fn_async
 
     return base.Case(
         fn=fn,

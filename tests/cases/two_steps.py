@@ -35,7 +35,7 @@ def create(
     ) -> None:
         state.run_id = ctx.run_id
 
-        def step_1() -> list[dict[str, object]]:
+        def step_1() -> list[dict[str, dict[str, int]]]:
             state.step_1_counter += 1
             return [{"foo": {"bar": 1}}]
 
@@ -57,7 +57,7 @@ def create(
     ) -> None:
         state.run_id = ctx.run_id
 
-        async def step_1() -> list[dict[str, object]]:
+        async def step_1() -> list[dict[str, dict[str, int]]]:
             state.step_1_counter += 1
             return [{"foo": {"bar": 1}}]
 

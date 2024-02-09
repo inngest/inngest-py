@@ -18,6 +18,7 @@ from ._internal.function_config import (
 )
 from ._internal.middleware_lib import Middleware, MiddlewareSync
 from ._internal.step_lib import FunctionID, Step, StepSync
+from ._internal.types import JSON
 
 __all__ = [
     "Batch",
@@ -29,6 +30,7 @@ __all__ = [
     "Function",
     "FunctionID",
     "Inngest",
+    "JSON",
     "Middleware",
     "MiddlewareSync",
     "NonRetriableError",

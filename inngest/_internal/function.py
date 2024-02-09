@@ -45,7 +45,7 @@ class FunctionHandlerAsync(typing.Protocol):
         self,
         ctx: Context,
         step: step_lib.Step,
-    ) -> typing.Awaitable[types.Serializable]:
+    ) -> typing.Awaitable[types.JSON]:
         ...
 
 
@@ -55,7 +55,7 @@ class FunctionHandlerSync(typing.Protocol):
         self,
         ctx: Context,
         step: step_lib.StepSync,
-    ) -> types.Serializable:
+    ) -> types.JSON:
         ...
 
 
