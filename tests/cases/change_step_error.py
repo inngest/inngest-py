@@ -76,8 +76,6 @@ def create(
         assert run.output is not None
         output = json.loads(run.output)
         assert output == {
-            "error": "invalid status code: 500",
-            "is_internal": False,
             "is_retriable": True,
             "message": "I am new",
             "name": "MyError",

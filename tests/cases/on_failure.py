@@ -102,8 +102,6 @@ def create(
         assert run.output is not None
         output = json.loads(run.output)
         assert output == {
-            "error": "invalid status code: 500",
-            "is_internal": False,
             "is_retriable": True,
             "message": "intentional failure",
             "name": "MyError",
@@ -132,14 +130,13 @@ def create(
         assert state.attempt == 0
         assert isinstance(state.event, inngest.Event)
 
-        # The serialized error
         # Assert that the error in the failure event is correct
-        error = state.event.data.get("error")
-        assert isinstance(error, dict)
-        assert error.get("is_internal") is False
-        assert error.get("is_retriable") is True
-        assert error.get("message") == "intentional failure"
-        assert error.get("name") == "MyError"
+        assert state.event.data.get("error") == {
+            "error": "invalid status code: 500",
+            "message": "intentional failure",
+            "name": "MyError",
+            "stack": unittest.mock.ANY,
+        }
         assert state.event.data["function_id"] == fn_sync.id
         assert state.event.data["run_id"] == state.run_id
 
