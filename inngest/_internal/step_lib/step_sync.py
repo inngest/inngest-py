@@ -242,6 +242,9 @@ class StepSync(base.StepBase):
                     op=execution.Opcode.STEP_RUN,
                 )
             )
+        except errors.NonRetriableError as err:
+            # NonRetriableErrors should bubble up to the function level
+            raise err
         except Exception as err:
             transforms.remove_first_traceback_frame(err)
 
