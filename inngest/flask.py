@@ -243,13 +243,6 @@ def _to_response(
         comm_res = comm.CommResponse.from_error(logger, body)
         body = json.dumps(comm_res.body)
 
-    print(
-        {
-            **comm_res.headers,
-            **net.create_headers(FRAMEWORK, server_kind),
-        }
-    )
-
     return flask.Response(
         headers={
             **comm_res.headers,
