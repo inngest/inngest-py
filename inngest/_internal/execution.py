@@ -31,7 +31,6 @@ class CallError(types.BaseModel):
     errors.
     """
 
-    is_internal: bool
     is_retriable: bool
     message: str
     name: str
@@ -57,7 +56,6 @@ class CallError(types.BaseModel):
             stack = transforms.get_traceback(err)
 
         return cls(
-            is_internal=isinstance(err, errors.InternalError),
             is_retriable=is_retriable,
             message=message,
             name=name,
