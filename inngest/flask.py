@@ -125,7 +125,7 @@ def _create_handler_async(
                     req_sig=net.RequestSignature(
                         body=flask.request.data,
                         headers=headers,
-                        is_production=client.is_production,
+                        mode=client._mode,
                     ),
                     target_hashed_id=step_id,
                 ),
@@ -205,7 +205,7 @@ def _create_handler_sync(
                     req_sig=net.RequestSignature(
                         body=flask.request.data,
                         headers=headers,
-                        is_production=client.is_production,
+                        mode=client._mode,
                     ),
                     target_hashed_id=step_id,
                 ),

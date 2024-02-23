@@ -22,7 +22,6 @@ class EnvKey(enum.Enum):
 class ErrorCode(enum.Enum):
     ASYNC_UNSUPPORTED = "async_unsupported"
     BODY_INVALID = "body_invalid"
-    DISALLOWED_REGISTRATION_INITIATOR = "disallowed_registration_initiator"
     EVENT_KEY_UNSPECIFIED = "event_key_unspecified"
     FUNCTION_CONFIG_INVALID = "function_config_invalid"
     FUNCTION_NOT_FOUND = "function_not_found"
@@ -31,6 +30,7 @@ class ErrorCode(enum.Enum):
     OUTPUT_UNSERIALIZABLE = "output_unserializable"
     QUERY_PARAM_MISSING = "query_param_missing"
     REGISTRATION_FAILED = "registration_failed"
+    SERVER_KIND_MISMATCH = "server_kind_mismatch"
     SIGNING_KEY_UNSPECIFIED = "signing_key_unspecified"
     SIG_VERIFICATION_FAILED = "sig_verification_failed"
     STEP_ERRORED = "step_errored"

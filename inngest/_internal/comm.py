@@ -103,21 +103,15 @@ class CommResponse:
         cls,
         logger: types.Logger,
         err: Exception,
+        status: http.HTTPStatus = http.HTTPStatus.INTERNAL_SERVER_ERROR,
     ) -> CommResponse:
         code: str | None = None
-        status_code = http.HTTPStatus.INTERNAL_SERVER_ERROR.value
         if isinstance(err, errors.Error):
             code = err.code.value
-
-            if err.code == const.ErrorCode.DISALLOWED_REGISTRATION_INITIATOR:
-                status_code = http.HTTPStatus.BAD_REQUEST.value
         else:
             code = const.ErrorCode.UNKNOWN.value
 
-        if code:
-            logger.error(f"{code}: {err!s}")
-        else:
-            logger.error(f"{err!s}")
+        logger.error(f"{code}: {err!s}")
 
         return cls(
             body={
@@ -125,7 +119,22 @@ class CommResponse:
                 "message": str(err),
                 "name": type(err).__name__,
             },
-            status_code=status_code,
+            status_code=status.value,
+        )
+
+    @classmethod
+    def from_error_code(
+        cls,
+        code: const.ErrorCode,
+        message: str,
+        status: http.HTTPStatus = http.HTTPStatus.INTERNAL_SERVER_ERROR,
+    ) -> CommResponse:
+        return cls(
+            body={
+                "code": code.value,
+                "message": message,
+            },
+            status_code=status.value,
         )
 
 
@@ -134,7 +143,7 @@ class CommHandler:
     _client: client_lib.Inngest
     _fns: dict[str, function.Function]
     _framework: const.Framework
-    _is_production: bool
+    _mode: const.ServerKind
     _signing_key: str | None
 
     def __init__(
@@ -148,21 +157,13 @@ class CommHandler:
     ) -> None:
         self._client = client
 
-        self._is_production = client.is_production
-        if self._is_production:
-            self._client.logger.info("Running in production mode")
-        else:
-            self._client.logger.warning("Running in development mode")
-
-        if not self._is_production:
-            self._client.logger.info("Dev Server mode enabled")
+        self._mode = client._mode
 
         api_base_url = api_base_url or os.getenv(
             const.EnvKey.API_BASE_URL.value
         )
         if api_base_url is None:
-            if not self._is_production:
-                self._client.logger.info("Defaulting API origin to Dev Server")
+            if self._mode == const.ServerKind.DEV_SERVER:
                 api_base_url = const.DEV_SERVER_ORIGIN
             else:
                 api_base_url = const.DEFAULT_API_ORIGIN
@@ -357,7 +358,7 @@ class CommHandler:
 
     def inspect(self, server_kind: const.ServerKind | None) -> CommResponse:
         """Handle Dev Server's auto-discovery."""
-        if server_kind == const.ServerKind.DEV_SERVER and self._is_production:
+        if server_kind != self._mode:
             # Tell Dev Server to leave the app alone since it's in production
             # mode.
             return CommResponse(
@@ -416,9 +417,10 @@ class CommHandler:
         sync_id: str | None = None,
     ) -> CommResponse:
         """Handle a registration call."""
-        err = self._validate_registration(server_kind)
-        if isinstance(err, Exception):
-            return CommResponse.from_error(self._client.logger, err)
+
+        res = self._validate_registration(server_kind)
+        if res is not None:
+            return res
 
         async with httpx.AsyncClient() as client:
             req = self._build_registration_request(
@@ -442,9 +444,10 @@ class CommHandler:
         sync_id: str | None,
     ) -> CommResponse:
         """Handle a registration call."""
-        err = self._validate_registration(server_kind)
-        if isinstance(err, Exception):
-            return CommResponse.from_error(self._client.logger, err)
+
+        res = self._validate_registration(server_kind)
+        if res is not None:
+            return res
 
         with httpx.Client() as client:
             req = self._build_registration_request(
@@ -491,10 +494,19 @@ class CommHandler:
     def _validate_registration(
         self,
         server_kind: const.ServerKind | None,
-    ) -> types.MaybeError[None]:
-        if server_kind == const.ServerKind.DEV_SERVER and self._is_production:
-            return errors.DisallowedRegistrationError(
-                "Dev Server registration not allowed in production mode"
+    ) -> CommResponse | None:
+        if server_kind is not None and server_kind != self._mode:
+            msg: str
+            if server_kind == const.ServerKind.DEV_SERVER:
+                msg = "Sync rejected since it's from a Dev Server but expected Cloud"
+            else:
+                msg = "Sync rejected since it's from Cloud but expected Dev Server"
+
+            self._client.logger.error(msg)
+            return CommResponse.from_error_code(
+                const.ErrorCode.SERVER_KIND_MISMATCH,
+                msg,
+                http.HTTPStatus.BAD_REQUEST,
             )
 
         return None
