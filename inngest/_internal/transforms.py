@@ -29,7 +29,7 @@ def dump_json(obj: object) -> types.MaybeError[str]:
     try:
         return json.dumps(obj)
     except Exception as err:
-        return errors.UnserializableOutputError(str(err))
+        return errors.OutputUnserializableError(str(err))
 
 
 def remove_signing_key_prefix(key: str) -> str:
@@ -84,7 +84,9 @@ def to_duration_str(
         ms = int(ms.total_seconds() * 1000)
 
     if ms < _Duration.second():
-        return errors.InvalidConfigError("duration must be at least 1 second")
+        return errors.FunctionConfigInvalidError(
+            "duration must be at least 1 second"
+        )
 
     if ms < _Duration.minute():
         return f"{ms // _Duration.second()}s"

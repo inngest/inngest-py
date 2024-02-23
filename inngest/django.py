@@ -97,13 +97,13 @@ def _create_handler_sync(
         if request.method == "POST":
             fn_id = request.GET.get(const.QueryParamKey.FUNCTION_ID.value)
             if fn_id is None:
-                raise errors.MissingParamError(
+                raise errors.QueryParamMissingError(
                     const.QueryParamKey.FUNCTION_ID.value
                 )
 
             step_id = request.GET.get(const.QueryParamKey.STEP_ID.value)
             if step_id is None:
-                raise errors.MissingParamError(
+                raise errors.QueryParamMissingError(
                     const.QueryParamKey.STEP_ID.value
                 )
 
@@ -185,13 +185,13 @@ def _create_handler_async(
         if request.method == "POST":
             fn_id = request.GET.get(const.QueryParamKey.FUNCTION_ID.value)
             if fn_id is None:
-                raise errors.MissingParamError(
+                raise errors.QueryParamMissingError(
                     const.QueryParamKey.FUNCTION_ID.value
                 )
 
             step_id = request.GET.get(const.QueryParamKey.STEP_ID.value)
             if step_id is None:
-                raise errors.MissingParamError(
+                raise errors.QueryParamMissingError(
                     const.QueryParamKey.STEP_ID.value
                 )
 

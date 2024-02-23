@@ -19,7 +19,7 @@ MiddlewareT = typing.TypeVar("MiddlewareT", bound=Middleware)
 MiddlewareSyncT = typing.TypeVar("MiddlewareSyncT", bound=MiddlewareSync)
 
 
-_mismatched_sync = errors.MismatchedSyncError(
+_mismatched_sync = errors.AsyncUnsupportedError(
     "encountered async middleware in non-async context"
 )
 

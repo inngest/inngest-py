@@ -82,9 +82,9 @@ def create(
         output = json.loads(run.output)
 
         assert output == {
-            "code": "unserializable_output",
+            "code": "output_unserializable",
             "message": '"step_1" returned unserializable data',
-            "name": "UnserializableOutputError",
+            "name": "OutputUnserializableError",
         }
 
     if is_sync:

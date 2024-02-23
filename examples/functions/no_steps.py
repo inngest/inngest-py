@@ -10,6 +10,7 @@ def create_sync_function(client: inngest.Inngest) -> inngest.Function:
         ctx: inngest.Context,
         step: inngest.StepSync,
     ) -> int:
+        raise inngest.NonRetriableError("no")
         return 1
 
     return fn
