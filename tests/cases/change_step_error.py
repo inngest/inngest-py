@@ -76,6 +76,7 @@ def create(
         assert run.output is not None
         output = json.loads(run.output)
         assert output == {
+            "code": "unknown",
             "is_retriable": True,
             "message": "I am new",
             "name": "MyError",

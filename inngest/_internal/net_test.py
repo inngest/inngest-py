@@ -117,7 +117,7 @@ def test_body_tamper() -> None:
     req_sig = net.RequestSignature(body, headers, is_production=True)
 
     validation = req_sig.validate(signing_key)
-    assert isinstance(validation, errors.InvalidRequestSignatureError)
+    assert isinstance(validation, errors.SigVerificationFailedError)
 
 
 def _sign(body: bytes, signing_key: str, unix_ms: int) -> str:

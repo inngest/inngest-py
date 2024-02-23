@@ -89,7 +89,7 @@ class FunctionOpts(types.BaseModel):
         self,
         err: pydantic.ValidationError,
     ) -> BaseException:
-        return errors.InvalidConfigError.from_validation_error(err)
+        return errors.FunctionConfigInvalidError.from_validation_error(err)
 
 
 class Function:
@@ -174,12 +174,12 @@ class Function:
             elif self.on_failure_fn_id == fn_id:
                 if self._opts.on_failure is None:
                     return execution.CallError.from_error(
-                        errors.MissingFunctionError("on_failure not defined")
+                        errors.FunctionNotFoundError("on_failure not defined")
                     )
                 handler = self._opts.on_failure
             else:
                 return execution.CallError.from_error(
-                    errors.MissingFunctionError("function ID mismatch")
+                    errors.FunctionNotFoundError("function ID mismatch")
                 )
 
             output: object
@@ -260,7 +260,7 @@ class Function:
             # We don't currently have a way to recover from this scenario.
 
             return execution.CallError.from_error(
-                errors.UnexpectedStepError(
+                errors.StepUnexpectedError(
                     f'found step "{err.step_id}" when targeting a different step'
                 )
             )
@@ -300,12 +300,12 @@ class Function:
             elif self.on_failure_fn_id == fn_id:
                 if self._opts.on_failure is None:
                     return execution.CallError.from_error(
-                        errors.MissingFunctionError("on_failure not defined")
+                        errors.FunctionNotFoundError("on_failure not defined")
                     )
                 handler = self._opts.on_failure
             else:
                 return execution.CallError.from_error(
-                    errors.MissingFunctionError("function ID mismatch")
+                    errors.FunctionNotFoundError("function ID mismatch")
                 )
 
             if _is_function_handler_sync(handler):
@@ -325,7 +325,7 @@ class Function:
                     raise _UserError(user_err)
             else:
                 return execution.CallError.from_error(
-                    errors.MismatchedSyncError(
+                    errors.AsyncUnsupportedError(
                         "encountered async function in non-async context"
                     )
                 )
@@ -368,7 +368,7 @@ class Function:
             # We don't currently have a way to recover from this scenario.
 
             return execution.CallError.from_error(
-                errors.UnexpectedStepError(
+                errors.StepUnexpectedError(
                     f'found step "{err.step_id}" when targeting a different step'
                 )
             )

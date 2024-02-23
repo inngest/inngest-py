@@ -5,7 +5,7 @@ import typing
 
 import pydantic
 
-from . import errors, event_lib, transforms, types
+from . import const, errors, event_lib, transforms, types
 
 
 class Call(types.BaseModel):
@@ -31,6 +31,7 @@ class CallError(types.BaseModel):
     errors.
     """
 
+    code: const.ErrorCode
     is_retriable: bool
     message: str
     name: str
@@ -44,7 +45,9 @@ class CallError(types.BaseModel):
         err: Exception,
         step_id: str | None = None,
     ) -> CallError:
+        code = const.ErrorCode.UNKNOWN
         if isinstance(err, errors.Error):
+            code = err.code
             is_retriable = err.is_retriable
             message = err.message
             name = err.name
@@ -56,6 +59,7 @@ class CallError(types.BaseModel):
             stack = transforms.get_traceback(err)
 
         return cls(
+            code=code,
             is_retriable=is_retriable,
             message=message,
             name=name,

@@ -99,7 +99,7 @@ class Inngest:
             const.EnvKey.SIGNING_KEY.value
         )
         if self._signing_key is None and self.is_production:
-            raise errors.MissingSigningKeyError()
+            raise errors.SigningKeyMissingError()
 
         api_origin = api_base_url or os.getenv(const.EnvKey.API_BASE_URL.value)
         if api_origin is None:
@@ -130,7 +130,7 @@ class Inngest:
             if not self.is_production:
                 event_key = _DEV_SERVER_EVENT_KEY
             else:
-                return errors.MissingEventKeyError()
+                return errors.EventKeyUnspecifiedError()
 
         url = urllib.parse.urljoin(self._event_api_origin, f"/e/{event_key}")
 
@@ -288,10 +288,10 @@ class Inngest:
 
 def _extract_ids(body: object) -> list[str]:
     if not isinstance(body, dict) or "ids" not in body:
-        raise errors.InvalidBodyError("unexpected response when sending events")
+        raise errors.BodyInvalidError("unexpected response when sending events")
 
     ids = body["ids"]
     if not isinstance(ids, list):
-        raise errors.InvalidBodyError("unexpected response when sending events")
+        raise errors.BodyInvalidError("unexpected response when sending events")
 
     return ids

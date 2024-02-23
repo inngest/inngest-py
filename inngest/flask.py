@@ -99,13 +99,13 @@ def _create_handler_async(
                 const.QueryParamKey.FUNCTION_ID.value
             )
             if fn_id is None:
-                raise errors.MissingParamError(
+                raise errors.QueryParamMissingError(
                     const.QueryParamKey.FUNCTION_ID.value
                 )
 
             step_id = flask.request.args.get(const.QueryParamKey.STEP_ID.value)
             if step_id is None:
-                raise errors.MissingParamError(
+                raise errors.QueryParamMissingError(
                     const.QueryParamKey.STEP_ID.value
                 )
 
@@ -179,13 +179,13 @@ def _create_handler_sync(
                 const.QueryParamKey.FUNCTION_ID.value
             )
             if fn_id is None:
-                raise errors.MissingParamError(
+                raise errors.QueryParamMissingError(
                     const.QueryParamKey.FUNCTION_ID.value
                 )
 
             step_id = flask.request.args.get(const.QueryParamKey.STEP_ID.value)
             if step_id is None:
-                raise errors.MissingParamError(
+                raise errors.QueryParamMissingError(
                     const.QueryParamKey.STEP_ID.value
                 )
 

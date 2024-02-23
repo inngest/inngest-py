@@ -71,6 +71,7 @@ def create(
             output = json.loads(run.output)
 
             assert output == {
+                "code": "non_retriable_error",
                 "is_retriable": False,
                 "message": "foo",
                 "name": "NonRetriableError",

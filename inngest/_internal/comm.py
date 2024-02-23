@@ -50,7 +50,7 @@ class CommResponse:
                 if isinstance(d, Exception):
                     return cls.from_error(
                         logger,
-                        errors.UnserializableOutputError(
+                        errors.OutputUnserializableError(
                             f'"{item.display_name}" returned unserializable data'
                         ),
                     )
@@ -106,14 +106,18 @@ class CommResponse:
     ) -> CommResponse:
         code: str | None = None
         status_code = http.HTTPStatus.INTERNAL_SERVER_ERROR.value
-        if isinstance(err, errors.InternalError):
+        if isinstance(err, errors.Error):
             code = err.code.value
-            status_code = err.status_code
+
+            if err.code == const.ErrorCode.DISALLOWED_REGISTRATION_INITIATOR:
+                status_code = http.HTTPStatus.BAD_REQUEST.value
+        else:
+            code = const.ErrorCode.UNKNOWN.value
 
         if code:
             logger.error(f"{code}: {err!s}")
         else:
-            logger.error(f"_{err!s}_")
+            logger.error(f"{err!s}")
 
         return cls(
             body={
@@ -166,7 +170,7 @@ class CommHandler:
         try:
             self._api_origin = net.parse_url(api_base_url)
         except Exception as err:
-            raise errors.InvalidBaseURLError() from err
+            raise errors.URLInvalidError() from err
 
         self._fns = {fn.get_id(): fn for fn in functions}
         self._framework = framework
@@ -176,7 +180,7 @@ class CommHandler:
                 signing_key = os.getenv(const.EnvKey.SIGNING_KEY.value)
                 if signing_key is None:
                     self._client.logger.error("missing signing key")
-                    raise errors.MissingSigningKeyError()
+                    raise errors.SigningKeyMissingError()
         self._signing_key = signing_key
 
     def _build_registration_request(
@@ -333,7 +337,7 @@ class CommHandler:
             if _fn.on_failure_fn_id == app_and_fn_id:
                 return _fn
 
-        return errors.MissingFunctionError(f"function {fn_id} not found")
+        return errors.FunctionNotFoundError(f"function {fn_id} not found")
 
     def get_function_configs(
         self,
@@ -348,7 +352,7 @@ class CommHandler:
                 configs.append(config.on_failure)
 
         if len(configs) == 0:
-            return errors.InvalidConfigError("no functions found")
+            return errors.FunctionConfigInvalidError("no functions found")
         return configs
 
     def inspect(self, server_kind: const.ServerKind | None) -> CommResponse:
@@ -378,13 +382,13 @@ class CommHandler:
         except Exception:
             return CommResponse.from_error(
                 self._client.logger,
-                errors.RegistrationError("response is not valid JSON"),
+                errors.RegistrationFailedError("response is not valid JSON"),
             )
 
         if not isinstance(server_res_body, dict):
             return CommResponse.from_error(
                 self._client.logger,
-                errors.RegistrationError("response is not an object"),
+                errors.RegistrationFailedError("response is not an object"),
             )
 
         if server_res.status_code < 400:
@@ -399,7 +403,7 @@ class CommHandler:
             msg = "registration failed"
         comm_res = CommResponse.from_error(
             self._client.logger,
-            errors.RegistrationError(msg.strip()),
+            errors.RegistrationFailedError(msg.strip()),
         )
         comm_res.status_code = server_res.status_code
         return comm_res

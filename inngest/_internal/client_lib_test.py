@@ -47,7 +47,7 @@ class Test(unittest.TestCase):
             signing_key="foo",
         )
 
-        with pytest.raises(errors.MissingEventKeyError):
+        with pytest.raises(errors.EventKeyUnspecifiedError):
             client.send_sync(event_lib.Event(name="foo"))
 
     def test_signing_key_env_var(self) -> None:
@@ -68,7 +68,7 @@ class Test(unittest.TestCase):
         Error is raised when the signing key is not set in production.
         """
 
-        with pytest.raises(errors.MissingSigningKeyError):
+        with pytest.raises(errors.SigningKeyMissingError):
             client_lib.Inngest(app_id="test")
 
     def test_api_base_url_env_var(self) -> None:

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import http
 import typing
 
 import pydantic
@@ -13,6 +12,7 @@ class Error(Exception):
     Base error for all our custom errors
     """
 
+    code: const.ErrorCode
     include_stack: bool = True
     is_retriable: bool = True
 
@@ -32,55 +32,22 @@ class Error(Exception):
         return transforms.get_traceback(self)
 
 
-class InternalError(Error):
-    """
-    Base error for all errors that need an error code
-    """
-
-    code: const.ErrorCode
-    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
-
-    def __init__(
-        self, *, code: const.ErrorCode, message: str | None = None
-    ) -> None:
-        super().__init__(message)
-        self.code = code
+class DisallowedRegistrationError(Error):
+    code = const.ErrorCode.DISALLOWED_REGISTRATION_INITIATOR
 
 
-class DisallowedRegistrationError(InternalError):
-    status_code: int = http.HTTPStatus.BAD_REQUEST
-
-    def __init__(self, message: str | None = None) -> None:
-        super().__init__(
-            code=const.ErrorCode.DISALLOWED_REGISTRATION_INITIATOR,
-            message=message,
-        )
+class URLInvalidError(Error):
+    code = const.ErrorCode.URL_INVALID
 
 
-class InvalidBaseURLError(InternalError):
-    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
-
-    def __init__(self, message: str | None = None) -> None:
-        super().__init__(
-            code=const.ErrorCode.INVALID_BASE_URL,
-            message=message,
-        )
-
-
-class InvalidConfigError(InternalError):
-    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
-
-    def __init__(self, message: str | None = None) -> None:
-        super().__init__(
-            code=const.ErrorCode.INVALID_FUNCTION_CONFIG,
-            message=message,
-        )
+class FunctionConfigInvalidError(Error):
+    code = const.ErrorCode.FUNCTION_CONFIG_INVALID
 
     @classmethod
     def from_validation_error(
         cls,
         err: pydantic.ValidationError,
-    ) -> InvalidConfigError:
+    ) -> FunctionConfigInvalidError:
         """
         Extract info from Pydantic's ValidationError and return our internal
         InvalidFunctionConfig error.
@@ -109,130 +76,59 @@ class InvalidConfigError(InternalError):
         return cls(f"{loc[0]}: {msg}")
 
 
-class MismatchedSyncError(InternalError):
-    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
-
-    def __init__(self, message: str | None = None) -> None:
-        super().__init__(
-            code=const.ErrorCode.MISMATCHED_SYNC,
-            message=message,
-        )
+class AsyncUnsupportedError(Error):
+    code = const.ErrorCode.ASYNC_UNSUPPORTED
 
 
-class InvalidRequestSignatureError(InternalError):
-    status_code: int = http.HTTPStatus.UNAUTHORIZED
-
-    def __init__(self, message: str | None = None) -> None:
-        super().__init__(
-            code=const.ErrorCode.INVALID_REQUEST_SIGNATURE,
-            message=message,
-        )
+class SigVerificationFailedError(Error):
+    code = const.ErrorCode.SIG_VERIFICATION_FAILED
 
 
-class InvalidBodyError(InternalError):
-    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
-
-    def __init__(self, message: str | None = None) -> None:
-        super().__init__(
-            code=const.ErrorCode.INVALID_BODY,
-            message=message,
-        )
+class BodyInvalidError(Error):
+    code = const.ErrorCode.BODY_INVALID
 
 
-class MissingEventKeyError(InternalError):
-    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
-
-    def __init__(self, message: str | None = None) -> None:
-        super().__init__(
-            code=const.ErrorCode.MISSING_EVENT_KEY,
-            message=message,
-        )
+class EventKeyUnspecifiedError(Error):
+    code = const.ErrorCode.EVENT_KEY_UNSPECIFIED
 
 
-class MissingFunctionError(InternalError):
-    status_code: int = http.HTTPStatus.BAD_REQUEST
-
-    def __init__(self, message: str | None = None) -> None:
-        super().__init__(
-            code=const.ErrorCode.MISSING_FUNCTION,
-            message=message,
-        )
+class FunctionNotFoundError(Error):
+    code = const.ErrorCode.FUNCTION_NOT_FOUND
 
 
-class MissingHeaderError(InternalError):
-    status_code: int = http.HTTPStatus.BAD_REQUEST
-
-    def __init__(self, message: str | None = None) -> None:
-        super().__init__(
-            code=const.ErrorCode.MISSING_HEADER,
-            message=message,
-        )
+class HeaderMissingError(Error):
+    code = const.ErrorCode.HEADER_MISSING
 
 
-class MissingParamError(InternalError):
-    status_code: int = http.HTTPStatus.BAD_REQUEST
-
-    def __init__(self, message: str | None = None) -> None:
-        super().__init__(
-            code=const.ErrorCode.MISSING_HEADER,
-            message=message,
-        )
+class QueryParamMissingError(Error):
+    code = const.ErrorCode.QUERY_PARAM_MISSING
 
 
-class MissingSigningKeyError(InternalError):
-    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
-
-    def __init__(self, message: str | None = None) -> None:
-        super().__init__(
-            code=const.ErrorCode.MISSING_SIGNING_KEY,
-            message=message,
-        )
+class SigningKeyMissingError(Error):
+    code = const.ErrorCode.SIGNING_KEY_UNSPECIFIED
 
 
-class RegistrationError(InternalError):
-    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
-
-    def __init__(self, message: str | None = None) -> None:
-        super().__init__(
-            code=const.ErrorCode.REGISTRATION_ERROR,
-            message=message,
-        )
+class RegistrationFailedError(Error):
+    code = const.ErrorCode.REGISTRATION_FAILED
 
 
-class UnknownError(InternalError):
-    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
-
-    def __init__(self, message: str | None = None) -> None:
-        super().__init__(
-            code=const.ErrorCode.UNKNOWN,
-            message=message,
-        )
+class UnknownError(Error):
+    code = const.ErrorCode.UNKNOWN
 
 
-class UnexpectedStepError(InternalError):
+class StepUnexpectedError(Error):
+    code = const.ErrorCode.STEP_UNEXPECTED
     include_stack = False
-    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
-
-    def __init__(self, message: str | None = None) -> None:
-        super().__init__(
-            code=const.ErrorCode.UNEXPECTED_STEP,
-            message=message,
-        )
 
 
-class UnserializableOutputError(InternalError):
-    status_code: int = http.HTTPStatus.INTERNAL_SERVER_ERROR
-
-    def __init__(self, message: str | None = None) -> None:
-        super().__init__(
-            code=const.ErrorCode.UNSERIALIZABLE_OUTPUT,
-            message=message,
-        )
+class OutputUnserializableError(Error):
+    code = const.ErrorCode.OUTPUT_UNSERIALIZABLE
 
 
 class NonRetriableError(Error):
     """End users can raise this error to prevent retries."""
 
+    code = const.ErrorCode.NON_RETRIABLE_ERROR
     is_retriable = False
 
     def __init__(
@@ -250,6 +146,8 @@ class StepError(Error):
     memoized error data which can't be deserialized into the original error
     class.
     """
+
+    code = const.ErrorCode.STEP_ERRORED
 
     # Not retriable since this error is thrown after exhausting retries
     is_retriable = False

@@ -13,7 +13,7 @@ class _BaseConfig(types.BaseModel):
         self,
         err: pydantic.ValidationError,
     ) -> BaseException:
-        return errors.InvalidConfigError.from_validation_error(err)
+        return errors.FunctionConfigInvalidError.from_validation_error(err)
 
 
 class Batch(_BaseConfig):

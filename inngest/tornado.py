@@ -69,7 +69,7 @@ def serve(
                 const.QueryParamKey.FUNCTION_ID.value
             )
             if raw_fn_id is None or len(raw_fn_id) == 0:
-                raise errors.MissingParamError(
+                raise errors.QueryParamMissingError(
                     const.QueryParamKey.FUNCTION_ID.value
                 )
             fn_id = raw_fn_id[0].decode("utf-8")
@@ -79,7 +79,7 @@ def serve(
                 const.QueryParamKey.STEP_ID.value
             )
             if raw_step_id is None or len(raw_step_id) == 0:
-                raise errors.MissingParamError(
+                raise errors.QueryParamMissingError(
                     const.QueryParamKey.STEP_ID.value
                 )
             step_id = raw_step_id[0].decode("utf-8")

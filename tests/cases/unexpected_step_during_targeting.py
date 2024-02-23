@@ -104,13 +104,12 @@ def create(
         )
         assert run.output is not None
         output = json.loads(run.output)
-        assert isinstance(output, dict)
-        assert (
-            output.get("message")
-            == 'found step "unexpected" when targeting a different step'
-        )
-        assert output.get("name") == "UnexpectedStepError"
-        assert output.get("stack") is None
+        assert output == {
+            "code": "step_unexpected",
+            "is_retriable": True,
+            "message": 'found step "unexpected" when targeting a different step',
+            "name": "StepUnexpectedError",
+        }
 
         # None of the step callbacks were called
         assert state.step_parallel_1_counter == 0
