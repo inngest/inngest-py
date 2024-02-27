@@ -124,9 +124,9 @@ class Function:
     def __init__(
         self,
         opts: FunctionOpts,
-        triggers: list[
-            function_config.TriggerCron | function_config.TriggerEvent
-        ],
+        trigger: function_config.TriggerCron
+        | function_config.TriggerEvent
+        | list[function_config.TriggerCron | function_config.TriggerEvent],
         handler: FunctionHandlerAsync | FunctionHandlerSync,
         middleware: list[
             type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]
@@ -136,7 +136,7 @@ class Function:
         self._handler = handler
         self._middleware = middleware or []
         self._opts = opts
-        self._triggers = triggers
+        self._triggers = trigger if isinstance(trigger, list) else [trigger]
 
         if opts.on_failure is not None:
             self._on_failure_fn_id = f"{opts.id}-failure"
