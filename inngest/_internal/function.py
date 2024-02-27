@@ -96,7 +96,7 @@ class Function:
     _handler: FunctionHandlerAsync | FunctionHandlerSync
     _on_failure_fn_id: str | None = None
     _opts: FunctionOpts
-    _trigger: function_config.TriggerCron | function_config.TriggerEvent
+    _triggers: list[function_config.TriggerCron | function_config.TriggerEvent]
 
     @property
     def id(self) -> str:
@@ -124,7 +124,9 @@ class Function:
     def __init__(
         self,
         opts: FunctionOpts,
-        trigger: function_config.TriggerCron | function_config.TriggerEvent,
+        triggers: list[
+            function_config.TriggerCron | function_config.TriggerEvent
+        ],
         handler: FunctionHandlerAsync | FunctionHandlerSync,
         middleware: list[
             type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]
@@ -134,7 +136,7 @@ class Function:
         self._handler = handler
         self._middleware = middleware or []
         self._opts = opts
-        self._trigger = trigger
+        self._triggers = triggers
 
         if opts.on_failure is not None:
             self._on_failure_fn_id = f"{opts.id}-failure"
@@ -415,7 +417,7 @@ class Function:
                 ),
             },
             throttle=self._opts.throttle,
-            triggers=[self._trigger],
+            triggers=self._triggers,
         )
 
         on_failure = None
