@@ -94,7 +94,7 @@ def serve(
                 req_sig=net.RequestSignature(
                     body=body,
                     headers=headers,
-                    is_production=client.is_production,
+                    mode=client._mode,
                 ),
                 target_hashed_id=stepId,
             ),

@@ -100,7 +100,7 @@ def test_success() -> None:
         const.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
     }
 
-    req_sig = net.RequestSignature(body, headers, is_production=True)
+    req_sig = net.RequestSignature(body, headers, mode=const.ServerKind.CLOUD)
     assert not isinstance(req_sig.validate(signing_key), Exception)
 
 
@@ -114,7 +114,7 @@ def test_body_tamper() -> None:
     }
 
     body = json.dumps({"msg": "you've been hacked"}).encode("utf-8")
-    req_sig = net.RequestSignature(body, headers, is_production=True)
+    req_sig = net.RequestSignature(body, headers, mode=const.ServerKind.CLOUD)
 
     validation = req_sig.validate(signing_key)
     assert isinstance(validation, errors.SigVerificationFailedError)

@@ -116,8 +116,7 @@ class TestTornadoRegistration(tornado.testing.AsyncHTTPTestCase):
         body: object = json.loads(res.body)
         assert (
             isinstance(body, dict)
-            and body["code"]
-            == const.ErrorCode.DISALLOWED_REGISTRATION_INITIATOR.value
+            and body["code"] == const.ErrorCode.SERVER_KIND_MISMATCH.value
         )
 
 

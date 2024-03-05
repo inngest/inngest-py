@@ -121,10 +121,7 @@ class TestRegistration(unittest.TestCase):
         assert res.status_code == 400
         body: object = res.json
         assert isinstance(body, dict)
-        assert (
-            body["code"]
-            == const.ErrorCode.DISALLOWED_REGISTRATION_INITIATOR.value
-        )
+        assert body["code"] == const.ErrorCode.SERVER_KIND_MISMATCH.value
 
 
 if __name__ == "__main__":

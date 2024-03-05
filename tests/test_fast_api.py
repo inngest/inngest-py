@@ -136,8 +136,7 @@ class TestRegistration(unittest.TestCase):
         body: object = res.json()
         assert (
             isinstance(body, dict)
-            and body["code"]
-            == const.ErrorCode.DISALLOWED_REGISTRATION_INITIATOR.value
+            and body["code"] == const.ErrorCode.SERVER_KIND_MISMATCH.value
         )
 
 

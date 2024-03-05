@@ -79,31 +79,26 @@ class Inngest:
         """
 
         self.app_id = app_id
-
-        if is_production is None:
-            is_production = (
-                env.is_truthy(
-                    const.EnvKey.DEV,
-                    # Default to prod for security reasons
-                    default=False,
-                )
-                is False
-            )
-        self.is_production = is_production
-
         self.logger = logger or logging.getLogger(__name__)
+        self._mode = _get_mode(self.logger, is_production)
+
+        # TODO: Delete this during next major version bump
+        self.is_production = self._mode == const.ServerKind.CLOUD
+
         self.middleware = middleware or []
         self._event_key = event_key or os.getenv(const.EnvKey.EVENT_KEY.value)
 
         self._signing_key = signing_key or os.getenv(
             const.EnvKey.SIGNING_KEY.value
         )
-        if self._signing_key is None and self.is_production:
-            raise errors.SigningKeyMissingError()
+        if self._signing_key is None and self._mode == const.ServerKind.CLOUD:
+            raise errors.SigningKeyMissingError(
+                f"Signing key must be set when Cloud mode is enabled. If you don't want to use Cloud mode, set the {const.EnvKey.DEV.value} env var."
+            )
 
         api_origin = api_base_url or os.getenv(const.EnvKey.API_BASE_URL.value)
         if api_origin is None:
-            if not self.is_production:
+            if self._mode == const.ServerKind.DEV_SERVER:
                 api_origin = const.DEV_SERVER_ORIGIN
             else:
                 api_origin = const.DEFAULT_API_ORIGIN
@@ -113,7 +108,7 @@ class Inngest:
             const.EnvKey.EVENT_API_BASE_URL.value
         )
         if event_origin is None:
-            if not self.is_production:
+            if self._mode == const.ServerKind.DEV_SERVER:
                 event_origin = const.DEV_SERVER_ORIGIN
             else:
                 event_origin = const.DEFAULT_EVENT_ORIGIN
@@ -127,7 +122,7 @@ class Inngest:
         if self._event_key is not None:
             event_key = self._event_key
         else:
-            if not self.is_production:
+            if self._mode == const.ServerKind.DEV_SERVER:
                 event_key = _DEV_SERVER_EVENT_KEY
             else:
                 return errors.EventKeyUnspecifiedError()
@@ -295,3 +290,27 @@ def _extract_ids(body: object) -> list[str]:
         raise errors.BodyInvalidError("unexpected response when sending events")
 
     return ids
+
+
+def _get_mode(
+    logger: types.Logger,
+    is_production: bool | None,
+) -> const.ServerKind:
+    if is_production is not None:
+        if is_production:
+            logger.debug("Cloud mode enabled by client argument")
+            return const.ServerKind.CLOUD
+
+        logger.debug("Dev Server mode enabled by client argument")
+        return const.ServerKind.DEV_SERVER
+
+    if env.is_true(const.EnvKey.DEV):
+        logger.debug(
+            f"Dev Server mode enabled by {const.EnvKey.DEV.value} env var"
+        )
+        return const.ServerKind.DEV_SERVER
+
+    logger.debug(
+        f"Cloud mode enabled. Set {const.EnvKey.DEV.value} to enable development mode"
+    )
+    return const.ServerKind.CLOUD

@@ -110,10 +110,10 @@ class RequestSignature:
         self,
         body: bytes,
         headers: dict[str, str],
-        is_production: bool,
+        mode: const.ServerKind,
     ) -> None:
         self._body = body
-        self._is_production = is_production
+        self._mode = mode
 
         sig_header = headers.get(const.HeaderKey.SIGNATURE.value)
         if sig_header is not None:
@@ -124,7 +124,7 @@ class RequestSignature:
                 self._signature = parsed["s"][0]
 
     def validate(self, signing_key: str | None) -> types.MaybeError[None]:
-        if not self._is_production:
+        if self._mode == const.ServerKind.DEV_SERVER:
             return None
 
         if signing_key is None:

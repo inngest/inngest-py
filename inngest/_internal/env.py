@@ -3,9 +3,12 @@ import os
 from . import const
 
 
-def is_truthy(env_var: const.EnvKey, *, default: bool = False) -> bool:
+def is_true(env_var: const.EnvKey) -> bool:
     val = os.getenv(env_var.value)
     if val is None:
-        return default
+        return False
 
-    return val.lower() in ("true", "1")
+    if val.lower() in ("true", "1"):
+        return True
+
+    return False
