@@ -35,7 +35,7 @@ class Batch(_BaseConfig):
 
 class Cancel(_BaseConfig):
     event: str
-    if_exp: str | None = None
+    if_exp: str | None = pydantic.Field(default=None, serialization_alias="if")
     timeout: int | datetime.timedelta | None = None
 
     @pydantic.field_serializer("timeout")

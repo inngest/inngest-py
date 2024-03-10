@@ -17,6 +17,15 @@ class RunStatus(enum.Enum):
     RUNNING = "RUNNING"
 
 
+ended_statuses = set(
+    [
+        RunStatus.CANCELLED,
+        RunStatus.COMPLETED,
+        RunStatus.FAILED,
+    ]
+)
+
+
 class _Client:
     def __init__(self) -> None:
         self._gql = gql.Client(f"http://localhost:{dev_server.PORT}/v0/gql")
@@ -159,8 +168,16 @@ class _Client:
                 if run["status"] == status.value:
                     return _Run.model_validate(run)
 
+                if any(run["status"] == s.value for s in ended_statuses):
+                    # Fail early if the run ended with a different status
+                    raise Exception(
+                        f"run ended with a different status: {run['status']}"
+                    )
+
             if time.time() - start > timeout:
-                raise Exception("timed out waiting for run status")
+                raise Exception(
+                    "timed out waiting for run status, actual status is"
+                )
 
             time.sleep(0.2)
 

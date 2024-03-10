@@ -1,3 +1,7 @@
+"""
+Don't cancel the run if the function's cancel expression isn't matched
+"""
+
 import asyncio
 import time
 
@@ -6,7 +10,7 @@ import tests.helper
 
 from . import base
 
-_TEST_NAME = "cancel"
+_TEST_NAME = "no_cancel_if_exp_not_match"
 
 
 class _State(base.BaseState):
@@ -77,11 +81,11 @@ def create(
         self.client.send_sync(inngest.Event(name=event_name, data={"id": 123}))
         run_id = state.wait_for_run_id()
         self.client.send_sync(
-            inngest.Event(name=f"{event_name}.cancel", data={"id": 123})
+            inngest.Event(name=f"{event_name}.cancel", data={"id": 456})
         )
         tests.helper.client.wait_for_run_status(
             run_id,
-            tests.helper.RunStatus.CANCELLED,
+            tests.helper.RunStatus.COMPLETED,
         )
 
         def assert_is_done() -> None:

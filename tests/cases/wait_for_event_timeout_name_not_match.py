@@ -1,16 +1,19 @@
+"""
+Wait for event times out if the specified event name isn't received
+"""
+
 import datetime
-import time
 
 import inngest
 import tests.helper
 
 from . import base
 
-_TEST_NAME = "wait_for_event_fulfill"
+_TEST_NAME = "wait_for_event_timeout_name_not_match"
 
 
 class _State(base.BaseState):
-    result: inngest.Event | None = None
+    result: inngest.Event | None | str = "not_set"
 
 
 def create(
@@ -37,8 +40,7 @@ def create(
         state.result = step.wait_for_event(
             "wait",
             event=f"{event_name}.fulfill",
-            if_exp="event.data.id == 123",
-            timeout=datetime.timedelta(minutes=1),
+            timeout=datetime.timedelta(seconds=1),
         )
 
     @client.create_function(
@@ -55,32 +57,17 @@ def create(
         state.result = await step.wait_for_event(
             "wait",
             event=f"{event_name}.fulfill",
-            if_exp="event.data.id == 123",
-            timeout=datetime.timedelta(minutes=1),
+            timeout=datetime.timedelta(seconds=1),
         )
 
     def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
         run_id = state.wait_for_run_id()
-
-        # Sleep long enough for the wait_for_event to register.
-        time.sleep(0.5)
-
-        self.client.send_sync(
-            inngest.Event(
-                data={"id": 123},
-                name=f"{event_name}.fulfill",
-            )
-        )
         tests.helper.client.wait_for_run_status(
             run_id,
             tests.helper.RunStatus.COMPLETED,
         )
-
-        assert isinstance(state.result, inngest.Event)
-        assert state.result.id != ""
-        assert state.result.name == f"{event_name}.fulfill"
-        assert state.result.ts > 0
+        assert state.result is None
 
     if is_sync:
         fn = fn_sync

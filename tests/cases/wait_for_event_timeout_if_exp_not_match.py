@@ -1,11 +1,16 @@
+"""
+Wait for event times out if its expression isn't matched
+"""
+
 import datetime
+import time
 
 import inngest
 import tests.helper
 
 from . import base
 
-_TEST_NAME = "wait_for_event_timeout"
+_TEST_NAME = "wait_for_event_timeout_if_exp_not_match"
 
 
 class _State(base.BaseState):
@@ -36,6 +41,7 @@ def create(
         state.result = step.wait_for_event(
             "wait",
             event=f"{event_name}.fulfill",
+            if_exp="event.data.id == 123",
             timeout=datetime.timedelta(seconds=1),
         )
 
@@ -53,16 +59,28 @@ def create(
         state.result = await step.wait_for_event(
             "wait",
             event=f"{event_name}.fulfill",
+            if_exp="event.data.id == 123",
             timeout=datetime.timedelta(seconds=1),
         )
 
     def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
         run_id = state.wait_for_run_id()
+
+        # Sleep long enough for the wait_for_event to register.
+        time.sleep(0.5)
+
+        self.client.send_sync(
+            inngest.Event(
+                data={"id": 123},
+                name=f"{event_name}.fulfill",
+            )
+        )
         tests.helper.client.wait_for_run_status(
             run_id,
             tests.helper.RunStatus.COMPLETED,
         )
+
         assert state.result is None
 
     if is_sync:

@@ -17,6 +17,7 @@ from . import (
     invoke_by_object,
     invoke_failure,
     logger,
+    no_cancel_if_exp_not_match,
     no_steps,
     non_retriable_error,
     on_failure,
@@ -27,7 +28,8 @@ from . import (
     unexpected_step_during_targeting,
     unserializable_step_output,
     wait_for_event_fulfill,
-    wait_for_event_timeout,
+    wait_for_event_timeout_if_exp_not_match,
+    wait_for_event_timeout_name_not_match,
 )
 
 _modules = (
@@ -46,6 +48,7 @@ _modules = (
     invoke_by_object,
     invoke_failure,
     logger,
+    no_cancel_if_exp_not_match,
     no_steps,
     non_retriable_error,
     on_failure,
@@ -56,7 +59,8 @@ _modules = (
     unexpected_step_during_targeting,
     unserializable_step_output,
     wait_for_event_fulfill,
-    wait_for_event_timeout,
+    wait_for_event_timeout_if_exp_not_match,
+    wait_for_event_timeout_name_not_match,
 )
 
 
