@@ -63,7 +63,7 @@ def test_serialization() -> None:
         "cancel": [
             {
                 "event": "foo",
-                "if_exp": "foo",
+                "if": "foo",
                 "timeout": "1m",
             }
         ],
