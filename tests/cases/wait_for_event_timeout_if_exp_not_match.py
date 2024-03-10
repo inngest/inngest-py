@@ -41,7 +41,7 @@ def create(
         state.result = step.wait_for_event(
             "wait",
             event=f"{event_name}.fulfill",
-            if_exp="event.data.id == 123",
+            if_exp="event.data.id == async.data.id",
             timeout=datetime.timedelta(seconds=1),
         )
 
@@ -59,12 +59,17 @@ def create(
         state.result = await step.wait_for_event(
             "wait",
             event=f"{event_name}.fulfill",
-            if_exp="event.data.id == 123",
+            if_exp="event.data.id == async.data.id",
             timeout=datetime.timedelta(seconds=1),
         )
 
     def run_test(self: base.TestClass) -> None:
-        self.client.send_sync(inngest.Event(name=event_name))
+        self.client.send_sync(
+            inngest.Event(
+                data={"id": 123},
+                name=event_name,
+            )
+        )
         run_id = state.wait_for_run_id()
 
         # Sleep long enough for the wait_for_event to register.
@@ -72,7 +77,7 @@ def create(
 
         self.client.send_sync(
             inngest.Event(
-                data={"id": 123},
+                data={"id": 456},
                 name=f"{event_name}.fulfill",
             )
         )
