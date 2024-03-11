@@ -185,7 +185,9 @@ class Inngest:
         rate_limit: function_config.RateLimit | None = None,
         retries: int | None = None,
         throttle: function_config.Throttle | None = None,
-        trigger: function_config.TriggerCron | function_config.TriggerEvent,
+        trigger: function_config.TriggerCron
+        | function_config.TriggerEvent
+        | list[function_config.TriggerCron | function_config.TriggerEvent],
     ) -> typing.Callable[
         [function.FunctionHandlerAsync | function.FunctionHandlerSync],
         function.Function,
@@ -215,6 +217,8 @@ class Inngest:
         def decorator(
             func: function.FunctionHandlerAsync | function.FunctionHandlerSync,
         ) -> function.Function:
+            triggers = trigger if isinstance(trigger, list) else [trigger]
+
             return function.Function(
                 function.FunctionOpts(
                     batch_events=batch_events,
@@ -228,7 +232,7 @@ class Inngest:
                     retries=retries,
                     throttle=throttle,
                 ),
-                trigger,
+                triggers,
                 func,
                 middleware,
             )
