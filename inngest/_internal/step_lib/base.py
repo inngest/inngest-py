@@ -3,6 +3,8 @@ from __future__ import annotations
 import dataclasses
 import threading
 
+import pydantic
+
 from inngest._internal import (
     client_lib,
     errors,
@@ -215,5 +217,5 @@ class InvokeOptsPayload(types.BaseModel):
 
 
 class WaitForEventOpts(types.BaseModel):
-    if_exp: str | None
+    if_exp: str | None = pydantic.Field(..., serialization_alias="if")
     timeout: str

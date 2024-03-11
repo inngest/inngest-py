@@ -32,10 +32,6 @@ class Error(Exception):
         return transforms.get_traceback(self)
 
 
-class DisallowedRegistrationError(Error):
-    code = const.ErrorCode.DISALLOWED_REGISTRATION_INITIATOR
-
-
 class URLInvalidError(Error):
     code = const.ErrorCode.URL_INVALID
 

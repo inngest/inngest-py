@@ -1,3 +1,7 @@
+"""
+Wait for event times out if the specified event name isn't received
+"""
+
 import datetime
 
 import inngest
@@ -5,7 +9,7 @@ import tests.helper
 
 from . import base
 
-_TEST_NAME = "wait_for_event_timeout"
+_TEST_NAME = "wait_for_event_timeout_name_not_match"
 
 
 class _State(base.BaseState):

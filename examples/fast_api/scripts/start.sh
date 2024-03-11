@@ -8,4 +8,4 @@ if [ -n "${ENV_VARS}" ]; then
     export $(echo ${ENV_VARS} | xargs)
 fi
 
-python ./app.py
+uvicorn app:app --reload

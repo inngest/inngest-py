@@ -1,3 +1,7 @@
+"""
+Wait for event times out if its expression isn't matched
+"""
+
 import datetime
 import time
 
@@ -6,11 +10,11 @@ import tests.helper
 
 from . import base
 
-_TEST_NAME = "wait_for_event_fulfill"
+_TEST_NAME = "wait_for_event_timeout_if_exp_not_match"
 
 
 class _State(base.BaseState):
-    result: inngest.Event | None = None
+    result: inngest.Event | None | str = "not_set"
 
 
 def create(
@@ -38,7 +42,7 @@ def create(
             "wait",
             event=f"{event_name}.fulfill",
             if_exp="event.data.id == async.data.id",
-            timeout=datetime.timedelta(minutes=1),
+            timeout=datetime.timedelta(seconds=1),
         )
 
     @client.create_function(
@@ -56,7 +60,7 @@ def create(
             "wait",
             event=f"{event_name}.fulfill",
             if_exp="event.data.id == async.data.id",
-            timeout=datetime.timedelta(minutes=1),
+            timeout=datetime.timedelta(seconds=1),
         )
 
     def run_test(self: base.TestClass) -> None:
@@ -73,7 +77,7 @@ def create(
 
         self.client.send_sync(
             inngest.Event(
-                data={"id": 123},
+                data={"id": 456},
                 name=f"{event_name}.fulfill",
             )
         )
@@ -82,10 +86,7 @@ def create(
             tests.helper.RunStatus.COMPLETED,
         )
 
-        assert isinstance(state.result, inngest.Event)
-        assert state.result.id != ""
-        assert state.result.name == f"{event_name}.fulfill"
-        assert state.result.ts > 0
+        assert state.result is None
 
     if is_sync:
         fn = fn_sync
