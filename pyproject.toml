@@ -1,6 +1,6 @@
 [project]
 name = "inngest"
-version = "0.3.5"
+version = "0.3.6a1"
 description = "Python SDK for Inngest"
 readme = "README.md"
 classifiers = [
@@ -9,28 +9,29 @@ classifiers = [
     "Framework :: FastAPI",
     "Framework :: Flask",
     "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 
-dependencies = ["httpx>=0.24.0", "pydantic>=2.1.1", "typing-extensions>=4.6.0"]
+dependencies = ["httpx>=0.24.0", "pydantic>=2.1.1", "typing-extensions>=4.8.0"]
 
 [project.optional-dependencies]
 extra = [
-    "Django==4.2.7",
-    "Flask==3.0.0",
+    "Django==4.2",
+    "Flask==2.3.0",
     "build==1.0.3",
     "django-types==0.19.1",
-    "fastapi==0.104.0",
+    "fastapi==0.100.0",
     "mypy==1.8.0",
     "pytest==7.4.2",
     "pytest-django==4.7.0",
     "pytest-xdist[psutil]==3.3.1",
     "ruff==0.1.9",
     "toml==0.10.2",
-    "tornado==6.3.3",
+    "tornado==6.3",
     "types-toml==0.10.8.7",
     "types-tornado==5.1.1",
     "uvicorn==0.23.2",
@@ -87,7 +88,18 @@ extend-select = [
     'T',
     'UP',
 ]
-extend-ignore = ['D200', 'D202', 'D203', 'D205', 'D212', 'D400', 'D415']
+extend-ignore = [
+    'D200',
+    'D202',
+    'D203',
+    'D205',
+    'D212',
+    'D400',
+    'D415',
+
+    # Can't use the "|" operator for unions until we drop support for Python 3.9
+    'UP007',
+]
 
 line-length = 80
 mccabe = { max-complexity = 16 }

@@ -4,6 +4,7 @@ Django integration for Inngest.
 
 import http
 import json
+import typing
 
 import django
 import django.http
@@ -30,8 +31,8 @@ def serve(
     functions: list[function.Function],
     *,
     async_mode: bool = False,
-    serve_origin: str | None = None,
-    serve_path: str | None = None,
+    serve_origin: typing.Optional[str] = None,
+    serve_path: typing.Optional[str] = None,
 ) -> django.urls.URLPattern:
     """
     Serve Inngest functions in a Django app.
@@ -74,8 +75,8 @@ def _create_handler_sync(
     client: client_lib.Inngest,
     handler: comm.CommHandler,
     *,
-    serve_origin: str | None,
-    serve_path: str | None,
+    serve_origin: typing.Optional[str],
+    serve_path: typing.Optional[str],
 ) -> django.urls.URLPattern:
     def inngest_api(
         request: django.http.HttpRequest,
@@ -162,8 +163,8 @@ def _create_handler_async(
     client: client_lib.Inngest,
     handler: comm.CommHandler,
     *,
-    serve_origin: str | None,
-    serve_path: str | None,
+    serve_origin: typing.Optional[str],
+    serve_path: typing.Optional[str],
 ) -> django.urls.URLPattern:
     async def inngest_api(
         request: django.http.HttpRequest,
@@ -249,7 +250,7 @@ def _create_handler_async(
 def _to_response(
     logger: types.Logger,
     comm_res: comm.CommResponse,
-    server_kind: const.ServerKind | None,
+    server_kind: typing.Optional[const.ServerKind],
 ) -> django.http.HttpResponse:
     body = transforms.dump_json(comm_res.body)
     if isinstance(body, Exception):

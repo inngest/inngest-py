@@ -10,8 +10,8 @@ Method = typing.Literal["GET", "POST"]
 
 
 def create_headers(
-    framework: const.Framework | None,
-    server_kind: const.ServerKind | None,
+    framework: typing.Optional[const.Framework],
+    server_kind: typing.Optional[const.ServerKind],
 ) -> dict[str, str]:
     """
     Create standard headers that should exist on every possible outgoing
@@ -35,8 +35,8 @@ def create_headers(
 def create_serve_url(
     *,
     request_url: str,
-    serve_origin: str | None,
-    serve_path: str | None,
+    serve_origin: typing.Optional[str],
+    serve_path: typing.Optional[str],
 ) -> str:
     """
     Create the serve URL, which is the URL that the Executor will use to reach
@@ -103,8 +103,8 @@ def parse_url(url: str) -> str:
 
 
 class RequestSignature:
-    _signature: str | None = None
-    _timestamp: int | None = None
+    _signature: typing.Optional[str] = None
+    _timestamp: typing.Optional[int] = None
 
     def __init__(
         self,
@@ -123,7 +123,9 @@ class RequestSignature:
             if "s" in parsed:
                 self._signature = parsed["s"][0]
 
-    def validate(self, signing_key: str | None) -> types.MaybeError[None]:
+    def validate(
+        self, signing_key: typing.Optional[str]
+    ) -> types.MaybeError[None]:
         if self._mode == const.ServerKind.DEV_SERVER:
             return None
 

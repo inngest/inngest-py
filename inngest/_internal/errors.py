@@ -25,7 +25,7 @@ class Error(Exception):
         return type(self).__name__
 
     @property
-    def stack(self) -> str | None:
+    def stack(self) -> typing.Optional[str]:
         if self.include_stack is False:
             return None
 
@@ -129,8 +129,8 @@ class NonRetriableError(Error):
 
     def __init__(
         self,
-        message: str | None = None,
-        cause: typing.Mapping[str, object] | None = None,
+        message: typing.Optional[str] = None,
+        cause: typing.Optional[typing.Mapping[str, object]] = None,
     ) -> None:
         super().__init__(message)
         self.cause = cause
@@ -165,7 +165,7 @@ class StepError(Error):
         return self._name
 
     @property
-    def stack(self) -> str | None:
+    def stack(self) -> typing.Optional[str]:
         """
         Returns the userland error stack trace
         """
@@ -176,7 +176,7 @@ class StepError(Error):
         self,
         message: str,
         name: str,
-        stack: str | None,
+        stack: typing.Optional[str],
     ) -> None:
         """
         Args:

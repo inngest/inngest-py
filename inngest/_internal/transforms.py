@@ -78,7 +78,7 @@ class _Duration:
 
 
 def to_duration_str(
-    ms: int | datetime.timedelta,
+    ms: typing.Union[int, datetime.timedelta],
 ) -> types.MaybeError[str]:
     if isinstance(ms, datetime.timedelta):
         ms = int(ms.total_seconds() * 1000)
@@ -111,7 +111,7 @@ def to_iso_utc(value: datetime.datetime) -> str:
 
 def get_server_kind(
     headers: dict[str, str],
-) -> const.ServerKind | None | Exception:
+) -> typing.Union[const.ServerKind, None, Exception]:
     value = headers.get(const.HeaderKey.SERVER_KIND.value, None)
     if value is None:
         return None
@@ -123,7 +123,7 @@ def get_server_kind(
 
 
 async def maybe_await(
-    value: types.T | typing.Awaitable[types.T],
+    value: typing.Union[types.T, typing.Awaitable[types.T]],
 ) -> types.T:
     if inspect.isawaitable(value):
         return await value  # type: ignore

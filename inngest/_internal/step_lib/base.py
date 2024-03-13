@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import threading
+import typing
 
 import pydantic
 
@@ -25,7 +26,9 @@ class StepMemos:
     def __init__(self, memos: dict[str, execution.Output]) -> None:
         self._memos = memos
 
-    def pop(self, hashed_id: str) -> execution.Output | types.EmptySentinel:
+    def pop(
+        self, hashed_id: str
+    ) -> typing.Union[execution.Output, types.EmptySentinel]:
         if hashed_id in self._memos:
             memo = self._memos[hashed_id]
 
@@ -61,7 +64,7 @@ class StepBase:
         memos: StepMemos,
         middleware: middleware_lib.MiddlewareManager,
         step_id_counter: StepIDCounter,
-        target_hashed_id: str | None,
+        target_hashed_id: typing.Optional[str],
     ) -> None:
         self._client = client
         self._inside_parallel = False
@@ -73,7 +76,7 @@ class StepBase:
     async def _get_memo(
         self,
         hashed_id: str,
-    ) -> execution.Output | types.EmptySentinel:
+    ) -> typing.Union[execution.Output, types.EmptySentinel]:
         memo = self._memos.pop(hashed_id)
 
         # If there are no more memos then all future code is new.
@@ -99,7 +102,7 @@ class StepBase:
     def _get_memo_sync(
         self,
         hashed_id: str,
-    ) -> execution.Output | types.EmptySentinel:
+    ) -> typing.Union[execution.Output, types.EmptySentinel]:
         memo = self._memos.pop(hashed_id)
 
         # If there are no more memos then all future code is new.
@@ -187,7 +190,9 @@ class ResponseInterrupt(BaseException):
 
     def __init__(
         self,
-        responses: execution.StepResponse | list[execution.StepResponse],
+        responses: typing.Union[
+            execution.StepResponse, list[execution.StepResponse]
+        ],
     ) -> None:
         if not isinstance(responses, list):
             responses = [responses]
@@ -213,9 +218,9 @@ class InvokeOpts(types.BaseModel):
 class InvokeOptsPayload(types.BaseModel):
     data: object
     user: object
-    v: str | None
+    v: typing.Optional[str]
 
 
 class WaitForEventOpts(types.BaseModel):
-    if_exp: str | None = pydantic.Field(..., serialization_alias="if")
+    if_exp: typing.Optional[str] = pydantic.Field(..., serialization_alias="if")
     timeout: str

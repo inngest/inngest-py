@@ -1,4 +1,5 @@
 import datetime
+import typing
 
 import inngest
 import tests.helper
@@ -9,8 +10,8 @@ _TEST_NAME = "sleep"
 
 
 class _State(base.BaseState):
-    after_sleep: datetime.datetime | None = None
-    before_sleep: datetime.datetime | None = None
+    after_sleep: typing.Optional[datetime.datetime] = None
+    before_sleep: typing.Optional[datetime.datetime] = None
 
     def is_done(self) -> bool:
         return self.after_sleep is not None and self.before_sleep is not None

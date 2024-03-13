@@ -1,3 +1,5 @@
+import typing
+
 import inngest
 import tests.helper
 
@@ -7,7 +9,7 @@ _TEST_NAME = "event_payload"
 
 
 class _State(base.BaseState):
-    event: inngest.Event | None = None
+    event: typing.Optional[inngest.Event] = None
 
 
 def create(

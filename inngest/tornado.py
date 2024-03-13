@@ -24,8 +24,8 @@ def serve(
     client: client_lib.Inngest,
     functions: list[function.Function],
     *,
-    serve_origin: str | None = None,
-    serve_path: str | None = None,
+    serve_origin: typing.Optional[str] = None,
+    serve_path: typing.Optional[str] = None,
 ) -> None:
     """
     Serve Inngest functions in a Tornado app.
@@ -48,7 +48,9 @@ def serve(
     )
 
     class InngestHandler(tornado.web.RequestHandler):
-        def data_received(self, chunk: bytes) -> typing.Awaitable[None] | None:
+        def data_received(
+            self, chunk: bytes
+        ) -> typing.Optional[typing.Awaitable[None]]:
             return None
 
         def get(self) -> None:
@@ -64,7 +66,7 @@ def serve(
             self._write_comm_response(comm_res, server_kind)
 
         def post(self) -> None:
-            fn_id: str | None
+            fn_id: typing.Optional[str]
             raw_fn_id = self.request.query_arguments.get(
                 const.QueryParamKey.FUNCTION_ID.value
             )
@@ -74,7 +76,7 @@ def serve(
                 )
             fn_id = raw_fn_id[0].decode("utf-8")
 
-            step_id: str | None
+            step_id: typing.Optional[str]
             raw_step_id = self.request.query_arguments.get(
                 const.QueryParamKey.STEP_ID.value
             )
@@ -119,7 +121,7 @@ def serve(
                 client.logger.error(server_kind)
                 server_kind = None
 
-            sync_id: str | None = None
+            sync_id: typing.Optional[str] = None
             raw_sync_id = self.request.query_arguments.get(
                 const.QueryParamKey.SYNC_ID.value
             )
@@ -141,7 +143,7 @@ def serve(
         def _write_comm_response(
             self,
             comm_res: comm.CommResponse,
-            server_kind: const.ServerKind | None,
+            server_kind: typing.Optional[const.ServerKind],
         ) -> None:
             body = transforms.dump_json(comm_res.body)
             if isinstance(body, Exception):

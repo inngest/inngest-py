@@ -1,5 +1,6 @@
 import datetime
 import time
+import typing
 
 import inngest
 import tests.helper
@@ -10,7 +11,7 @@ _TEST_NAME = "wait_for_event_fulfill"
 
 
 class _State(base.BaseState):
-    result: inngest.Event | None = None
+    result: typing.Optional[inngest.Event] = None
 
 
 def create(

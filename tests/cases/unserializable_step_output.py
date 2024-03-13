@@ -1,4 +1,5 @@
 import json
+import typing
 
 import inngest
 import tests.helper
@@ -9,7 +10,7 @@ _TEST_NAME = "unserializable_step_output"
 
 
 class _State(base.BaseState):
-    error: BaseException | None = None
+    error: typing.Optional[BaseException] = None
 
 
 def create(

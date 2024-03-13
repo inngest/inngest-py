@@ -3,6 +3,7 @@ When an invoked function fails, `step.invoke` raises a NonRetriableError.
 """
 
 import json
+import typing
 
 import inngest
 import tests.helper
@@ -13,7 +14,7 @@ _TEST_NAME = "invoke_failure"
 
 
 class _State(base.BaseState):
-    raised_error: inngest.StepError | None = None
+    raised_error: typing.Optional[inngest.StepError] = None
 
 
 class MyException(Exception):

@@ -1,3 +1,5 @@
+import typing
+
 import inngest
 import tests.helper
 
@@ -7,10 +9,10 @@ _TEST_NAME = "function_args"
 
 
 class _State(base.BaseState):
-    attempt: int | None = None
-    event: inngest.Event | None = None
-    events: list[inngest.Event] | None = None
-    step: inngest.Step | inngest.StepSync | None = None
+    attempt: typing.Optional[int] = None
+    event: typing.Optional[inngest.Event] = None
+    events: typing.Optional[list[inngest.Event]] = None
+    step: typing.Union[inngest.Step, inngest.StepSync, None] = None
 
 
 def create(
@@ -64,7 +66,7 @@ def create(
         assert state.attempt == 0
         assert isinstance(state.event, inngest.Event)
         assert isinstance(state.events, list) and len(state.events) == 1
-        assert isinstance(state.step, inngest.Step | inngest.StepSync)
+        assert isinstance(state.step, (inngest.Step, inngest.StepSync))
 
     if is_sync:
         fn = fn_sync

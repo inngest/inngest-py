@@ -1,4 +1,5 @@
 import json
+import typing
 import unittest
 
 import fastapi
@@ -60,7 +61,7 @@ class TestFastAPI(unittest.TestCase):
     def on_proxy_request(
         cls,
         *,
-        body: bytes | None,
+        body: typing.Optional[bytes],
         headers: dict[str, list[str]],
         method: str,
         path: str,

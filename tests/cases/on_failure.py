@@ -1,4 +1,5 @@
 import json
+import typing
 import unittest.mock
 
 import inngest
@@ -10,11 +11,11 @@ _TEST_NAME = "on_failure"
 
 
 class _State(base.BaseState):
-    attempt: int | None = None
-    event: inngest.Event | None = None
-    events: list[inngest.Event] | None = None
-    on_failure_run_id: str | None = None
-    step: inngest.Step | inngest.StepSync | None = None
+    attempt: typing.Optional[int] = None
+    event: typing.Optional[inngest.Event] = None
+    events: typing.Optional[list[inngest.Event]] = None
+    on_failure_run_id: typing.Optional[str] = None
+    step: typing.Union[inngest.Step, inngest.StepSync, None] = None
 
     def wait_for_on_failure_run_id(self) -> str:
         def assertion() -> None:
@@ -150,7 +151,7 @@ def create(
         assert event.ts > 0
 
         assert isinstance(state.events, list) and len(state.events) == 1
-        assert isinstance(state.step, inngest.Step | inngest.StepSync)
+        assert isinstance(state.step, (inngest.Step, inngest.StepSync))
 
     if is_sync:
         fn = fn_sync

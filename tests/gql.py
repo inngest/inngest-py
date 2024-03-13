@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import typing
+
 import httpx
 import pydantic
 
@@ -8,7 +10,7 @@ class Client:
     def __init__(self, endpoint: str):
         self._endpoint = endpoint
 
-    def query(self, query: Query) -> Response | Error:
+    def query(self, query: Query) -> typing.Union[Response, Error]:
         http_res = httpx.post(
             self._endpoint,
             json=query.payload(),
@@ -35,7 +37,7 @@ class Query:
     def __init__(
         self,
         query: str,
-        variables: dict[str, object] | None = None,
+        variables: typing.Optional[dict[str, object]] = None,
     ):
         self._query = query
         self._variables = variables
@@ -49,9 +51,9 @@ class Query:
 
 class Response(pydantic.BaseModel):
     data: dict[str, object]
-    errors: list[dict[str, object]] | None = None
+    errors: typing.Optional[list[dict[str, object]]] = None
 
 
 class Error(pydantic.BaseModel):
-    response: Response | None = None
+    response: typing.Optional[Response] = None
     message: str

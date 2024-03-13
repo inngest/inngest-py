@@ -5,6 +5,7 @@ for async and sync, likely due to django.conf.settings being a singleton.
 """
 
 import threading
+import typing
 import unittest
 
 import django.conf
@@ -80,7 +81,7 @@ class TestDjango(unittest.TestCase):
     def on_proxy_request(
         cls,
         *,
-        body: bytes | None,
+        body: typing.Optional[bytes],
         headers: dict[str, list[str]],
         method: str,
         path: str,

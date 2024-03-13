@@ -1,6 +1,7 @@
 """FastAPI integration for Inngest."""
 
 import json
+import typing
 
 import fastapi
 
@@ -23,8 +24,8 @@ def serve(
     client: client_lib.Inngest,
     functions: list[function.Function],
     *,
-    serve_origin: str | None = None,
-    serve_path: str | None = None,
+    serve_origin: typing.Optional[str] = None,
+    serve_path: typing.Optional[str] = None,
 ) -> None:
     """
     Serve Inngest functions in a FastAPI app.
@@ -132,7 +133,7 @@ def serve(
 def _to_response(
     logger: types.Logger,
     comm_res: comm.CommResponse,
-    server_kind: const.ServerKind | None,
+    server_kind: typing.Union[const.ServerKind, None],
 ) -> fastapi.responses.Response:
     body = transforms.dump_json(comm_res.body)
     if isinstance(body, Exception):
