@@ -27,10 +27,12 @@
 
 We currently support the following frameworks (but adding a new framework is easy!):
 
-- Django
-- FastAPI
-- Flask
-- Tornado
+- Django (`>=4.2`)
+- FastAPI (`>=0.100.0`)
+- Flask (`>=2.3.0`)
+- Tornado (`>=6.3`)
+
+Python 3.9 is the minimum version we support.
 
 ## Getting started
 
