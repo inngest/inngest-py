@@ -29,7 +29,11 @@ _DEV_SERVER_EVENT_KEY = "NO_EVENT_KEY_SET"
 
 class Inngest:
     middleware: list[
-        type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]
+        type[
+            typing.Union[
+                middleware_lib.Middleware, middleware_lib.MiddlewareSync
+            ]
+        ]
     ]
 
     @property
@@ -41,27 +45,32 @@ class Inngest:
         return self._event_api_origin
 
     @property
-    def event_key(self) -> str | None:
+    def event_key(self) -> typing.Optional[str]:
         return self._event_key
 
     @property
-    def signing_key(self) -> str | None:
+    def signing_key(self) -> typing.Optional[str]:
         return self._signing_key
 
     def __init__(
         self,
         *,
-        api_base_url: str | None = None,
+        api_base_url: typing.Optional[str] = None,
         app_id: str,
-        event_api_base_url: str | None = None,
-        event_key: str | None = None,
-        is_production: bool | None = None,
-        logger: types.Logger | None = None,
-        middleware: list[
-            type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]
-        ]
-        | None = None,
-        signing_key: str | None = None,
+        event_api_base_url: typing.Optional[str] = None,
+        event_key: typing.Optional[str] = None,
+        is_production: typing.Optional[bool] = None,
+        logger: typing.Optional[types.Logger] = None,
+        middleware: typing.Optional[
+            list[
+                type[
+                    typing.Union[
+                        middleware_lib.Middleware, middleware_lib.MiddlewareSync
+                    ]
+                ]
+            ]
+        ] = None,
+        signing_key: typing.Optional[str] = None,
     ) -> None:
         """
         Args:
@@ -161,7 +170,9 @@ class Inngest:
     def add_middleware(
         self,
         middleware: type[
-            middleware_lib.Middleware | middleware_lib.MiddlewareSync
+            typing.Union[
+                middleware_lib.Middleware, middleware_lib.MiddlewareSync
+            ]
         ],
     ) -> None:
         self.middleware = [*self.middleware, middleware]
@@ -169,27 +180,42 @@ class Inngest:
     def create_function(
         self,
         *,
-        batch_events: function_config.Batch | None = None,
-        cancel: list[function_config.Cancel] | None = None,
-        concurrency: list[function_config.Concurrency] | None = None,
-        debounce: function_config.Debounce | None = None,
+        batch_events: typing.Optional[function_config.Batch] = None,
+        cancel: typing.Optional[list[function_config.Cancel]] = None,
+        concurrency: typing.Optional[list[function_config.Concurrency]] = None,
+        debounce: typing.Optional[function_config.Debounce] = None,
         fn_id: str,
-        middleware: list[
-            type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]
-        ]
-        | None = None,
-        name: str | None = None,
-        on_failure: function.FunctionHandlerAsync
-        | function.FunctionHandlerSync
-        | None = None,
-        rate_limit: function_config.RateLimit | None = None,
-        retries: int | None = None,
-        throttle: function_config.Throttle | None = None,
-        trigger: function_config.TriggerCron
-        | function_config.TriggerEvent
-        | list[function_config.TriggerCron | function_config.TriggerEvent],
+        middleware: typing.Optional[
+            list[
+                type[
+                    typing.Union[
+                        middleware_lib.Middleware, middleware_lib.MiddlewareSync
+                    ]
+                ]
+            ]
+        ] = None,
+        name: typing.Optional[str] = None,
+        on_failure: typing.Union[
+            function.FunctionHandlerAsync, function.FunctionHandlerSync, None
+        ] = None,
+        rate_limit: typing.Optional[function_config.RateLimit] = None,
+        retries: typing.Optional[int] = None,
+        throttle: typing.Optional[function_config.Throttle] = None,
+        trigger: typing.Union[
+            function_config.TriggerCron,
+            function_config.TriggerEvent,
+            list[
+                typing.Union[
+                    function_config.TriggerCron, function_config.TriggerEvent
+                ]
+            ],
+        ],
     ) -> typing.Callable[
-        [function.FunctionHandlerAsync | function.FunctionHandlerSync],
+        [
+            typing.Union[
+                function.FunctionHandlerAsync, function.FunctionHandlerSync
+            ]
+        ],
         function.Function,
     ]:
         """
@@ -215,7 +241,9 @@ class Inngest:
         fully_qualified_fn_id = f"{self.app_id}-{fn_id}"
 
         def decorator(
-            func: function.FunctionHandlerAsync | function.FunctionHandlerSync,
+            func: typing.Union[
+                function.FunctionHandlerAsync, function.FunctionHandlerSync
+            ],
         ) -> function.Function:
             triggers = trigger if isinstance(trigger, list) else [trigger]
 
@@ -241,7 +269,7 @@ class Inngest:
 
     async def send(
         self,
-        events: event_lib.Event | list[event_lib.Event],
+        events: typing.Union[event_lib.Event, list[event_lib.Event]],
     ) -> list[str]:
         """
         Send one or more events. This method is asynchronous.
@@ -262,7 +290,7 @@ class Inngest:
 
     def send_sync(
         self,
-        events: event_lib.Event | list[event_lib.Event],
+        events: typing.Union[event_lib.Event, list[event_lib.Event]],
     ) -> list[str]:
         """
         Send one or more events. This method is synchronous.
@@ -298,7 +326,7 @@ def _extract_ids(body: object) -> list[str]:
 
 def _get_mode(
     logger: types.Logger,
-    is_production: bool | None,
+    is_production: typing.Optional[bool],
 ) -> const.ServerKind:
     if is_production is not None:
         if is_production:

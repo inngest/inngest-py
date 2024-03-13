@@ -18,9 +18,9 @@ class StepSync(base.StepBase):
         step_id: str,
         *,
         function: Function,
-        data: types.JSON | None = None,
-        user: types.JSON | None = None,
-        v: str | None = None,
+        data: typing.Optional[types.JSON] = None,
+        user: typing.Optional[types.JSON] = None,
+        v: typing.Optional[str] = None,
     ) -> object:
         """
         Invoke an Inngest function with data. Returns the result of the returned
@@ -93,11 +93,11 @@ class StepSync(base.StepBase):
         self,
         step_id: str,
         *,
-        app_id: str | None = None,
+        app_id: typing.Optional[str] = None,
         function_id: str,
-        data: types.JSON | None = None,
-        user: types.JSON | None = None,
-        v: str | None = None,
+        data: typing.Optional[types.JSON] = None,
+        user: typing.Optional[types.JSON] = None,
+        v: typing.Optional[str] = None,
     ) -> object:
         """
         Invoke an Inngest function with data. Returns the result of the returned
@@ -264,7 +264,7 @@ class StepSync(base.StepBase):
     def send_event(
         self,
         step_id: str,
-        events: event_lib.Event | list[event_lib.Event],
+        events: typing.Union[event_lib.Event, list[event_lib.Event]],
     ) -> list[str]:
         """
         Send an event or list of events.
@@ -285,7 +285,7 @@ class StepSync(base.StepBase):
     def sleep(
         self,
         step_id: str,
-        duration: int | datetime.timedelta,
+        duration: typing.Union[int, datetime.timedelta],
     ) -> None:
         """
         Sleep for a duration.
@@ -348,9 +348,9 @@ class StepSync(base.StepBase):
         step_id: str,
         *,
         event: str,
-        if_exp: str | None = None,
-        timeout: int | datetime.timedelta,
-    ) -> event_lib.Event | None:
+        if_exp: typing.Optional[str] = None,
+        timeout: typing.Union[int, datetime.timedelta],
+    ) -> typing.Optional[event_lib.Event]:
         """
         Wait for an event to be sent.
 

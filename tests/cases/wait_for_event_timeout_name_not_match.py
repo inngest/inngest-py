@@ -3,6 +3,7 @@ Wait for event times out if the specified event name isn't received
 """
 
 import datetime
+import typing
 
 import inngest
 import tests.helper
@@ -13,7 +14,7 @@ _TEST_NAME = "wait_for_event_timeout_name_not_match"
 
 
 class _State(base.BaseState):
-    result: inngest.Event | None | str = "not_set"
+    result: typing.Union[inngest.Event, None, str] = "not_set"
 
 
 def create(

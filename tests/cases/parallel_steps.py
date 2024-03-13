@@ -1,4 +1,5 @@
 import json
+import typing
 import unittest.mock
 
 import inngest
@@ -33,7 +34,7 @@ def create(
     def fn_sync(
         ctx: inngest.Context,
         step: inngest.StepSync,
-    ) -> tuple[int | list[str], ...]:
+    ) -> tuple[typing.Union[int, list[str]], ...]:
         state.run_id = ctx.run_id
         state.request_counter += 1
 
@@ -63,7 +64,7 @@ def create(
     async def fn_async(
         ctx: inngest.Context,
         step: inngest.Step,
-    ) -> tuple[int | list[str] | None, ...]:
+    ) -> tuple[typing.Union[int, list[str], None], ...]:
         state.run_id = ctx.run_id
         state.request_counter += 1
 

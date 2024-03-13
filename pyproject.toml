@@ -9,13 +9,14 @@ classifiers = [
     "Framework :: FastAPI",
     "Framework :: Flask",
     "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 
-dependencies = ["httpx>=0.24.0", "pydantic>=2.1.1", "typing-extensions>=4.6.0"]
+dependencies = ["httpx>=0.24.0", "pydantic>=2.1.1", "typing-extensions>=4.8.0"]
 
 [project.optional-dependencies]
 extra = [
@@ -87,7 +88,18 @@ extend-select = [
     'T',
     'UP',
 ]
-extend-ignore = ['D200', 'D202', 'D203', 'D205', 'D212', 'D400', 'D415']
+extend-ignore = [
+    'D200',
+    'D202',
+    'D203',
+    'D205',
+    'D212',
+    'D400',
+    'D415',
+
+    # Can't use the "|" operator for unions until we drop support for Python 3.9
+    'UP007',
+]
 
 line-length = 80
 mccabe = { max-complexity = 16 }

@@ -3,6 +3,7 @@ import signal
 import subprocess
 import threading
 import time
+import typing
 
 import httpx
 
@@ -23,8 +24,8 @@ else:
 
 
 class _DevServer:
-    _process: subprocess.Popen[bytes] | None = None
-    _thread: threading.Thread | None = None
+    _process: typing.Optional[subprocess.Popen[bytes]] = None
+    _thread: typing.Optional[threading.Thread] = None
 
     def __init__(
         self,
@@ -42,8 +43,8 @@ class _DevServer:
             return
         print("Starting Dev Server")
 
-        stderr: int | None = subprocess.DEVNULL
-        stdout: int | None = subprocess.DEVNULL
+        stderr: typing.Optional[int] = subprocess.DEVNULL
+        stdout: typing.Optional[int] = subprocess.DEVNULL
         if self._verbose:
             stderr = None
             stdout = None

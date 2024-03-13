@@ -1,3 +1,4 @@
+import typing
 import unittest
 
 import flask
@@ -59,7 +60,7 @@ class TestFlask(unittest.TestCase):
     def on_proxy_request(
         cls,
         *,
-        body: bytes | None,
+        body: typing.Optional[bytes],
         headers: dict[str, list[str]],
         method: str,
         path: str,

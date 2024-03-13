@@ -6,6 +6,7 @@ import typing
 import urllib.parse
 
 import pydantic
+import typing_extensions
 
 from inngest._internal import (
     client_lib,
@@ -36,7 +37,7 @@ class _Config:
     main: function_config.FunctionConfig
 
     # The internal on_failure function
-    on_failure: function_config.FunctionConfig | None
+    on_failure: typing.Optional[function_config.FunctionConfig]
 
 
 @typing.runtime_checkable
@@ -60,30 +61,32 @@ class FunctionHandlerSync(typing.Protocol):
 
 
 def _is_function_handler_async(
-    value: FunctionHandlerAsync | FunctionHandlerSync,
-) -> typing.TypeGuard[FunctionHandlerAsync]:
+    value: typing.Union[FunctionHandlerAsync, FunctionHandlerSync],
+) -> typing_extensions.TypeGuard[FunctionHandlerAsync]:
     return inspect.iscoroutinefunction(value)
 
 
 def _is_function_handler_sync(
-    value: FunctionHandlerAsync | FunctionHandlerSync,
-) -> typing.TypeGuard[FunctionHandlerSync]:
+    value: typing.Union[FunctionHandlerAsync, FunctionHandlerSync],
+) -> typing_extensions.TypeGuard[FunctionHandlerSync]:
     return not inspect.iscoroutinefunction(value)
 
 
 class FunctionOpts(types.BaseModel):
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
-    batch_events: function_config.Batch | None = None
-    cancel: list[function_config.Cancel] | None = None
-    concurrency: list[function_config.Concurrency] | None = None
-    debounce: function_config.Debounce | None = None
+    batch_events: typing.Optional[function_config.Batch] = None
+    cancel: typing.Optional[list[function_config.Cancel]] = None
+    concurrency: typing.Optional[list[function_config.Concurrency]] = None
+    debounce: typing.Optional[function_config.Debounce] = None
     id: str
     name: str
-    on_failure: FunctionHandlerAsync | FunctionHandlerSync | None = None
-    rate_limit: function_config.RateLimit | None = None
-    retries: int | None = None
-    throttle: function_config.Throttle | None = None
+    on_failure: typing.Union[
+        FunctionHandlerAsync, FunctionHandlerSync, None
+    ] = None
+    rate_limit: typing.Optional[function_config.RateLimit] = None
+    retries: typing.Optional[int] = None
+    throttle: typing.Optional[function_config.Throttle] = None
 
     def convert_validation_error(
         self,
@@ -93,10 +96,12 @@ class FunctionOpts(types.BaseModel):
 
 
 class Function:
-    _handler: FunctionHandlerAsync | FunctionHandlerSync
-    _on_failure_fn_id: str | None = None
+    _handler: typing.Union[FunctionHandlerAsync, FunctionHandlerSync]
+    _on_failure_fn_id: typing.Optional[str] = None
     _opts: FunctionOpts
-    _triggers: list[function_config.TriggerCron | function_config.TriggerEvent]
+    _triggers: list[
+        typing.Union[function_config.TriggerCron, function_config.TriggerEvent]
+    ]
 
     @property
     def id(self) -> str:
@@ -108,7 +113,7 @@ class Function:
         return _is_function_handler_async(self._handler)
 
     @property
-    def is_on_failure_handler_async(self) -> bool | None:
+    def is_on_failure_handler_async(self) -> typing.Optional[bool]:
         """
         Whether the on_failure handler is async. Returns None if there isn't an
         on_failure handler.
@@ -118,20 +123,31 @@ class Function:
         return _is_function_handler_async(self._opts.on_failure)
 
     @property
-    def on_failure_fn_id(self) -> str | None:
+    def on_failure_fn_id(self) -> typing.Optional[str]:
         return self._on_failure_fn_id
 
     def __init__(
         self,
         opts: FunctionOpts,
-        trigger: function_config.TriggerCron
-        | function_config.TriggerEvent
-        | list[function_config.TriggerCron | function_config.TriggerEvent],
-        handler: FunctionHandlerAsync | FunctionHandlerSync,
-        middleware: list[
-            type[middleware_lib.Middleware | middleware_lib.MiddlewareSync]
-        ]
-        | None = None,
+        trigger: typing.Union[
+            function_config.TriggerCron,
+            function_config.TriggerEvent,
+            list[
+                typing.Union[
+                    function_config.TriggerCron, function_config.TriggerEvent
+                ]
+            ],
+        ],
+        handler: typing.Union[FunctionHandlerAsync, FunctionHandlerSync],
+        middleware: typing.Optional[
+            list[
+                type[
+                    typing.Union[
+                        middleware_lib.Middleware, middleware_lib.MiddlewareSync
+                    ]
+                ]
+            ]
+        ] = None,
     ) -> None:
         self._handler = handler
         self._middleware = middleware or []
@@ -148,7 +164,7 @@ class Function:
         ctx: Context,
         fn_id: str,
         middleware: middleware_lib.MiddlewareManager,
-        target_hashed_id: str | None,
+        target_hashed_id: typing.Optional[str],
     ) -> execution.CallResult:
         middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
         for m in self._middleware:
@@ -170,7 +186,7 @@ class Function:
                 return execution.CallError.from_error(err)
 
         try:
-            handler: FunctionHandlerAsync | FunctionHandlerSync
+            handler: typing.Union[FunctionHandlerAsync, FunctionHandlerSync]
             if self.id == fn_id:
                 handler = self._handler
             elif self.on_failure_fn_id == fn_id:
@@ -276,7 +292,7 @@ class Function:
         ctx: Context,
         fn_id: str,
         middleware: middleware_lib.MiddlewareManager,
-        target_hashed_id: str | None,
+        target_hashed_id: typing.Optional[str],
     ) -> execution.CallResult:
         middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
         for m in self._middleware:
@@ -296,7 +312,7 @@ class Function:
             middleware.before_execution_sync()
 
         try:
-            handler: FunctionHandlerAsync | FunctionHandlerSync
+            handler: typing.Union[FunctionHandlerAsync, FunctionHandlerSync]
             if self.id == fn_id:
                 handler = self._handler
             elif self.on_failure_fn_id == fn_id:

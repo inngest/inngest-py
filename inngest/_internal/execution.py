@@ -4,6 +4,7 @@ import enum
 import typing
 
 import pydantic
+import typing_extensions
 
 from . import const, errors, event_lib, transforms, types
 
@@ -36,14 +37,14 @@ class CallError(types.BaseModel):
     message: str
     name: str
     original_error: object = pydantic.Field(exclude=True)
-    stack: str | None
-    step_id: str | None
+    stack: typing.Optional[str]
+    step_id: typing.Optional[str]
 
     @classmethod
     def from_error(
         cls,
         err: Exception,
-        step_id: str | None = None,
+        step_id: typing.Optional[str] = None,
     ) -> CallError:
         code = const.ErrorCode.UNKNOWN
         if isinstance(err, errors.Error):
@@ -76,21 +77,21 @@ class FunctionCallResponse(types.BaseModel):
 
 
 class StepResponse(types.BaseModel):
-    data: Output | None = None
+    data: typing.Optional[Output] = None
     display_name: str = pydantic.Field(..., serialization_alias="displayName")
     id: str
 
     # Deprecated
-    name: str | None = None
+    name: typing.Optional[str] = None
 
     op: Opcode
-    opts: dict[str, object] | None = None
+    opts: typing.Optional[dict[str, object]] = None
 
 
 class MemoizedError(types.BaseModel):
     message: str
     name: str
-    stack: str | None
+    stack: typing.Optional[str]
 
     @classmethod
     def from_error(cls, err: Exception) -> MemoizedError:
@@ -110,20 +111,20 @@ class Output(types.BaseModel):
 
     # TODO: Change the type to MemoizedError. But that requires a breaking
     # change, so do it in version 0.4
-    error: dict[str, object] | None = None
+    error: typing.Optional[dict[str, object]] = None
 
 
 def is_step_call_responses(
     value: object,
-) -> typing.TypeGuard[list[StepResponse]]:
+) -> typing_extensions.TypeGuard[list[StepResponse]]:
     if not isinstance(value, list):
         return False
     return all(isinstance(item, StepResponse) for item in value)
 
 
-CallResult: typing.TypeAlias = (
-    list[StepResponse] | FunctionCallResponse | CallError
-)
+CallResult: typing_extensions.TypeAlias = typing.Union[
+    list[StepResponse], FunctionCallResponse, CallError
+]
 
 
 class Opcode(enum.Enum):

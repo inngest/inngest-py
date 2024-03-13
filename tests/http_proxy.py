@@ -11,7 +11,7 @@ from . import net
 
 class Proxy:
     _port: int
-    _thread: threading.Thread | None = None
+    _thread: typing.Optional[threading.Thread] = None
 
     @property
     def host(self) -> str:
@@ -115,7 +115,7 @@ class Proxy:
 
 @dataclasses.dataclass
 class Response:
-    body: bytes | None
+    body: typing.Optional[bytes]
     headers: dict[str, str]
     status_code: int
 
@@ -124,7 +124,7 @@ class _OnRequest(typing.Protocol):
     def __call__(
         self,
         *,
-        body: bytes | None,
+        body: typing.Optional[bytes],
         headers: dict[str, list[str]],
         method: str,
         path: str,

@@ -8,7 +8,7 @@ import typing_extensions
 
 if typing.TYPE_CHECKING:
     # https://github.com/python/typeshed/issues/7855
-    Logger = logging.Logger | logging.LoggerAdapter[logging.Logger]
+    Logger = typing.Union[logging.Logger, logging.LoggerAdapter[logging.Logger]]
 else:
     Logger = object
 
@@ -28,21 +28,28 @@ empty_sentinel = EmptySentinel()
 if typing.TYPE_CHECKING:
     # Mypy uses this statically. Pydantic can't use this at runtime since it'll
     # error with "name 'JSON' is not defined"
-    JSON = (
-        bool
-        | float
-        | int
-        | str
-        | typing.Mapping[str, "JSON"]
-        | typing.Sequence["JSON"]
-        | None
-    )
+    JSON = typing.Union[
+        bool,
+        float,
+        int,
+        str,
+        typing.Mapping[str, "JSON"],
+        typing.Sequence["JSON"],
+        None,
+    ]
 else:
     # Pydantic uses this at runtime. Mypy can't use this since it'll error with
     # "possible cyclic definition"
     JSON = typing_extensions.TypeAliasType(
         "JSON",
-        bool | int | float | str | None | list["JSON"] | dict[str, "JSON"],
+        typing.Union[
+            bool,
+            int,
+            float,
+            typing.Optional[str],
+            list["JSON"],
+            dict[str, "JSON"],
+        ],
     )
 
 
@@ -76,7 +83,7 @@ class BaseModel(pydantic.BaseModel):
     def from_raw(
         cls: type[BaseModelT],
         raw: object,
-    ) -> BaseModelT | Exception:
+    ) -> typing.Union[BaseModelT, Exception]:
         try:
             return cls.model_validate(raw)
         except Exception as err:
@@ -91,4 +98,4 @@ class BaseModel(pydantic.BaseModel):
 
 BaseModelT = typing.TypeVar("BaseModelT", bound=BaseModel)
 
-MaybeError: typing.TypeAlias = T | Exception
+MaybeError: typing_extensions.TypeAlias = typing.Union[T, Exception]

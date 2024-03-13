@@ -1,6 +1,7 @@
 """Flask integration for Inngest."""
 
 import json
+import typing
 
 import flask
 
@@ -24,8 +25,8 @@ def serve(
     client: client_lib.Inngest,
     functions: list[function.Function],
     *,
-    serve_origin: str | None = None,
-    serve_path: str | None = None,
+    serve_origin: typing.Optional[str] = None,
+    serve_path: typing.Optional[str] = None,
 ) -> None:
     """
     Serve Inngest functions in a Flask app.
@@ -75,11 +76,11 @@ def _create_handler_async(
     client: client_lib.Inngest,
     handler: comm.CommHandler,
     *,
-    serve_origin: str | None,
-    serve_path: str | None,
+    serve_origin: typing.Optional[str],
+    serve_path: typing.Optional[str],
 ) -> None:
     @app.route("/api/inngest", methods=["GET", "POST", "PUT"])
-    async def inngest_api() -> flask.Response | str:
+    async def inngest_api() -> typing.Union[flask.Response, str]:
         headers = net.normalize_headers(dict(flask.request.headers.items()))
 
         server_kind = transforms.get_server_kind(headers)
@@ -155,11 +156,11 @@ def _create_handler_sync(
     client: client_lib.Inngest,
     handler: comm.CommHandler,
     *,
-    serve_origin: str | None,
-    serve_path: str | None,
+    serve_origin: typing.Optional[str],
+    serve_path: typing.Optional[str],
 ) -> None:
     @app.route("/api/inngest", methods=["GET", "POST", "PUT"])
-    def inngest_api() -> flask.Response | str:
+    def inngest_api() -> typing.Union[flask.Response, str]:
         headers = net.normalize_headers(dict(flask.request.headers.items()))
 
         server_kind = transforms.get_server_kind(headers)
@@ -236,7 +237,7 @@ def _create_handler_sync(
 def _to_response(
     logger: types.Logger,
     comm_res: comm.CommResponse,
-    server_kind: const.ServerKind | None,
+    server_kind: typing.Optional[const.ServerKind],
 ) -> flask.Response:
     body = transforms.dump_json(comm_res.body)
     if isinstance(body, Exception):

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import enum
 import time
+import typing
 
 import pydantic
 
@@ -68,7 +69,7 @@ class _Client:
         if not isinstance(history, list):
             raise Exception("unexpected response")
 
-        history_item_id: str | None = None
+        history_item_id: typing.Optional[str] = None
         for step in history:
             if not isinstance(step, dict):
                 raise Exception("unexpected response")
@@ -184,7 +185,7 @@ class _Client:
 
 class _Run(types.BaseModel):
     id: str
-    output: str | None
+    output: typing.Optional[str]
     status: RunStatus
 
     @pydantic.field_validator("status", mode="before")

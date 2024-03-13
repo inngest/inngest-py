@@ -13,7 +13,7 @@ class _FrameworkTestCase(typing.Protocol):
     def on_proxy_request(
         self,
         *,
-        body: bytes | None,
+        body: typing.Optional[bytes],
         headers: dict[str, list[str]],
         method: str,
         path: str,

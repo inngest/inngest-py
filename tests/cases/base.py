@@ -12,7 +12,7 @@ class TestClass(typing.Protocol):
 
 
 class BaseState:
-    run_id: str | None = None
+    run_id: typing.Optional[str] = None
 
     def wait_for_run_id(
         self,
@@ -29,7 +29,7 @@ class BaseState:
 
 @dataclasses.dataclass
 class Case:
-    fn: inngest.Function | list[inngest.Function]
+    fn: typing.Union[inngest.Function, list[inngest.Function]]
     name: str
     run_test: typing.Callable[[TestClass], None]
 

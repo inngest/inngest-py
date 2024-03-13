@@ -1,4 +1,5 @@
 import json
+import typing
 
 import inngest
 import tests.helper
@@ -23,7 +24,7 @@ def create(
     fn_id = base.create_fn_id(test_name)
     state = _State()
 
-    middleware: type[inngest.Middleware | inngest.MiddlewareSync]
+    middleware: type[typing.Union[inngest.Middleware, inngest.MiddlewareSync]]
     if is_sync:
 
         class _MiddlewareSync(inngest.MiddlewareSync):

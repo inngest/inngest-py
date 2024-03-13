@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import http
 import os
+import typing
 import urllib.parse
 
 import httpx
@@ -26,7 +27,7 @@ class CommResponse:
         self,
         *,
         body: object = None,
-        headers: dict[str, str] | None = None,
+        headers: typing.Optional[dict[str, str]] = None,
         status_code: int = http.HTTPStatus.OK.value,
     ) -> None:
         self.headers = headers or {}
@@ -105,7 +106,7 @@ class CommResponse:
         err: Exception,
         status: http.HTTPStatus = http.HTTPStatus.INTERNAL_SERVER_ERROR,
     ) -> CommResponse:
-        code: str | None = None
+        code: typing.Optional[str] = None
         if isinstance(err, errors.Error):
             code = err.code.value
         else:
@@ -144,16 +145,16 @@ class CommHandler:
     _fns: dict[str, function.Function]
     _framework: const.Framework
     _mode: const.ServerKind
-    _signing_key: str | None
+    _signing_key: typing.Optional[str]
 
     def __init__(
         self,
         *,
-        api_base_url: str | None = None,
+        api_base_url: typing.Optional[str] = None,
         client: client_lib.Inngest,
         framework: const.Framework,
         functions: list[function.Function],
-        signing_key: str | None = None,
+        signing_key: typing.Optional[str] = None,
     ) -> None:
         self._client = client
 
@@ -188,8 +189,8 @@ class CommHandler:
         self,
         *,
         app_url: str,
-        server_kind: const.ServerKind | None,
-        sync_id: str | None,
+        server_kind: typing.Optional[const.ServerKind],
+        sync_id: typing.Optional[str],
     ) -> types.MaybeError[httpx.Request]:
         registration_url = urllib.parse.urljoin(
             self._api_origin,
@@ -356,7 +357,9 @@ class CommHandler:
             return errors.FunctionConfigInvalidError("no functions found")
         return configs
 
-    def inspect(self, server_kind: const.ServerKind | None) -> CommResponse:
+    def inspect(
+        self, server_kind: typing.Optional[const.ServerKind]
+    ) -> CommResponse:
         """Handle Dev Server's auto-discovery."""
         if server_kind != self._mode:
             # Tell Dev Server to leave the app alone since it's in production
@@ -376,7 +379,7 @@ class CommHandler:
     def _parse_registration_response(
         self,
         server_res: httpx.Response,
-        server_kind: const.ServerKind | None,
+        server_kind: typing.Optional[const.ServerKind],
     ) -> CommResponse:
         try:
             server_res_body = server_res.json()
@@ -413,8 +416,8 @@ class CommHandler:
         self,
         *,
         app_url: str,
-        server_kind: const.ServerKind | None,
-        sync_id: str | None = None,
+        server_kind: typing.Optional[const.ServerKind],
+        sync_id: typing.Optional[str] = None,
     ) -> CommResponse:
         """Handle a registration call."""
 
@@ -440,8 +443,8 @@ class CommHandler:
         self,
         *,
         app_url: str,
-        server_kind: const.ServerKind | None,
-        sync_id: str | None,
+        server_kind: typing.Optional[const.ServerKind],
+        sync_id: typing.Optional[str],
     ) -> CommResponse:
         """Handle a registration call."""
 
@@ -466,7 +469,7 @@ class CommHandler:
     async def _respond(
         self,
         middleware: middleware_lib.MiddlewareManager,
-        value: execution.CallResult | Exception,
+        value: typing.Union[execution.CallResult, Exception],
     ) -> CommResponse:
         err = await middleware.before_response()
         if isinstance(err, Exception):
@@ -480,7 +483,7 @@ class CommHandler:
     def _respond_sync(
         self,
         middleware: middleware_lib.MiddlewareManager,
-        value: execution.CallResult | Exception,
+        value: typing.Union[execution.CallResult, Exception],
     ) -> CommResponse:
         err = middleware.before_response_sync()
         if isinstance(err, Exception):
@@ -493,8 +496,8 @@ class CommHandler:
 
     def _validate_registration(
         self,
-        server_kind: const.ServerKind | None,
-    ) -> CommResponse | None:
+        server_kind: typing.Optional[const.ServerKind],
+    ) -> typing.Optional[CommResponse]:
         if server_kind is not None and server_kind != self._mode:
             msg: str
             if server_kind == const.ServerKind.DEV_SERVER:

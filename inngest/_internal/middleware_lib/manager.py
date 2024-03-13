@@ -23,20 +23,20 @@ _mismatched_sync = errors.AsyncUnsupportedError(
     "encountered async middleware in non-async context"
 )
 
-DEFAULT_CLIENT_MIDDLEWARE: list[type[Middleware | MiddlewareSync]] = [
-    LoggerMiddleware
-]
+DEFAULT_CLIENT_MIDDLEWARE: list[
+    type[typing.Union[Middleware, MiddlewareSync]]
+] = [LoggerMiddleware]
 
 
 class MiddlewareManager:
     @property
-    def middleware(self) -> list[Middleware | MiddlewareSync]:
+    def middleware(self) -> list[typing.Union[Middleware, MiddlewareSync]]:
         return [*self._middleware]
 
     def __init__(self, client: client_lib.Inngest) -> None:
         self.client = client
         self._disabled_hooks = set[str]()
-        self._middleware = list[Middleware | MiddlewareSync]()
+        self._middleware = list[typing.Union[Middleware, MiddlewareSync]]()
 
     @classmethod
     def from_client(cls, client: client_lib.Inngest) -> MiddlewareManager:
@@ -65,7 +65,9 @@ class MiddlewareManager:
             new_mgr._middleware = [*new_mgr._middleware, m]
         return new_mgr
 
-    def add(self, middleware: type[Middleware | MiddlewareSync]) -> None:
+    def add(
+        self, middleware: type[typing.Union[Middleware, MiddlewareSync]]
+    ) -> None:
         self._middleware = [*self._middleware, middleware(self.client)]
 
     async def after_execution(self) -> types.MaybeError[None]:
@@ -166,8 +168,8 @@ class MiddlewareManager:
 
     async def transform_output(
         self,
-        output: execution.Output | None,
-    ) -> types.MaybeError[execution.Output | None]:
+        output: typing.Optional[execution.Output],
+    ) -> types.MaybeError[typing.Optional[execution.Output]]:
         # Nothing to transform
         if output is None:
             return None
@@ -183,8 +185,8 @@ class MiddlewareManager:
 
     def transform_output_sync(
         self,
-        output: execution.Output | None,
-    ) -> types.MaybeError[execution.Output | None]:
+        output: typing.Optional[execution.Output],
+    ) -> types.MaybeError[typing.Optional[execution.Output]]:
         # Nothing to transform
         if output is None:
             return None

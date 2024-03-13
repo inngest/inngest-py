@@ -4,6 +4,7 @@ Wait for event times out if its expression isn't matched
 
 import datetime
 import time
+import typing
 
 import inngest
 import tests.helper
@@ -14,7 +15,7 @@ _TEST_NAME = "wait_for_event_timeout_if_exp_not_match"
 
 
 class _State(base.BaseState):
-    result: inngest.Event | None | str = "not_set"
+    result: typing.Union[inngest.Event, None, str] = "not_set"
 
 
 def create(

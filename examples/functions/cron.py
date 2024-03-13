@@ -1,8 +1,9 @@
 import os
+import typing
 
 import inngest
 
-trigger: inngest.TriggerCron | inngest.TriggerEvent
+trigger: typing.Union[inngest.TriggerCron, inngest.TriggerEvent]
 if os.getenv("ENABLE_CRONS") == "1":
     trigger = inngest.TriggerCron(cron="* * * * *")
 else:

@@ -18,13 +18,13 @@ class _BaseConfig(types.BaseModel):
 
 class Batch(_BaseConfig):
     max_size: int = pydantic.Field(..., serialization_alias="maxSize")
-    timeout: int | datetime.timedelta | None = None
+    timeout: typing.Union[int, datetime.timedelta, None] = None
 
     @pydantic.field_serializer("timeout")
     def serialize_timeout(
         self,
-        value: int | datetime.timedelta | None,
-    ) -> str | None:
+        value: typing.Union[int, datetime.timedelta, None],
+    ) -> typing.Optional[str]:
         if value is None:
             return None
         out = transforms.to_duration_str(value)
@@ -35,14 +35,16 @@ class Batch(_BaseConfig):
 
 class Cancel(_BaseConfig):
     event: str
-    if_exp: str | None = pydantic.Field(default=None, serialization_alias="if")
-    timeout: int | datetime.timedelta | None = None
+    if_exp: typing.Optional[str] = pydantic.Field(
+        default=None, serialization_alias="if"
+    )
+    timeout: typing.Union[int, datetime.timedelta, None] = None
 
     @pydantic.field_serializer("timeout")
     def serialize_timeout(
         self,
-        value: int | datetime.timedelta | None,
-    ) -> str | None:
+        value: typing.Union[int, datetime.timedelta, None],
+    ) -> typing.Optional[str]:
         if value is None:
             return None
         out = transforms.to_duration_str(value)
@@ -52,20 +54,20 @@ class Cancel(_BaseConfig):
 
 
 class Concurrency(_BaseConfig):
-    key: str | None = None
+    key: typing.Optional[str] = None
     limit: int
-    scope: typing.Literal["account", "env", "fn"] | None = None
+    scope: typing.Optional[typing.Literal["account", "env", "fn"]] = None
 
 
 class Debounce(_BaseConfig):
-    key: str | None = None
-    period: int | datetime.timedelta
+    key: typing.Optional[str] = None
+    period: typing.Union[int, datetime.timedelta]
 
     @pydantic.field_serializer("period")
     def serialize_period(
         self,
-        value: int | datetime.timedelta | None,
-    ) -> str | None:
+        value: typing.Union[int, datetime.timedelta, None],
+    ) -> typing.Optional[str]:
         if value is None:
             return None
         out = transforms.to_duration_str(value)
@@ -75,32 +77,32 @@ class Debounce(_BaseConfig):
 
 
 class FunctionConfig(_BaseConfig):
-    batch_events: Batch | None = pydantic.Field(
+    batch_events: typing.Optional[Batch] = pydantic.Field(
         default=None, serialization_alias="batchEvents"
     )
-    cancel: list[Cancel] | None = None
-    concurrency: list[Concurrency] | None = None
-    debounce: Debounce | None = None
+    cancel: typing.Optional[list[Cancel]] = None
+    concurrency: typing.Optional[list[Concurrency]] = None
+    debounce: typing.Optional[Debounce] = None
     id: str
-    name: str | None = None
-    rate_limit: RateLimit | None = pydantic.Field(
+    name: typing.Optional[str] = None
+    rate_limit: typing.Optional[RateLimit] = pydantic.Field(
         default=None, serialization_alias="rateLimit"
     )
     steps: dict[str, Step]
-    throttle: Throttle | None = None
-    triggers: list[TriggerCron | TriggerEvent]
+    throttle: typing.Optional[Throttle] = None
+    triggers: list[typing.Union[TriggerCron, TriggerEvent]]
 
 
 class RateLimit(_BaseConfig):
-    key: str | None = None
+    key: typing.Optional[str] = None
     limit: int
-    period: int | datetime.timedelta
+    period: typing.Union[int, datetime.timedelta]
 
     @pydantic.field_serializer("period")
     def serialize_period(
         self,
-        value: int | datetime.timedelta | None,
-    ) -> str | None:
+        value: typing.Union[int, datetime.timedelta, None],
+    ) -> typing.Optional[str]:
         if value is None:
             return None
         out = transforms.to_duration_str(value)
@@ -121,20 +123,20 @@ class Runtime(_BaseConfig):
 class Step(_BaseConfig):
     id: str
     name: str
-    retries: Retries | None = None
+    retries: typing.Optional[Retries] = None
     runtime: Runtime
 
 
 class Throttle(_BaseConfig):
-    key: str | None = None
+    key: typing.Optional[str] = None
     count: int
-    period: int | datetime.timedelta
+    period: typing.Union[int, datetime.timedelta]
 
     @pydantic.field_serializer("period")
     def serialize_period(
         self,
-        value: int | datetime.timedelta | None,
-    ) -> str | None:
+        value: typing.Union[int, datetime.timedelta, None],
+    ) -> typing.Optional[str]:
         if value is None:
             return None
         out = transforms.to_duration_str(value)
@@ -149,4 +151,4 @@ class TriggerCron(_BaseConfig):
 
 class TriggerEvent(_BaseConfig):
     event: str
-    expression: str | None = None
+    expression: typing.Optional[str] = None
