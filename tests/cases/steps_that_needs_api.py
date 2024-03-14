@@ -90,7 +90,6 @@ def create(
         await step.parallel(tuple(steps))
 
     def run_test(self: base.TestClass) -> None:
-        print("yo")
         self.client.send_sync(inngest.Event(name=event_name))
 
         run_id = state.wait_for_run_id()
