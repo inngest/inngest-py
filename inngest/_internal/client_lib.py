@@ -16,6 +16,7 @@ from . import (
     function,
     function_config,
     net,
+    transforms,
     types,
 )
 
@@ -266,6 +267,53 @@ class Inngest:
             )
 
         return decorator
+
+    async def _get_batch(self, run_id: str) -> list[event_lib.Event]:
+        """
+        Fetch a batch of events from the API
+        """
+
+        url = urllib.parse.urljoin(
+            self._api_origin,
+            f"/v0/runs/{run_id}/batch",
+        )
+
+        headers = {}
+        if self._signing_key:
+            headers[
+                "Authorization"
+            ] = f"Bearer {transforms.hash_signing_key(self._signing_key)}"
+
+        async with httpx.AsyncClient() as client:
+            res = await client.get(url, headers=headers)
+
+        events = []
+        for e in res.json():
+            events.append(event_lib.Event.model_validate(e))
+        return events
+
+    def _get_batch_sync(self, run_id: str) -> list[event_lib.Event]:
+        """
+        Fetch a batch of events from the API
+        """
+
+        url = urllib.parse.urljoin(
+            self._api_origin,
+            f"/v0/runs/{run_id}/batch",
+        )
+
+        headers = {}
+        if self._signing_key:
+            headers[
+                "Authorization"
+            ] = f"Bearer {transforms.hash_signing_key(self._signing_key)}"
+
+        res = httpx.get(url, headers=headers)
+
+        events = []
+        for e in res.json():
+            events.append(event_lib.Event.model_validate(e))
+        return events
 
     async def send(
         self,

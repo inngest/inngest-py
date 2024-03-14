@@ -12,8 +12,9 @@ from . import const, errors, event_lib, transforms, types
 class Call(types.BaseModel):
     ctx: CallContext
     event: event_lib.Event
-    events: list[event_lib.Event]
+    events: typing.Optional[list[event_lib.Event]] = None
     steps: dict[str, object]
+    use_api: bool
 
 
 class CallContext(types.BaseModel):

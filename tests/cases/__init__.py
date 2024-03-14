@@ -2,6 +2,7 @@ import inngest
 
 from . import (
     base,
+    batch_that_needs_api,
     cancel,
     change_step_error,
     client_middleware,
@@ -34,6 +35,7 @@ from . import (
 )
 
 _modules = (
+    batch_that_needs_api,
     cancel,
     change_step_error,
     client_middleware,
