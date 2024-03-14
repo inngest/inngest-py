@@ -159,18 +159,18 @@ class Function:
 
     async def call(  # noqa: C901
         self,
-        call: execution.Call,
         client: client_lib.Inngest,
         ctx: Context,
         fn_id: str,
         middleware: middleware_lib.MiddlewareManager,
+        steps: dict[str, object],
         target_hashed_id: typing.Optional[str],
     ) -> execution.CallResult:
         middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
         for m in self._middleware:
             middleware.add(m)
 
-        memos = step_lib.StepMemos.from_raw(call.steps)
+        memos = step_lib.StepMemos.from_raw(steps)
 
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
@@ -287,18 +287,18 @@ class Function:
 
     def call_sync(  # noqa: C901
         self,
-        call: execution.Call,
         client: client_lib.Inngest,
         ctx: Context,
         fn_id: str,
         middleware: middleware_lib.MiddlewareManager,
+        steps: dict[str, object],
         target_hashed_id: typing.Optional[str],
     ) -> execution.CallResult:
         middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
         for m in self._middleware:
             middleware.add(m)
 
-        memos = step_lib.StepMemos.from_raw(call.steps)
+        memos = step_lib.StepMemos.from_raw(steps)
 
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.

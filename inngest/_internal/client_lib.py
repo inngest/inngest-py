@@ -268,6 +268,33 @@ class Inngest:
 
         return decorator
 
+    async def _get(self, url: str) -> httpx.Response:
+        """
+        Perform an asynchronous HTTP GET request. Handles authn
+        """
+
+        headers = {}
+        if self._signing_key:
+            headers[
+                "Authorization"
+            ] = f"Bearer {transforms.hash_signing_key(self._signing_key)}"
+
+        async with httpx.AsyncClient() as client:
+            return await client.get(url, headers=headers)
+
+    def _get_sync(self, url: str) -> httpx.Response:
+        """
+        Perform a synchronous HTTP GET request. Handles authn
+        """
+
+        headers = {}
+        if self._signing_key:
+            headers[
+                "Authorization"
+            ] = f"Bearer {transforms.hash_signing_key(self._signing_key)}"
+
+        return httpx.get(url, headers=headers)
+
     async def _get_batch(self, run_id: str) -> list[event_lib.Event]:
         """
         Fetch a batch of events from the API
@@ -277,18 +304,12 @@ class Inngest:
             self._api_origin,
             f"/v0/runs/{run_id}/batch",
         )
-
-        headers = {}
-        if self._signing_key:
-            headers[
-                "Authorization"
-            ] = f"Bearer {transforms.hash_signing_key(self._signing_key)}"
-
-        async with httpx.AsyncClient() as client:
-            res = await client.get(url, headers=headers)
+        data = (await self._get(url)).json()
+        if not isinstance(data, list):
+            raise errors.BodyInvalidError("batch data is not an array")
 
         events = []
-        for e in res.json():
+        for e in data:
             events.append(event_lib.Event.model_validate(e))
         return events
 
@@ -301,19 +322,44 @@ class Inngest:
             self._api_origin,
             f"/v0/runs/{run_id}/batch",
         )
-
-        headers = {}
-        if self._signing_key:
-            headers[
-                "Authorization"
-            ] = f"Bearer {transforms.hash_signing_key(self._signing_key)}"
-
-        res = httpx.get(url, headers=headers)
+        data = self._get_sync(url).json()
+        if not isinstance(data, list):
+            raise errors.BodyInvalidError("batch data is not an array")
 
         events = []
-        for e in res.json():
+        for e in data:
             events.append(event_lib.Event.model_validate(e))
         return events
+
+    async def _get_steps(self, run_id: str) -> dict[str, object]:
+        """
+        Fetch memoized step data from the API
+        """
+
+        url = urllib.parse.urljoin(
+            self._api_origin,
+            f"/v0/runs/{run_id}/actions",
+        )
+        data = (await self._get(url)).json()
+        if not isinstance(data, dict):
+            raise errors.BodyInvalidError("step data is not an object")
+
+        return data
+
+    def _get_steps_sync(self, run_id: str) -> dict[str, object]:
+        """
+        Fetch memoized step data from the API
+        """
+
+        url = urllib.parse.urljoin(
+            self._api_origin,
+            f"/v0/runs/{run_id}/actions",
+        )
+        data = self._get_sync(url).json()
+        if not isinstance(data, dict):
+            raise errors.BodyInvalidError("step data is not an object")
+
+        return data
 
     async def send(
         self,
