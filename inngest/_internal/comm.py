@@ -274,8 +274,17 @@ class CommHandler:
                 middleware, Exception("events not in request")
             )
 
+        steps = call.steps
+        if call.use_api:
+            # Memoized step data is too large to fit in the request, so we need
+            # to fetch it from the API
+
+            try:
+                steps = await self._client._get_steps(call.ctx.run_id)
+            except Exception as err:
+                return await self._respond(middleware, err)
+
         call_res = await fn.call(
-            call,
             self._client,
             function.Context(
                 attempt=call.ctx.attempt,
@@ -286,6 +295,7 @@ class CommHandler:
             ),
             fn_id,
             middleware,
+            steps,
             target_step_id,
         )
 
@@ -335,8 +345,17 @@ class CommHandler:
                 middleware, Exception("events not in request")
             )
 
+        steps = call.steps
+        if call.use_api:
+            # Memoized step data is too large to fit in the request, so we need
+            # to fetch it from the API
+
+            try:
+                steps = self._client._get_steps_sync(call.ctx.run_id)
+            except Exception as err:
+                return self._respond_sync(middleware, err)
+
         call_res = fn.call_sync(
-            call,
             self._client,
             function.Context(
                 attempt=call.ctx.attempt,
@@ -347,6 +366,7 @@ class CommHandler:
             ),
             fn_id,
             middleware,
+            steps,
             target_step_id,
         )
 
