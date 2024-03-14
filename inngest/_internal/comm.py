@@ -257,13 +257,30 @@ class CommHandler:
         if isinstance(fn, Exception):
             return await self._respond(middleware, fn)
 
+        events = call.events
+        if call.use_api:
+            # Batch size is too large to fit in the request, so we need to fetch
+            # it from the API
+
+            try:
+                events = await self._client._get_batch(call.ctx.run_id)
+            except Exception as err:
+                return await self._respond(middleware, err)
+        elif events is None:
+            # Should be unreachable. The Executor should always either send the
+            # batch or tell the SDK to fetch the batch
+
+            return await self._respond(
+                middleware, Exception("events not in request")
+            )
+
         call_res = await fn.call(
             call,
             self._client,
             function.Context(
                 attempt=call.ctx.attempt,
                 event=call.event,
-                events=call.events,
+                events=events,
                 logger=self._client.logger,
                 run_id=call.ctx.run_id,
             ),
@@ -301,13 +318,30 @@ class CommHandler:
         if isinstance(fn, Exception):
             return self._respond_sync(middleware, fn)
 
+        events = call.events
+        if call.use_api:
+            # Batch size is too large to fit in the request, so we need to fetch
+            # it from the API
+
+            try:
+                events = self._client._get_batch_sync(call.ctx.run_id)
+            except Exception as err:
+                return self._respond_sync(middleware, err)
+        elif events is None:
+            # Should be unreachable. The Executor should always either send the
+            # batch or tell the SDK to fetch the batch
+
+            return self._respond_sync(
+                middleware, Exception("events not in request")
+            )
+
         call_res = fn.call_sync(
             call,
             self._client,
             function.Context(
                 attempt=call.ctx.attempt,
                 event=call.event,
-                events=call.events,
+                events=events,
                 logger=self._client.logger,
                 run_id=call.ctx.run_id,
             ),
