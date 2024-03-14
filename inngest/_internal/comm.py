@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import http
 import os
 import typing
@@ -258,31 +259,26 @@ class CommHandler:
             return await self._respond(middleware, fn)
 
         events = call.events
+        steps = call.steps
         if call.use_api:
-            # Batch size is too large to fit in the request, so we need to fetch
-            # it from the API
+            # Putting the batch and memoized steps in the request would make it
+            # to big, so the Executor is telling the SDK to fetch them from the
+            # API
 
             try:
-                events = await self._client._get_batch(call.ctx.run_id)
+                events, steps = await asyncio.gather(
+                    self._client._get_batch(call.ctx.run_id),
+                    self._client._get_steps(call.ctx.run_id),
+                )
             except Exception as err:
                 return await self._respond(middleware, err)
-        elif events is None:
+        if events is None:
             # Should be unreachable. The Executor should always either send the
             # batch or tell the SDK to fetch the batch
 
             return await self._respond(
                 middleware, Exception("events not in request")
             )
-
-        steps = call.steps
-        if call.use_api:
-            # Memoized step data is too large to fit in the request, so we need
-            # to fetch it from the API
-
-            try:
-                steps = await self._client._get_steps(call.ctx.run_id)
-            except Exception as err:
-                return await self._respond(middleware, err)
 
         call_res = await fn.call(
             self._client,
@@ -329,31 +325,24 @@ class CommHandler:
             return self._respond_sync(middleware, fn)
 
         events = call.events
+        steps = call.steps
         if call.use_api:
-            # Batch size is too large to fit in the request, so we need to fetch
-            # it from the API
+            # Putting the batch and memoized steps in the request would make it
+            # to big, so the Executor is telling the SDK to fetch them from the
+            # API
 
             try:
                 events = self._client._get_batch_sync(call.ctx.run_id)
+                steps = self._client._get_steps_sync(call.ctx.run_id)
             except Exception as err:
                 return self._respond_sync(middleware, err)
-        elif events is None:
+        if events is None:
             # Should be unreachable. The Executor should always either send the
             # batch or tell the SDK to fetch the batch
 
             return self._respond_sync(
                 middleware, Exception("events not in request")
             )
-
-        steps = call.steps
-        if call.use_api:
-            # Memoized step data is too large to fit in the request, so we need
-            # to fetch it from the API
-
-            try:
-                steps = self._client._get_steps_sync(call.ctx.run_id)
-            except Exception as err:
-                return self._respond_sync(middleware, err)
 
         call_res = fn.call_sync(
             self._client,
