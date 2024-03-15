@@ -4,7 +4,6 @@ when using `async.gather`: a step is executed twice
 """
 
 import asyncio
-import typing
 
 import inngest
 import tests.helper
