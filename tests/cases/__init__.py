@@ -1,6 +1,7 @@
 import inngest
 
 from . import (
+    async_gather,
     base,
     batch_that_needs_api,
     cancel,
@@ -36,6 +37,7 @@ from . import (
 )
 
 _modules = (
+    async_gather,
     batch_that_needs_api,
     cancel,
     change_step_error,
