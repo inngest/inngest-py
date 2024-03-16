@@ -75,6 +75,7 @@ def create(
             tests.helper.RunStatus.COMPLETED,
         )
 
+        # If `async.gather` worked as expected, the counters would each be 1
         assert state.step_1a_counter + state.step_1b_counter == 3
 
     if is_sync:
