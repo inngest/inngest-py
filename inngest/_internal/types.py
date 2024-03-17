@@ -46,9 +46,10 @@ else:
             bool,
             int,
             float,
-            typing.Optional[str],
-            list["JSON"],
+            str,
             dict[str, "JSON"],
+            list["JSON"],
+            None,
         ],
     )
 
