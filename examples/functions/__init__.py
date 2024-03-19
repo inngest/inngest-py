@@ -7,6 +7,7 @@ from . import (
     debounce,
     duplicate_step_name,
     error_step,
+    invoke,
     no_steps,
     on_failure,
     parallel_steps,
@@ -20,6 +21,7 @@ from . import (
 def create_async_functions(client: inngest.Inngest) -> list[inngest.Function]:
     return [
         cron.create_async_function(client),
+        *invoke.create_async_functions(client),
         parallel_steps.create_async_function(client),
         print_event.create_async_function(client),
         two_steps_and_sleep.create_async_function(client),
@@ -34,6 +36,7 @@ def create_sync_functions(client: inngest.Inngest) -> list[inngest.Function]:
         debounce.create_sync_function(client),
         duplicate_step_name.create_sync_function(client),
         error_step.create_sync_function(client),
+        *invoke.create_sync_functions(client),
         no_steps.create_sync_function(client),
         on_failure.create_sync_function(client),
         parallel_steps.create_sync_function(client),
