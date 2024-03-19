@@ -254,7 +254,7 @@ class Inngest:
                     cancel=cancel,
                     concurrency=concurrency,
                     debounce=debounce,
-                    full_qualified_id=fully_qualified_fn_id,
+                    fully_qualified_id=fully_qualified_fn_id,
                     local_id=fn_id,
                     name=name or fn_id,
                     on_failure=on_failure,
