@@ -79,7 +79,13 @@ class FunctionOpts(types.BaseModel):
     cancel: typing.Optional[list[function_config.Cancel]] = None
     concurrency: typing.Optional[list[function_config.Concurrency]] = None
     debounce: typing.Optional[function_config.Debounce] = None
-    id: str
+
+    # Unique within an environment
+    fully_qualified_id: str
+
+    # Unique within an app
+    local_id: str
+
     name: str
     on_failure: typing.Union[
         FunctionHandlerAsync, FunctionHandlerSync, None
@@ -105,7 +111,7 @@ class Function:
 
     @property
     def id(self) -> str:
-        return self._opts.id
+        return self._opts.fully_qualified_id
 
     @property
     def is_handler_async(self) -> bool:
@@ -155,7 +161,7 @@ class Function:
         self._triggers = trigger if isinstance(trigger, list) else [trigger]
 
         if opts.on_failure is not None:
-            self._on_failure_fn_id = f"{opts.id}-failure"
+            self._on_failure_fn_id = f"{opts.fully_qualified_id}-failure"
 
     async def call(  # noqa: C901
         self,
@@ -394,7 +400,7 @@ class Function:
             return execution.CallError.from_error(err)
 
     def get_config(self, app_url: str) -> _Config:
-        fn_id = self._opts.id
+        fn_id = self._opts.fully_qualified_id
         name = self._opts.name
 
         if self._opts.retries is not None:
@@ -474,7 +480,7 @@ class Function:
         return _Config(main=main, on_failure=on_failure)
 
     def get_id(self) -> str:
-        return self._opts.id
+        return self._opts.fully_qualified_id
 
 
 class _UserError(Exception):

@@ -43,50 +43,13 @@ class Step(base.StepBase):
             v: Will become `event.v` in the invoked function.
         """
 
-        parsed_step_id = self._parse_step_id(step_id)
-
-        memo = await self._get_memo(parsed_step_id.hashed)
-        if not isinstance(memo, types.EmptySentinel):
-            if memo.error is not None:
-                cause = None
-                msg = "invoked function failed"
-                if isinstance(memo.error, dict):
-                    cause = {
-                        "message": memo.error.get("message"),
-                        "name": memo.error.get("name"),
-                        "stack": memo.error.get("stack"),
-                    }
-                    msg += f": {cause.get('message') or ''}"
-
-                # Invoked function failed so also fail the invoker.
-                raise errors.NonRetriableError(msg, cause)
-            return memo.data
-
-        self._handle_skip(parsed_step_id)
-
-        err = await self._middleware.before_execution()
-        if isinstance(err, Exception):
-            raise err
-
-        opts = base.InvokeOpts(
-            function_id=function.id,
-            payload=base.InvokeOptsPayload(
-                data=data,
-                user=user,
-                v=v,
-            ),
-        ).to_dict()
-        if isinstance(opts, Exception):
-            raise opts
-
-        raise base.ResponseInterrupt(
-            execution.StepResponse(
-                display_name=parsed_step_id.user_facing,
-                id=parsed_step_id.hashed,
-                name=parsed_step_id.user_facing,
-                op=execution.Opcode.INVOKE,
-                opts=opts,
-            )
+        return await self.invoke_by_id(
+            step_id,
+            app_id=self._client.app_id,
+            function_id=function._opts.local_id,
+            data=data,
+            user=user,
+            v=v,
         )
 
     async def invoke_by_id(
