@@ -155,7 +155,7 @@ def serve(
             for k, v in comm_res.headers.items():
                 self.add_header(k, v)
             for k, v in net.create_headers(
-                env=client._env,
+                env=client.env,
                 framework=FRAMEWORK,
                 server_kind=server_kind,
                 signing_key=None,

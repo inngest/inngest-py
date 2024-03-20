@@ -16,7 +16,6 @@ from . import (
     function,
     function_config,
     net,
-    transforms,
     types,
 )
 
@@ -40,6 +39,10 @@ class Inngest:
     @property
     def api_origin(self) -> str:
         return self._api_origin
+
+    @property
+    def env(self) -> typing.Optional[str]:
+        return self._env
 
     @property
     def event_api_origin(self) -> str:

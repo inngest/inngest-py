@@ -215,7 +215,7 @@ class CommHandler:
             return body
 
         headers = net.create_headers(
-            env=self._client._env,
+            env=self._client.env,
             framework=self._framework,
             server_kind=server_kind,
             signing_key=self._signing_key,
@@ -417,7 +417,7 @@ class CommHandler:
         return CommResponse(
             body={},
             headers=net.create_headers(
-                env=self._client._env,
+                env=self._client.env,
                 framework=self._framework,
                 server_kind=server_kind,
                 signing_key=None,
@@ -448,7 +448,7 @@ class CommHandler:
             return CommResponse(
                 body=server_res_body,
                 headers=net.create_headers(
-                    env=self._client._env,
+                    env=self._client.env,
                     framework=self._framework,
                     server_kind=server_kind,
                     signing_key=None,
