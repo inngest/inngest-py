@@ -163,6 +163,7 @@ class Inngest:
             env=self._env,
             framework=framework,
             server_kind=server_kind,
+            signing_key=None,
         )
 
         body = []
@@ -291,27 +292,31 @@ class Inngest:
         Perform an asynchronous HTTP GET request. Handles authn
         """
 
-        headers = {}
-        if self._signing_key:
-            headers[
-                "Authorization"
-            ] = f"Bearer {transforms.hash_signing_key(self._signing_key)}"
-
         async with httpx.AsyncClient() as client:
-            return await client.get(url, headers=headers)
+            return await client.get(
+                url,
+                headers=net.create_headers(
+                    env=self._env,
+                    framework=None,
+                    server_kind=None,
+                    signing_key=self._signing_key,
+                ),
+            )
 
     def _get_sync(self, url: str) -> httpx.Response:
         """
         Perform a synchronous HTTP GET request. Handles authn
         """
 
-        headers = {}
-        if self._signing_key:
-            headers[
-                "Authorization"
-            ] = f"Bearer {transforms.hash_signing_key(self._signing_key)}"
-
-        return httpx.get(url, headers=headers)
+        return httpx.get(
+            url,
+            headers=net.create_headers(
+                env=self._env,
+                framework=None,
+                server_kind=None,
+                signing_key=self._signing_key,
+            ),
+        )
 
     async def _get_batch(self, run_id: str) -> list[event_lib.Event]:
         """

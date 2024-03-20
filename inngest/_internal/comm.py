@@ -218,11 +218,8 @@ class CommHandler:
             env=self._client._env,
             framework=self._framework,
             server_kind=server_kind,
+            signing_key=self._signing_key,
         )
-        if self._signing_key:
-            headers[
-                "Authorization"
-            ] = f"Bearer {transforms.hash_signing_key(self._signing_key)}"
 
         return httpx.Client().build_request(
             "POST",
@@ -423,6 +420,7 @@ class CommHandler:
                 env=self._client._env,
                 framework=self._framework,
                 server_kind=server_kind,
+                signing_key=None,
             ),
             status_code=200,
         )
@@ -453,6 +451,7 @@ class CommHandler:
                     env=self._client._env,
                     framework=self._framework,
                     server_kind=server_kind,
+                    signing_key=None,
                 ),
                 status_code=http.HTTPStatus.OK,
             )

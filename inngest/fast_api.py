@@ -147,6 +147,7 @@ def _to_response(
                 env=client._env,
                 framework=FRAMEWORK,
                 server_kind=server_kind,
+                signing_key=None,
             ),
         },
         status_code=comm_res.status_code,

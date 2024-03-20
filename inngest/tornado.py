@@ -158,6 +158,7 @@ def serve(
                 env=client._env,
                 framework=FRAMEWORK,
                 server_kind=server_kind,
+                signing_key=None,
             ).items():
                 self.add_header(k, v)
 

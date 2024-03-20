@@ -14,6 +14,7 @@ def create_headers(
     env: typing.Optional[str],
     framework: typing.Optional[const.Framework],
     server_kind: typing.Optional[const.ServerKind],
+    signing_key: typing.Optional[str],
 ) -> dict[str, str]:
     """
     Create standard headers that should exist on every possible outgoing
@@ -32,6 +33,10 @@ def create_headers(
         headers[const.HeaderKey.FRAMEWORK.value] = framework.value
     if server_kind is not None:
         headers[const.HeaderKey.EXPECTED_SERVER_KIND.value] = server_kind.value
+    if signing_key is not None:
+        headers[
+            const.HeaderKey.AUTHORIZATION.value
+        ] = f"Bearer {transforms.hash_signing_key(signing_key)}"
 
     return headers
 

@@ -250,6 +250,7 @@ def _to_response(
                 env=client._env,
                 framework=FRAMEWORK,
                 server_kind=server_kind,
+                signing_key=None,
             ),
         },
         response=body.encode("utf-8"),
