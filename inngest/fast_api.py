@@ -13,7 +13,6 @@ from ._internal import (
     function,
     net,
     transforms,
-    types,
 )
 
 FRAMEWORK = const.Framework.FAST_API
@@ -60,7 +59,7 @@ def serve(
             server_kind = None
 
         return _to_response(
-            client.logger,
+            client,
             handler.inspect(server_kind),
             server_kind,
         )
@@ -82,13 +81,13 @@ def serve(
         call = execution.Call.from_raw(json.loads(body))
         if isinstance(call, Exception):
             return _to_response(
-                client.logger,
+                client,
                 comm.CommResponse.from_error(client.logger, call),
                 server_kind,
             )
 
         return _to_response(
-            client.logger,
+            client,
             await handler.call_function(
                 call=call,
                 fn_id=fnId,
@@ -116,7 +115,7 @@ def serve(
         sync_id = request.query_params.get(const.QueryParamKey.SYNC_ID.value)
 
         return _to_response(
-            client.logger,
+            client,
             await handler.register(
                 app_url=net.create_serve_url(
                     request_url=str(request.url),
@@ -131,20 +130,24 @@ def serve(
 
 
 def _to_response(
-    logger: types.Logger,
+    client: client_lib.Inngest,
     comm_res: comm.CommResponse,
     server_kind: typing.Union[const.ServerKind, None],
 ) -> fastapi.responses.Response:
     body = transforms.dump_json(comm_res.body)
     if isinstance(body, Exception):
-        comm_res = comm.CommResponse.from_error(logger, body)
+        comm_res = comm.CommResponse.from_error(client.logger, body)
         body = json.dumps(comm_res.body)
 
     return fastapi.responses.Response(
         content=body.encode("utf-8"),
         headers={
             **comm_res.headers,
-            **net.create_headers(FRAMEWORK, server_kind),
+            **net.create_headers(
+                env=client._env,
+                framework=FRAMEWORK,
+                server_kind=server_kind,
+            ),
         },
         status_code=comm_res.status_code,
     )

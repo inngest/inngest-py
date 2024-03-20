@@ -154,7 +154,11 @@ def serve(
 
             for k, v in comm_res.headers.items():
                 self.add_header(k, v)
-            for k, v in net.create_headers(FRAMEWORK, server_kind).items():
+            for k, v in net.create_headers(
+                env=client._env,
+                framework=FRAMEWORK,
+                server_kind=server_kind,
+            ).items():
                 self.add_header(k, v)
 
             self.set_status(comm_res.status_code)

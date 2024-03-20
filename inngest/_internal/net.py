@@ -10,6 +10,8 @@ Method = typing.Literal["GET", "POST"]
 
 
 def create_headers(
+    *,
+    env: typing.Optional[str],
     framework: typing.Optional[const.Framework],
     server_kind: typing.Optional[const.ServerKind],
 ) -> dict[str, str]:
@@ -24,6 +26,8 @@ def create_headers(
         const.HeaderKey.USER_AGENT.value: f"inngest-{const.LANGUAGE}:v{const.VERSION}",
     }
 
+    if env is not None:
+        headers[const.HeaderKey.ENV.value] = env
     if framework is not None:
         headers[const.HeaderKey.FRAMEWORK.value] = framework.value
     if server_kind is not None:

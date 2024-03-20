@@ -14,6 +14,7 @@ class EnvKey(enum.Enum):
     DEV = "INNGEST_DEV"
     EVENT_API_BASE_URL = "INNGEST_EVENT_API_BASE_URL"
     EVENT_KEY = "INNGEST_EVENT_KEY"
+    ENV = "INNGEST_ENV"
     SERVE_ORIGIN = "INNGEST_SERVE_ORIGIN"
     SERVE_PATH = "INNGEST_SERVE_PATH"
     SIGNING_KEY = "INNGEST_SIGNING_KEY"
@@ -48,6 +49,7 @@ class Framework(enum.Enum):
 
 class HeaderKey(enum.Enum):
     CONTENT_TYPE = "Content-Type"
+    ENV = "X-Inngest-Env"
     EXPECTED_SERVER_KIND = "X-Inngest-Expected-Server-Kind"
     FRAMEWORK = "X-Inngest-Framework"
     NO_RETRY = "X-Inngest-No-Retry"

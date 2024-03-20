@@ -58,6 +58,7 @@ class Inngest:
         *,
         api_base_url: typing.Optional[str] = None,
         app_id: str,
+        env: typing.Optional[str] = None,
         event_api_base_url: typing.Optional[str] = None,
         event_key: typing.Optional[str] = None,
         is_production: typing.Optional[bool] = None,
@@ -79,6 +80,8 @@ class Inngest:
             api_base_url: Origin for the Inngest REST API.
             app_id: Unique Inngest ID. Changing this ID will make Inngest think
                 it's a different app.
+            env: Branch environment to use. This is only necessary for branch
+                environments.
             event_api_base_url: Origin for the Inngest Event API.
             event_key: Inngest event key.
             is_production: Whether the app is in production. This affects
@@ -104,6 +107,16 @@ class Inngest:
         if self._signing_key is None and self._mode == const.ServerKind.CLOUD:
             raise errors.SigningKeyMissingError(
                 f"Signing key must be set when Cloud mode is enabled. If you don't want to use Cloud mode, set the {const.EnvKey.DEV.value} env var."
+            )
+
+        self._env = env or os.getenv(const.EnvKey.ENV.value)
+        if (
+            self._env is None
+            and self._signing_key is not None
+            and "branch" in self._signing_key
+        ):
+            self.logger.warning(
+                "Signing key is for a branch environment but no branch environment is specified. This may cause unexpected behavior"
             )
 
         api_origin = api_base_url or os.getenv(const.EnvKey.API_BASE_URL.value)
@@ -146,7 +159,11 @@ class Inngest:
         # do that.
         server_kind = None
 
-        headers = net.create_headers(framework, server_kind)
+        headers = net.create_headers(
+            env=self._env,
+            framework=framework,
+            server_kind=server_kind,
+        )
 
         body = []
         for event in events:

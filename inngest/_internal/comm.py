@@ -214,7 +214,11 @@ class CommHandler:
         if isinstance(body, Exception):
             return body
 
-        headers = net.create_headers(self._framework, server_kind)
+        headers = net.create_headers(
+            env=self._client._env,
+            framework=self._framework,
+            server_kind=server_kind,
+        )
         if self._signing_key:
             headers[
                 "Authorization"
@@ -415,7 +419,11 @@ class CommHandler:
 
         return CommResponse(
             body={},
-            headers=net.create_headers(self._framework, server_kind),
+            headers=net.create_headers(
+                env=self._client._env,
+                framework=self._framework,
+                server_kind=server_kind,
+            ),
             status_code=200,
         )
 
@@ -441,7 +449,11 @@ class CommHandler:
         if server_res.status_code < 400:
             return CommResponse(
                 body=server_res_body,
-                headers=net.create_headers(self._framework, server_kind),
+                headers=net.create_headers(
+                    env=self._client._env,
+                    framework=self._framework,
+                    server_kind=server_kind,
+                ),
                 status_code=http.HTTPStatus.OK,
             )
 
