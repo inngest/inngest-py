@@ -126,9 +126,10 @@ class TestRegistration(unittest.TestCase):
         assert isinstance(body, dict)
         assert body["code"] == const.ErrorCode.SERVER_KIND_MISMATCH.value
 
-    def test_cloud_sync(self) -> None:
+    def test_sync_to_cloud_branch_env(self) -> None:
         """
-        Test that the SDK correctly syncs itself with Cloud.
+        Test that the SDK correctly syncs itself with Cloud when using a branch
+        environment.
 
         We need to use a mock Cloud since the Dev Server doesn't have a mode
         that simulates Cloud.
@@ -163,7 +164,7 @@ class TestRegistration(unittest.TestCase):
             api_base_url=f"http://localhost:{mock_cloud.port}",
             app_id="my-app",
             env="my-env",
-            signing_key="signkey-prod-0486c9",
+            signing_key="signkey-branch-123abc",
         )
 
         @client.create_function(

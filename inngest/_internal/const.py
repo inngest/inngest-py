@@ -48,6 +48,7 @@ class Framework(enum.Enum):
 
 
 class HeaderKey(enum.Enum):
+    AUTHORIZATION = "Authorization"
     CONTENT_TYPE = "Content-Type"
     ENV = "X-Inngest-Env"
     EXPECTED_SERVER_KIND = "X-Inngest-Expected-Server-Kind"
