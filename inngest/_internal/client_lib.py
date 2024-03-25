@@ -10,7 +10,7 @@ import httpx
 
 from . import (
     const,
-    env,
+    env_lib,
     errors,
     event_lib,
     function,
@@ -112,7 +112,7 @@ class Inngest:
                 f"Signing key must be set when Cloud mode is enabled. If you don't want to use Cloud mode, set the {const.EnvKey.DEV.value} env var."
             )
 
-        self._env = env or os.getenv(const.EnvKey.ENV.value)
+        self._env = env or env_lib.get_environment_name()
         if (
             self._env is None
             and self._signing_key is not None
@@ -456,7 +456,7 @@ def _get_mode(
         logger.debug("Dev Server mode enabled by client argument")
         return const.ServerKind.DEV_SERVER
 
-    if env.is_true(const.EnvKey.DEV):
+    if env_lib.is_true(const.EnvKey.DEV):
         logger.debug(
             f"Dev Server mode enabled by {const.EnvKey.DEV.value} env var"
         )
