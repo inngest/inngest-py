@@ -20,6 +20,34 @@ class Test(unittest.TestCase):
             app_id="test",
         )
 
+    def test_env_env_var(self) -> None:
+        """
+        If INNGEST_ENV is set, it is used as the env
+        """
+
+        os.environ[const.EnvKey.ENV.value] = "my-env"
+        self.addCleanup(lambda: os.environ.pop(const.EnvKey.ENV.value))
+        client = client_lib.Inngest(
+            app_id="test",
+            signing_key="foo",
+        )
+        assert client.env == "my-env"
+
+    def test_env_param(self) -> None:
+        """
+        If the env param is set, it takes precedence over the INNGEST_ENV env
+        var
+        """
+
+        os.environ[const.EnvKey.ENV.value] = "my-env1"
+        self.addCleanup(lambda: os.environ.pop(const.EnvKey.ENV.value))
+        client = client_lib.Inngest(
+            app_id="test",
+            env="my-env2",
+            signing_key="foo",
+        )
+        assert client.env == "my-env2"
+
     def test_event_key_env_var(self) -> None:
         os.environ[const.EnvKey.EVENT_KEY.value] = "foo2"
         self.addCleanup(lambda: os.environ.pop(const.EnvKey.EVENT_KEY.value))

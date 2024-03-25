@@ -214,11 +214,12 @@ class CommHandler:
         if isinstance(body, Exception):
             return body
 
-        headers = net.create_headers(self._framework, server_kind)
-        if self._signing_key:
-            headers[
-                "Authorization"
-            ] = f"Bearer {transforms.hash_signing_key(self._signing_key)}"
+        headers = net.create_headers(
+            env=self._client.env,
+            framework=self._framework,
+            server_kind=server_kind,
+            signing_key=self._signing_key,
+        )
 
         return httpx.Client().build_request(
             "POST",
@@ -415,7 +416,12 @@ class CommHandler:
 
         return CommResponse(
             body={},
-            headers=net.create_headers(self._framework, server_kind),
+            headers=net.create_headers(
+                env=self._client.env,
+                framework=self._framework,
+                server_kind=server_kind,
+                signing_key=None,
+            ),
             status_code=200,
         )
 
@@ -441,7 +447,12 @@ class CommHandler:
         if server_res.status_code < 400:
             return CommResponse(
                 body=server_res_body,
-                headers=net.create_headers(self._framework, server_kind),
+                headers=net.create_headers(
+                    env=self._client.env,
+                    framework=self._framework,
+                    server_kind=server_kind,
+                    signing_key=None,
+                ),
                 status_code=http.HTTPStatus.OK,
             )
 

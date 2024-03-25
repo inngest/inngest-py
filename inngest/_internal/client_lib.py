@@ -10,13 +10,12 @@ import httpx
 
 from . import (
     const,
-    env,
+    env_lib,
     errors,
     event_lib,
     function,
     function_config,
     net,
-    transforms,
     types,
 )
 
@@ -42,6 +41,10 @@ class Inngest:
         return self._api_origin
 
     @property
+    def env(self) -> typing.Optional[str]:
+        return self._env
+
+    @property
     def event_api_origin(self) -> str:
         return self._event_api_origin
 
@@ -58,6 +61,7 @@ class Inngest:
         *,
         api_base_url: typing.Optional[str] = None,
         app_id: str,
+        env: typing.Optional[str] = None,
         event_api_base_url: typing.Optional[str] = None,
         event_key: typing.Optional[str] = None,
         is_production: typing.Optional[bool] = None,
@@ -79,6 +83,8 @@ class Inngest:
             api_base_url: Origin for the Inngest REST API.
             app_id: Unique Inngest ID. Changing this ID will make Inngest think
                 it's a different app.
+            env: Branch environment to use. This is only necessary for branch
+                environments.
             event_api_base_url: Origin for the Inngest Event API.
             event_key: Inngest event key.
             is_production: Whether the app is in production. This affects
@@ -104,6 +110,16 @@ class Inngest:
         if self._signing_key is None and self._mode == const.ServerKind.CLOUD:
             raise errors.SigningKeyMissingError(
                 f"Signing key must be set when Cloud mode is enabled. If you don't want to use Cloud mode, set the {const.EnvKey.DEV.value} env var."
+            )
+
+        self._env = env or env_lib.get_environment_name()
+        if (
+            self._env is None
+            and self._signing_key is not None
+            and "branch" in self._signing_key
+        ):
+            self.logger.warning(
+                "Signing key is for a branch environment but no branch environment is specified. This may cause unexpected behavior"
             )
 
         api_origin = api_base_url or os.getenv(const.EnvKey.API_BASE_URL.value)
@@ -146,7 +162,12 @@ class Inngest:
         # do that.
         server_kind = None
 
-        headers = net.create_headers(framework, server_kind)
+        headers = net.create_headers(
+            env=self._env,
+            framework=framework,
+            server_kind=server_kind,
+            signing_key=None,
+        )
 
         body = []
         for event in events:
@@ -274,27 +295,31 @@ class Inngest:
         Perform an asynchronous HTTP GET request. Handles authn
         """
 
-        headers = {}
-        if self._signing_key:
-            headers[
-                "Authorization"
-            ] = f"Bearer {transforms.hash_signing_key(self._signing_key)}"
-
         async with httpx.AsyncClient() as client:
-            return await client.get(url, headers=headers)
+            return await client.get(
+                url,
+                headers=net.create_headers(
+                    env=self._env,
+                    framework=None,
+                    server_kind=None,
+                    signing_key=self._signing_key,
+                ),
+            )
 
     def _get_sync(self, url: str) -> httpx.Response:
         """
         Perform a synchronous HTTP GET request. Handles authn
         """
 
-        headers = {}
-        if self._signing_key:
-            headers[
-                "Authorization"
-            ] = f"Bearer {transforms.hash_signing_key(self._signing_key)}"
-
-        return httpx.get(url, headers=headers)
+        return httpx.get(
+            url,
+            headers=net.create_headers(
+                env=self._env,
+                framework=None,
+                server_kind=None,
+                signing_key=self._signing_key,
+            ),
+        )
 
     async def _get_batch(self, run_id: str) -> list[event_lib.Event]:
         """
@@ -431,7 +456,7 @@ def _get_mode(
         logger.debug("Dev Server mode enabled by client argument")
         return const.ServerKind.DEV_SERVER
 
-    if env.is_true(const.EnvKey.DEV):
+    if env_lib.is_true(const.EnvKey.DEV):
         logger.debug(
             f"Dev Server mode enabled by {const.EnvKey.DEV.value} env var"
         )

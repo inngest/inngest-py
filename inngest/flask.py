@@ -14,7 +14,6 @@ from ._internal import (
     function,
     net,
     transforms,
-    types,
 )
 
 FRAMEWORK = const.Framework.FLASK
@@ -90,7 +89,7 @@ def _create_handler_async(
 
         if flask.request.method == "GET":
             return _to_response(
-                client.logger,
+                client,
                 handler.inspect(server_kind),
                 server_kind,
             )
@@ -113,13 +112,13 @@ def _create_handler_async(
             call = execution.Call.from_raw(json.loads(flask.request.data))
             if isinstance(call, Exception):
                 return _to_response(
-                    client.logger,
+                    client,
                     comm.CommResponse.from_error(client.logger, call),
                     server_kind,
                 )
 
             return _to_response(
-                client.logger,
+                client,
                 await handler.call_function(
                     call=call,
                     fn_id=fn_id,
@@ -135,7 +134,7 @@ def _create_handler_async(
 
         if flask.request.method == "PUT":
             return _to_response(
-                client.logger,
+                client,
                 await handler.register(
                     app_url=net.create_serve_url(
                         request_url=flask.request.url,
@@ -170,7 +169,7 @@ def _create_handler_sync(
 
         if flask.request.method == "GET":
             return _to_response(
-                client.logger,
+                client,
                 handler.inspect(server_kind),
                 server_kind,
             )
@@ -193,13 +192,13 @@ def _create_handler_sync(
             call = execution.Call.from_raw(json.loads(flask.request.data))
             if isinstance(call, Exception):
                 return _to_response(
-                    client.logger,
+                    client,
                     comm.CommResponse.from_error(client.logger, call),
                     server_kind,
                 )
 
             return _to_response(
-                client.logger,
+                client,
                 handler.call_function_sync(
                     call=call,
                     fn_id=fn_id,
@@ -217,7 +216,7 @@ def _create_handler_sync(
             sync_id = flask.request.args.get(const.QueryParamKey.SYNC_ID.value)
 
             return _to_response(
-                client.logger,
+                client,
                 handler.register_sync(
                     app_url=net.create_serve_url(
                         request_url=flask.request.url,
@@ -235,19 +234,24 @@ def _create_handler_sync(
 
 
 def _to_response(
-    logger: types.Logger,
+    client: client_lib.Inngest,
     comm_res: comm.CommResponse,
     server_kind: typing.Optional[const.ServerKind],
 ) -> flask.Response:
     body = transforms.dump_json(comm_res.body)
     if isinstance(body, Exception):
-        comm_res = comm.CommResponse.from_error(logger, body)
+        comm_res = comm.CommResponse.from_error(client.logger, body)
         body = json.dumps(comm_res.body)
 
     return flask.Response(
         headers={
             **comm_res.headers,
-            **net.create_headers(FRAMEWORK, server_kind),
+            **net.create_headers(
+                env=client.env,
+                framework=FRAMEWORK,
+                server_kind=server_kind,
+                signing_key=None,
+            ),
         },
         response=body.encode("utf-8"),
         status=comm_res.status_code,
