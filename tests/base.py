@@ -44,4 +44,3 @@ def set_up(case: _FrameworkTestCase) -> None:
 
 def tear_down(case: _FrameworkTestCase) -> None:
     case.proxy.stop()
-    case.proxy.stop()
