@@ -6,10 +6,11 @@ import unittest
 import flask
 import flask.logging
 import flask.testing
+import pytest
 
 import inngest
 import inngest.flask
-from inngest._internal import const
+from inngest._internal import const, errors
 
 from . import base, cases, dev_server, http_proxy, net
 
@@ -32,7 +33,7 @@ for case in _cases:
         _fns.append(case.fn)
 
 
-class TestFlask(unittest.TestCase):
+class TestFunctions(unittest.TestCase):
     app: flask.testing.FlaskClient
     client: inngest.Inngest
     dev_server_port: int
@@ -83,7 +84,31 @@ class TestFlask(unittest.TestCase):
 
 for case in _cases:
     test_name = f"test_{case.name}"
-    setattr(TestFlask, test_name, case.run_test)
+    setattr(TestFunctions, test_name, case.run_test)
+
+
+class TestServe(unittest.TestCase):
+    def test_cloud_mode_without_signing_key(self) -> None:
+        """
+        When in Cloud mode but no signing key, raise an error.
+
+        This test isn't needed for every framework since it's testing logic in
+        CommHandler
+        """
+
+        app = flask.Flask(__name__)
+        client = inngest.Inngest(app_id="client")
+
+        @client.create_function(
+            fn_id="fn",
+            trigger=inngest.TriggerEvent(event="event"),
+        )
+        def fn(ctx: inngest.Context, step: inngest.StepSync) -> None:
+            pass
+
+        with pytest.raises(Exception) as err:
+            inngest.flask.serve(app, client, [fn])
+        assert isinstance(err.value, errors.SigningKeyMissingError)
 
 
 class TestRegistration(unittest.TestCase):
