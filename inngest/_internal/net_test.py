@@ -91,33 +91,101 @@ class Test_create_serve_url(unittest.TestCase):
         assert actual == expected
 
 
-def test_success() -> None:
-    body = json.dumps({"msg": "hi"}).encode("utf-8")
-    signing_key = "super-secret"
-    unix_ms = round(time.time() * 1000)
-    sig = _sign(body, signing_key, unix_ms)
-    headers = {
-        const.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
-    }
+class Test_RequestSignature(unittest.TestCase):
+    def test_success(self) -> None:
+        body = json.dumps({"msg": "hi"}).encode("utf-8")
+        signing_key = "super-secret"
+        unix_ms = round(time.time() * 1000)
+        sig = _sign(body, signing_key, unix_ms)
+        headers = {
+            const.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
+        }
 
-    req_sig = net.RequestSignature(body, headers, mode=const.ServerKind.CLOUD)
-    assert not isinstance(req_sig.validate(signing_key), Exception)
+        req_sig = net.RequestSignature(
+            body, headers, mode=const.ServerKind.CLOUD
+        )
+        assert not isinstance(
+            req_sig.validate(
+                signing_key=signing_key,
+                signing_key_rotated=None,
+            ),
+            Exception,
+        )
 
+    def test_body_tamper(self) -> None:
+        """
+        Validation fails if the body is changed after signature creation
+        """
 
-def test_body_tamper() -> None:
-    body = json.dumps({"msg": "bar"}).encode("utf-8")
-    signing_key = "super-secret"
-    unix_ms = round(time.time() * 1000)
-    sig = _sign(body, signing_key, unix_ms)
-    headers = {
-        const.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
-    }
+        body = json.dumps({"msg": "bar"}).encode("utf-8")
+        signing_key = "super-secret"
+        unix_ms = round(time.time() * 1000)
+        sig = _sign(body, signing_key, unix_ms)
+        headers = {
+            const.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
+        }
 
-    body = json.dumps({"msg": "you've been hacked"}).encode("utf-8")
-    req_sig = net.RequestSignature(body, headers, mode=const.ServerKind.CLOUD)
+        body = json.dumps({"msg": "you've been hacked"}).encode("utf-8")
+        req_sig = net.RequestSignature(
+            body, headers, mode=const.ServerKind.CLOUD
+        )
 
-    validation = req_sig.validate(signing_key)
-    assert isinstance(validation, errors.SigVerificationFailedError)
+        validation = req_sig.validate(
+            signing_key=signing_key,
+            signing_key_rotated=None,
+        )
+        assert isinstance(validation, errors.SigVerificationFailedError)
+
+    def test_rotation(self) -> None:
+        """
+        Validation succeeds if the primary signing key fails but the rotated
+        signing key succeeds
+        """
+
+        body = json.dumps({"msg": "hi"}).encode("utf-8")
+        signing_key = "super-secret"
+        signing_key_rotated = "super-secret-rotated"
+        unix_ms = round(time.time() * 1000)
+        sig = _sign(body, signing_key_rotated, unix_ms)
+        headers = {
+            const.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
+        }
+
+        req_sig = net.RequestSignature(
+            body, headers, mode=const.ServerKind.CLOUD
+        )
+        assert not isinstance(
+            req_sig.validate(
+                signing_key=signing_key,
+                signing_key_rotated=signing_key_rotated,
+            ),
+            Exception,
+        )
+
+    def test_fails_for_both_signing_keys(self) -> None:
+        """
+        Validation fails after trying both the signing keys
+        """
+
+        body = json.dumps({"msg": "hi"}).encode("utf-8")
+        signing_key = "super-secret"
+        signing_key_rotated = "super-secret-rotated"
+        unix_ms = round(time.time() * 1000)
+        sig = _sign(body, "something-else", unix_ms)
+        headers = {
+            const.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
+        }
+
+        req_sig = net.RequestSignature(
+            body, headers, mode=const.ServerKind.CLOUD
+        )
+        assert isinstance(
+            req_sig.validate(
+                signing_key=signing_key,
+                signing_key_rotated=signing_key_rotated,
+            ),
+            Exception,
+        )
 
 
 def _sign(body: bytes, signing_key: str, unix_ms: int) -> str:

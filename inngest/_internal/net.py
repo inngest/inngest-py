@@ -132,8 +132,9 @@ class RequestSignature:
             if "s" in parsed:
                 self._signature = parsed["s"][0]
 
-    def validate(
-        self, signing_key: typing.Optional[str]
+    def _validate(
+        self,
+        signing_key: typing.Optional[str],
     ) -> types.MaybeError[None]:
         if self._mode == const.ServerKind.DEV_SERVER:
             return None
@@ -158,3 +159,28 @@ class RequestSignature:
             return errors.SigVerificationFailedError()
 
         return None
+
+    def validate(
+        self,
+        *,
+        signing_key: typing.Optional[str],
+        signing_key_rotated: typing.Optional[str],
+    ) -> types.MaybeError[None]:
+        """
+        Validate the request signature. Falls back to the rotated signing key if
+        signature validation fails with the primary signing key.
+
+        Args:
+        ----
+            signing_key: The primary signing key.
+            signing_key_rotated: The rotated signing key.
+        """
+
+        err = self._validate(signing_key)
+        if err is not None and signing_key_rotated is not None:
+            # If the signature validation failed but there's a "rotated" signing
+            # key, then assume that the signing key was rotated. Attempt to
+            # validate the signature with the rotated key
+            err = self._validate(signing_key_rotated)
+
+        return err

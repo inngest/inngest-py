@@ -147,6 +147,7 @@ class CommHandler:
     _framework: const.Framework
     _mode: const.ServerKind
     _signing_key: typing.Optional[str]
+    _signing_key_rotated: typing.Optional[str]
 
     def __init__(
         self,
@@ -155,7 +156,6 @@ class CommHandler:
         client: client_lib.Inngest,
         framework: const.Framework,
         functions: list[function.Function],
-        signing_key: typing.Optional[str] = None,
     ) -> None:
         self._client = client
 
@@ -178,6 +178,7 @@ class CommHandler:
         self._fns = {fn.get_id(): fn for fn in functions}
         self._framework = framework
 
+        signing_key = client.signing_key
         if signing_key is None:
             if self._client.is_production:
                 signing_key = os.getenv(const.EnvKey.SIGNING_KEY.value)
@@ -185,6 +186,8 @@ class CommHandler:
                     self._client.logger.error("missing signing key")
                     raise errors.SigningKeyMissingError()
         self._signing_key = signing_key
+
+        self._signing_key_rotated = client.signing_key_rotated
 
     def _build_registration_request(
         self,
@@ -250,7 +253,10 @@ class CommHandler:
         middleware = middleware_lib.MiddlewareManager.from_client(self._client)
 
         # Validate the request signature.
-        err = req_sig.validate(self._signing_key)
+        err = req_sig.validate(
+            signing_key=self._signing_key,
+            signing_key_rotated=self._signing_key_rotated,
+        )
         if isinstance(err, Exception):
             return await self._respond(middleware, err)
 
@@ -316,7 +322,10 @@ class CommHandler:
         middleware = middleware_lib.MiddlewareManager.from_client(self._client)
 
         # Validate the request signature.
-        err = req_sig.validate(self._signing_key)
+        err = req_sig.validate(
+            signing_key=self._signing_key,
+            signing_key_rotated=self._signing_key_rotated,
+        )
         if isinstance(err, Exception):
             return self._respond_sync(middleware, err)
 

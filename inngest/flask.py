@@ -45,7 +45,6 @@ def serve(
         client=client,
         framework=FRAMEWORK,
         functions=functions,
-        signing_key=client.signing_key,
     )
 
     async_mode = any(
