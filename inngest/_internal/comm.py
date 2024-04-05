@@ -221,14 +221,16 @@ class CommHandler:
             signing_key=self._signing_key,
         )
 
+        params = {}
+        if sync_id is not None:
+            params[const.QueryParamKey.SYNC_ID.value] = sync_id
+
         return httpx.Client().build_request(
             "POST",
             registration_url,
             headers=headers,
             json=transforms.prep_body(body),
-            params={
-                const.QueryParamKey.SYNC_ID.value: sync_id,
-            },
+            params=params,
             timeout=30,
         )
 
@@ -405,7 +407,8 @@ class CommHandler:
         self, server_kind: typing.Optional[const.ServerKind]
     ) -> CommResponse:
         """Handle Dev Server's auto-discovery."""
-        if server_kind != self._mode:
+
+        if server_kind is not None and server_kind != self._mode:
             # Tell Dev Server to leave the app alone since it's in production
             # mode.
             return CommResponse(
@@ -414,8 +417,19 @@ class CommHandler:
                 status_code=403,
             )
 
+        body = _Inspection(
+            function_count=len(self._fns),
+            has_event_key=self._client.event_key is not None,
+            has_signing_key=self._signing_key is not None,
+            mode=self._mode,
+        ).to_dict()
+        if isinstance(body, Exception):
+            body = {
+                "error": "failed to serialize inspection data",
+            }
+
         return CommResponse(
-            body={},
+            body=body,
             headers=net.create_headers(
                 env=self._client.env,
                 framework=self._framework,
@@ -567,3 +581,10 @@ class CommHandler:
             )
 
         return None
+
+
+class _Inspection(types.BaseModel):
+    function_count: int
+    has_event_key: bool
+    has_signing_key: bool
+    mode: const.ServerKind
