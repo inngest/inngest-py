@@ -86,10 +86,16 @@ def _create_handler_sync(
             client.logger.error(server_kind)
             server_kind = None
 
+        req_sig = net.RequestSignature(
+            body=request.body,
+            headers=headers,
+            mode=client._mode,
+        )
+
         if request.method == "GET":
             return _to_response(
                 client,
-                handler.inspect(server_kind),
+                handler.inspect(server_kind, req_sig),
                 server_kind,
             )
 
@@ -119,11 +125,7 @@ def _create_handler_sync(
                 handler.call_function_sync(
                     call=call,
                     fn_id=fn_id,
-                    req_sig=net.RequestSignature(
-                        body=request.body,
-                        headers=headers,
-                        mode=client._mode,
-                    ),
+                    req_sig=req_sig,
                     target_hashed_id=step_id,
                 ),
                 server_kind,
@@ -174,10 +176,16 @@ def _create_handler_async(
             client.logger.error(server_kind)
             server_kind = None
 
+        req_sig = net.RequestSignature(
+            body=request.body,
+            headers=headers,
+            mode=client._mode,
+        )
+
         if request.method == "GET":
             return _to_response(
                 client,
-                handler.inspect(server_kind),
+                handler.inspect(server_kind, req_sig),
                 server_kind,
             )
 
@@ -207,11 +215,7 @@ def _create_handler_async(
                 await handler.call_function(
                     call=call,
                     fn_id=fn_id,
-                    req_sig=net.RequestSignature(
-                        body=request.body,
-                        headers=headers,
-                        mode=client._mode,
-                    ),
+                    req_sig=req_sig,
                     target_hashed_id=step_id,
                 ),
                 server_kind,

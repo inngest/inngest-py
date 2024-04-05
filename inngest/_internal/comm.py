@@ -414,7 +414,9 @@ class CommHandler:
         return configs
 
     def inspect(
-        self, server_kind: typing.Optional[const.ServerKind]
+        self,
+        server_kind: typing.Optional[const.ServerKind],
+        req_sig: net.RequestSignature,
     ) -> CommResponse:
         """Handle Dev Server's auto-discovery."""
 
@@ -427,19 +429,48 @@ class CommHandler:
                 status_code=403,
             )
 
-        body = _Inspection(
-            function_count=len(self._fns),
-            has_event_key=self._client.event_key is not None,
-            has_signing_key=self._signing_key is not None,
-            mode=self._mode,
-        ).to_dict()
+        # Validate the request signature.
+        err = req_sig.validate(
+            signing_key=self._signing_key,
+            signing_key_fallback=self._signing_key_fallback,
+        )
+        if isinstance(err, Exception):
+            body = _InsecureInspection(
+                function_count=len(self._fns),
+                has_event_key=self._client.event_key is not None,
+                has_signing_key=self._signing_key is not None,
+                mode=self._mode,
+            )
+        else:
+            signing_key_hash = (
+                transforms.hash_signing_key(self._signing_key)
+                if self._signing_key
+                else None
+            )
+
+            signing_key_fallback_hash = (
+                transforms.hash_signing_key(self._signing_key_fallback)
+                if self._signing_key_fallback
+                else None
+            )
+
+            body = _SecureInspection(
+                function_count=len(self._fns),
+                has_event_key=self._client.event_key is not None,
+                has_signing_key=self._signing_key is not None,
+                mode=self._mode,
+                signing_key_fallback_hash=signing_key_fallback_hash,
+                signing_key_hash=signing_key_hash,
+            )
+
+        body_json = body.to_dict()
         if isinstance(body, Exception):
-            body = {
+            body_json = {
                 "error": "failed to serialize inspection data",
             }
 
         return CommResponse(
-            body=body,
+            body=body_json,
             headers=net.create_headers(
                 env=self._client.env,
                 framework=self._framework,
@@ -629,8 +660,13 @@ class CommHandler:
         return None
 
 
-class _Inspection(types.BaseModel):
+class _InsecureInspection(types.BaseModel):
     function_count: int
     has_event_key: bool
     has_signing_key: bool
     mode: const.ServerKind
+
+
+class _SecureInspection(_InsecureInspection):
+    signing_key_fallback_hash: typing.Optional[str]
+    signing_key_hash: typing.Optional[str]

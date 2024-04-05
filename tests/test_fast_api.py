@@ -210,5 +210,47 @@ class TestRegistration(unittest.TestCase):
         ]
 
 
+class TestIntrospection(base.BaseTestIntrospection):
+    def _serve(self, client: inngest.Inngest) -> fastapi.testclient.TestClient:
+        app = fastapi.FastAPI()
+        inngest.fast_api.serve(
+            app,
+            client,
+            self.create_functions(client),
+        )
+        return fastapi.testclient.TestClient(app)
+
+    def test_insecure(self) -> None:
+        fast_api_client = self._serve(
+            inngest.Inngest(
+                app_id="test",
+                event_key="test",
+                signing_key=self.signing_key,
+            )
+        )
+        res = fast_api_client.get("/api/inngest")
+        assert res.status_code == 200
+        assert res.json() == self.expected_insecure_body
+
+    def test_secure(self) -> None:
+        self.set_signing_key_fallback_env_var()
+
+        fast_api_client = self._serve(
+            inngest.Inngest(
+                app_id="test",
+                event_key="test",
+                signing_key=self.signing_key,
+            )
+        )
+        res = fast_api_client.get(
+            "/api/inngest",
+            headers={
+                const.HeaderKey.SIGNATURE.value: self.create_signature(),
+            },
+        )
+        assert res.status_code == 200
+        assert res.json() == self.expected_secure_body
+
+
 if __name__ == "__main__":
     unittest.main()

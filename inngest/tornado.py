@@ -60,7 +60,13 @@ def serve(
                 client.logger.error(server_kind)
                 server_kind = None
 
-            comm_res = handler.inspect(server_kind)
+            req_sig = net.RequestSignature(
+                body=self.request.body,
+                headers=headers,
+                mode=client._mode,
+            )
+
+            comm_res = handler.inspect(server_kind, req_sig)
 
             self._write_comm_response(comm_res, server_kind)
 
@@ -92,6 +98,12 @@ def serve(
                 client.logger.error(server_kind)
                 server_kind = None
 
+            req_sig = net.RequestSignature(
+                body=self.request.body,
+                headers=headers,
+                mode=client._mode,
+            )
+
             call = execution.Call.from_raw(json.loads(self.request.body))
             if isinstance(call, Exception):
                 return self._write_comm_response(
@@ -102,11 +114,7 @@ def serve(
             comm_res = handler.call_function_sync(
                 call=call,
                 fn_id=fn_id,
-                req_sig=net.RequestSignature(
-                    body=self.request.body,
-                    headers=headers,
-                    mode=client._mode,
-                ),
+                req_sig=req_sig,
                 target_hashed_id=step_id,
             )
 
