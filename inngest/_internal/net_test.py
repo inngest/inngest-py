@@ -107,7 +107,7 @@ class Test_RequestSignature(unittest.TestCase):
         assert not isinstance(
             req_sig.validate(
                 signing_key=signing_key,
-                signing_key_rotated=None,
+                signing_key_fallback=None,
             ),
             Exception,
         )
@@ -132,21 +132,21 @@ class Test_RequestSignature(unittest.TestCase):
 
         validation = req_sig.validate(
             signing_key=signing_key,
-            signing_key_rotated=None,
+            signing_key_fallback=None,
         )
         assert isinstance(validation, errors.SigVerificationFailedError)
 
     def test_rotation(self) -> None:
         """
-        Validation succeeds if the primary signing key fails but the rotated
+        Validation succeeds if the primary signing key fails but the fallback
         signing key succeeds
         """
 
         body = json.dumps({"msg": "hi"}).encode("utf-8")
         signing_key = "super-secret"
-        signing_key_rotated = "super-secret-rotated"
+        signing_key_fallback = "super-secret-fallback"
         unix_ms = round(time.time() * 1000)
-        sig = _sign(body, signing_key_rotated, unix_ms)
+        sig = _sign(body, signing_key_fallback, unix_ms)
         headers = {
             const.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
         }
@@ -157,7 +157,7 @@ class Test_RequestSignature(unittest.TestCase):
         assert not isinstance(
             req_sig.validate(
                 signing_key=signing_key,
-                signing_key_rotated=signing_key_rotated,
+                signing_key_fallback=signing_key_fallback,
             ),
             Exception,
         )
@@ -169,7 +169,7 @@ class Test_RequestSignature(unittest.TestCase):
 
         body = json.dumps({"msg": "hi"}).encode("utf-8")
         signing_key = "super-secret"
-        signing_key_rotated = "super-secret-rotated"
+        signing_key_fallback = "super-secret-fallback"
         unix_ms = round(time.time() * 1000)
         sig = _sign(body, "something-else", unix_ms)
         headers = {
@@ -182,7 +182,7 @@ class Test_RequestSignature(unittest.TestCase):
         assert isinstance(
             req_sig.validate(
                 signing_key=signing_key,
-                signing_key_rotated=signing_key_rotated,
+                signing_key_fallback=signing_key_fallback,
             ),
             Exception,
         )

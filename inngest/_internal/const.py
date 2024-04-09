@@ -27,7 +27,7 @@ class EnvKey(enum.Enum):
     SERVE_ORIGIN = "INNGEST_SERVE_ORIGIN"
     SERVE_PATH = "INNGEST_SERVE_PATH"
     SIGNING_KEY = "INNGEST_SIGNING_KEY"
-    SIGNING_KEY_ROTATED = "INNGEST_SIGNING_KEY_ROTATED"
+    SIGNING_KEY_FALLBACK = "INNGEST_SIGNING_KEY_FALLBACK"
 
     # Vercel deployment's git branch
     # https://vercel.com/docs/concepts/projects/environment-variables/system-environment-variables#system-environment-variables

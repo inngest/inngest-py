@@ -147,7 +147,7 @@ class CommHandler:
     _framework: const.Framework
     _mode: const.ServerKind
     _signing_key: typing.Optional[str]
-    _signing_key_rotated: typing.Optional[str]
+    _signing_key_fallback: typing.Optional[str]
 
     def __init__(
         self,
@@ -187,7 +187,7 @@ class CommHandler:
                     raise errors.SigningKeyMissingError()
         self._signing_key = signing_key
 
-        self._signing_key_rotated = client.signing_key_rotated
+        self._signing_key_fallback = client.signing_key_fallback
 
     def _build_registration_request(
         self,
@@ -257,7 +257,7 @@ class CommHandler:
         # Validate the request signature.
         err = req_sig.validate(
             signing_key=self._signing_key,
-            signing_key_rotated=self._signing_key_rotated,
+            signing_key_fallback=self._signing_key_fallback,
         )
         if isinstance(err, Exception):
             return await self._respond(middleware, err)
@@ -326,7 +326,7 @@ class CommHandler:
         # Validate the request signature.
         err = req_sig.validate(
             signing_key=self._signing_key,
-            signing_key_rotated=self._signing_key_rotated,
+            signing_key_fallback=self._signing_key_fallback,
         )
         if isinstance(err, Exception):
             return self._respond_sync(middleware, err)

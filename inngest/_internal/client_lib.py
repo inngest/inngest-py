@@ -57,8 +57,8 @@ class Inngest:
         return self._signing_key
 
     @property
-    def signing_key_rotated(self) -> typing.Optional[str]:
-        return self._signing_key_rotated
+    def signing_key_fallback(self) -> typing.Optional[str]:
+        return self._signing_key_fallback
 
     def __init__(
         self,
@@ -116,8 +116,8 @@ class Inngest:
                 f"Signing key must be set when Cloud mode is enabled. If you don't want to use Cloud mode, set the {const.EnvKey.DEV.value} env var."
             )
 
-        self._signing_key_rotated = signing_key or os.getenv(
-            const.EnvKey.SIGNING_KEY_ROTATED.value
+        self._signing_key_fallback = signing_key or os.getenv(
+            const.EnvKey.SIGNING_KEY_FALLBACK.value
         )
 
         self._env = env or env_lib.get_environment_name()
