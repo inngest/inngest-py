@@ -179,8 +179,8 @@ class RequestSignature:
         err = self._validate(signing_key)
         if err is not None and signing_key_fallback is not None:
             # If the signature validation failed but there's a "fallback"
-            # signing key, then assume that the signing key was fallback.
-            # Attempt to validate the signature with the fallback key
+            # signing key, attempt to validate the signature with the fallback
+            # key
             err = self._validate(signing_key_fallback)
 
         return err
