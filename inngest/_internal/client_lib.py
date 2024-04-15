@@ -315,20 +315,23 @@ class Inngest:
                 ),
             )
 
-        if res.status_code != http.HTTPStatus.UNAUTHORIZED:
-            return res
+            if (
+                res.status_code
+                in (http.HTTPStatus.FORBIDDEN, http.HTTPStatus.UNAUTHORIZED)
+                and self._signing_key_fallback is not None
+            ):
+                # Retry with the fallback signing key
+                res = await client.get(
+                    url,
+                    headers=net.create_headers(
+                        env=self._env,
+                        framework=None,
+                        server_kind=None,
+                        signing_key=self._signing_key_fallback,
+                    ),
+                )
 
-        # Retry with the fallback signing key
-        async with httpx.AsyncClient() as client:
-            return await client.get(
-                url,
-                headers=net.create_headers(
-                    env=self._env,
-                    framework=None,
-                    server_kind=None,
-                    signing_key=self._signing_key_fallback,
-                ),
-            )
+            return res
 
     def _get_sync(self, url: str) -> httpx.Response:
         """
@@ -345,19 +348,23 @@ class Inngest:
             ),
         )
 
-        if res.status_code != http.HTTPStatus.UNAUTHORIZED:
-            return res
+        if (
+            res.status_code
+            in (http.HTTPStatus.FORBIDDEN, http.HTTPStatus.UNAUTHORIZED)
+            and self._signing_key_fallback is not None
+        ):
+            # Retry with the fallback signing key
+            res = httpx.get(
+                url,
+                headers=net.create_headers(
+                    env=self._env,
+                    framework=None,
+                    server_kind=None,
+                    signing_key=self._signing_key,
+                ),
+            )
 
-        # Retry with the fallback signing key
-        return httpx.get(
-            url,
-            headers=net.create_headers(
-                env=self._env,
-                framework=None,
-                server_kind=None,
-                signing_key=self._signing_key,
-            ),
-        )
+        return res
 
     async def _get_batch(self, run_id: str) -> list[event_lib.Event]:
         """

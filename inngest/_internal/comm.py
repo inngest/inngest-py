@@ -194,6 +194,7 @@ class CommHandler:
         *,
         app_url: str,
         server_kind: typing.Optional[const.ServerKind],
+        signing_key: typing.Optional[str],
         sync_id: typing.Optional[str],
     ) -> types.MaybeError[httpx.Request]:
         registration_url = urllib.parse.urljoin(
@@ -221,7 +222,7 @@ class CommHandler:
             env=self._client.env,
             framework=self._framework,
             server_kind=server_kind,
-            signing_key=self._signing_key,
+            signing_key=signing_key,
         )
 
         params = {}
@@ -498,21 +499,39 @@ class CommHandler:
     ) -> CommResponse:
         """Handle a registration call."""
 
-        res = self._validate_registration(server_kind)
-        if res is not None:
-            return res
+        comm_res = self._validate_registration(server_kind)
+        if comm_res is not None:
+            return comm_res
 
         async with httpx.AsyncClient() as client:
             req = self._build_registration_request(
                 app_url=app_url,
                 server_kind=server_kind,
+                signing_key=self._signing_key,
                 sync_id=sync_id,
             )
             if isinstance(req, Exception):
                 return CommResponse.from_error(self._client.logger, req)
+            res = await client.send(req)
+
+            if (
+                res.status_code
+                in (http.HTTPStatus.FORBIDDEN, http.HTTPStatus.UNAUTHORIZED)
+                and self._signing_key_fallback is not None
+            ):
+                # Retry with the fallback signing key
+                req = self._build_registration_request(
+                    app_url=app_url,
+                    server_kind=server_kind,
+                    signing_key=self._signing_key_fallback,
+                    sync_id=sync_id,
+                )
+                if isinstance(req, Exception):
+                    return CommResponse.from_error(self._client.logger, req)
+                res = await client.send(req)
 
             return self._parse_registration_response(
-                await client.send(req),
+                res,
                 server_kind,
             )
 
@@ -525,21 +544,39 @@ class CommHandler:
     ) -> CommResponse:
         """Handle a registration call."""
 
-        res = self._validate_registration(server_kind)
-        if res is not None:
-            return res
+        comm_res = self._validate_registration(server_kind)
+        if comm_res is not None:
+            return comm_res
 
         with httpx.Client() as client:
             req = self._build_registration_request(
                 app_url=app_url,
                 server_kind=server_kind,
+                signing_key=self._signing_key,
                 sync_id=sync_id,
             )
             if isinstance(req, Exception):
                 return CommResponse.from_error(self._client.logger, req)
+            res = client.send(req)
+
+            if (
+                res.status_code
+                in (http.HTTPStatus.FORBIDDEN, http.HTTPStatus.UNAUTHORIZED)
+                and self._signing_key_fallback is not None
+            ):
+                # Retry with the fallback signing key
+                req = self._build_registration_request(
+                    app_url=app_url,
+                    server_kind=server_kind,
+                    signing_key=self._signing_key_fallback,
+                    sync_id=sync_id,
+                )
+                if isinstance(req, Exception):
+                    return CommResponse.from_error(self._client.logger, req)
+                res = client.send(req)
 
             return self._parse_registration_response(
-                client.send(req),
+                res,
                 server_kind,
             )
 

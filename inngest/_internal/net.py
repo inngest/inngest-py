@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import http
 import os
 import typing
 import urllib.parse
