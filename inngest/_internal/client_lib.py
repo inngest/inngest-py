@@ -117,7 +117,7 @@ class Inngest:
                 f"Signing key must be set when Cloud mode is enabled. If you don't want to use Cloud mode, set the {const.EnvKey.DEV.value} env var."
             )
 
-        self._signing_key_fallback = signing_key or os.getenv(
+        self._signing_key_fallback = os.getenv(
             const.EnvKey.SIGNING_KEY_FALLBACK.value
         )
 
