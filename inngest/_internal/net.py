@@ -1,8 +1,11 @@
 import hashlib
 import hmac
+import http
 import os
 import typing
 import urllib.parse
+
+import httpx
 
 from . import const, errors, transforms, types
 
@@ -14,7 +17,6 @@ def create_headers(
     env: typing.Optional[str],
     framework: typing.Optional[const.Framework],
     server_kind: typing.Optional[const.ServerKind],
-    signing_key: typing.Optional[str],
 ) -> dict[str, str]:
     """
     Create standard headers that should exist on every possible outgoing
@@ -33,10 +35,6 @@ def create_headers(
         headers[const.HeaderKey.FRAMEWORK.value] = framework.value
     if server_kind is not None:
         headers[const.HeaderKey.EXPECTED_SERVER_KIND.value] = server_kind.value
-    if signing_key is not None:
-        headers[
-            const.HeaderKey.AUTHORIZATION.value
-        ] = f"Bearer {transforms.hash_signing_key(signing_key)}"
 
     return headers
 
@@ -83,6 +81,70 @@ def create_serve_url(
     return urllib.parse.urlunparse(
         (new_scheme, new_netloc, new_path, "", "", "")
     )
+
+
+async def fetch_with_auth_fallback(
+    client: httpx.AsyncClient,
+    request: httpx.Request,
+    *,
+    signing_key: typing.Optional[str],
+    signing_key_fallback: typing.Optional[str],
+) -> httpx.Response:
+    """
+    Send an HTTP request with the given signing key. If the response is a 401 or
+    403, then try again with the fallback signing key
+    """
+
+    if signing_key is not None:
+        request.headers[
+            const.HeaderKey.AUTHORIZATION.value
+        ] = f"Bearer {transforms.hash_signing_key(signing_key)}"
+
+    res = await client.send(request)
+    if (
+        res.status_code
+        in (http.HTTPStatus.FORBIDDEN, http.HTTPStatus.UNAUTHORIZED)
+        and signing_key_fallback is not None
+    ):
+        # Try again with the signing key fallback
+        request.headers[
+            const.HeaderKey.AUTHORIZATION.value
+        ] = f"Bearer {transforms.hash_signing_key(signing_key_fallback)}"
+        res = await client.send(request)
+
+    return res
+
+
+def fetch_with_auth_fallback_sync(
+    client: httpx.Client,
+    request: httpx.Request,
+    *,
+    signing_key: typing.Optional[str],
+    signing_key_fallback: typing.Optional[str],
+) -> httpx.Response:
+    """
+    Send an HTTP request with the given signing key. If the response is a 401 or
+    403, then try again with the fallback signing key
+    """
+
+    if signing_key is not None:
+        request.headers[
+            const.HeaderKey.AUTHORIZATION.value
+        ] = f"Bearer {transforms.hash_signing_key(signing_key)}"
+
+    res = client.send(request)
+    if (
+        res.status_code
+        in (http.HTTPStatus.FORBIDDEN, http.HTTPStatus.UNAUTHORIZED)
+        and signing_key_fallback is not None
+    ):
+        # Try again with the signing key fallback
+        request.headers[
+            const.HeaderKey.AUTHORIZATION.value
+        ] = f"Bearer {transforms.hash_signing_key(signing_key_fallback)}"
+        res = client.send(request)
+
+    return res
 
 
 def normalize_headers(headers: dict[str, str]) -> dict[str, str]:
