@@ -194,7 +194,6 @@ class CommHandler:
         *,
         app_url: str,
         server_kind: typing.Optional[const.ServerKind],
-        signing_key: typing.Optional[str],
         sync_id: typing.Optional[str],
     ) -> types.MaybeError[httpx.Request]:
         registration_url = urllib.parse.urljoin(
@@ -222,7 +221,6 @@ class CommHandler:
             env=self._client.env,
             framework=self._framework,
             server_kind=server_kind,
-            signing_key=signing_key,
         )
 
         params = {}
@@ -475,7 +473,6 @@ class CommHandler:
                 env=self._client.env,
                 framework=self._framework,
                 server_kind=server_kind,
-                signing_key=None,
             ),
             status_code=200,
         )
@@ -506,7 +503,6 @@ class CommHandler:
                     env=self._client.env,
                     framework=self._framework,
                     server_kind=server_kind,
-                    signing_key=None,
                 ),
                 status_code=http.HTTPStatus.OK,
             )
@@ -534,32 +530,21 @@ class CommHandler:
         if comm_res is not None:
             return comm_res
 
-        async with httpx.AsyncClient() as client:
-            req = self._build_registration_request(
-                app_url=app_url,
-                server_kind=server_kind,
-                signing_key=self._signing_key,
-                sync_id=sync_id,
-            )
-            if isinstance(req, Exception):
-                return CommResponse.from_error(self._client.logger, req)
-            res = await client.send(req)
+        req = self._build_registration_request(
+            app_url=app_url,
+            server_kind=server_kind,
+            sync_id=sync_id,
+        )
+        if isinstance(req, Exception):
+            return CommResponse.from_error(self._client.logger, req)
 
-            if (
-                res.status_code
-                in (http.HTTPStatus.FORBIDDEN, http.HTTPStatus.UNAUTHORIZED)
-                and self._signing_key_fallback is not None
-            ):
-                # Retry with the fallback signing key
-                req = self._build_registration_request(
-                    app_url=app_url,
-                    server_kind=server_kind,
-                    signing_key=self._signing_key_fallback,
-                    sync_id=sync_id,
-                )
-                if isinstance(req, Exception):
-                    return CommResponse.from_error(self._client.logger, req)
-                res = await client.send(req)
+        async with httpx.AsyncClient() as client:
+            res = await net.fetch_with_auth_fallback(
+                client,
+                req,
+                signing_key=self._signing_key,
+                signing_key_fallback=self._signing_key_fallback,
+            )
 
             return self._parse_registration_response(
                 res,
@@ -579,32 +564,21 @@ class CommHandler:
         if comm_res is not None:
             return comm_res
 
-        with httpx.Client() as client:
-            req = self._build_registration_request(
-                app_url=app_url,
-                server_kind=server_kind,
-                signing_key=self._signing_key,
-                sync_id=sync_id,
-            )
-            if isinstance(req, Exception):
-                return CommResponse.from_error(self._client.logger, req)
-            res = client.send(req)
+        req = self._build_registration_request(
+            app_url=app_url,
+            server_kind=server_kind,
+            sync_id=sync_id,
+        )
+        if isinstance(req, Exception):
+            return CommResponse.from_error(self._client.logger, req)
 
-            if (
-                res.status_code
-                in (http.HTTPStatus.FORBIDDEN, http.HTTPStatus.UNAUTHORIZED)
-                and self._signing_key_fallback is not None
-            ):
-                # Retry with the fallback signing key
-                req = self._build_registration_request(
-                    app_url=app_url,
-                    server_kind=server_kind,
-                    signing_key=self._signing_key_fallback,
-                    sync_id=sync_id,
-                )
-                if isinstance(req, Exception):
-                    return CommResponse.from_error(self._client.logger, req)
-                res = client.send(req)
+        with httpx.Client() as client:
+            res = net.fetch_with_auth_fallback_sync(
+                client,
+                req,
+                signing_key=self._signing_key,
+                signing_key_fallback=self._signing_key_fallback,
+            )
 
             return self._parse_registration_response(
                 res,

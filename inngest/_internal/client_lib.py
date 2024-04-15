@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import http
 import logging
 import os
 import time
@@ -175,7 +174,6 @@ class Inngest:
             env=self._env,
             framework=framework,
             server_kind=server_kind,
-            signing_key=None,
         )
 
         body = []
@@ -304,67 +302,46 @@ class Inngest:
         Perform an asynchronous HTTP GET request. Handles authn
         """
 
+        req = httpx.Client().build_request(
+            "GET",
+            url,
+            headers=net.create_headers(
+                env=self._env,
+                framework=None,
+                server_kind=None,
+            ),
+        )
+
         async with httpx.AsyncClient() as client:
-            res = await client.get(
-                url,
-                headers=net.create_headers(
-                    env=self._env,
-                    framework=None,
-                    server_kind=None,
-                    signing_key=self._signing_key,
-                ),
+            return await net.fetch_with_auth_fallback(
+                client,
+                req,
+                signing_key=self._signing_key,
+                signing_key_fallback=self._signing_key_fallback,
             )
-
-            if (
-                res.status_code
-                in (http.HTTPStatus.FORBIDDEN, http.HTTPStatus.UNAUTHORIZED)
-                and self._signing_key_fallback is not None
-            ):
-                # Retry with the fallback signing key
-                res = await client.get(
-                    url,
-                    headers=net.create_headers(
-                        env=self._env,
-                        framework=None,
-                        server_kind=None,
-                        signing_key=self._signing_key_fallback,
-                    ),
-                )
-
-            return res
 
     def _get_sync(self, url: str) -> httpx.Response:
         """
         Perform a synchronous HTTP GET request. Handles authn
         """
 
-        res = httpx.get(
+        req = httpx.Client().build_request(
+            "GET",
             url,
             headers=net.create_headers(
                 env=self._env,
                 framework=None,
                 server_kind=None,
-                signing_key=self._signing_key,
             ),
         )
 
-        if (
-            res.status_code
-            in (http.HTTPStatus.FORBIDDEN, http.HTTPStatus.UNAUTHORIZED)
-            and self._signing_key_fallback is not None
-        ):
-            # Retry with the fallback signing key
-            res = httpx.get(
-                url,
-                headers=net.create_headers(
-                    env=self._env,
-                    framework=None,
-                    server_kind=None,
-                    signing_key=self._signing_key,
-                ),
+        with httpx.Client() as client:
+            return net.fetch_with_auth_fallback_sync(
+                client,
+                req,
+                signing_key=self._signing_key,
+                signing_key_fallback=self._signing_key_fallback,
             )
-
-        return res
 
     async def _get_batch(self, run_id: str) -> list[event_lib.Event]:
         """
