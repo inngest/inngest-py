@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import http
 import logging
 import os
 import time
@@ -304,7 +305,7 @@ class Inngest:
         """
 
         async with httpx.AsyncClient() as client:
-            return await client.get(
+            res = await client.get(
                 url,
                 headers=net.create_headers(
                     env=self._env,
@@ -314,11 +315,40 @@ class Inngest:
                 ),
             )
 
+        if res.status_code != http.HTTPStatus.UNAUTHORIZED:
+            return res
+
+        # Retry with the fallback signing key
+        async with httpx.AsyncClient() as client:
+            return await client.get(
+                url,
+                headers=net.create_headers(
+                    env=self._env,
+                    framework=None,
+                    server_kind=None,
+                    signing_key=self._signing_key_fallback,
+                ),
+            )
+
     def _get_sync(self, url: str) -> httpx.Response:
         """
         Perform a synchronous HTTP GET request. Handles authn
         """
 
+        res = httpx.get(
+            url,
+            headers=net.create_headers(
+                env=self._env,
+                framework=None,
+                server_kind=None,
+                signing_key=self._signing_key,
+            ),
+        )
+
+        if res.status_code != http.HTTPStatus.UNAUTHORIZED:
+            return res
+
+        # Retry with the fallback signing key
         return httpx.get(
             url,
             headers=net.create_headers(
