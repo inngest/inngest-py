@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 import json
 import typing
@@ -62,6 +63,26 @@ class TestClient(unittest.TestCase):
             f"inngest-py:v{const.VERSION}"
         ]
         assert event_key in state.path
+
+    async def test_many_parallel_sends(self) -> None:
+        """
+        Ensure the client can run many sends in parallel
+        """
+
+        class_name = self.__class__.__name__
+        method_name = self._testMethodName
+        client = inngest.Inngest(
+            app_id=f"{class_name}-{method_name}",
+            is_production=False,
+        )
+
+        sends = []
+        for _ in range(1000):
+            sends.append(
+                client.send(inngest.Event(name=f"{class_name}-{method_name}"))
+            )
+
+        await asyncio.gather(*sends)
 
 
 if __name__ == "__main__":

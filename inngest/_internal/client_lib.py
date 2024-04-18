@@ -148,6 +148,9 @@ class Inngest:
                 event_origin = const.DEFAULT_EVENT_ORIGIN
         self._event_api_origin = event_origin
 
+        self._http_client = net.ThreadAwareAsyncHTTPClient().initialize()
+        self._http_client_sync = httpx.Client()
+
     def _build_send_request(
         self,
         events: list[event_lib.Event],
@@ -188,7 +191,7 @@ class Inngest:
                 d["ts"] = int(time.time() * 1000)
             body.append(d)
 
-        return httpx.Client().build_request(
+        return self._http_client.build_request(
             "POST",
             url,
             headers=headers,
@@ -302,7 +305,7 @@ class Inngest:
         Perform an asynchronous HTTP GET request. Handles authn
         """
 
-        req = httpx.Client().build_request(
+        req = self._http_client.build_request(
             "GET",
             url,
             headers=net.create_headers(
@@ -312,20 +315,21 @@ class Inngest:
             ),
         )
 
-        async with httpx.AsyncClient() as client:
-            return await net.fetch_with_auth_fallback(
-                client,
-                req,
-                signing_key=self._signing_key,
-                signing_key_fallback=self._signing_key_fallback,
-            )
+        return await net.fetch_with_auth_fallback(
+            self.logger,
+            self._http_client,
+            self._http_client_sync,
+            req,
+            signing_key=self._signing_key,
+            signing_key_fallback=self._signing_key_fallback,
+        )
 
     def _get_sync(self, url: str) -> httpx.Response:
         """
         Perform a synchronous HTTP GET request. Handles authn
         """
 
-        req = httpx.Client().build_request(
+        req = self._http_client.build_request(
             "GET",
             url,
             headers=net.create_headers(
@@ -335,13 +339,12 @@ class Inngest:
             ),
         )
 
-        with httpx.Client() as client:
-            return net.fetch_with_auth_fallback_sync(
-                client,
-                req,
-                signing_key=self._signing_key,
-                signing_key_fallback=self._signing_key_fallback,
-            )
+        return net.fetch_with_auth_fallback_sync(
+            self._http_client_sync,
+            req,
+            signing_key=self._signing_key,
+            signing_key_fallback=self._signing_key_fallback,
+        )
 
     async def _get_batch(self, run_id: str) -> list[event_lib.Event]:
         """
@@ -424,11 +427,10 @@ class Inngest:
         if not isinstance(events, list):
             events = [events]
 
-        async with httpx.AsyncClient() as client:
-            req = self._build_send_request(events)
-            if isinstance(req, Exception):
-                raise req
-            return _extract_ids((await client.send(req)).json())
+        req = self._build_send_request(events)
+        if isinstance(req, Exception):
+            raise req
+        return _extract_ids((await self._http_client.send(req)).json())
 
     def send_sync(
         self,
@@ -445,11 +447,10 @@ class Inngest:
         if not isinstance(events, list):
             events = [events]
 
-        with httpx.Client() as client:
-            req = self._build_send_request(events)
-            if isinstance(req, Exception):
-                raise req
-            return _extract_ids((client.send(req)).json())
+        req = self._build_send_request(events)
+        if isinstance(req, Exception):
+            raise req
+        return _extract_ids((self._http_client_sync.send(req)).json())
 
     def set_logger(self, logger: types.Logger) -> None:
         self.logger = logger

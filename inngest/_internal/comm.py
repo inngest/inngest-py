@@ -227,7 +227,7 @@ class CommHandler:
         if sync_id is not None:
             params[const.QueryParamKey.SYNC_ID.value] = sync_id
 
-        return httpx.Client().build_request(
+        return self._client._http_client.build_request(
             "POST",
             registration_url,
             headers=headers,
@@ -538,18 +538,19 @@ class CommHandler:
         if isinstance(req, Exception):
             return CommResponse.from_error(self._client.logger, req)
 
-        async with httpx.AsyncClient() as client:
-            res = await net.fetch_with_auth_fallback(
-                client,
-                req,
-                signing_key=self._signing_key,
-                signing_key_fallback=self._signing_key_fallback,
-            )
+        res = await net.fetch_with_auth_fallback(
+            self._client.logger,
+            self._client._http_client,
+            self._client._http_client_sync,
+            req,
+            signing_key=self._signing_key,
+            signing_key_fallback=self._signing_key_fallback,
+        )
 
-            return self._parse_registration_response(
-                res,
-                server_kind,
-            )
+        return self._parse_registration_response(
+            res,
+            server_kind,
+        )
 
     def register_sync(
         self,
@@ -572,18 +573,17 @@ class CommHandler:
         if isinstance(req, Exception):
             return CommResponse.from_error(self._client.logger, req)
 
-        with httpx.Client() as client:
-            res = net.fetch_with_auth_fallback_sync(
-                client,
-                req,
-                signing_key=self._signing_key,
-                signing_key_fallback=self._signing_key_fallback,
-            )
+        res = net.fetch_with_auth_fallback_sync(
+            self._client._http_client_sync,
+            req,
+            signing_key=self._signing_key,
+            signing_key_fallback=self._signing_key_fallback,
+        )
 
-            return self._parse_registration_response(
-                res,
-                server_kind,
-            )
+        return self._parse_registration_response(
+            res,
+            server_kind,
+        )
 
     async def _respond(
         self,

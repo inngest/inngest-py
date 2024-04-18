@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import hashlib
 import hmac
 import http
 import os
+import threading
 import typing
 import urllib.parse
 
@@ -9,7 +12,26 @@ import httpx
 
 from . import const, errors, transforms, types
 
-Method = typing.Literal["GET", "POST"]
+
+class ThreadAwareAsyncHTTPClient(httpx.AsyncClient):
+    """
+    Thin wrapper around httpx.AsyncClient. It keeps track of the thread it was
+    created in, which is critical since asyncio is not thread safe: calling an
+    async method in a different thread will raise an exception
+    """
+
+    _creation_thread_id: typing.Optional[int] = None
+
+    def is_same_thread(self) -> bool:
+        if self._creation_thread_id is None:
+            raise Exception("did initialize ThreadAwareAsyncHTTPClient")
+
+        current_thread_id = threading.get_ident()
+        return self._creation_thread_id == current_thread_id
+
+    def initialize(self) -> ThreadAwareAsyncHTTPClient:
+        self._creation_thread_id = threading.get_ident()
+        return self
 
 
 def create_headers(
@@ -84,7 +106,9 @@ def create_serve_url(
 
 
 async def fetch_with_auth_fallback(
-    client: httpx.AsyncClient,
+    logger: types.Logger,
+    client: ThreadAwareAsyncHTTPClient,
+    client_sync: httpx.Client,
     request: httpx.Request,
     *,
     signing_key: typing.Optional[str],
@@ -94,6 +118,20 @@ async def fetch_with_auth_fallback(
     Send an HTTP request with the given signing key. If the response is a 401 or
     403, then try again with the fallback signing key
     """
+
+    if client.is_same_thread() is False:
+        # Python freaks out if you call an object's async methods in a different
+        # thread. To solve this, we'll use the synchronous client instead
+        logger.warning(
+            "called an async client method in a different thread; falling back to synchronous HTTP client"
+        )
+
+        return fetch_with_auth_fallback_sync(
+            client_sync,
+            request,
+            signing_key=signing_key,
+            signing_key_fallback=signing_key_fallback,
+        )
 
     if signing_key is not None:
         request.headers[
