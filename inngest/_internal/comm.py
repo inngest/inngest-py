@@ -147,6 +147,7 @@ class CommHandler:
     _framework: const.Framework
     _mode: const.ServerKind
     _signing_key: typing.Optional[str]
+    _signing_key_fallback: typing.Optional[str]
 
     def __init__(
         self,
@@ -155,7 +156,6 @@ class CommHandler:
         client: client_lib.Inngest,
         framework: const.Framework,
         functions: list[function.Function],
-        signing_key: typing.Optional[str] = None,
     ) -> None:
         self._client = client
 
@@ -178,6 +178,7 @@ class CommHandler:
         self._fns = {fn.get_id(): fn for fn in functions}
         self._framework = framework
 
+        signing_key = client.signing_key
         if signing_key is None:
             if self._client.is_production:
                 signing_key = os.getenv(const.EnvKey.SIGNING_KEY.value)
@@ -185,6 +186,8 @@ class CommHandler:
                     self._client.logger.error("missing signing key")
                     raise errors.SigningKeyMissingError()
         self._signing_key = signing_key
+
+        self._signing_key_fallback = client.signing_key_fallback
 
     def _build_registration_request(
         self,
@@ -218,7 +221,6 @@ class CommHandler:
             env=self._client.env,
             framework=self._framework,
             server_kind=server_kind,
-            signing_key=self._signing_key,
         )
 
         params = {}
@@ -252,7 +254,10 @@ class CommHandler:
         middleware = middleware_lib.MiddlewareManager.from_client(self._client)
 
         # Validate the request signature.
-        err = req_sig.validate(self._signing_key)
+        err = req_sig.validate(
+            signing_key=self._signing_key,
+            signing_key_fallback=self._signing_key_fallback,
+        )
         if isinstance(err, Exception):
             return await self._respond(middleware, err)
 
@@ -318,7 +323,10 @@ class CommHandler:
         middleware = middleware_lib.MiddlewareManager.from_client(self._client)
 
         # Validate the request signature.
-        err = req_sig.validate(self._signing_key)
+        err = req_sig.validate(
+            signing_key=self._signing_key,
+            signing_key_fallback=self._signing_key_fallback,
+        )
         if isinstance(err, Exception):
             return self._respond_sync(middleware, err)
 
@@ -434,7 +442,6 @@ class CommHandler:
                 env=self._client.env,
                 framework=self._framework,
                 server_kind=server_kind,
-                signing_key=None,
             ),
             status_code=200,
         )
@@ -465,7 +472,6 @@ class CommHandler:
                     env=self._client.env,
                     framework=self._framework,
                     server_kind=server_kind,
-                    signing_key=None,
                 ),
                 status_code=http.HTTPStatus.OK,
             )
@@ -489,21 +495,28 @@ class CommHandler:
     ) -> CommResponse:
         """Handle a registration call."""
 
-        res = self._validate_registration(server_kind)
-        if res is not None:
-            return res
+        comm_res = self._validate_registration(server_kind)
+        if comm_res is not None:
+            return comm_res
+
+        req = self._build_registration_request(
+            app_url=app_url,
+            server_kind=server_kind,
+            sync_id=sync_id,
+        )
+        if isinstance(req, Exception):
+            return CommResponse.from_error(self._client.logger, req)
 
         async with httpx.AsyncClient() as client:
-            req = self._build_registration_request(
-                app_url=app_url,
-                server_kind=server_kind,
-                sync_id=sync_id,
+            res = await net.fetch_with_auth_fallback(
+                client,
+                req,
+                signing_key=self._signing_key,
+                signing_key_fallback=self._signing_key_fallback,
             )
-            if isinstance(req, Exception):
-                return CommResponse.from_error(self._client.logger, req)
 
             return self._parse_registration_response(
-                await client.send(req),
+                res,
                 server_kind,
             )
 
@@ -516,21 +529,28 @@ class CommHandler:
     ) -> CommResponse:
         """Handle a registration call."""
 
-        res = self._validate_registration(server_kind)
-        if res is not None:
-            return res
+        comm_res = self._validate_registration(server_kind)
+        if comm_res is not None:
+            return comm_res
+
+        req = self._build_registration_request(
+            app_url=app_url,
+            server_kind=server_kind,
+            sync_id=sync_id,
+        )
+        if isinstance(req, Exception):
+            return CommResponse.from_error(self._client.logger, req)
 
         with httpx.Client() as client:
-            req = self._build_registration_request(
-                app_url=app_url,
-                server_kind=server_kind,
-                sync_id=sync_id,
+            res = net.fetch_with_auth_fallback_sync(
+                client,
+                req,
+                signing_key=self._signing_key,
+                signing_key_fallback=self._signing_key_fallback,
             )
-            if isinstance(req, Exception):
-                return CommResponse.from_error(self._client.logger, req)
 
             return self._parse_registration_response(
-                client.send(req),
+                res,
                 server_kind,
             )
 

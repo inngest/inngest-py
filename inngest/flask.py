@@ -45,7 +45,6 @@ def serve(
         client=client,
         framework=FRAMEWORK,
         functions=functions,
-        signing_key=client.signing_key,
     )
 
     async_mode = any(
@@ -250,7 +249,6 @@ def _to_response(
                 env=client.env,
                 framework=FRAMEWORK,
                 server_kind=server_kind,
-                signing_key=None,
             ),
         },
         response=body.encode("utf-8"),

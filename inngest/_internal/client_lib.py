@@ -56,6 +56,10 @@ class Inngest:
     def signing_key(self) -> typing.Optional[str]:
         return self._signing_key
 
+    @property
+    def signing_key_fallback(self) -> typing.Optional[str]:
+        return self._signing_key_fallback
+
     def __init__(
         self,
         *,
@@ -106,6 +110,10 @@ class Inngest:
 
         self._signing_key = signing_key or os.getenv(
             const.EnvKey.SIGNING_KEY.value
+        )
+
+        self._signing_key_fallback = signing_key or os.getenv(
+            const.EnvKey.SIGNING_KEY_FALLBACK.value
         )
 
         self._env = env or env_lib.get_environment_name()
@@ -162,7 +170,6 @@ class Inngest:
             env=self._env,
             framework=framework,
             server_kind=server_kind,
-            signing_key=None,
         )
 
         body = []
@@ -291,15 +298,22 @@ class Inngest:
         Perform an asynchronous HTTP GET request. Handles authn
         """
 
+        req = httpx.Client().build_request(
+            "GET",
+            url,
+            headers=net.create_headers(
+                env=self._env,
+                framework=None,
+                server_kind=None,
+            ),
+        )
+
         async with httpx.AsyncClient() as client:
-            return await client.get(
-                url,
-                headers=net.create_headers(
-                    env=self._env,
-                    framework=None,
-                    server_kind=None,
-                    signing_key=self._signing_key,
-                ),
+            return await net.fetch_with_auth_fallback(
+                client,
+                req,
+                signing_key=self._signing_key,
+                signing_key_fallback=self._signing_key_fallback,
             )
 
     def _get_sync(self, url: str) -> httpx.Response:
@@ -307,15 +321,23 @@ class Inngest:
         Perform a synchronous HTTP GET request. Handles authn
         """
 
-        return httpx.get(
+        req = httpx.Client().build_request(
+            "GET",
             url,
             headers=net.create_headers(
                 env=self._env,
                 framework=None,
                 server_kind=None,
-                signing_key=self._signing_key,
             ),
         )
+
+        with httpx.Client() as client:
+            return net.fetch_with_auth_fallback_sync(
+                client,
+                req,
+                signing_key=self._signing_key,
+                signing_key_fallback=self._signing_key_fallback,
+            )
 
     async def _get_batch(self, run_id: str) -> list[event_lib.Event]:
         """

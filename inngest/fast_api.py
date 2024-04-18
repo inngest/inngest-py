@@ -44,7 +44,6 @@ def serve(
         client=client,
         framework=FRAMEWORK,
         functions=functions,
-        signing_key=client.signing_key,
     )
 
     @app.get("/api/inngest")
@@ -147,7 +146,6 @@ def _to_response(
                 env=client.env,
                 framework=FRAMEWORK,
                 server_kind=server_kind,
-                signing_key=None,
             ),
         },
         status_code=comm_res.status_code,

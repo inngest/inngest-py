@@ -51,7 +51,6 @@ def serve(
         client=client,
         framework=FRAMEWORK,
         functions=functions,
-        signing_key=client.signing_key,
     )
 
     if async_mode:
@@ -264,7 +263,6 @@ def _to_response(
                 env=client.env,
                 framework=FRAMEWORK,
                 server_kind=server_kind,
-                signing_key=None,
             ),
         },
         status=comm_res.status_code,

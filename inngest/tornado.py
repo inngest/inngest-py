@@ -44,7 +44,6 @@ def serve(
         client=client,
         framework=FRAMEWORK,
         functions=functions,
-        signing_key=client.signing_key,
     )
 
     class InngestHandler(tornado.web.RequestHandler):
@@ -158,7 +157,6 @@ def serve(
                 env=client.env,
                 framework=FRAMEWORK,
                 server_kind=server_kind,
-                signing_key=None,
             ).items():
                 self.add_header(k, v)
 
