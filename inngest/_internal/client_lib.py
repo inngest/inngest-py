@@ -116,6 +116,10 @@ class Inngest:
             const.EnvKey.SIGNING_KEY_FALLBACK.value
         )
 
+        self._signing_key_fallback = os.getenv(
+            const.EnvKey.SIGNING_KEY_FALLBACK.value
+        )
+
         self._env = env or env_lib.get_environment_name()
         if (
             self._env is None

@@ -50,6 +50,7 @@ def serve(
     async def get_api_inngest(
         request: fastapi.Request,
     ) -> fastapi.Response:
+        body = await request.body()
         headers = net.normalize_headers(dict(request.headers.items()))
 
         server_kind = transforms.get_server_kind(headers)
@@ -59,7 +60,14 @@ def serve(
 
         return _to_response(
             client,
-            handler.inspect(server_kind),
+            handler.inspect(
+                server_kind,
+                net.RequestSignature(
+                    body=body,
+                    headers=headers,
+                    mode=client._mode,
+                ),
+            ),
             server_kind,
         )
 
