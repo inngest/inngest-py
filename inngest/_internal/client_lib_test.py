@@ -91,13 +91,15 @@ class Test(unittest.TestCase):
         )
         assert client.signing_key == "foo1"
 
-    def test_signing_key_missing(self) -> None:
+    def test_cloud_mode_without_signing_key(self) -> None:
         """
-        Error is raised when the signing key is not set in production.
+        When in Cloud mode but no signing key, no error is raised. This behavior
+        is necessary because some users may only use the Inngest client for
+        sending events. The signing key should only be required when serving
+        Inngest functions in Cloud mode
         """
 
-        with pytest.raises(errors.SigningKeyMissingError):
-            client_lib.Inngest(app_id="test")
+        client_lib.Inngest(app_id="test")
 
     def test_api_base_url_env_var(self) -> None:
         os.environ[const.EnvKey.API_BASE_URL.value] = "example.com"

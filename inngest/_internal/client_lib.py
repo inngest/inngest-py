@@ -111,10 +111,10 @@ class Inngest:
         self._signing_key = signing_key or os.getenv(
             const.EnvKey.SIGNING_KEY.value
         )
-        if self._signing_key is None and self._mode == const.ServerKind.CLOUD:
-            raise errors.SigningKeyMissingError(
-                f"Signing key must be set when Cloud mode is enabled. If you don't want to use Cloud mode, set the {const.EnvKey.DEV.value} env var."
-            )
+
+        self._signing_key_fallback = signing_key or os.getenv(
+            const.EnvKey.SIGNING_KEY_FALLBACK.value
+        )
 
         self._signing_key_fallback = os.getenv(
             const.EnvKey.SIGNING_KEY_FALLBACK.value

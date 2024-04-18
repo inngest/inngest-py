@@ -3,9 +3,16 @@ import hmac
 import json
 import os
 import time
+import typing
 import unittest
+import unittest.mock
 
-from . import const, errors, net
+import httpx
+
+from . import const, errors, net, transforms
+
+_signing_key = "signkey-prod-000000"
+_signing_key_fallback = "signkey-prod-111111"
 
 
 class Test_create_serve_url(unittest.TestCase):
@@ -94,9 +101,8 @@ class Test_create_serve_url(unittest.TestCase):
 class Test_RequestSignature(unittest.TestCase):
     def test_success(self) -> None:
         body = json.dumps({"msg": "hi"}).encode("utf-8")
-        signing_key = "super-secret"
         unix_ms = round(time.time() * 1000)
-        sig = _sign(body, signing_key, unix_ms)
+        sig = _sign(body, _signing_key, unix_ms)
         headers = {
             const.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
         }
@@ -106,7 +112,7 @@ class Test_RequestSignature(unittest.TestCase):
         )
         assert not isinstance(
             req_sig.validate(
-                signing_key=signing_key,
+                signing_key=_signing_key,
                 signing_key_fallback=None,
             ),
             Exception,
@@ -118,9 +124,8 @@ class Test_RequestSignature(unittest.TestCase):
         """
 
         body = json.dumps({"msg": "bar"}).encode("utf-8")
-        signing_key = "super-secret"
         unix_ms = round(time.time() * 1000)
-        sig = _sign(body, signing_key, unix_ms)
+        sig = _sign(body, _signing_key, unix_ms)
         headers = {
             const.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
         }
@@ -131,7 +136,7 @@ class Test_RequestSignature(unittest.TestCase):
         )
 
         validation = req_sig.validate(
-            signing_key=signing_key,
+            signing_key=_signing_key,
             signing_key_fallback=None,
         )
         assert isinstance(validation, errors.SigVerificationFailedError)
@@ -143,10 +148,8 @@ class Test_RequestSignature(unittest.TestCase):
         """
 
         body = json.dumps({"msg": "hi"}).encode("utf-8")
-        signing_key = "super-secret"
-        signing_key_fallback = "super-secret-fallback"
         unix_ms = round(time.time() * 1000)
-        sig = _sign(body, signing_key_fallback, unix_ms)
+        sig = _sign(body, _signing_key_fallback, unix_ms)
         headers = {
             const.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
         }
@@ -156,8 +159,8 @@ class Test_RequestSignature(unittest.TestCase):
         )
         assert not isinstance(
             req_sig.validate(
-                signing_key=signing_key,
-                signing_key_fallback=signing_key_fallback,
+                signing_key=_signing_key,
+                signing_key_fallback=_signing_key_fallback,
             ),
             Exception,
         )
@@ -168,8 +171,6 @@ class Test_RequestSignature(unittest.TestCase):
         """
 
         body = json.dumps({"msg": "hi"}).encode("utf-8")
-        signing_key = "super-secret"
-        signing_key_fallback = "super-secret-fallback"
         unix_ms = round(time.time() * 1000)
         sig = _sign(body, "something-else", unix_ms)
         headers = {
@@ -181,14 +182,208 @@ class Test_RequestSignature(unittest.TestCase):
         )
         assert isinstance(
             req_sig.validate(
-                signing_key=signing_key,
-                signing_key_fallback=signing_key_fallback,
+                signing_key=_signing_key,
+                signing_key_fallback=_signing_key_fallback,
             ),
             Exception,
         )
 
 
+class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        self._req = httpx.Request("GET", "http://localhost")
+
+    def _create_async_transport(
+        self,
+        handler: typing.Callable[[httpx.Request], httpx.Response],
+    ) -> httpx.AsyncBaseTransport:
+        class Transport(httpx.AsyncBaseTransport):
+            async def handle_async_request(
+                self,
+                request: httpx.Request,
+            ) -> httpx.Response:
+                return handler(request)
+
+        return Transport()
+
+    def _create_transport(
+        self,
+        handler: typing.Callable[[httpx.Request], httpx.Response],
+    ) -> httpx.BaseTransport:
+        class Transport(httpx.BaseTransport):
+            def handle_request(self, request: httpx.Request) -> httpx.Response:
+                return handler(request)
+
+        return Transport()
+
+    async def test_signing_key_works(self) -> None:
+        """
+        The signing key is valid, so the fallback isn't used
+        """
+
+        req_count = 0
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            nonlocal req_count
+            req_count += 1
+
+            actual_token = request.headers.get("Authorization")
+            if actual_token is None:
+                return httpx.Response(401, content=b"", request=request)
+            expected_token = (
+                f"Bearer {transforms.hash_signing_key(_signing_key)}"
+            )
+
+            if actual_token != expected_token:
+                return httpx.Response(401, content=b"", request=request)
+
+            return httpx.Response(200, content=b"", request=request)
+
+        res = await net.fetch_with_auth_fallback(
+            httpx.AsyncClient(transport=self._create_async_transport(handler)),
+            self._req,
+            signing_key=_signing_key,
+            signing_key_fallback=_signing_key_fallback,
+        )
+        assert res.status_code == 200
+        assert req_count == 1
+        req_count = 0
+
+        res = net.fetch_with_auth_fallback_sync(
+            httpx.Client(transport=self._create_transport(handler)),
+            self._req,
+            signing_key=_signing_key,
+            signing_key_fallback=_signing_key_fallback,
+        )
+        assert res.status_code == 200
+        assert req_count == 1
+
+    async def test_signing_key_fallback_works(self) -> None:
+        """
+        The signing key is invalid, so the fallback is used
+        """
+
+        req_count = 0
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            nonlocal req_count
+            req_count += 1
+
+            actual_token = request.headers.get("Authorization")
+            if actual_token is None:
+                return httpx.Response(401, content=b"", request=request)
+            expected_token = (
+                f"Bearer {transforms.hash_signing_key(_signing_key_fallback)}"
+            )
+
+            if actual_token != expected_token:
+                return httpx.Response(401, content=b"", request=request)
+
+            return httpx.Response(200, content=b"", request=request)
+
+        res = await net.fetch_with_auth_fallback(
+            httpx.AsyncClient(transport=self._create_async_transport(handler)),
+            self._req,
+            signing_key=_signing_key,
+            signing_key_fallback=_signing_key_fallback,
+        )
+        assert res.status_code == 200
+        assert req_count == 2
+        req_count = 0
+
+        res = net.fetch_with_auth_fallback_sync(
+            httpx.Client(transport=self._create_transport(handler)),
+            self._req,
+            signing_key=_signing_key,
+            signing_key_fallback=_signing_key_fallback,
+        )
+        assert res.status_code == 200
+        assert req_count == 2
+
+    async def test_signing_key_fallback_invalid(self) -> None:
+        """
+        Both signing keys are invalid
+        """
+
+        req_count = 0
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            nonlocal req_count
+            req_count += 1
+
+            actual_token = request.headers.get("Authorization")
+            if actual_token is None:
+                return httpx.Response(401, content=b"", request=request)
+            expected_token = (
+                f"Bearer {transforms.hash_signing_key(_signing_key_fallback)}"
+            )
+
+            if actual_token != expected_token:
+                return httpx.Response(401, content=b"", request=request)
+
+            return httpx.Response(200, content=b"", request=request)
+
+        res = await net.fetch_with_auth_fallback(
+            httpx.AsyncClient(transport=self._create_async_transport(handler)),
+            self._req,
+            signing_key="signkey-prod-aaaaaa",
+            signing_key_fallback="signkey-prod-bbbbbb",
+        )
+        assert res.status_code == 401
+        assert req_count == 2
+        req_count = 0
+
+        res = net.fetch_with_auth_fallback_sync(
+            httpx.Client(transport=self._create_transport(handler)),
+            self._req,
+            signing_key="signkey-prod-aaaaaa",
+            signing_key_fallback="signkey-prod-bbbbbb",
+        )
+        assert res.status_code == 401
+        assert req_count == 2
+
+    async def test_no_signing_key(self) -> None:
+        """
+        Still send a request when we don't have a signing key.  This is
+        necessary to work with the Dev Server
+        """
+
+        req_count = 0
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            nonlocal req_count
+            req_count += 1
+
+            actual_token = request.headers.get("Authorization")
+            if actual_token is not None:
+                return httpx.Response(500, content=b"", request=request)
+
+            return httpx.Response(200, content=b"", request=request)
+
+        res = await net.fetch_with_auth_fallback(
+            httpx.AsyncClient(transport=self._create_async_transport(handler)),
+            self._req,
+            signing_key=None,
+            signing_key_fallback=None,
+        )
+        assert res.status_code == 200
+        assert req_count == 1
+        req_count = 0
+
+        res = net.fetch_with_auth_fallback_sync(
+            httpx.Client(transport=self._create_transport(handler)),
+            self._req,
+            signing_key=None,
+            signing_key_fallback=None,
+        )
+        assert res.status_code == 200
+        assert req_count == 1
+
+
 def _sign(body: bytes, signing_key: str, unix_ms: int) -> str:
+    signing_key = transforms.remove_signing_key_prefix(signing_key)
+
     mac = hmac.new(
         signing_key.encode("utf-8"),
         body,
