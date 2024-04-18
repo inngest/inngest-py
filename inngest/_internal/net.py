@@ -138,17 +138,18 @@ async def fetch_with_auth_fallback(
             const.HeaderKey.AUTHORIZATION.value
         ] = f"Bearer {transforms.hash_signing_key(signing_key)}"
 
-    res = await client.send(request)
-    if (
-        res.status_code
-        in (http.HTTPStatus.FORBIDDEN, http.HTTPStatus.UNAUTHORIZED)
-        and signing_key_fallback is not None
-    ):
-        # Try again with the signing key fallback
-        request.headers[
-            const.HeaderKey.AUTHORIZATION.value
-        ] = f"Bearer {transforms.hash_signing_key(signing_key_fallback)}"
+    async with client:
         res = await client.send(request)
+        if (
+            res.status_code
+            in (http.HTTPStatus.FORBIDDEN, http.HTTPStatus.UNAUTHORIZED)
+            and signing_key_fallback is not None
+        ):
+            # Try again with the signing key fallback
+            request.headers[
+                const.HeaderKey.AUTHORIZATION.value
+            ] = f"Bearer {transforms.hash_signing_key(signing_key_fallback)}"
+            res = await client.send(request)
 
     return res
 

@@ -191,7 +191,7 @@ class Inngest:
                 d["ts"] = int(time.time() * 1000)
             body.append(d)
 
-        return self._http_client.build_request(
+        return self._http_client_sync.build_request(
             "POST",
             url,
             headers=headers,
@@ -305,7 +305,7 @@ class Inngest:
         Perform an asynchronous HTTP GET request. Handles authn
         """
 
-        req = self._http_client.build_request(
+        req = self._http_client_sync.build_request(
             "GET",
             url,
             headers=net.create_headers(
@@ -329,7 +329,7 @@ class Inngest:
         Perform a synchronous HTTP GET request. Handles authn
         """
 
-        req = self._http_client.build_request(
+        req = self._http_client_sync.build_request(
             "GET",
             url,
             headers=net.create_headers(
@@ -430,7 +430,18 @@ class Inngest:
         req = self._build_send_request(events)
         if isinstance(req, Exception):
             raise req
-        return _extract_ids((await self._http_client.send(req)).json())
+
+        if self._http_client.is_same_thread() is False:
+            # Python freaks out if you call an object's async methods in a different
+            # thread. To solve this, we'll use the synchronous client instead
+            self.logger.warning(
+                "called an async client method in a different thread; falling back to synchronous HTTP client"
+            )
+
+            return _extract_ids(self._http_client_sync.send(req).json())
+
+        async with self._http_client as client:
+            return _extract_ids((await client.send(req)).json())
 
     def send_sync(
         self,

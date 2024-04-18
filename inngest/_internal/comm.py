@@ -227,7 +227,7 @@ class CommHandler:
         if sync_id is not None:
             params[const.QueryParamKey.SYNC_ID.value] = sync_id
 
-        return self._client._http_client.build_request(
+        return self._client._http_client_sync.build_request(
             "POST",
             registration_url,
             headers=headers,
