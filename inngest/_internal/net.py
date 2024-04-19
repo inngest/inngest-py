@@ -119,37 +119,34 @@ async def fetch_with_auth_fallback(
     403, then try again with the fallback signing key
     """
 
-    if client.is_same_thread() is False:
-        # Python freaks out if you call an object's async methods in a different
-        # thread. To solve this, we'll use the synchronous client instead
+    if client.is_same_thread() is True:
+        _client: typing.Union[httpx.AsyncClient, httpx.Client] = client
+    else:
+        # Python freaks out if you call httpx.AsyncClient's async methods in a
+        # multiple threads. To solve this, we'll use the synchronous client
+        # instead
         logger.warning(
             "called an async client method in a different thread; falling back to synchronous HTTP client"
         )
 
-        return fetch_with_auth_fallback_sync(
-            client_sync,
-            request,
-            signing_key=signing_key,
-            signing_key_fallback=signing_key_fallback,
-        )
+        _client = client_sync
 
     if signing_key is not None:
         request.headers[
             const.HeaderKey.AUTHORIZATION.value
         ] = f"Bearer {transforms.hash_signing_key(signing_key)}"
 
-    async with client:
-        res = await client.send(request)
-        if (
-            res.status_code
-            in (http.HTTPStatus.FORBIDDEN, http.HTTPStatus.UNAUTHORIZED)
-            and signing_key_fallback is not None
-        ):
-            # Try again with the signing key fallback
-            request.headers[
-                const.HeaderKey.AUTHORIZATION.value
-            ] = f"Bearer {transforms.hash_signing_key(signing_key_fallback)}"
-            res = await client.send(request)
+    res = await transforms.maybe_await(_client.send(request))
+    if (
+        res.status_code
+        in (http.HTTPStatus.FORBIDDEN, http.HTTPStatus.UNAUTHORIZED)
+        and signing_key_fallback is not None
+    ):
+        # Try again with the signing key fallback
+        request.headers[
+            const.HeaderKey.AUTHORIZATION.value
+        ] = f"Bearer {transforms.hash_signing_key(signing_key_fallback)}"
+        res = await transforms.maybe_await(_client.send(request))
 
     return res
 
