@@ -61,7 +61,7 @@ def create(
     async def fn_async(
         ctx: inngest.Context,
         step: inngest.Step,
-    ) -> None:
+    ) -> str:
         state.run_id = ctx.run_id
 
         def _step_1() -> str:
