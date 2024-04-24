@@ -33,20 +33,22 @@ def create(
     def fn_sync(
         ctx: inngest.Context,
         step: inngest.StepSync,
-    ) -> None:
+    ) -> str:
         state.run_id = ctx.run_id
 
         def _step_1() -> str:
-            return "test-string"
+            return "test string"
 
         step_1_output = step.run("step_1", _step_1)
-        assert step_1_output == "test-string"
+        assert step_1_output == "test string"
 
         def _step_2() -> list[inngest.JSON]:
             return [{"a": {"b": 1}}]
 
         step_2_output = step.run("step_2", _step_2)
         assert step_2_output == [{"a": {"b": 1}}]
+
+        return "function output"
 
     @client.create_function(
         fn_id=fn_id,
@@ -63,10 +65,10 @@ def create(
         state.run_id = ctx.run_id
 
         def _step_1() -> str:
-            return "test-string"
+            return "test string"
 
         step_1_output = await step.run("step_1", _step_1)
-        assert step_1_output == "test-string"
+        assert step_1_output == "test string"
 
         def _step_2() -> list[inngest.JSON]:
             return [{"a": {"b": 1}}]
@@ -74,10 +76,12 @@ def create(
         step_2_output = await step.run("step_2", _step_2)
         assert step_2_output == [{"a": {"b": 1}}]
 
+        return "function output"
+
     def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
         run_id = state.wait_for_run_id()
-        tests.helper.client.wait_for_run_status(
+        run = tests.helper.client.wait_for_run_status(
             run_id,
             tests.helper.RunStatus.COMPLETED,
         )
@@ -94,7 +98,7 @@ def create(
         assert isinstance(output, dict)
         data = output.get("data")
         assert isinstance(data, str)
-        assert json.loads(fernet.decrypt(data).decode()) == "test-string"
+        assert json.loads(fernet.decrypt(data).decode()) == "test string"
 
         # Ensure that step_2 output is encrypted and its value is correct
         output = json.loads(
@@ -107,6 +111,11 @@ def create(
         data = output.get("data")
         assert isinstance(data, str)
         assert json.loads(fernet.decrypt(data).decode()) == [{"a": {"b": 1}}]
+
+        assert isinstance(run.output, str)
+        assert (
+            json.loads(fernet.decrypt(run.output).decode()) == "function output"
+        )
 
     if is_sync:
         fn = fn_sync
