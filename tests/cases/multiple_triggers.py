@@ -1,4 +1,3 @@
-import asyncio
 from dataclasses import dataclass
 
 import inngest
@@ -60,19 +59,15 @@ def create(client: inngest.Inngest, framework: str, is_sync: bool) -> base.Case:
                 break
 
     def run_test(self: base.TestClass) -> None:
-        async def trigger_event_and_wait(state_event: StateAndEvent) -> None:
-            await self.client.send(inngest.Event(name=state_event.event_name))
+        def trigger_event_and_wait(state_event: StateAndEvent) -> None:
+            self.client.send_sync(inngest.Event(name=state_event.event_name))
             run_id = state_event.state.wait_for_run_id()
             tests.helper.client.wait_for_run_status(
                 run_id, tests.helper.RunStatus.COMPLETED
             )
 
-        async def run_all() -> None:
-            await asyncio.gather(
-                *(trigger_event_and_wait(se) for se in states_events)
-            )
-
-        asyncio.run(run_all())
+        for se in states_events:
+            trigger_event_and_wait(se)
 
         assert all(se.state.run_id for se in states_events)
         assert len(set(se.state.run_id for se in states_events)) == len(
