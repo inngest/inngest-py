@@ -18,6 +18,7 @@ from inngest._internal import (
     middleware_lib,
     net,
     registration,
+    step_lib,
     transforms,
     types,
 )
@@ -291,6 +292,7 @@ class CommHandler:
         call_res = await fn.call(
             self._client,
             function.Context(
+                _steps=step_lib.StepMemos.from_raw(steps),
                 attempt=call.ctx.attempt,
                 event=call.event,
                 events=events,
@@ -299,7 +301,6 @@ class CommHandler:
             ),
             fn_id,
             middleware,
-            steps,
             target_step_id,
         )
 
@@ -358,6 +359,7 @@ class CommHandler:
         call_res = fn.call_sync(
             self._client,
             function.Context(
+                _steps=step_lib.StepMemos.from_raw(steps),
                 attempt=call.ctx.attempt,
                 event=call.event,
                 events=events,
@@ -366,7 +368,6 @@ class CommHandler:
             ),
             fn_id,
             middleware,
-            steps,
             target_step_id,
         )
 

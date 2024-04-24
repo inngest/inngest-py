@@ -23,6 +23,7 @@ extra = [
     "Django==4.2",
     "Flask==2.3.0",
     "build==1.0.3",
+    "cryptography==42.0.5",
     "django-types==0.19.1",
     "fastapi==0.100.0",
     "mypy==1.8.0",

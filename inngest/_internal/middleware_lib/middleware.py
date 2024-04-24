@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from inngest._internal import client_lib, execution, function
+import typing
+
+from inngest._internal import execution, function
+
+if typing.TYPE_CHECKING:
+    from inngest._internal import client_lib
 
 
 class Middleware:
@@ -101,3 +106,9 @@ class MiddlewareSync:
         is thrown.
         """
         return output
+
+
+UninitializedMiddleware = typing.Callable[
+    # Used a "client_lib.Inngest" string to avoid a circular import
+    ["client_lib.Inngest"], typing.Union[Middleware, MiddlewareSync]
+]

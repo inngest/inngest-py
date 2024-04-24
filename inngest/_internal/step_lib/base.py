@@ -26,6 +26,9 @@ class StepMemos:
     def __init__(self, memos: dict[str, execution.Output]) -> None:
         self._memos = memos
 
+    def values(self) -> typing.Iterator[execution.Output]:
+        return iter(self._memos.values())
+
     def pop(
         self, hashed_id: str
     ) -> typing.Union[execution.Output, types.EmptySentinel]:
