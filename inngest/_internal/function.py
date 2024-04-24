@@ -24,6 +24,10 @@ from inngest._internal import (
 
 @dataclasses.dataclass
 class Context:
+    # TODO: Remove this in v0.4.0. It's only here to avoid a breaking change to
+    # Middleware.transform_input
+    _steps: step_lib.StepMemos
+
     attempt: int
     event: event_lib.Event
     events: list[event_lib.Event]
@@ -146,13 +150,7 @@ class Function:
         ],
         handler: typing.Union[FunctionHandlerAsync, FunctionHandlerSync],
         middleware: typing.Optional[
-            list[
-                type[
-                    typing.Union[
-                        middleware_lib.Middleware, middleware_lib.MiddlewareSync
-                    ]
-                ]
-            ]
+            list[middleware_lib.UninitializedMiddleware]
         ] = None,
     ) -> None:
         self._handler = handler
@@ -169,14 +167,11 @@ class Function:
         ctx: Context,
         fn_id: str,
         middleware: middleware_lib.MiddlewareManager,
-        steps: dict[str, object],
         target_hashed_id: typing.Optional[str],
     ) -> execution.CallResult:
         middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
         for m in self._middleware:
             middleware.add(m)
-
-        memos = step_lib.StepMemos.from_raw(steps)
 
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
@@ -186,7 +181,7 @@ class Function:
         ctx = new_ctx
 
         # No memoized data means we're calling the function for the first time.
-        if memos.size == 0:
+        if ctx._steps.size == 0:
             err = await middleware.before_execution()
             if isinstance(err, Exception):
                 return execution.CallError.from_error(err)
@@ -217,7 +212,7 @@ class Function:
                         ctx=ctx,
                         step=step_lib.Step(
                             client,
-                            memos,
+                            ctx._steps,
                             middleware,
                             step_lib.StepIDCounter(),
                             target_hashed_id,
@@ -228,7 +223,7 @@ class Function:
                         ctx=ctx,
                         step=step_lib.StepSync(
                             client,
-                            memos,
+                            ctx._steps,
                             middleware,
                             step_lib.StepIDCounter(),
                             target_hashed_id,
@@ -297,14 +292,11 @@ class Function:
         ctx: Context,
         fn_id: str,
         middleware: middleware_lib.MiddlewareManager,
-        steps: dict[str, object],
         target_hashed_id: typing.Optional[str],
     ) -> execution.CallResult:
         middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
         for m in self._middleware:
             middleware.add(m)
-
-        memos = step_lib.StepMemos.from_raw(steps)
 
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
@@ -314,7 +306,7 @@ class Function:
         ctx = new_ctx
 
         # No memoized data means we're calling the function for the first time.
-        if memos.size == 0:
+        if ctx._steps.size == 0:
             middleware.before_execution_sync()
 
         try:
@@ -338,7 +330,7 @@ class Function:
                         ctx=ctx,
                         step=step_lib.StepSync(
                             client,
-                            memos,
+                            ctx._steps,
                             middleware,
                             step_lib.StepIDCounter(),
                             target_hashed_id,

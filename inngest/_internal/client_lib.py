@@ -28,13 +28,7 @@ _DEV_SERVER_EVENT_KEY = "NO_EVENT_KEY_SET"
 
 
 class Inngest:
-    middleware: list[
-        type[
-            typing.Union[
-                middleware_lib.Middleware, middleware_lib.MiddlewareSync
-            ]
-        ]
-    ]
+    middleware: list[middleware_lib.UninitializedMiddleware]
 
     @property
     def api_origin(self) -> str:
@@ -71,13 +65,7 @@ class Inngest:
         is_production: typing.Optional[bool] = None,
         logger: typing.Optional[types.Logger] = None,
         middleware: typing.Optional[
-            list[
-                type[
-                    typing.Union[
-                        middleware_lib.Middleware, middleware_lib.MiddlewareSync
-                    ]
-                ]
-            ]
+            list[middleware_lib.UninitializedMiddleware]
         ] = None,
         signing_key: typing.Optional[str] = None,
     ) -> None:
@@ -201,11 +189,7 @@ class Inngest:
 
     def add_middleware(
         self,
-        middleware: type[
-            typing.Union[
-                middleware_lib.Middleware, middleware_lib.MiddlewareSync
-            ]
-        ],
+        middleware: middleware_lib.UninitializedMiddleware,
     ) -> None:
         self.middleware = [*self.middleware, middleware]
 
@@ -218,13 +202,7 @@ class Inngest:
         debounce: typing.Optional[function_config.Debounce] = None,
         fn_id: str,
         middleware: typing.Optional[
-            list[
-                type[
-                    typing.Union[
-                        middleware_lib.Middleware, middleware_lib.MiddlewareSync
-                    ]
-                ]
-            ]
+            list[middleware_lib.UninitializedMiddleware]
         ] = None,
         name: typing.Optional[str] = None,
         on_failure: typing.Union[

@@ -13,19 +13,13 @@ from inngest._internal import (
 )
 
 from .log import LoggerMiddleware
-from .middleware import Middleware, MiddlewareSync
-
-MiddlewareT = typing.TypeVar("MiddlewareT", bound=Middleware)
-MiddlewareSyncT = typing.TypeVar("MiddlewareSyncT", bound=MiddlewareSync)
-
+from .middleware import Middleware, MiddlewareSync, UninitializedMiddleware
 
 _mismatched_sync = errors.AsyncUnsupportedError(
     "encountered async middleware in non-async context"
 )
 
-DEFAULT_CLIENT_MIDDLEWARE: list[
-    type[typing.Union[Middleware, MiddlewareSync]]
-] = [LoggerMiddleware]
+DEFAULT_CLIENT_MIDDLEWARE: list[UninitializedMiddleware] = [LoggerMiddleware]
 
 
 class MiddlewareManager:
@@ -65,9 +59,7 @@ class MiddlewareManager:
             new_mgr._middleware = [*new_mgr._middleware, m]
         return new_mgr
 
-    def add(
-        self, middleware: type[typing.Union[Middleware, MiddlewareSync]]
-    ) -> None:
+    def add(self, middleware: UninitializedMiddleware) -> None:
         self._middleware = [*self._middleware, middleware(self.client)]
 
     async def after_execution(self) -> types.MaybeError[None]:
