@@ -16,7 +16,6 @@ from . import (
     function,
     function_config,
     net,
-    transforms,
     types,
 )
 
@@ -432,23 +431,14 @@ class Inngest:
         if isinstance(req, Exception):
             raise req
 
-        if self._http_client.is_same_thread() is True:
-            _http_client: typing.Union[
-                httpx.AsyncClient, httpx.Client
-            ] = self._http_client
-        else:
-            # Python freaks out if you call httpx.AsyncClient's async methods in
-            # a multiple threads. To solve this, we'll use the synchronous
-            # client instead
-            self.logger.warning(
-                "called an async client method in a different thread; falling back to synchronous HTTP client"
-            )
-
-            _http_client = self._http_client_sync
-
-        return _extract_ids(
-            (await transforms.maybe_await(_http_client.send(req))).json()
+        res = await net.fetch_with_thready_safety(
+            self.logger,
+            self._http_client,
+            self._http_client_sync,
+            req,
         )
+
+        return _extract_ids(res.json())
 
     def send_sync(
         self,

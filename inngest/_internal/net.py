@@ -119,24 +119,17 @@ async def fetch_with_auth_fallback(
     403, then try again with the fallback signing key
     """
 
-    if client.is_same_thread() is True:
-        _client: typing.Union[httpx.AsyncClient, httpx.Client] = client
-    else:
-        # Python freaks out if you call httpx.AsyncClient's async methods in a
-        # multiple threads. To solve this, we'll use the synchronous client
-        # instead
-        logger.warning(
-            "called an async client method in a different thread; falling back to synchronous HTTP client"
-        )
-
-        _client = client_sync
-
     if signing_key is not None:
         request.headers[
             const.HeaderKey.AUTHORIZATION.value
         ] = f"Bearer {transforms.hash_signing_key(signing_key)}"
 
-    res = await transforms.maybe_await(_client.send(request))
+    res = await fetch_with_thready_safety(
+        logger,
+        client,
+        client_sync,
+        request,
+    )
     if (
         res.status_code
         in (http.HTTPStatus.FORBIDDEN, http.HTTPStatus.UNAUTHORIZED)
@@ -146,7 +139,13 @@ async def fetch_with_auth_fallback(
         request.headers[
             const.HeaderKey.AUTHORIZATION.value
         ] = f"Bearer {transforms.hash_signing_key(signing_key_fallback)}"
-        res = await transforms.maybe_await(_client.send(request))
+
+        res = await fetch_with_thready_safety(
+            logger,
+            client,
+            client_sync,
+            request,
+        )
 
     return res
 
@@ -207,6 +206,29 @@ def parse_url(url: str) -> str:
         parsed._replace(scheme="https")
 
     return parsed.geturl()
+
+
+async def fetch_with_thready_safety(
+    logger: types.Logger,
+    client: ThreadAwareAsyncHTTPClient,
+    client_sync: httpx.Client,
+    request: httpx.Request,
+) -> httpx.Response:
+    """
+    Safely handles the situation where the async HTTP client is called in a
+    different thread.
+    """
+
+    if client.is_same_thread() is True:
+        return await client.send(request)
+
+    # Python freaks out if you call httpx.AsyncClient's async methods in a
+    # multiple threads. To solve this, we'll use the synchronous client
+    # instead
+    logger.warning(
+        "called an async client method in a different thread; falling back to synchronous HTTP client"
+    )
+    return client_sync.send(request)
 
 
 class RequestSignature:
