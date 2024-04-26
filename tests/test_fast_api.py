@@ -67,30 +67,12 @@ class TestFastAPI(unittest.TestCase):
         method: str,
         path: str,
     ) -> http_proxy.Response:
-        if body is None or len(body) == 0:
-            body = json.dumps({}).encode("utf-8")
-
-        new_headers = {key: value[0] for key, value in headers.items()}
-
-        if method == "POST":
-            res = cls.fast_api_client.post(
-                path,
-                content=body,
-                headers=new_headers,
-            )
-        elif method == "PUT":
-            res = cls.fast_api_client.put(
-                path,
-                content=body,
-                headers=new_headers,
-            )
-        else:
-            raise Exception(f"unsupported method: {method}")
-
-        return http_proxy.Response(
-            body=res.content,
-            headers=dict(res.headers),
-            status_code=res.status_code,
+        return http_proxy.on_proxy_fast_api_request(
+            cls.fast_api_client,
+            body=body,
+            headers=headers,
+            method=method,
+            path=path,
         )
 
 

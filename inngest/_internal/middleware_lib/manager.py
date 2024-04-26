@@ -4,8 +4,8 @@ import inspect
 import typing
 
 from inngest._internal import (
-    client_lib,
     errors,
+    event_lib,
     execution,
     function,
     transforms,
@@ -14,6 +14,9 @@ from inngest._internal import (
 
 from .log import LoggerMiddleware
 from .middleware import Middleware, MiddlewareSync, UninitializedMiddleware
+
+if typing.TYPE_CHECKING:
+    from inngest._internal import client_lib
 
 _mismatched_sync = errors.AsyncUnsupportedError(
     "encountered async middleware in non-async context"
@@ -128,6 +131,30 @@ class MiddlewareManager:
                 if inspect.iscoroutinefunction(m.before_response):
                     return _mismatched_sync
                 m.before_response()
+            return None
+        except Exception as err:
+            return err
+
+    async def before_send_events(
+        self,
+        events: list[event_lib.Event],
+    ) -> types.MaybeError[None]:
+        try:
+            for m in self._middleware:
+                await transforms.maybe_await(m.before_send_events(events))
+            return None
+        except Exception as err:
+            return err
+
+    def before_send_events_sync(
+        self,
+        events: list[event_lib.Event],
+    ) -> types.MaybeError[None]:
+        try:
+            for m in self._middleware:
+                if inspect.iscoroutinefunction(m.before_send_events):
+                    return _mismatched_sync
+                m.before_send_events(events)
             return None
         except Exception as err:
             return err

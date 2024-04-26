@@ -23,6 +23,9 @@ else:
     PORT = _DEFAULT_DEV_SERVER_PORT
 
 
+origin: typing.Final = f"http://{net.HOST}:{PORT}"
+
+
 class _DevServer:
     _process: typing.Optional[subprocess.Popen[bytes]] = None
     _thread: typing.Optional[threading.Thread] = None

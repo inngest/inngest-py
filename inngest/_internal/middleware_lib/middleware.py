@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typing
 
-from inngest._internal import execution, function
+from inngest._internal import event_lib, execution, function
 
 if typing.TYPE_CHECKING:
     from inngest._internal import client_lib
@@ -32,6 +32,12 @@ class Middleware:
         back to Inngest. This is where you can perform any final actions before
         the response is sent back to Inngest. Called multiple times per run when
         using steps. Not called for function middleware.
+        """
+        return None
+
+    async def before_send_events(self, events: list[event_lib.Event]) -> None:
+        """
+        Before sending events.
         """
         return None
 
@@ -83,6 +89,12 @@ class MiddlewareSync:
         back to Inngest. This is where you can perform any final actions before
         the response is sent back to Inngest. Called multiple times per run when
         using steps. Not called for function middleware.
+        """
+        return None
+
+    def before_send_events(self, events: list[event_lib.Event]) -> None:
+        """
+        Before sending events.
         """
         return None
 

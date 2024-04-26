@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import dataclasses
 import http.server
+import json
 import socketserver
 import threading
 import typing
+
+import fastapi.testclient
+import flask.testing
 
 from . import net
 
@@ -130,3 +134,60 @@ class _OnRequest(typing.Protocol):
         path: str,
     ) -> Response:
         ...
+
+
+def on_proxy_fast_api_request(
+    client: fastapi.testclient.TestClient,
+    *,
+    body: typing.Optional[bytes],
+    headers: dict[str, list[str]],
+    method: str,
+    path: str,
+) -> Response:
+    if body is None or len(body) == 0:
+        body = json.dumps({}).encode("utf-8")
+
+    new_headers = {key: value[0] for key, value in headers.items()}
+
+    if method == "POST":
+        res = client.post(
+            path,
+            content=body,
+            headers=new_headers,
+        )
+    elif method == "PUT":
+        res = client.put(
+            path,
+            content=body,
+            headers=new_headers,
+        )
+    else:
+        raise Exception(f"unsupported method: {method}")
+
+    return Response(
+        body=res.content,
+        headers=dict(res.headers),
+        status_code=res.status_code,
+    )
+
+
+def on_proxy_flask_request(
+    client: flask.testing.FlaskClient,
+    *,
+    body: typing.Optional[bytes],
+    headers: dict[str, list[str]],
+    method: str,
+    path: str,
+) -> Response:
+    res = client.open(
+        method=method,
+        path=path,
+        headers=headers,
+        data=body,
+    )
+
+    return Response(
+        body=res.data,
+        headers=dict(res.headers),
+        status_code=res.status_code,
+    )

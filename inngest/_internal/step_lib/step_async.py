@@ -260,7 +260,18 @@ class Step(base.StepBase):
         """
 
         async def fn() -> list[str]:
-            return await self._client.send(events)
+            if isinstance(events, list):
+                _events = events
+            else:
+                _events = [events]
+
+            await self._middleware.before_send_events(_events)
+            return await self._client.send(
+                events,
+                # Skip middleware since we're already running it above. Without
+                # this, we'll double-call middleware hooks
+                skip_middleware=True,
+            )
 
         return await self.run(step_id, fn)
 

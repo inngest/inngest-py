@@ -241,7 +241,18 @@ class StepSync(base.StepBase):
         """
 
         def fn() -> list[str]:
-            return self._client.send_sync(events)
+            if isinstance(events, list):
+                _events = events
+            else:
+                _events = [events]
+
+            self._middleware.before_send_events_sync(_events)
+            return self._client.send_sync(
+                events,
+                # Skip middleware since we're already running it above. Without
+                # this, we'll double-call middleware hooks
+                skip_middleware=True,
+            )
 
         return self.run(step_id, fn)
 
