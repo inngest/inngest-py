@@ -15,13 +15,10 @@ from . import (
     event_lib,
     function,
     function_config,
+    middleware_lib,
     net,
     types,
 )
-
-if typing.TYPE_CHECKING:
-    from . import middleware_lib
-
 
 # Dummy value
 _DEV_SERVER_EVENT_KEY = "NO_EVENT_KEY_SET"
@@ -393,6 +390,8 @@ class Inngest:
     async def send(
         self,
         events: typing.Union[event_lib.Event, list[event_lib.Event]],
+        *,
+        skip_middleware: bool = False,
     ) -> list[str]:
         """
         Send one or more events. This method is asynchronous.
@@ -400,10 +399,15 @@ class Inngest:
         Args:
         ----
             events: An event or list of events to send.
+            skip_middleware: Whether to skip middleware.
         """
 
         if not isinstance(events, list):
             events = [events]
+
+        if not skip_middleware:
+            middleware = middleware_lib.MiddlewareManager.from_client(self)
+            await middleware.before_send_events(events)
 
         req = self._build_send_request(events)
         if isinstance(req, Exception):
@@ -421,6 +425,8 @@ class Inngest:
     def send_sync(
         self,
         events: typing.Union[event_lib.Event, list[event_lib.Event]],
+        *,
+        skip_middleware: bool = False,
     ) -> list[str]:
         """
         Send one or more events. This method is synchronous.
@@ -428,10 +434,15 @@ class Inngest:
         Args:
         ----
             events: An event or list of events to send.
+            skip_middleware: Whether to skip middleware.
         """
 
         if not isinstance(events, list):
             events = [events]
+
+        if not skip_middleware:
+            middleware = middleware_lib.MiddlewareManager.from_client(self)
+            middleware.before_send_events_sync(events)
 
         req = self._build_send_request(events)
         if isinstance(req, Exception):

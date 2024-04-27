@@ -35,6 +35,9 @@ def create(
         def before_execution(self) -> None:
             state.hook_list.append("before_execution")
 
+        def before_send_events(self, events: list[inngest.Event]) -> None:
+            state.hook_list.append("before_send_events")
+
         def transform_input(
             self,
             ctx: inngest.Context,
@@ -62,6 +65,12 @@ def create(
 
         async def before_execution(self) -> None:
             state.hook_list.append("before_execution")
+
+        async def before_send_events(
+            self,
+            events: list[inngest.Event],
+        ) -> None:
+            state.hook_list.append("before_send_events")
 
         async def transform_input(
             self,
@@ -95,11 +104,7 @@ def create(
             return "original output"
 
         step.run("step_1", _step_1)
-
-        def _step_2() -> None:
-            pass
-
-        step.run("step_2", _step_2)
+        step.send_event("send", [inngest.Event(name="dummy")])
 
     @client.create_function(
         fn_id=fn_id,
@@ -117,11 +122,7 @@ def create(
             return "original output"
 
         await step.run("step_1", _step_1)
-
-        async def _step_2() -> None:
-            pass
-
-        await step.run("step_2", _step_2)
+        await step.send_event("send", [inngest.Event(name="dummy")])
 
     def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
@@ -141,6 +142,7 @@ def create(
             # Entry 2
             "transform_input",
             "before_execution",
+            "before_send_events",
             "after_execution",
             "transform_output",
             # Entry 3

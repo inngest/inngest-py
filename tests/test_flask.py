@@ -68,17 +68,12 @@ class TestFunctions(unittest.TestCase):
         method: str,
         path: str,
     ) -> http_proxy.Response:
-        res = cls.app.open(
+        return http_proxy.on_proxy_flask_request(
+            cls.app,
+            body=body,
+            headers=headers,
             method=method,
             path=path,
-            headers=headers,
-            data=body,
-        )
-
-        return http_proxy.Response(
-            body=res.data,
-            headers=dict(res.headers),
-            status_code=res.status_code,
         )
 
 
