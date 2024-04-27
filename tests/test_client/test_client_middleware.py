@@ -20,10 +20,9 @@ import inngest.fast_api
 import inngest.flask
 import tests.helper
 from tests import base, dev_server, http_proxy
-from tests.cases.base import BaseState
 
 
-class State(BaseState):
+class State(base.BaseState):
     def __init__(self) -> None:
         super().__init__()
         self.hook_list: list[str] = []

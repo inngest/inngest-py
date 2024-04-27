@@ -4,7 +4,6 @@ ran into some "Settings already configured" errors when we had separate files
 for async and sync, likely due to django.conf.settings being a singleton.
 """
 
-import threading
 import typing
 import unittest
 
@@ -13,23 +12,18 @@ import django.test
 
 import inngest
 import inngest.django
+from tests import base, dev_server, http_proxy
 
-from . import base, cases, dev_server, http_proxy, net
-
-
-class SetupState:
-    is_setup = False
-    is_torn_down = False
-    mutex = threading.Lock()
-
+from . import cases
 
 _framework = "django"
-_dev_server_origin = f"http://{net.HOST}:{dev_server.PORT}"
+_app_id = f"{_framework}-functions"
+
 
 _client = inngest.Inngest(
-    api_base_url=_dev_server_origin,
-    app_id=_framework,
-    event_api_base_url=_dev_server_origin,
+    api_base_url=dev_server.origin,
+    app_id=_app_id,
+    event_api_base_url=dev_server.origin,
     is_production=False,
 )
 
@@ -59,7 +53,7 @@ urlpatterns = [
 ]
 
 
-class TestDjango(unittest.TestCase):
+class TestFunctions(unittest.TestCase):
     client: inngest.Inngest
     django_client: django.test.Client
     proxy: http_proxy.Proxy
@@ -104,4 +98,4 @@ class TestDjango(unittest.TestCase):
 
 for case in _cases:
     test_name = f"test_{case.name}"
-    setattr(TestDjango, test_name, case.run_test)
+    setattr(TestFunctions, test_name, case.run_test)

@@ -1,3 +1,4 @@
+import datetime
 import hashlib
 import hmac
 import os
@@ -11,6 +12,40 @@ import inngest
 from inngest._internal import const, transforms, types
 
 from . import http_proxy, net
+
+
+class BaseState:
+    run_id: typing.Optional[str] = None
+
+    def wait_for_run_id(
+        self,
+        *,
+        timeout: datetime.timedelta = datetime.timedelta(seconds=5),
+    ) -> str:
+        def assertion() -> None:
+            assert self.run_id is not None
+
+        wait_for(assertion, timeout=timeout)
+        assert self.run_id is not None
+        return self.run_id
+
+
+def wait_for(
+    assertion: typing.Callable[[], None],
+    *,
+    timeout: datetime.timedelta = datetime.timedelta(seconds=5),
+) -> None:
+    start = datetime.datetime.now()
+    while True:
+        try:
+            assertion()
+            return
+        except Exception as err:
+            timed_out = datetime.datetime.now() > start + timeout
+            if timed_out:
+                raise err
+
+        time.sleep(0.2)
 
 
 class _FrameworkTestCase(typing.Protocol):

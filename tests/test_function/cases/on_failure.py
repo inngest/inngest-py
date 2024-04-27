@@ -118,7 +118,10 @@ def create(
         assert "inngest/_internal" not in stack
 
         # User code is in the traceback.
-        assert '/inngest-py/tests/cases/on_failure.py", line' in stack
+        assert (
+            '/inngest-py/tests/test_function/cases/on_failure.py", line'
+            in stack
+        )
 
         run_id = state.wait_for_on_failure_run_id()
         tests.helper.client.wait_for_run_status(

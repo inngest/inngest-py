@@ -6,12 +6,11 @@ import unittest
 
 import inngest
 import inngest.flask
-from inngest._internal import const
+from inngest._internal import const, errors
+from tests import http_proxy
 
-from . import http_proxy
 
-
-class TestClient(unittest.TestCase):
+class TestSend(unittest.TestCase):
     def test_send_event_to_cloud_branch_env(self) -> None:
         """
         Test that the SDK correctly syncs itself with Cloud.
@@ -54,7 +53,6 @@ class TestClient(unittest.TestCase):
             app_id="my-app",
             env="my-env",
             event_key=event_key,
-            signing_key="signkey-branch-123abc",
         )
 
         client.send_sync(inngest.Event(name="foo"))
@@ -83,6 +81,12 @@ class TestClient(unittest.TestCase):
             )
 
         await asyncio.gather(*sends)
+
+    def test_cloud_mode_without_event_key(self) -> None:
+        client = inngest.Inngest(app_id="my-app")
+
+        with self.assertRaises(errors.EventKeyUnspecifiedError):
+            client.send_sync(inngest.Event(name="foo"))
 
 
 if __name__ == "__main__":
