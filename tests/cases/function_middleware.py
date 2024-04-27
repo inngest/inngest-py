@@ -104,12 +104,6 @@ def create(
             return "original output"
 
         step.run("step_1", _step_1)
-
-        def _step_2() -> None:
-            pass
-
-        step.run("step_2", _step_2)
-
         step.send_event("send", [inngest.Event(name="dummy")])
 
     @client.create_function(
@@ -128,12 +122,6 @@ def create(
             return "original output"
 
         await step.run("step_1", _step_1)
-
-        async def _step_2() -> None:
-            pass
-
-        await step.run("step_2", _step_2)
-
         await step.send_event("send", [inngest.Event(name="dummy")])
 
     def run_test(self: base.TestClass) -> None:
@@ -152,11 +140,6 @@ def create(
             "after_execution",
             "transform_output",
             # Entry 2
-            "transform_input",
-            "before_execution",
-            "after_execution",
-            "transform_output",
-            # Entry 3
             "transform_input",
             "before_execution",
             "before_send_events",
