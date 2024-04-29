@@ -43,7 +43,7 @@ def create(
         state.run_id = ctx.run_id
         state.step_output = step.invoke_by_id(
             "invoke",
-            app_id=framework,
+            app_id=client.app_id,
             function_id=f"{fn_id}/invokee",
         )
 
@@ -70,7 +70,7 @@ def create(
         state.run_id = ctx.run_id
         state.step_output = await step.invoke_by_id(
             "invoke",
-            app_id=framework,
+            app_id=client.app_id,
             function_id=f"{fn_id}/invokee",
         )
 

@@ -92,7 +92,7 @@ class StepResponse(types.BaseModel):
 class MemoizedError(types.BaseModel):
     message: str
     name: str
-    stack: typing.Optional[str]
+    stack: typing.Optional[str] = None
 
     @classmethod
     def from_error(cls, err: Exception) -> MemoizedError:

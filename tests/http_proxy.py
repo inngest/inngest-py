@@ -25,7 +25,7 @@ class Proxy:
     def port(self) -> int:
         return self._port
 
-    def __init__(self, on_request: _OnRequest) -> None:
+    def __init__(self, on_request: OnRequest) -> None:
         self._port = net.get_available_port()
 
         class _Handler(http.server.SimpleHTTPRequestHandler):
@@ -124,7 +124,7 @@ class Response:
     status_code: int
 
 
-class _OnRequest(typing.Protocol):
+class OnRequest(typing.Protocol):
     def __call__(
         self,
         *,
