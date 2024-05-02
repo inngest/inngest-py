@@ -55,6 +55,7 @@ class ErrorCode(enum.Enum):
 
 
 class Framework(enum.Enum):
+    DIGITAL_OCEAN = "digitalocean"
     DJANGO = "django"
     FAST_API = "fast_api"
     FLASK = "flask"

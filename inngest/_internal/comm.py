@@ -525,7 +525,7 @@ class CommHandler:
         *,
         app_url: str,
         server_kind: typing.Optional[const.ServerKind],
-        sync_id: typing.Optional[str] = None,
+        sync_id: typing.Optional[str],
     ) -> CommResponse:
         """Handle a registration call."""
 
