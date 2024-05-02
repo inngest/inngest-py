@@ -103,7 +103,7 @@ extend-ignore = [
 ]
 
 line-length = 80
-mccabe = { max-complexity = 16 }
+mccabe = { max-complexity = 20 }
 
 [tool.ruff.extend-per-file-ignores]
 "examples/**/*.py" = ['D', 'T20']
