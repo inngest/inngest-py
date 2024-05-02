@@ -13,6 +13,7 @@ else:
     Logger = object
 
 T = typing.TypeVar("T")
+TTuple = typing_extensions.TypeVarTuple("TTuple")
 
 
 class EmptySentinel:

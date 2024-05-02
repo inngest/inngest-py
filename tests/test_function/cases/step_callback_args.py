@@ -1,16 +1,15 @@
-import json
-import typing
-
 import inngest
 import tests.helper
 
 from . import base
 
-_TEST_NAME = "unserializable_step_output"
+_TEST_NAME = "step_callback_args"
 
 
 class _State(base.BaseState):
-    error: typing.Optional[BaseException] = None
+    def __init__(self) -> None:
+        super().__init__()
+        self.step_args: list[object] = []
 
 
 def create(
@@ -23,6 +22,9 @@ def create(
     fn_id = base.create_fn_id(test_name)
     state = _State()
 
+    def step_callback(a: int, b: str) -> None:
+        state.step_args = [a, b]
+
     @client.create_function(
         fn_id=fn_id,
         retries=0,
@@ -33,21 +35,7 @@ def create(
         step: inngest.StepSync,
     ) -> None:
         state.run_id = ctx.run_id
-
-        class Foo:
-            pass
-
-        def step_1() -> Foo:
-            return Foo()
-
-        try:
-            step.run(
-                "step_1",
-                step_1,  # type: ignore[type-var]
-            )
-        except BaseException as err:
-            state.error = err
-            raise
+        step.run("step", step_callback, 1, "a")
 
     @client.create_function(
         fn_id=fn_id,
@@ -59,34 +47,17 @@ def create(
         step: inngest.Step,
     ) -> None:
         state.run_id = ctx.run_id
-
-        class Foo:
-            pass
-
-        async def step_1() -> Foo:
-            return Foo()
-
-        await step.run(  # type: ignore[call-arg]
-            "step_1",
-            step_1,  # type: ignore[type-var]
-        )
+        await step.run("step", step_callback, 1, "a")
 
     def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
         run_id = state.wait_for_run_id()
-        run = tests.helper.client.wait_for_run_status(
+        tests.helper.client.wait_for_run_status(
             run_id,
-            tests.helper.RunStatus.FAILED,
+            tests.helper.RunStatus.COMPLETED,
         )
 
-        assert run.output is not None
-        output = json.loads(run.output)
-
-        assert output == {
-            "code": "output_unserializable",
-            "message": '"step_1" returned unserializable data',
-            "name": "OutputUnserializableError",
-        }
+        assert state.step_args == [1, "a"]
 
     if is_sync:
         fn = fn_sync
