@@ -433,7 +433,9 @@ class CommHandler:
             signing_key=self._signing_key,
             signing_key_fallback=self._signing_key_fallback,
         )
-        if isinstance(err, Exception):
+        if self._client._mode != const.ServerKind.CLOUD or isinstance(
+            err, Exception
+        ):
             body = _InsecureInspection(
                 function_count=len(self._fns),
                 has_event_key=self._client.event_key is not None,

@@ -21,7 +21,7 @@ class TestIntrospection(base.BaseTestIntrospection):
         )
         return fastapi.testclient.TestClient(app)
 
-    def test_insecure(self) -> None:
+    def test_cloud_mode_with_no_signature(self) -> None:
         fast_api_client = self._serve(
             inngest.Inngest(
                 app_id=f"{_framework}-introspection",
@@ -33,7 +33,7 @@ class TestIntrospection(base.BaseTestIntrospection):
         assert res.status_code == 200
         assert res.json() == self.expected_insecure_body
 
-    def test_secure(self) -> None:
+    def test_cloud_mode_with_signature(self) -> None:
         self.set_signing_key_fallback_env_var()
 
         fast_api_client = self._serve(
@@ -51,6 +51,22 @@ class TestIntrospection(base.BaseTestIntrospection):
         )
         assert res.status_code == 200
         assert res.json() == self.expected_secure_body
+
+    def test_dev_mode_with_no_signature(self) -> None:
+        fast_api_client = self._serve(
+            inngest.Inngest(
+                app_id=f"{_framework}-introspection",
+                event_key="test",
+                is_production=False,
+                signing_key=self.signing_key,
+            )
+        )
+        res = fast_api_client.get("/api/inngest")
+        assert res.status_code == 200
+        assert res.json() == {
+            **self.expected_insecure_body,
+            "mode": "dev",
+        }
 
 
 if __name__ == "__main__":
