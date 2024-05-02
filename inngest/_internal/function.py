@@ -161,7 +161,7 @@ class Function:
         if opts.on_failure is not None:
             self._on_failure_fn_id = f"{opts.fully_qualified_id}-failure"
 
-    async def call(  # noqa: C901
+    async def call(
         self,
         client: client_lib.Inngest,
         ctx: Context,
@@ -286,7 +286,7 @@ class Function:
         except Exception as err:
             return execution.CallError.from_error(err)
 
-    def call_sync(  # noqa: C901
+    def call_sync(
         self,
         client: client_lib.Inngest,
         ctx: Context,
