@@ -1,6 +1,8 @@
 import datetime
 import typing
 
+import typing_extensions
+
 from inngest._internal import errors, event_lib, execution, transforms, types
 
 from . import base
@@ -156,7 +158,11 @@ class StepSync(base.StepBase):
     def run(
         self,
         step_id: str,
-        handler: typing.Callable[[], types.JSONT],
+        handler: typing.Callable[
+            [typing_extensions.Unpack[types.TTuple]],
+            types.JSONT,
+        ],
+        *handler_args: typing_extensions.Unpack[types.TTuple],
     ) -> types.JSONT:
         """
         Run logic that should be retried on error and memoized after success.
@@ -167,6 +173,7 @@ class StepSync(base.StepBase):
                 function, but it's OK to reuse as long as your function is
                 deterministic.
             handler: The logic to run.
+            *handler_args: Arguments to pass to the handler.
         """
 
         parsed_step_id = self._parse_step_id(step_id)
@@ -194,7 +201,7 @@ class StepSync(base.StepBase):
             raise err
 
         try:
-            output = handler()
+            output = handler(*handler_args)
 
             raise base.ResponseInterrupt(
                 execution.StepResponse(
