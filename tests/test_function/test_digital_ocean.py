@@ -7,8 +7,8 @@ import flask.testing
 import inngest
 import inngest.digital_ocean
 import inngest.fast_api
-from inngest._internal import const
-from tests import base, dev_server, digital_ocean, http_proxy
+from inngest._internal import const, digital_ocean_simulator
+from tests import base, dev_server, http_proxy
 
 from . import cases
 
@@ -41,7 +41,9 @@ class TestFunctions(unittest.TestCase):
     def setUpClass(cls) -> None:
         super().setUpClass()
         main = inngest.digital_ocean.serve(_client, _fns)
-        cls.app = digital_ocean.DigitalOceanSimulator(main).app.test_client()
+        cls.app = digital_ocean_simulator.DigitalOceanSimulator(
+            main
+        ).app.test_client()
         cls.client = _client
         cls.proxy = http_proxy.Proxy(cls.on_proxy_request).start()
         base.register(cls.proxy.port)

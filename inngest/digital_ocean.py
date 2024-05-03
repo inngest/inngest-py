@@ -135,7 +135,9 @@ def serve(
                 )
 
             if http.method == "PUT":
-                request_url = context.api_host + (http.path or "")
+                request_url = urllib.parse.urljoin(
+                    context.api_host, http.path or ""
+                )
                 sync_id = _get_first(
                     query_params.get(const.QueryParamKey.SYNC_ID.value),
                 )

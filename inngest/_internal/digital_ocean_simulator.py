@@ -16,7 +16,7 @@ class DigitalOceanSimulator:
     """
     Simulates the DigitalOcean Functions runtime. This is necessary because
     DigitalOcean Functions don't seem to have a local development environment.
-    If that's wrong or changes, this class can likely be removed.
+    If that's wrong or changes, this class can likely be deleted.
     """
 
     def __init__(self, main: _Main) -> None:

@@ -6,8 +6,8 @@ import flask.testing
 import inngest
 import inngest.digital_ocean
 import inngest.fast_api
-from inngest._internal import const
-from tests import base, digital_ocean
+from inngest._internal import const, digital_ocean_simulator
+from tests import base
 
 _framework = const.Framework.DIGITAL_OCEAN.value
 
@@ -19,7 +19,9 @@ class TestIntrospection(base.BaseTestIntrospection):
             self.create_functions(client),
         )
 
-        return digital_ocean.DigitalOceanSimulator(main).app.test_client()
+        return digital_ocean_simulator.DigitalOceanSimulator(
+            main
+        ).app.test_client()
 
     def test_cloud_mode_with_no_signature(self) -> None:
         app_client = self._serve(
