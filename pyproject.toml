@@ -1,6 +1,6 @@
 [project]
 name = "inngest"
-version = "0.3.11"
+version = "0.3.12"
 description = "Python SDK for Inngest"
 readme = "README.md"
 classifiers = [
@@ -27,6 +27,7 @@ extra = [
     "django-types==0.19.1",
     "fastapi==0.100.0",
     "mypy==1.8.0",
+    "pynacl==1.5.0",
     "pytest==7.4.2",
     "pytest-django==4.7.0",
     "pytest-xdist[psutil]==3.3.1",
