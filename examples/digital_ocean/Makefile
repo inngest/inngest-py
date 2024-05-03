@@ -5,7 +5,7 @@ check-venv:
 	fi
 
 dev: check-venv
-	@export INNGEST_DEV=1 FLASK_DEBUG=true && ./scripts/start.sh
+	@export INNGEST_DEV=1 && ./scripts/start.sh
 
 install: check-venv
 	@pip install .
