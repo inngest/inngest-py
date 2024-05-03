@@ -40,7 +40,11 @@ class TestFunctions(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
-        main = inngest.digital_ocean.serve(_client, _fns)
+        main = inngest.digital_ocean.serve(
+            _client,
+            _fns,
+            serve_path="/api/inngest",
+        )
         cls.app = digital_ocean_simulator.DigitalOceanSimulator(
             main
         ).app.test_client()

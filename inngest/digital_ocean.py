@@ -28,7 +28,7 @@ def serve(
     functions: list[function.Function],
     *,
     serve_origin: typing.Optional[str] = None,
-    serve_path: typing.Optional[str] = None,
+    serve_path: str,
 ) -> typing.Callable[[dict[str, object], _Context], _Response]:
     """
     Serve Inngest functions in a DigitalOcean Function.
@@ -41,6 +41,9 @@ def serve(
         serve_origin: Origin to serve the functions from.
         serve_path: Path to serve the functions from.
     """
+
+    if not serve_path:
+        raise ValueError("serve_path is required")
 
     handler = comm.CommHandler(
         api_base_url=client.api_origin,

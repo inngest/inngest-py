@@ -17,6 +17,7 @@ class TestIntrospection(base.BaseTestIntrospection):
         main = inngest.digital_ocean.serve(
             client,
             self.create_functions(client),
+            serve_path="/api/inngest",
         )
 
         return digital_ocean_simulator.DigitalOceanSimulator(
