@@ -23,8 +23,6 @@
 
 # Inngest Python SDK
 
-> 🚧 Currently in beta! Users have deployed our Python SDK in their production environments but it isn't as battle-tested as our TypeScript SDK.
-
 We currently support the following frameworks (but adding a new framework is easy!):
 
 - DigitalOcean Functions
