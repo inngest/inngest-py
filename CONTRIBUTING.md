@@ -8,6 +8,12 @@ make install
 ## Start example servers
 
 ```sh
+# DigitalOcean
+(cd examples/digital_ocean && make dev)
+
+# Django
+(cd examples/django && make dev)
+
 # FastAPI
 (cd examples/fast_api && make dev)
 

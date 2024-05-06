@@ -134,6 +134,8 @@ def _create_handler_async(
             )
 
         if flask.request.method == "PUT":
+            sync_id = flask.request.args.get(const.QueryParamKey.SYNC_ID.value)
+
             return _to_response(
                 client,
                 await handler.register(
@@ -143,6 +145,7 @@ def _create_handler_async(
                         serve_path=serve_path,
                     ),
                     server_kind=server_kind,
+                    sync_id=sync_id,
                 ),
                 server_kind,
             )

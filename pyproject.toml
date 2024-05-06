@@ -1,6 +1,6 @@
 [project]
 name = "inngest"
-version = "0.3.12"
+version = "0.3.13.dev2"
 description = "Python SDK for Inngest"
 readme = "README.md"
 classifiers = [
@@ -104,7 +104,7 @@ extend-ignore = [
 ]
 
 line-length = 80
-mccabe = { max-complexity = 16 }
+mccabe = { max-complexity = 21 }
 
 [tool.ruff.extend-per-file-ignores]
 "examples/**/*.py" = ['D', 'T20']

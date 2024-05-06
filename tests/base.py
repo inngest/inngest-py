@@ -5,6 +5,7 @@ import os
 import time
 import typing
 import unittest
+import urllib.parse
 
 import httpx
 
@@ -72,9 +73,12 @@ def create_app_id(framework: str) -> str:
     return framework + suffix
 
 
-def register(app_port: int) -> None:
+def register(
+    app_port: int,
+    path: typing.Optional[str] = "/api/inngest",
+) -> None:
     res = httpx.put(
-        f"http://{net.HOST}:{app_port}/api/inngest",
+        urllib.parse.urljoin(f"http://{net.HOST}:{app_port}", path),
         timeout=5,
     )
     assert res.status_code == 200

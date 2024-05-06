@@ -6,7 +6,7 @@ DEFAULT_EVENT_ORIGIN: typing.Final = "https://inn.gs/"
 DEV_SERVER_ORIGIN: typing.Final = "http://127.0.0.1:8288/"
 LANGUAGE: typing.Final = "py"
 ROOT_STEP_ID: typing.Final = "step"
-VERSION: typing.Final = "0.3.12"
+VERSION: typing.Final = "0.3.13.dev2"
 
 
 class EnvKey(enum.Enum):
@@ -55,6 +55,7 @@ class ErrorCode(enum.Enum):
 
 
 class Framework(enum.Enum):
+    DIGITAL_OCEAN = "digitalocean"
     DJANGO = "django"
     FAST_API = "fast_api"
     FLASK = "flask"

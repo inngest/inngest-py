@@ -1,3 +1,9 @@
+"""
+Encryption middleware for Inngest.
+
+NOT STABLE! This is an experimental feature and may change in the future.
+"""
+
 from __future__ import annotations
 
 import json
@@ -101,10 +107,18 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
         return data
 
     def before_send_events(self, events: list[inngest.Event]) -> None:
+        """
+        Encrypt event data before sending it to the Inngest server.
+        """
+
         for event in events:
             event.data = self._encrypt(event.data)
 
     def transform_input(self, ctx: inngest.Context) -> inngest.Context:
+        """
+        Decrypt data from the Inngest server.
+        """
+
         for step in ctx._steps.values():
             step.data = self._decrypt(step.data)
 
@@ -116,6 +130,10 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
         return ctx
 
     def transform_output(self, output: inngest.Output) -> inngest.Output:
+        """
+        Encrypt data before sending it to the Inngest server.
+        """
+
         output.data = self._encrypt(output.data)
         return output
 
