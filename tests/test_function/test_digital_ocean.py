@@ -44,14 +44,13 @@ class TestFunctions(unittest.TestCase):
         main = inngest.digital_ocean.serve(
             _client,
             _fns,
-            serve_path="/api/inngest",
         )
         cls.app = digital_ocean_simulator.DigitalOceanSimulator(
             main
         ).app.test_client()
         cls.client = _client
         cls.proxy = http_proxy.Proxy(cls.on_proxy_request).start()
-        base.register(cls.proxy.port)
+        base.register(cls.proxy.port, digital_ocean_simulator.FULL_PATH)
 
     @classmethod
     def tearDownClass(cls) -> None:

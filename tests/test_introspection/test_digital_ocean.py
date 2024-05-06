@@ -18,7 +18,6 @@ class TestIntrospection(base.BaseTestIntrospection):
         main = inngest.digital_ocean.serve(
             client,
             self.create_functions(client),
-            serve_path="/api/inngest",
         )
 
         return digital_ocean_simulator.DigitalOceanSimulator(
@@ -33,7 +32,7 @@ class TestIntrospection(base.BaseTestIntrospection):
                 signing_key=self.signing_key,
             )
         )
-        res = app_client.get("/api/inngest")
+        res = app_client.get(digital_ocean_simulator.FULL_PATH)
         assert res.status_code == 200
         assert res.json == self.expected_insecure_body
 
@@ -49,7 +48,7 @@ class TestIntrospection(base.BaseTestIntrospection):
         )
 
         res = app_client.get(
-            "/api/inngest",
+            digital_ocean_simulator.FULL_PATH,
             headers={
                 const.HeaderKey.SIGNATURE.value: self.create_signature(),
             },
@@ -67,7 +66,7 @@ class TestIntrospection(base.BaseTestIntrospection):
             )
         )
 
-        res = app_client.get("/api/inngest")
+        res = app_client.get(digital_ocean_simulator.FULL_PATH)
         assert res.status_code == 200
         assert res.json == {
             **self.expected_insecure_body,

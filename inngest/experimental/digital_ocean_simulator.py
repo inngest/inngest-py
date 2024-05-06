@@ -8,6 +8,11 @@ import typing
 
 import flask
 
+_PATH_PREFIX = "/api/v1/web"
+_NAMESPACE = "fn-00000000"
+_FUNCTION_NAME = "fake-name"
+FULL_PATH = f"{_PATH_PREFIX}/{_NAMESPACE}/{_FUNCTION_NAME}"
+
 _Main = typing.Callable[[typing.Any, typing.Any], typing.Any]
 
 
@@ -36,7 +41,7 @@ class DigitalOceanSimulator:
 def _create_app(main: _Main) -> flask.Flask:
     app = flask.Flask(__name__)
 
-    @app.route("/api/inngest", methods=["GET", "POST", "PUT"])
+    @app.route(FULL_PATH, methods=["GET", "POST", "PUT"])
     def handler() -> flask.Response:
         event: dict[str, object] = {
             "http": {
@@ -52,7 +57,7 @@ def _create_app(main: _Main) -> flask.Flask:
             event,
             _Context(
                 api_host=flask.request.url_root,
-                function_name=flask.request.path,
+                function_name=f"/{_NAMESPACE}/{_FUNCTION_NAME}",
             ),
         )
         if not isinstance(res, dict):

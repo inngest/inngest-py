@@ -143,7 +143,7 @@ def serve(
                 #
                 # You might be tempted to use event.http.path, but that's
                 # actually the relative path after the prefix + function name.
-                path = "/api/v1/web/" + context.function_name
+                path = "/api/v1/web" + context.function_name
 
                 request_url = urllib.parse.urljoin(context.api_host, path)
                 sync_id = _get_first(
