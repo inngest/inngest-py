@@ -1,8 +1,8 @@
 from src.inngest import inngest_client
 
 import inngest.digital_ocean
-import inngest.experimental
 from examples import functions
+from inngest.experimental.digital_ocean_simulator import DigitalOceanSimulator
 
 main = inngest.digital_ocean.serve(
     inngest_client,
@@ -11,4 +11,4 @@ main = inngest.digital_ocean.serve(
 
 # This should not be used in production. It's just for locally running
 # Inngestful DigitalOcean Functions
-inngest.experimental.DigitalOceanSimulator(main).app.run(port=8000)
+DigitalOceanSimulator(main).app.run(port=8000)

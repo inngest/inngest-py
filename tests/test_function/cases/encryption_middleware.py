@@ -6,8 +6,8 @@ import nacl.secret
 import nacl.utils
 
 import inngest
-import inngest.experimental
 import tests.helper
+from inngest.experimental.encryption_middleware import EncryptionMiddleware
 
 from . import base
 
@@ -59,9 +59,7 @@ def create(
 
     @client.create_function(
         fn_id=fn_id,
-        middleware=[
-            inngest.experimental.EncryptionMiddleware.factory(_secret_key)
-        ],
+        middleware=[EncryptionMiddleware.factory(_secret_key)],
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
@@ -89,9 +87,7 @@ def create(
 
     @client.create_function(
         fn_id=fn_id,
-        middleware=[
-            inngest.experimental.EncryptionMiddleware.factory(_secret_key)
-        ],
+        middleware=[EncryptionMiddleware.factory(_secret_key)],
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )

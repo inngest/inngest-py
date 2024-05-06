@@ -1,3 +1,7 @@
+"""
+Simulator for the DigitalOcean Function runtime.
+"""
+
 import dataclasses
 import json
 import typing
@@ -10,16 +14,22 @@ _Main = typing.Callable[[typing.Any, typing.Any], typing.Any]
 @dataclasses.dataclass
 class _Context:
     api_host: str
+    function_name: str
 
 
 class DigitalOceanSimulator:
     """
-    Simulates the DigitalOcean Functions runtime. This is necessary because
+    Simulator for the DigitalOcean Function runtime. This is necessary because
     DigitalOcean Functions don't seem to have a local development environment.
     If that's wrong or changes, this class can likely be deleted.
     """
 
     def __init__(self, main: _Main) -> None:
+        """
+        Args:
+        ----
+            main: DigitalOcean Function handler.
+        """
         self.app = _create_app(main)
 
 
@@ -33,14 +43,17 @@ def _create_app(main: _Main) -> flask.Flask:
                 "body": flask.request.data.decode("utf-8"),
                 "headers": dict(flask.request.headers.items()),
                 "method": flask.request.method,
-                "path": flask.request.path,
+                "path": "",
                 "queryString": flask.request.query_string.decode("utf-8"),
             },
         }
 
         res = main(
             event,
-            _Context(api_host=flask.request.url_root),
+            _Context(
+                api_host=flask.request.url_root,
+                function_name=flask.request.path,
+            ),
         )
         if not isinstance(res, dict):
             raise ValueError("response must be a dict")

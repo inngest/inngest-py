@@ -28,7 +28,7 @@ def serve(
     functions: list[function.Function],
     *,
     serve_origin: typing.Optional[str] = None,
-    serve_path: str,
+    serve_path: typing.Optional[str] = None,
 ) -> typing.Callable[[dict[str, object], _Context], _Response]:
     """
     Serve Inngest functions in a DigitalOcean Function.
@@ -39,11 +39,8 @@ def serve(
         functions: List of functions to serve.
 
         serve_origin: Origin to serve the functions from.
-        serve_path: Path to serve the functions from.
+        serve_path: The entire function path (e.g. /api/v1/web/fn-b094417f/sample/hello).
     """
-
-    if not serve_path:
-        raise ValueError("serve_path is required")
 
     handler = comm.CommHandler(
         api_base_url=client.api_origin,
@@ -138,9 +135,17 @@ def serve(
                 )
 
             if http.method == "PUT":
-                request_url = urllib.parse.urljoin(
-                    context.api_host, http.path or ""
-                )
+                # DigitalOcean does not give the full path to the function, so
+                # we'll build it by hardcoding the path prefix ("api/v1/web")
+                # and concatenating it with the function name. This should be
+                # identical to the path, but DigitalOcean may change this in the
+                # future (e.g. a new API version).
+                #
+                # You might be tempted to use event.http.path, but that's
+                # actually the relative path after the prefix + function name.
+                path = "/api/v1/web/" + context.function_name
+
+                request_url = urllib.parse.urljoin(context.api_host, path)
                 sync_id = _get_first(
                     query_params.get(const.QueryParamKey.SYNC_ID.value),
                 )
@@ -218,7 +223,11 @@ class _EventHTTP(types.BaseModel):
 
 
 class _Context(typing.Protocol):
+    # E.g. "https://faas-nyc1-2ef2e6cc.doserverless.co"
     api_host: str
+
+    # E.g. "/fn-b094417f/sample/hello"
+    function_name: str
 
 
 class _Response(typing.TypedDict):

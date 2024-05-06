@@ -7,7 +7,8 @@ import flask.testing
 import inngest
 import inngest.digital_ocean
 import inngest.fast_api
-from inngest._internal import const, digital_ocean_simulator
+from inngest._internal import const
+from inngest.experimental import digital_ocean_simulator
 from tests import base, dev_server, http_proxy
 
 from . import cases
