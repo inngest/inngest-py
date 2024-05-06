@@ -1,5 +1,7 @@
 """
 Encryption middleware for Inngest.
+
+NOT STABLE! This is an experimental feature and may change in the future.
 """
 
 from __future__ import annotations

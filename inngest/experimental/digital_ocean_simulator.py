@@ -1,5 +1,7 @@
 """
 Simulator for the DigitalOcean Function runtime.
+
+NOT STABLE! This is an experimental feature and may change in the future.
 """
 
 import dataclasses
