@@ -17,6 +17,6 @@ def create_sync_function(client: inngest.Inngest) -> inngest.Function:
             event="app/wait_for_event.fulfill",
             timeout=datetime.timedelta(seconds=2),
         )
-        step.run("print-result", lambda: print(res))
+        step.run("print-result", print, res)
 
     return fn

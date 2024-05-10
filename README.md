@@ -146,7 +146,7 @@ def fetch_ships(
     ship_names = []
     for ship_url in person["starships"]:
         # step.run works in loops!
-        ship = step.run("fetch_ship", lambda: _fetch_ship(ship_url))
+        ship = step.run("fetch_ship", _fetch_ship, ship_url)
 
         ship_names.append(ship["name"])
 
