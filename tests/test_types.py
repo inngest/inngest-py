@@ -3,6 +3,7 @@ Even though this file has test functions, they don't actually need to run. This
 file is purely for static type analysis
 """
 
+import functools
 import typing
 
 import inngest
@@ -151,6 +152,93 @@ def step_callback_Args() -> None:
         )
 
         output = step.run("step", step_callback_sync, 1, "a")
+
+        # Output type is correctly inferred
+        _AssertType[bool](output)
+        _AssertType[str](output)  # type: ignore[arg-type]
+
+
+def step_callback_kwargs() -> None:
+    """
+    Step callback kwargs require functools.partial.
+    """
+
+    def step_callback_async(a: int, *, b: str) -> bool:
+        return True
+
+    def step_callback_sync(a: int, *, b: str) -> bool:
+        return True
+
+    @client.create_function(
+        fn_id="foo",
+        trigger=inngest.TriggerEvent(event="foo"),
+    )
+    async def async_fn(
+        ctx: inngest.Context,
+        step: inngest.Step,
+    ) -> None:
+        # Incorrect arg types fail type checker
+        await step.run(
+            "step",
+            step_callback_async,  # type: ignore[arg-type]
+            "a",
+            1,
+        )  # type: ignore[call-arg]
+
+        output = await step.run(
+            "step",
+            functools.partial(step_callback_async, 1, b="a"),
+        )
+
+        # Output type is correctly inferred
+        _AssertType[bool](output)
+        _AssertType[str](output)  # type: ignore[arg-type]
+
+    @client.create_function(
+        fn_id="foo",
+        trigger=inngest.TriggerEvent(event="foo"),
+    )
+    async def async_fn_with_sync_callback(
+        ctx: inngest.Context,
+        step: inngest.Step,
+    ) -> None:
+        # Incorrect arg types fail type checker
+        await step.run(
+            "step",
+            step_callback_sync,  # type: ignore[arg-type]
+            "a",
+            1,
+        )  # type: ignore[call-arg]
+
+        output = await step.run(
+            "step",
+            functools.partial(step_callback_sync, 1, b="a"),
+        )
+
+        # Output type is correctly inferred
+        _AssertType[bool](output)
+        _AssertType[str](output)  # type: ignore[arg-type]
+
+    @client.create_function(
+        fn_id="foo",
+        trigger=inngest.TriggerEvent(event="foo"),
+    )
+    def sync_fn(
+        ctx: inngest.Context,
+        step: inngest.StepSync,
+    ) -> None:
+        # Incorrect arg types fail type checker
+        step.run(
+            "step",
+            step_callback_sync,  # type: ignore[arg-type]
+            "a",
+            1,
+        )
+
+        output = step.run(
+            "step",
+            functools.partial(step_callback_sync, 1, b="a"),
+        )
 
         # Output type is correctly inferred
         _AssertType[bool](output)
