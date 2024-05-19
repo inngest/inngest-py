@@ -29,7 +29,7 @@ def serve(
     client: client_lib.Inngest,
     functions: list[function.Function],
     *,
-    async_mode: bool = False,
+    async_mode: typing.Optional[bool] = None,
     serve_origin: typing.Optional[str] = None,
     serve_path: typing.Optional[str] = None,
 ) -> django.urls.URLPattern:
@@ -41,7 +41,7 @@ def serve(
         client: Inngest client.
         functions: List of functions to serve.
 
-        async_mode: Whether to serve functions asynchronously.
+        async_mode: [DEPRECATED] Whether to serve functions asynchronously.
         serve_origin: Origin to serve Inngest from.
         serve_path: Path to serve Inngest from.
     """
@@ -52,6 +52,13 @@ def serve(
         framework=FRAMEWORK,
         functions=functions,
     )
+
+    # TODO: Remove async_mode kwarg in v0.4.0
+    if async_mode is None:
+        async_mode = any(
+            function.is_handler_async or function.is_on_failure_handler_async
+            for function in functions
+        )
 
     if async_mode:
         return _create_handler_async(
@@ -166,6 +173,16 @@ def _create_handler_async(
     serve_origin: typing.Optional[str],
     serve_path: typing.Optional[str],
 ) -> django.urls.URLPattern:
+    major_version = transforms.get_major_version(django.get_version())
+    if isinstance(major_version, Exception):
+        client.logger.error(major_version)
+    else:
+        if major_version < 5:
+            # Django 5 introduced async support for csrf_exempt
+            raise Exception(
+                "Django version 5 or higher is required for async mode"
+            )
+
     async def inngest_api(
         request: django.http.HttpRequest,
     ) -> django.http.HttpResponse:

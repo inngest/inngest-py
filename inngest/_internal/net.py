@@ -10,7 +10,7 @@ import urllib.parse
 
 import httpx
 
-from . import const, errors, transforms, types
+from . import async_lib, const, errors, transforms, types
 
 
 class ThreadAwareAsyncHTTPClient(httpx.AsyncClient):
@@ -24,7 +24,7 @@ class ThreadAwareAsyncHTTPClient(httpx.AsyncClient):
 
     def is_same_thread(self) -> bool:
         if self._creation_thread_id is None:
-            raise Exception("did initialize ThreadAwareAsyncHTTPClient")
+            raise Exception("did not initialize ThreadAwareAsyncHTTPClient")
 
         current_thread_id = threading.get_ident()
         return self._creation_thread_id == current_thread_id
@@ -106,7 +106,6 @@ def create_serve_url(
 
 
 async def fetch_with_auth_fallback(
-    logger: types.Logger,
     client: ThreadAwareAsyncHTTPClient,
     client_sync: httpx.Client,
     request: httpx.Request,
@@ -125,7 +124,6 @@ async def fetch_with_auth_fallback(
         ] = f"Bearer {transforms.hash_signing_key(signing_key)}"
 
     res = await fetch_with_thready_safety(
-        logger,
         client,
         client_sync,
         request,
@@ -141,7 +139,6 @@ async def fetch_with_auth_fallback(
         ] = f"Bearer {transforms.hash_signing_key(signing_key_fallback)}"
 
         res = await fetch_with_thready_safety(
-            logger,
             client,
             client_sync,
             request,
@@ -209,7 +206,6 @@ def parse_url(url: str) -> str:
 
 
 async def fetch_with_thready_safety(
-    logger: types.Logger,
     client: ThreadAwareAsyncHTTPClient,
     client_sync: httpx.Client,
     request: httpx.Request,
@@ -220,15 +216,19 @@ async def fetch_with_thready_safety(
     """
 
     if client.is_same_thread() is True:
+        # Python freaks out if you call httpx.AsyncClient's methods in multiple
+        # threads. So we'll only use it if we're in the same thread as its first
+        # method call
         return await client.send(request)
 
-    # Python freaks out if you call httpx.AsyncClient's async methods in a
-    # multiple threads. To solve this, we'll use the synchronous client
-    # instead
-    logger.warning(
-        "called an async client method in a different thread; falling back to synchronous HTTP client"
+    loop = async_lib.get_event_loop()
+    if loop is None:
+        return client_sync.send(request)
+
+    return await loop.run_in_executor(
+        None,
+        lambda: client_sync.send(request),
     )
-    return client_sync.send(request)
 
 
 class RequestSignature:
