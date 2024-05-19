@@ -109,6 +109,17 @@ def to_iso_utc(value: datetime.datetime) -> str:
     )
 
 
+def _to_int(value: typing.Any) -> types.MaybeError[int]:
+    try:
+        return int(value)
+    except Exception as err:
+        return ValueError(f"invalid integer: {err}")
+
+
+def get_major_version(version: str) -> types.MaybeError[int]:
+    return _to_int(version.split(".")[0])
+
+
 def get_server_kind(
     headers: dict[str, str],
 ) -> typing.Union[const.ServerKind, None, Exception]:
