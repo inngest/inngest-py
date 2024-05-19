@@ -178,6 +178,7 @@ def _create_handler_async(
         client.logger.error(major_version)
     else:
         if major_version < 5:
+            # Django 5 introduced async support for csrf_exempt
             raise Exception(
                 "Django version 5 or higher is required for async mode"
             )
