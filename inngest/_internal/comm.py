@@ -542,7 +542,6 @@ class CommHandler:
             return CommResponse.from_error(self._client.logger, req)
 
         res = await net.fetch_with_auth_fallback(
-            self._client.logger,
             self._client._http_client,
             self._client._http_client_sync,
             req,

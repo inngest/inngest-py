@@ -291,7 +291,6 @@ class Inngest:
         )
 
         return await net.fetch_with_auth_fallback(
-            self.logger,
             self._http_client,
             self._http_client_sync,
             req,
@@ -414,7 +413,6 @@ class Inngest:
             raise req
 
         res = await net.fetch_with_thready_safety(
-            self.logger,
             self._http_client,
             self._http_client_sync,
             req,
