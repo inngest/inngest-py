@@ -192,7 +192,6 @@ class Test_RequestSignature(unittest.TestCase):
 class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         super().setUp()
-        self._logger = unittest.mock.Mock()
         self._req = httpx.Request("GET", "http://localhost")
 
     def _create_async_transport(
@@ -242,7 +241,6 @@ class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
             return httpx.Response(200, content=b"", request=request)
 
         res = await net.fetch_with_auth_fallback(
-            self._logger,
             net.ThreadAwareAsyncHTTPClient(
                 transport=self._create_async_transport(handler)
             ).initialize(),
@@ -288,7 +286,6 @@ class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
             return httpx.Response(200, content=b"", request=request)
 
         res = await net.fetch_with_auth_fallback(
-            self._logger,
             net.ThreadAwareAsyncHTTPClient(
                 transport=self._create_async_transport(handler)
             ).initialize(),
@@ -334,7 +331,6 @@ class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
             return httpx.Response(200, content=b"", request=request)
 
         res = await net.fetch_with_auth_fallback(
-            self._logger,
             net.ThreadAwareAsyncHTTPClient(
                 transport=self._create_async_transport(handler)
             ).initialize(),
@@ -375,7 +371,6 @@ class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
             return httpx.Response(200, content=b"", request=request)
 
         res = await net.fetch_with_auth_fallback(
-            self._logger,
             net.ThreadAwareAsyncHTTPClient(
                 transport=self._create_async_transport(handler)
             ).initialize(),
