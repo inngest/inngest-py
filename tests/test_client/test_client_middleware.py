@@ -117,18 +117,17 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
             async def transform_input(
                 self,
                 ctx: inngest.Context,
-            ) -> inngest.Context:
+                steps: inngest.StepMemos,
+            ) -> None:
                 state.hook_list.append("transform_input")
-                return ctx
 
             async def transform_output(
                 self,
-                output: inngest.Output,
-            ) -> inngest.Output:
+                result: inngest.CallResult,
+            ) -> None:
                 state.hook_list.append("transform_output")
-                if output.data == "original output":
-                    output.data = "transformed output"
-                return output
+                if result.output == "original output":
+                    result.output = "transformed output"
 
         client = inngest.Inngest(
             api_base_url=dev_server.origin,
@@ -206,18 +205,17 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
             def transform_input(
                 self,
                 ctx: inngest.Context,
-            ) -> inngest.Context:
+                steps: inngest.StepMemos,
+            ) -> None:
                 state.hook_list.append("transform_input")
-                return ctx
 
             def transform_output(
                 self,
-                output: inngest.Output,
-            ) -> inngest.Output:
+                result: inngest.CallResult,
+            ) -> None:
                 state.hook_list.append("transform_output")
-                if output.data == "original output":
-                    output.data = "transformed output"
-                return output
+                if result.output == "original output":
+                    result.output = "transformed output"
 
         client = inngest.Inngest(
             api_base_url=dev_server.origin,

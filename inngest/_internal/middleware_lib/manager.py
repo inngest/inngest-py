@@ -8,6 +8,7 @@ from inngest._internal import (
     event_lib,
     execution,
     function,
+    step_lib,
     transforms,
     types,
 )
@@ -30,18 +31,23 @@ class MiddlewareManager:
     def middleware(self) -> list[typing.Union[Middleware, MiddlewareSync]]:
         return [*self._middleware]
 
-    def __init__(self, client: client_lib.Inngest) -> None:
+    def __init__(self, client: client_lib.Inngest, raw_request: object) -> None:
         self.client = client
         self._disabled_hooks = set[str]()
         self._middleware = list[typing.Union[Middleware, MiddlewareSync]]()
+        self._raw_request = raw_request
 
     @classmethod
-    def from_client(cls, client: client_lib.Inngest) -> MiddlewareManager:
+    def from_client(
+        cls,
+        client: client_lib.Inngest,
+        raw_request: object,
+    ) -> MiddlewareManager:
         """
         Create a new manager from an Inngest client, using the middleware on the
         client.
         """
-        mgr = cls(client)
+        mgr = cls(client, raw_request)
 
         for m in DEFAULT_CLIENT_MIDDLEWARE:
             mgr.add(m)
@@ -57,13 +63,16 @@ class MiddlewareManager:
         Create a new manager from another manager, using the middleware on the
         passed manager. Effectively wraps a manager.
         """
-        new_mgr = cls(manager.client)
+        new_mgr = cls(manager.client, manager._raw_request)
         for m in manager.middleware:
             new_mgr._middleware = [*new_mgr._middleware, m]
         return new_mgr
 
     def add(self, middleware: UninitializedMiddleware) -> None:
-        self._middleware = [*self._middleware, middleware(self.client)]
+        self._middleware = [
+            *self._middleware,
+            middleware(self.client, self._raw_request),
+        ]
 
     async def after_execution(self) -> types.MaybeError[None]:
         try:
@@ -162,59 +171,71 @@ class MiddlewareManager:
     async def transform_input(
         self,
         ctx: function.Context,
-    ) -> types.MaybeError[function.Context]:
+        steps: step_lib.StepMemos,
+    ) -> types.MaybeError[None]:
         try:
             for m in self._middleware:
-                ctx = await transforms.maybe_await(
-                    m.transform_input(ctx),
+                await transforms.maybe_await(
+                    m.transform_input(ctx, steps),
                 )
-            return ctx
+            return None
         except Exception as err:
             return err
 
     def transform_input_sync(
         self,
         ctx: function.Context,
-    ) -> types.MaybeError[function.Context]:
+        steps: step_lib.StepMemos,
+    ) -> types.MaybeError[None]:
         try:
             for m in self._middleware:
                 if isinstance(m, Middleware):
                     return _mismatched_sync
-                ctx = m.transform_input(ctx)
-            return ctx
+                m.transform_input(ctx, steps)
+            return None
         except Exception as err:
             return err
 
     async def transform_output(
         self,
-        output: typing.Optional[execution.Output],
-    ) -> types.MaybeError[typing.Optional[execution.Output]]:
-        # Nothing to transform
-        if output is None:
+        call_res: execution.CallResult,
+    ) -> types.MaybeError[None]:
+        # This should only happen when planning parallel steps
+        if call_res.multi is not None:
+            if len(call_res.multi) > 1:
+                return None
+            call_res = call_res.multi[0]
+
+        # Not sure how this can happen, but we should handle it
+        if call_res.is_empty:
             return None
 
         try:
             for m in self._middleware:
-                output = await transforms.maybe_await(
-                    m.transform_output(output)
-                )
-            return output
+                await transforms.maybe_await(m.transform_output(call_res))
+            return None
         except Exception as err:
             return err
 
     def transform_output_sync(
         self,
-        output: typing.Optional[execution.Output],
-    ) -> types.MaybeError[typing.Optional[execution.Output]]:
-        # Nothing to transform
-        if output is None:
+        call_res: execution.CallResult,
+    ) -> types.MaybeError[None]:
+        # This should only happen when planning parallel steps
+        if call_res.multi is not None:
+            if len(call_res.multi) > 1:
+                return None
+            call_res = call_res.multi[0]
+
+        # Not sure how this can happen, but we should handle it
+        if call_res.is_empty:
             return None
 
         try:
             for m in self._middleware:
                 if isinstance(m, Middleware):
                     return _mismatched_sync
-                output = m.transform_output(output)
-            return output
+                m.transform_output(call_res)
+            return None
         except Exception as err:
             return err

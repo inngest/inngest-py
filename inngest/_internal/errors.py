@@ -190,3 +190,9 @@ class StepError(Error):
         self._message = message
         self._name = name
         self._stack = stack
+
+
+def is_retriable(err: Exception) -> bool:
+    if isinstance(err, Error):
+        return err.is_retriable
+    return True

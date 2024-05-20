@@ -41,17 +41,15 @@ def remove_signing_key_prefix(key: str) -> str:
     return key[len(prefix) :]
 
 
-def prep_body(obj: types.T) -> types.T:
+def deep_strip_none(obj: types.T) -> types.T:
     """
-    Prep body before sending to the Inngest server. This function will:
-    - Remove items whose value is None.
-    - Convert keys to camelCase.
+    Recursively remove items whose value is None.
     """
 
     if isinstance(obj, dict):
-        return {k: prep_body(v) for k, v in obj.items() if v is not None}  # type: ignore
+        return {k: deep_strip_none(v) for k, v in obj.items() if v is not None}  # type: ignore
     if isinstance(obj, list):
-        return [prep_body(v) for v in obj if v is not None]  # type: ignore
+        return [deep_strip_none(v) for v in obj if v is not None]  # type: ignore
     return obj
 
 

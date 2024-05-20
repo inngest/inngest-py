@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from inngest._internal import client_lib, function, types
+from inngest._internal import client_lib, function, step_lib, types
 
 from .middleware import MiddlewareSync
 
@@ -34,8 +34,8 @@ class LoggerProxy:
 
 
 class LoggerMiddleware(MiddlewareSync):
-    def __init__(self, client: client_lib.Inngest) -> None:
-        super().__init__(client)
+    def __init__(self, client: client_lib.Inngest, raw_request: object) -> None:
+        super().__init__(client, raw_request)
         self.logger = LoggerProxy(client.logger)
 
     def before_execution(self) -> None:
@@ -44,7 +44,7 @@ class LoggerMiddleware(MiddlewareSync):
     def transform_input(
         self,
         ctx: function.Context,
-    ) -> function.Context:
+        steps: step_lib.StepMemos,
+    ) -> None:
         self.logger.logger = ctx.logger
         ctx.logger = self.logger  # type: ignore
-        return ctx

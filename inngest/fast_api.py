@@ -98,6 +98,7 @@ def serve(
             await handler.call_function(
                 call=call,
                 fn_id=fnId,
+                raw_request=request,
                 req_sig=net.RequestSignature(
                     body=body,
                     headers=headers,

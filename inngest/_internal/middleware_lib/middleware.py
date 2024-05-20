@@ -1,16 +1,25 @@
 from __future__ import annotations
 
+import dataclasses
 import typing
 
-from inngest._internal import event_lib, execution, function
+from inngest._internal import event_lib, execution, function, step_lib
 
 if typing.TYPE_CHECKING:
     from inngest._internal import client_lib
 
 
 class Middleware:
-    def __init__(self, client: client_lib.Inngest) -> None:
-        self._client = client
+    def __init__(self, client: client_lib.Inngest, raw_request: object) -> None:
+        """
+        Args:
+        ----
+            client: Inngest client.
+            raw_request: Framework/platform specific request object.
+        """
+
+        self.client = client
+        self.raw_request = raw_request
 
     async def after_execution(self) -> None:
         """
@@ -44,30 +53,36 @@ class Middleware:
     async def transform_input(
         self,
         ctx: function.Context,
-    ) -> function.Context:
+        steps: step_lib.StepMemos,
+    ) -> None:
         """
         Before calling a function or step. Used to replace certain arguments in
         the function. Called multiple times per run when using steps.
         """
-        return ctx
+        return None
 
-    async def transform_output(
-        self,
-        output: execution.Output,
-    ) -> execution.Output:
+    async def transform_output(self, result: execution.CallResult) -> None:
         """
         After a function or step returns. Used to modify the returned data.
         Called multiple times per run when using steps. Not called when an error
         is thrown.
         """
-        return output
+        return None
 
 
 class MiddlewareSync:
     client: client_lib.Inngest
 
-    def __init__(self, client: client_lib.Inngest) -> None:
+    def __init__(self, client: client_lib.Inngest, raw_request: object) -> None:
+        """
+        Args:
+        ----
+            client: Inngest client.
+            raw_request: Framework/platform specific request object.
+        """
+
         self.client = client
+        self.raw_request = raw_request
 
     def after_execution(self) -> None:
         """
@@ -101,26 +116,31 @@ class MiddlewareSync:
     def transform_input(
         self,
         ctx: function.Context,
-    ) -> function.Context:
+        steps: step_lib.StepMemos,
+    ) -> None:
         """
         Before calling a function or step. Used to replace certain arguments in
         the function. Called multiple times per run when using steps.
         """
-        return ctx
+        return None
 
-    def transform_output(
-        self,
-        output: execution.Output,
-    ) -> execution.Output:
+    def transform_output(self, result: execution.CallResult) -> None:
         """
         After a function or step returns. Used to modify the returned data.
         Called multiple times per run when using steps. Not called when an error
         is thrown.
         """
-        return output
+        return None
 
 
 UninitializedMiddleware = typing.Callable[
     # Used a "client_lib.Inngest" string to avoid a circular import
-    ["client_lib.Inngest"], typing.Union[Middleware, MiddlewareSync]
+    ["client_lib.Inngest", object], typing.Union[Middleware, MiddlewareSync]
 ]
+
+
+@dataclasses.dataclass
+class OutputCtx:
+    data: object
+    error: typing.Optional[Exception]
+    step: typing.Optional[execution.StepInfo]

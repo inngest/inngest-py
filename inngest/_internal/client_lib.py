@@ -405,7 +405,10 @@ class Inngest:
             events = [events]
 
         if not skip_middleware:
-            middleware = middleware_lib.MiddlewareManager.from_client(self)
+            middleware = middleware_lib.MiddlewareManager.from_client(
+                self,
+                raw_request=None,
+            )
             await middleware.before_send_events(events)
 
         req = self._build_send_request(events)
@@ -439,7 +442,10 @@ class Inngest:
             events = [events]
 
         if not skip_middleware:
-            middleware = middleware_lib.MiddlewareManager.from_client(self)
+            middleware = middleware_lib.MiddlewareManager.from_client(
+                self,
+                raw_request=None,
+            )
             middleware.before_send_events_sync(events)
 
         req = self._build_send_request(events)

@@ -106,9 +106,9 @@ def create(
         output = json.loads(run.output)
         assert output == {
             "code": "step_unexpected",
-            "is_retriable": True,
             "message": 'found step "unexpected" when targeting a different step',
             "name": "StepUnexpectedError",
+            "stack": None,
         }
 
         # None of the step callbacks were called

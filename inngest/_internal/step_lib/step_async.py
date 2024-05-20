@@ -115,11 +115,13 @@ class Step(base.StepBase):
 
         raise base.ResponseInterrupt(
             execution.StepResponse(
-                display_name=parsed_step_id.user_facing,
-                id=parsed_step_id.hashed,
-                name=parsed_step_id.user_facing,
-                op=execution.Opcode.INVOKE,
-                opts=opts,
+                step=execution.StepInfo(
+                    display_name=parsed_step_id.user_facing,
+                    id=parsed_step_id.hashed,
+                    name=parsed_step_id.user_facing,
+                    op=execution.Opcode.INVOKE,
+                    opts=opts,
+                )
             )
         )
 
@@ -217,10 +219,12 @@ class Step(base.StepBase):
             # Plan this step because we're in parallel mode.
             raise base.ResponseInterrupt(
                 execution.StepResponse(
-                    display_name=parsed_step_id.user_facing,
-                    id=parsed_step_id.hashed,
-                    name=parsed_step_id.user_facing,
-                    op=execution.Opcode.PLANNED,
+                    step=execution.StepInfo(
+                        display_name=parsed_step_id.user_facing,
+                        id=parsed_step_id.hashed,
+                        name=parsed_step_id.user_facing,
+                        op=execution.Opcode.PLANNED,
+                    )
                 )
             )
 
@@ -233,11 +237,13 @@ class Step(base.StepBase):
 
             raise base.ResponseInterrupt(
                 execution.StepResponse(
-                    data=execution.Output(data=output),
-                    display_name=parsed_step_id.user_facing,
-                    id=parsed_step_id.hashed,
-                    name=parsed_step_id.user_facing,
-                    op=execution.Opcode.STEP_RUN,
+                    output=output,
+                    step=execution.StepInfo(
+                        display_name=parsed_step_id.user_facing,
+                        id=parsed_step_id.hashed,
+                        name=parsed_step_id.user_facing,
+                        op=execution.Opcode.STEP_RUN,
+                    ),
                 )
             )
         except errors.NonRetriableError as err:
@@ -246,16 +252,14 @@ class Step(base.StepBase):
         except Exception as err:
             transforms.remove_first_traceback_frame(err)
 
-            error_dict = execution.MemoizedError.from_error(err).to_dict()
-            if isinstance(error_dict, Exception):
-                raise error_dict
-
             raise base.ResponseInterrupt(
                 execution.StepResponse(
-                    data=execution.Output(error=error_dict),
-                    display_name=parsed_step_id.user_facing,
-                    id=parsed_step_id.hashed,
-                    op=execution.Opcode.STEP_ERROR,
+                    original_error=err,
+                    step=execution.StepInfo(
+                        display_name=parsed_step_id.user_facing,
+                        id=parsed_step_id.hashed,
+                        op=execution.Opcode.STEP_ERROR,
+                    ),
                 )
             )
 
@@ -345,10 +349,12 @@ class Step(base.StepBase):
 
         raise base.ResponseInterrupt(
             execution.StepResponse(
-                display_name=parsed_step_id.user_facing,
-                id=parsed_step_id.hashed,
-                name=transforms.to_iso_utc(until),
-                op=execution.Opcode.SLEEP,
+                step=execution.StepInfo(
+                    display_name=parsed_step_id.user_facing,
+                    id=parsed_step_id.hashed,
+                    name=transforms.to_iso_utc(until),
+                    op=execution.Opcode.SLEEP,
+                )
             )
         )
 
@@ -403,10 +409,12 @@ class Step(base.StepBase):
 
         raise base.ResponseInterrupt(
             execution.StepResponse(
-                id=parsed_step_id.hashed,
-                display_name=parsed_step_id.user_facing,
-                name=event,
-                op=execution.Opcode.WAIT_FOR_EVENT,
-                opts=opts,
+                step=execution.StepInfo(
+                    id=parsed_step_id.hashed,
+                    display_name=parsed_step_id.user_facing,
+                    name=event,
+                    op=execution.Opcode.WAIT_FOR_EVENT,
+                    opts=opts,
+                )
             )
         )

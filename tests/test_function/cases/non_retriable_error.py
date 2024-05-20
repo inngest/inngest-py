@@ -72,7 +72,6 @@ def create(
 
             assert output == {
                 "code": "non_retriable_error",
-                "is_retriable": False,
                 "message": "foo",
                 "name": "NonRetriableError",
                 "stack": unittest.mock.ANY,

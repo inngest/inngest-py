@@ -128,6 +128,10 @@ def serve(
                     handler.call_function_sync(
                         call=call,
                         fn_id=fn_id,
+                        raw_request={
+                            "context": context,
+                            "event": event,
+                        },
                         req_sig=req_sig,
                         target_hashed_id=step_id,
                     ),
