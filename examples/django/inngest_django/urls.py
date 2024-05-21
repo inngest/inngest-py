@@ -11,5 +11,6 @@ urlpatterns = [
     inngest.django.serve(
         inngest_client,
         functions.create_async_functions(inngest_client),
+        async_mode=True
     ),
 ]
