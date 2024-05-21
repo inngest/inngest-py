@@ -1,6 +1,6 @@
 [project]
 name = "inngest"
-version = "0.3.13"
+version = "0.3.14"
 description = "Python SDK for Inngest"
 readme = "README.md"
 classifiers = [
