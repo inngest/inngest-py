@@ -470,6 +470,7 @@ class CommHandler:
                 env=self._client.env,
                 event_api_origin=self._client.event_api_origin,
                 event_key_hash=event_key_hash,
+                framework=self._framework.value,
                 function_count=len(self._fns),
                 has_event_key=self._client.event_key is not None,
                 has_signing_key=self._signing_key is not None,
@@ -665,6 +666,9 @@ class _SecureInspection(_InsecureInspection):
     env: typing.Optional[str]
     event_api_origin: str
     event_key_hash: typing.Optional[str]
+    framework: str
+    sdk_language: str = const.LANGUAGE
+    sdk_version: str = const.VERSION
     serve_origin: typing.Optional[str]
     serve_path: typing.Optional[str]
     signing_key_fallback_hash: typing.Optional[str]
