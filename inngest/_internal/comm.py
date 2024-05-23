@@ -443,6 +443,7 @@ class CommHandler:
                 function_count=len(self._fns),
                 has_event_key=self._client.event_key is not None,
                 has_signing_key=self._signing_key is not None,
+                has_signing_key_fallback=self._signing_key_fallback is not None,
                 mode=self._mode,
             )
         else:
@@ -474,6 +475,7 @@ class CommHandler:
                 function_count=len(self._fns),
                 has_event_key=self._client.event_key is not None,
                 has_signing_key=self._signing_key is not None,
+                has_signing_key_fallback=self._signing_key_fallback is not None,
                 mode=self._mode,
                 serve_origin=serve_origin,
                 serve_path=serve_path,
@@ -657,6 +659,7 @@ class _InsecureInspection(types.BaseModel):
     function_count: int
     has_event_key: bool
     has_signing_key: bool
+    has_signing_key_fallback: bool
     mode: const.ServerKind
 
 
