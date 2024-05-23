@@ -95,7 +95,12 @@ def _create_handler_async(
         if flask.request.method == "GET":
             return _to_response(
                 client,
-                handler.inspect(server_kind, req_sig),
+                handler.inspect(
+                    serve_origin=serve_origin,
+                    serve_path=serve_path,
+                    server_kind=server_kind,
+                    req_sig=req_sig,
+                ),
                 server_kind,
             )
 
@@ -180,7 +185,12 @@ def _create_handler_sync(
         if flask.request.method == "GET":
             return _to_response(
                 client,
-                handler.inspect(server_kind, req_sig),
+                handler.inspect(
+                    serve_origin=serve_origin,
+                    serve_path=serve_path,
+                    server_kind=server_kind,
+                    req_sig=req_sig,
+                ),
                 server_kind,
             )
 

@@ -109,10 +109,17 @@ class BaseTestIntrospection(unittest.TestCase):
         }
 
         self.expected_secure_body = {
+            "api_origin": "https://api.inngest.com/",
+            "app_id": "flask-introspection",
+            "env": None,
+            "event_api_origin": "https://inn.gs/",
+            "event_key_hash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
             "function_count": 1,
             "has_event_key": True,
             "has_signing_key": True,
             "mode": "cloud",
+            "serve_origin": None,
+            "serve_path": None,
             "signing_key_fallback_hash": "a820760dee6119fcf76498ab8d94be2f8cf04e786add2a4569e427462a84dd47",
             "signing_key_hash": "94bab7f22b92278ccab46e15da43a9fb8b079c05fa099d4134c6c39bbcee49f6",
         }
