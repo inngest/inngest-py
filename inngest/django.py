@@ -29,7 +29,6 @@ def serve(
     client: client_lib.Inngest,
     functions: list[function.Function],
     *,
-    async_mode: typing.Optional[bool] = None,
     serve_origin: typing.Optional[str] = None,
     serve_path: typing.Optional[str] = None,
 ) -> django.urls.URLPattern:
@@ -53,12 +52,10 @@ def serve(
         functions=functions,
     )
 
-    # TODO: Remove async_mode kwarg in v0.4.0
-    if async_mode is None:
-        async_mode = any(
-            function.is_handler_async or function.is_on_failure_handler_async
-            for function in functions
-        )
+    async_mode = any(
+        function.is_handler_async or function.is_on_failure_handler_async
+        for function in functions
+    )
 
     if async_mode:
         return _create_handler_async(
