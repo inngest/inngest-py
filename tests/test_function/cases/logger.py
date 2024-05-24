@@ -8,6 +8,11 @@ from . import base
 _TEST_NAME = "logger"
 
 
+class _State(base.BaseState):
+    fn_raise: bool = False
+    step_raise: bool = False
+
+
 class StatefulLogger(logging.Logger):
     """Fake logger that stores calls to its methods. We can use this to assert that
     logger methods are properly called (e.g. no duplicates).
@@ -29,13 +34,13 @@ def create(
     test_name = base.create_test_name(_TEST_NAME, is_sync)
     event_name = base.create_event_name(framework, test_name)
     fn_id = base.create_fn_id(test_name)
-    state = base.BaseState()
+    state = _State()
 
     _logger = StatefulLogger()
 
     @client.create_function(
         fn_id=fn_id,
-        retries=0,
+        retries=1,
         trigger=inngest.TriggerEvent(event=event_name),
     )
     def fn_sync(
@@ -45,22 +50,35 @@ def create(
         ctx.logger.info("function start")
         state.run_id = ctx.run_id
 
-        def _first_step() -> None:
-            ctx.logger.info("first_step")
+        def step_1() -> None:
+            ctx.logger.info("step_1")
 
-        step.run("first_step", _first_step)
+        step.run("step_1", step_1)
 
-        ctx.logger.info("between steps")
+        ctx.logger.info("log before function-level raise")
+        if state.fn_raise is False:
+            state.fn_raise = True
+            raise inngest.RetryAfterError("", 1000, quiet=True)
 
-        def _second_step() -> None:
-            ctx.logger.info("second_step")
+        def step_2() -> None:
+            ctx.logger.info("step_2")
 
-        step.run("second_step", _second_step)
+        step.run("step_2", step_2)
+
+        ctx.logger.info("log before step-level raise")
+
+        def step_3() -> None:
+            if state.step_raise is False:
+                state.step_raise = True
+                raise inngest.RetryAfterError("", 1000, quiet=True)
+
+        step.run("step_3", step_3)
+
         ctx.logger.info("function end")
 
     @client.create_function(
         fn_id=fn_id,
-        retries=0,
+        retries=1,
         trigger=inngest.TriggerEvent(event=event_name),
     )
     async def fn_async(
@@ -70,17 +88,30 @@ def create(
         ctx.logger.info("function start")
         state.run_id = ctx.run_id
 
-        def _first_step() -> None:
-            ctx.logger.info("first_step")
+        async def step_1() -> None:
+            ctx.logger.info("step_1")
 
-        await step.run("first_step", _first_step)
+        await step.run("step_1", step_1)
 
-        ctx.logger.info("between steps")
+        ctx.logger.info("log before function-level raise")
+        if state.fn_raise is False:
+            state.fn_raise = True
+            raise inngest.RetryAfterError("", 1000, quiet=True)
 
-        def _second_step() -> None:
-            ctx.logger.info("second_step")
+        async def step_2() -> None:
+            ctx.logger.info("step_2")
 
-        await step.run("second_step", _second_step)
+        await step.run("step_2", step_2)
+
+        ctx.logger.info("log before step-level raise")
+
+        async def step_3() -> None:
+            if state.step_raise is False:
+                state.step_raise = True
+                raise inngest.RetryAfterError("", 1000, quiet=True)
+
+        await step.run("step_3", step_3)
+
         ctx.logger.info("function end")
 
     def run_test(self: base.TestClass) -> None:
@@ -94,9 +125,12 @@ def create(
 
         assert _logger.info_calls == [
             "function start",
-            "first_step",
-            "between steps",
-            "second_step",
+            "step_1",
+            "log before function-level raise",
+            "log before function-level raise",
+            "step_2",
+            "log before step-level raise",
+            "log before step-level raise",
             "function end",
         ]
 

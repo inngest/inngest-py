@@ -144,6 +144,7 @@ class RetryAfterError(Error):
         self,
         message: typing.Optional[str],
         retry_after: typing.Union[int, datetime.timedelta, datetime.datetime],
+        quiet: bool = False,
     ) -> None:
         """
         Raise this error to retry at a specific time.
@@ -152,6 +153,7 @@ class RetryAfterError(Error):
         ----
             message: Error message
             retry_after: Time to retry after in milliseconds, timedelta, or datetime
+            quiet: Whether to supress logging
         """
 
         super().__init__(message)
@@ -164,6 +166,7 @@ class RetryAfterError(Error):
             retry_after = datetime.datetime.now() + retry_after
 
         self.retry_after: datetime.datetime = retry_after
+        self.quiet: bool = quiet
 
 
 class StepError(Error):
@@ -220,3 +223,8 @@ class StepError(Error):
         self._message = message
         self._name = name
         self._stack = stack
+
+
+@typing.runtime_checkable
+class Quietable(typing.Protocol):
+    quiet: bool
