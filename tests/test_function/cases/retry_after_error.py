@@ -75,7 +75,7 @@ def create(
 
     @client.create_function(
         fn_id=fn_id,
-        retries=1,
+        retries=2,
         trigger=inngest.TriggerEvent(event=event_name),
     )
     async def fn_async(
