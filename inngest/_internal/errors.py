@@ -138,10 +138,6 @@ class NonRetriableError(Error):
 
 
 class RetryAfterError(Error):
-    """
-    Raise this retry after a time duration or datetime.
-    """
-
     code = const.ErrorCode.RETRY_AFTER_ERROR
 
     def __init__(
@@ -149,6 +145,15 @@ class RetryAfterError(Error):
         message: typing.Optional[str],
         retry_after: typing.Union[int, datetime.timedelta, datetime.datetime],
     ) -> None:
+        """
+        Raise this error to retry at a specific time.
+
+        Args:
+        ----
+            message: Error message
+            retry_after: Time to retry after in milliseconds, timedelta, or datetime
+        """
+
         super().__init__(message)
 
         if isinstance(retry_after, int):
