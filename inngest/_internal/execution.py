@@ -39,6 +39,7 @@ class CallError(types.BaseModel):
     message: str
     name: str
     original_error: object = pydantic.Field(exclude=True)
+    quiet: bool = pydantic.Field(exclude=True)
     retry_after: typing.Optional[datetime.datetime]
     stack: typing.Optional[str]
     step_id: typing.Optional[str]
@@ -66,12 +67,17 @@ class CallError(types.BaseModel):
         if isinstance(err, errors.RetryAfterError):
             retry_after = err.retry_after
 
+        quiet = False
+        if isinstance(err, errors.Quietable):
+            quiet = err.quiet
+
         return cls(
             code=code,
             is_retriable=is_retriable,
             message=message,
             name=name,
             original_error=err,
+            quiet=quiet,
             retry_after=retry_after,
             stack=stack,
             step_id=step_id,

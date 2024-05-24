@@ -75,7 +75,8 @@ class CommResponse:
             )
 
         if isinstance(call_res, execution.CallError):
-            logger.error(call_res.stack)
+            if call_res.quiet is False:
+                logger.error(call_res.stack)
 
             d = call_res.to_dict()
             if isinstance(d, Exception):
