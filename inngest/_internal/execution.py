@@ -39,7 +39,7 @@ class CallError(types.BaseModel):
     message: str
     name: str
     original_error: object = pydantic.Field(exclude=True)
-    quiet: bool
+    quiet: bool = pydantic.Field(exclude=True)
     retry_after: typing.Optional[datetime.datetime]
     stack: typing.Optional[str]
     step_id: typing.Optional[str]
