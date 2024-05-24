@@ -143,6 +143,11 @@ class CommResponse:
             if errors.is_retriable(call_res.error) is False:
                 headers[const.HeaderKey.NO_RETRY.value] = "true"
 
+            if isinstance(call_res.error, errors.RetryAfterError):
+                headers[
+                    const.HeaderKey.RETRY_AFTER.value
+                ] = transforms.to_iso_utc(call_res.error.retry_after)
+
         return cls(
             body=body,
             headers=headers,
@@ -162,7 +167,8 @@ class CommResponse:
         else:
             code = const.ErrorCode.UNKNOWN.value
 
-        logger.error(f"{code}: {err!s}")
+        if errors.is_quiet(err) is False:
+            logger.error(f"{code}: {err!s}")
 
         return cls(
             body={
