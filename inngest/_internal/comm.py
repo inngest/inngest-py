@@ -439,7 +439,12 @@ class CommHandler:
         if self._client._mode != const.ServerKind.CLOUD or isinstance(
             err, Exception
         ):
-            body = _InsecureInspection(
+            authentication_succeeded = None
+            if isinstance(err, Exception):
+                authentication_succeeded = False
+
+            body = _UnauthenticatedIntrospection(
+                authentication_succeeded=authentication_succeeded,
                 function_count=len(self._fns),
                 has_event_key=self._client.event_key is not None,
                 has_signing_key=self._signing_key is not None,
@@ -465,9 +470,10 @@ class CommHandler:
                 else None
             )
 
-            body = _SecureInspection(
+            body = _AuthenticatedIntrospection(
                 api_origin=self._client.api_origin,
                 app_id=self._client.app_id,
+                authentication_succeeded=True,
                 env=self._client.env,
                 event_api_origin=self._client.event_api_origin,
                 event_key_hash=event_key_hash,
@@ -655,7 +661,10 @@ class CommHandler:
         return None
 
 
-class _InsecureInspection(types.BaseModel):
+class _UnauthenticatedIntrospection(types.BaseModel):
+    schema_version: str = "2024-05-24"
+
+    authentication_succeeded: typing.Optional[bool]
     function_count: int
     has_event_key: bool
     has_signing_key: bool
@@ -663,9 +672,10 @@ class _InsecureInspection(types.BaseModel):
     mode: const.ServerKind
 
 
-class _SecureInspection(_InsecureInspection):
+class _AuthenticatedIntrospection(_UnauthenticatedIntrospection):
     api_origin: str
     app_id: str
+    authentication_succeeded: bool = True
     env: typing.Optional[str]
     event_api_origin: str
     event_key_hash: typing.Optional[str]

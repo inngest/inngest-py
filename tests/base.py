@@ -102,7 +102,7 @@ class BaseTestIntrospection(unittest.TestCase):
     signing_key = "signkey-prod-123abc"
 
     def setUp(self) -> None:
-        self.expected_insecure_body = {
+        self.expected_unauthed_body = {
             "function_count": 1,
             "has_event_key": True,
             "has_signing_key": True,
@@ -110,8 +110,8 @@ class BaseTestIntrospection(unittest.TestCase):
             "mode": "cloud",
         }
 
-        self.expected_secure_body = {
-            **self.expected_insecure_body,
+        self.expected_authed_body = {
+            **self.expected_unauthed_body,
             "api_origin": "https://api.inngest.com/",
             "app_id": "flask-introspection",
             "env": None,

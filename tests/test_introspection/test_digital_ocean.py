@@ -35,7 +35,7 @@ class TestIntrospection(base.BaseTestIntrospection):
         res = app_client.get(digital_ocean_simulator.FULL_PATH)
         assert res.status_code == 200
         assert res.json == {
-            **self.expected_insecure_body,
+            **self.expected_unauthed_body,
             "has_signing_key_fallback": True,
         }
 
@@ -57,7 +57,7 @@ class TestIntrospection(base.BaseTestIntrospection):
             },
         )
         assert res.status_code == 200
-        assert res.json == self.expected_secure_body
+        assert res.json == self.expected_authed_body
 
     def test_dev_mode_with_no_signature(self) -> None:
         app_client = self._serve(
@@ -72,7 +72,7 @@ class TestIntrospection(base.BaseTestIntrospection):
         res = app_client.get(digital_ocean_simulator.FULL_PATH)
         assert res.status_code == 200
         assert res.json == {
-            **self.expected_insecure_body,
+            **self.expected_unauthed_body,
             "mode": "dev",
         }
 

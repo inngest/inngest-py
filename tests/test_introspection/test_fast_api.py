@@ -31,7 +31,7 @@ class TestIntrospection(base.BaseTestIntrospection):
         )
         res = fast_api_client.get("/api/inngest")
         assert res.status_code == 200
-        assert res.json() == self.expected_insecure_body
+        assert res.json() == self.expected_unauthed_body
 
     def test_cloud_mode_with_signature(self) -> None:
         self.set_signing_key_fallback_env_var()
@@ -51,7 +51,7 @@ class TestIntrospection(base.BaseTestIntrospection):
         )
         assert res.status_code == 200
         assert res.json() == {
-            **self.expected_secure_body,
+            **self.expected_authed_body,
             "has_signing_key_fallback": True,
         }
 
@@ -67,7 +67,7 @@ class TestIntrospection(base.BaseTestIntrospection):
         res = fast_api_client.get("/api/inngest")
         assert res.status_code == 200
         assert res.json() == {
-            **self.expected_insecure_body,
+            **self.expected_unauthed_body,
             "mode": "dev",
         }
 
