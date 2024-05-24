@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import enum
 import typing
 
@@ -38,6 +39,7 @@ class CallError(types.BaseModel):
     message: str
     name: str
     original_error: object = pydantic.Field(exclude=True)
+    retry_after: typing.Optional[datetime.datetime]
     stack: typing.Optional[str]
     step_id: typing.Optional[str]
 
@@ -60,12 +62,17 @@ class CallError(types.BaseModel):
             name = type(err).__name__
             stack = transforms.get_traceback(err)
 
+        retry_after = None
+        if isinstance(err, errors.RetryAfterError):
+            retry_after = err.retry_after
+
         return cls(
             code=code,
             is_retriable=is_retriable,
             message=message,
             name=name,
             original_error=err,
+            retry_after=retry_after,
             stack=stack,
             step_id=step_id,
         )

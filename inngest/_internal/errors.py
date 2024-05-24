@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import typing
 
 import pydantic
@@ -134,6 +135,35 @@ class NonRetriableError(Error):
     ) -> None:
         super().__init__(message)
         self.cause = cause
+
+
+class RetryAfterError(Error):
+    code = const.ErrorCode.RETRY_AFTER_ERROR
+
+    def __init__(
+        self,
+        message: typing.Optional[str],
+        retry_after: typing.Union[int, datetime.timedelta, datetime.datetime],
+    ) -> None:
+        """
+        Raise this error to retry at a specific time.
+
+        Args:
+        ----
+            message: Error message
+            retry_after: Time to retry after in milliseconds, timedelta, or datetime
+        """
+
+        super().__init__(message)
+
+        if isinstance(retry_after, int):
+            retry_after = datetime.datetime.now() + datetime.timedelta(
+                milliseconds=retry_after
+            )
+        elif isinstance(retry_after, datetime.timedelta):
+            retry_after = datetime.datetime.now() + retry_after
+
+        self.retry_after: datetime.datetime = retry_after
 
 
 class StepError(Error):

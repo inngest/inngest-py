@@ -84,6 +84,11 @@ class CommResponse:
             if call_res.is_retriable is False:
                 headers[const.HeaderKey.NO_RETRY.value] = "true"
 
+            if call_res.retry_after is not None:
+                headers[
+                    const.HeaderKey.RETRY_AFTER.value
+                ] = transforms.to_iso_utc(call_res.retry_after)
+
             return cls(
                 body=transforms.prep_body(d),
                 headers=headers,

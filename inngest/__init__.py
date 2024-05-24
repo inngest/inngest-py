@@ -2,7 +2,7 @@
 
 
 from ._internal.client_lib import Inngest
-from ._internal.errors import NonRetriableError, StepError
+from ._internal.errors import NonRetriableError, RetryAfterError, StepError
 from ._internal.event_lib import Event
 from ._internal.execution import Output
 from ._internal.function import Context, Function
@@ -36,6 +36,7 @@ __all__ = [
     "NonRetriableError",
     "Output",
     "RateLimit",
+    "RetryAfterError",
     "Step",
     "StepError",
     "StepSync",
