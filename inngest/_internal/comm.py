@@ -439,6 +439,7 @@ class CommHandler:
         if self._client._mode != const.ServerKind.CLOUD or isinstance(
             err, Exception
         ):
+            print(err)
             authentication_succeeded = None
             if isinstance(err, Exception):
                 authentication_succeeded = False
