@@ -61,8 +61,10 @@ def serve(
         return _to_response(
             client,
             handler.inspect(
-                server_kind,
-                net.RequestSignature(
+                serve_origin=serve_origin,
+                serve_path=serve_path,
+                server_kind=server_kind,
+                req_sig=net.RequestSignature(
                     body=body,
                     headers=headers,
                     mode=client._mode,

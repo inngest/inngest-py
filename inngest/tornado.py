@@ -66,7 +66,12 @@ def serve(
                 mode=client._mode,
             )
 
-            comm_res = handler.inspect(server_kind, req_sig)
+            comm_res = handler.inspect(
+                serve_origin=serve_origin,
+                serve_path=serve_path,
+                server_kind=server_kind,
+                req_sig=req_sig,
+            )
 
             self._write_comm_response(comm_res, server_kind)
 
