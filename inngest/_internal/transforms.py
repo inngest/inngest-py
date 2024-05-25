@@ -15,6 +15,10 @@ def get_traceback(err: Exception) -> str:
     )
 
 
+def hash_event_key(key: str) -> str:
+    return hashlib.sha256(key.encode("utf-8")).hexdigest()
+
+
 def hash_signing_key(key: str) -> str:
     return hashlib.sha256(
         bytearray.fromhex(remove_signing_key_prefix(key))

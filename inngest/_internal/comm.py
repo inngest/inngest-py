@@ -420,8 +420,11 @@ class CommHandler:
 
     def inspect(
         self,
-        server_kind: typing.Optional[const.ServerKind],
+        *,
         req_sig: net.RequestSignature,
+        serve_origin: typing.Optional[str],
+        serve_path: typing.Optional[str],
+        server_kind: typing.Optional[const.ServerKind],
     ) -> CommResponse:
         """Handle Dev Server's auto-discovery."""
 
@@ -442,13 +445,25 @@ class CommHandler:
         if self._client._mode != const.ServerKind.CLOUD or isinstance(
             err, Exception
         ):
-            body = _InsecureInspection(
+            authentication_succeeded = None
+            if isinstance(err, Exception):
+                authentication_succeeded = False
+
+            body = _UnauthenticatedIntrospection(
+                authentication_succeeded=authentication_succeeded,
                 function_count=len(self._fns),
                 has_event_key=self._client.event_key is not None,
                 has_signing_key=self._signing_key is not None,
+                has_signing_key_fallback=self._signing_key_fallback is not None,
                 mode=self._mode,
             )
         else:
+            event_key_hash = (
+                transforms.hash_event_key(self._client.event_key)
+                if self._client.event_key
+                else None
+            )
+
             signing_key_hash = (
                 transforms.hash_signing_key(self._signing_key)
                 if self._signing_key
@@ -461,11 +476,21 @@ class CommHandler:
                 else None
             )
 
-            body = _SecureInspection(
+            body = _AuthenticatedIntrospection(
+                api_origin=self._client.api_origin,
+                app_id=self._client.app_id,
+                authentication_succeeded=True,
+                env=self._client.env,
+                event_api_origin=self._client.event_api_origin,
+                event_key_hash=event_key_hash,
+                framework=self._framework.value,
                 function_count=len(self._fns),
                 has_event_key=self._client.event_key is not None,
                 has_signing_key=self._signing_key is not None,
+                has_signing_key_fallback=self._signing_key_fallback is not None,
                 mode=self._mode,
+                serve_origin=serve_origin,
+                serve_path=serve_path,
                 signing_key_fallback_hash=signing_key_fallback_hash,
                 signing_key_hash=signing_key_hash,
             )
@@ -642,13 +667,28 @@ class CommHandler:
         return None
 
 
-class _InsecureInspection(types.BaseModel):
+class _UnauthenticatedIntrospection(types.BaseModel):
+    schema_version: str = "2024-05-24"
+
+    authentication_succeeded: typing.Optional[bool]
     function_count: int
     has_event_key: bool
     has_signing_key: bool
+    has_signing_key_fallback: bool
     mode: const.ServerKind
 
 
-class _SecureInspection(_InsecureInspection):
+class _AuthenticatedIntrospection(_UnauthenticatedIntrospection):
+    api_origin: str
+    app_id: str
+    authentication_succeeded: bool = True
+    env: typing.Optional[str]
+    event_api_origin: str
+    event_key_hash: typing.Optional[str]
+    framework: str
+    sdk_language: str = const.LANGUAGE
+    sdk_version: str = const.VERSION
+    serve_origin: typing.Optional[str]
+    serve_path: typing.Optional[str]
     signing_key_fallback_hash: typing.Optional[str]
     signing_key_hash: typing.Optional[str]
