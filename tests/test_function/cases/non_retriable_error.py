@@ -36,7 +36,7 @@ def create(
         state.run_id = ctx.run_id
 
         def step_1() -> None:
-            raise inngest.NonRetriableError("foo")
+            raise inngest.NonRetriableError("foo", quiet=True)
 
         step.run("step_1", step_1)
 
@@ -53,7 +53,7 @@ def create(
         state.run_id = ctx.run_id
 
         def step_1() -> None:
-            raise inngest.NonRetriableError("foo")
+            raise inngest.NonRetriableError("foo", quiet=True)
 
         await step.run("step_1", step_1)
 

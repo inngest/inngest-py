@@ -132,9 +132,11 @@ class NonRetriableError(Error):
         self,
         message: typing.Optional[str] = None,
         cause: typing.Optional[typing.Mapping[str, object]] = None,
+        quiet: bool = False,
     ) -> None:
         super().__init__(message)
         self.cause = cause
+        self.quiet = quiet
 
 
 class RetryAfterError(Error):
