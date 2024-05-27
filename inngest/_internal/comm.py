@@ -318,12 +318,12 @@ class CommHandler:
             signing_key_fallback=self._signing_key_fallback,
         )
         if isinstance(err, Exception):
-            return await self._respond(middleware, err)
+            return await self._respond(err)
 
         # Get the function we should call.
         fn = self._get_function(fn_id)
         if isinstance(fn, Exception):
-            return await self._respond(middleware, fn)
+            return await self._respond(fn)
 
         events = call.events
         steps = call.steps
@@ -338,14 +338,12 @@ class CommHandler:
                     self._client._get_steps(call.ctx.run_id),
                 )
             except Exception as err:
-                return await self._respond(middleware, err)
+                return await self._respond(err)
         if events is None:
             # Should be unreachable. The Executor should always either send the
             # batch or tell the SDK to fetch the batch
 
-            return await self._respond(
-                middleware, Exception("events not in request")
-            )
+            return await self._respond(Exception("events not in request"))
 
         call_res = await fn.call(
             self._client,
@@ -362,7 +360,7 @@ class CommHandler:
             target_step_id,
         )
 
-        return await self._respond(middleware, call_res)
+        return await self._respond(call_res)
 
     def call_function_sync(
         self,
@@ -391,12 +389,12 @@ class CommHandler:
             signing_key_fallback=self._signing_key_fallback,
         )
         if isinstance(err, Exception):
-            return self._respond_sync(middleware, err)
+            return self._respond_sync(err)
 
         # Get the function we should call.
         fn = self._get_function(fn_id)
         if isinstance(fn, Exception):
-            return self._respond_sync(middleware, fn)
+            return self._respond_sync(fn)
 
         events = call.events
         steps = call.steps
@@ -409,14 +407,12 @@ class CommHandler:
                 events = self._client._get_batch_sync(call.ctx.run_id)
                 steps = self._client._get_steps_sync(call.ctx.run_id)
             except Exception as err:
-                return self._respond_sync(middleware, err)
+                return self._respond_sync(err)
         if events is None:
             # Should be unreachable. The Executor should always either send the
             # batch or tell the SDK to fetch the batch
 
-            return self._respond_sync(
-                middleware, Exception("events not in request")
-            )
+            return self._respond_sync(Exception("events not in request"))
 
         call_res = fn.call_sync(
             self._client,
@@ -433,7 +429,7 @@ class CommHandler:
             target_step_id,
         )
 
-        return self._respond_sync(middleware, call_res)
+        return self._respond_sync(call_res)
 
     def _get_function(self, fn_id: str) -> types.MaybeError[function.Function]:
         # Look for the function ID in the list of user functions, but also
@@ -676,13 +672,8 @@ class CommHandler:
 
     async def _respond(
         self,
-        middleware: middleware_lib.MiddlewareManager,
         value: typing.Union[execution.CallResult, Exception],
     ) -> CommResponse:
-        err = await middleware.before_response()
-        if isinstance(err, Exception):
-            return CommResponse.from_error(self._client.logger, err)
-
         if isinstance(value, Exception):
             return CommResponse.from_error(self._client.logger, value)
 
@@ -690,19 +681,12 @@ class CommHandler:
 
     def _respond_sync(
         self,
-        middleware: middleware_lib.MiddlewareManager,
         value: typing.Union[execution.CallResult, Exception],
     ) -> CommResponse:
-        err = middleware.before_response_sync()
-        if isinstance(err, Exception):
-            return CommResponse.from_error(self._client.logger, err)
-
         if isinstance(value, Exception):
             return CommResponse.from_error(self._client.logger, value)
 
-        res = CommResponse.from_call_result(self._client.logger, value)
-
-        return res
+        return CommResponse.from_call_result(self._client.logger, value)
 
     def _validate_registration(
         self,

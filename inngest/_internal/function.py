@@ -181,9 +181,13 @@ class Function:
             target_hashed_id,
         )
 
-        middleware_err = await middleware.transform_output(call_res)
-        if isinstance(middleware_err, Exception):
-            return execution.CallResult(middleware_err)
+        err = await middleware.transform_output(call_res)
+        if isinstance(err, Exception):
+            return execution.CallResult(err)
+
+        err = await middleware.before_response()
+        if isinstance(err, Exception):
+            return execution.CallResult(err)
 
         return call_res
 
@@ -313,9 +317,13 @@ class Function:
             target_hashed_id,
         )
 
-        middleware_err = middleware.transform_output_sync(call_res)
-        if isinstance(middleware_err, Exception):
-            return execution.CallResult(middleware_err)
+        err = middleware.transform_output_sync(call_res)
+        if isinstance(err, Exception):
+            return execution.CallResult(err)
+
+        err = middleware.before_response_sync()
+        if isinstance(err, Exception):
+            return execution.CallResult(err)
 
         return call_res
 

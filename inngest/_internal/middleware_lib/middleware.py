@@ -40,7 +40,7 @@ class Middleware:
         After the output has been set and before the response is sent
         back to Inngest. This is where you can perform any final actions before
         the response is sent back to Inngest. Called multiple times per run when
-        using steps. Not called for function middleware.
+        using steps.
         """
         return None
 
@@ -103,7 +103,7 @@ class MiddlewareSync:
         After the output has been set and before the response is sent
         back to Inngest. This is where you can perform any final actions before
         the response is sent back to Inngest. Called multiple times per run when
-        using steps. Not called for function middleware.
+        using steps.
         """
         return None
 

@@ -43,9 +43,7 @@ def create(
             state.messages.append("hook:after_execution")
 
         def before_response(self) -> None:
-            # This hook is not called for function middleware but we'll include
-            # in anyway to verify that.
-            state.messages.append("before_response")
+            state.messages.append("hook:before_response")
 
         def before_execution(self) -> None:
             state.messages.append("hook:before_execution")
@@ -81,9 +79,7 @@ def create(
             state.messages.append("hook:after_execution")
 
         async def before_response(self) -> None:
-            # This hook is not called for function middleware but we'll include
-            # in anyway to verify that.
-            state.messages.append("before_response")
+            state.messages.append("hook:before_response")
 
         async def before_execution(self) -> None:
             state.messages.append("hook:before_execution")
@@ -184,6 +180,7 @@ def create(
             "fn_logic: before step_1",
             "hook:after_execution",
             "hook:transform_output",
+            "hook:before_response",
             # Entry 2
             "hook:transform_input",
             "fn_logic: before step_1",
@@ -192,6 +189,7 @@ def create(
             "before_send_events",
             "hook:after_execution",
             "hook:transform_output",
+            "hook:before_response",
             # Entry 3
             "hook:transform_input",
             "fn_logic: before step_1",
@@ -200,6 +198,7 @@ def create(
             "fn_logic: after send",
             "hook:after_execution",
             "hook:transform_output",
+            "hook:before_response",
         ]
 
         step_1_output = json.loads(
