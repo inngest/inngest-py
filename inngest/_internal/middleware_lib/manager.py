@@ -14,7 +14,13 @@ from inngest._internal import (
 )
 
 from .log import LoggerMiddleware
-from .middleware import Middleware, MiddlewareSync, UninitializedMiddleware
+from .middleware import (
+    Middleware,
+    MiddlewareSync,
+    TransformOutputResult,
+    TransformOutputStepInfo,
+    UninitializedMiddleware,
+)
 
 if typing.TYPE_CHECKING:
     from inngest._internal import client_lib
@@ -210,9 +216,29 @@ class MiddlewareManager:
         if call_res.is_empty:
             return None
 
+        # Create a new result object to pass to the middleware. We don't want to
+        # pass the CallResult object because it exposes too many internal
+        # implementation details
+        result = TransformOutputResult(
+            error=call_res.error,
+            output=call_res.output,
+            step=None,
+        )
+        if call_res.step is not None:
+            result.step = TransformOutputStepInfo(
+                id=call_res.step.display_name,
+                op=call_res.step.op,
+                opts=call_res.step.opts,
+            )
+
         try:
             for m in self._middleware:
-                await transforms.maybe_await(m.transform_output(call_res))
+                await transforms.maybe_await(m.transform_output(result))
+
+            # Update the original call result with the (possibly) mutated fields
+            call_res.error = result.error
+            call_res.output = result.output
+
             return None
         except Exception as err:
             return err
@@ -231,11 +257,31 @@ class MiddlewareManager:
         if call_res.is_empty:
             return None
 
+        # Create a new result object to pass to the middleware. We don't want to
+        # pass the CallResult object because it exposes too many internal
+        # implementation details
+        result = TransformOutputResult(
+            error=call_res.error,
+            output=call_res.output,
+            step=None,
+        )
+        if call_res.step is not None:
+            result.step = TransformOutputStepInfo(
+                id=call_res.step.display_name,
+                op=call_res.step.op,
+                opts=call_res.step.opts,
+            )
+
         try:
             for m in self._middleware:
                 if isinstance(m, Middleware):
                     return _mismatched_sync
-                m.transform_output(call_res)
+                m.transform_output(result)
+
+            # Update the original call result with the (possibly) mutated fields
+            call_res.error = result.error
+            call_res.output = result.output
+
             return None
         except Exception as err:
             return err
