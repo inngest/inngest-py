@@ -7,13 +7,13 @@ import unittest
 import inngest
 import inngest.flask
 from inngest._internal import const, errors
-from tests import http_proxy
+from tests import dev_server, http_proxy
 
 
-class TestSend(unittest.TestCase):
-    def test_send_event_to_cloud_branch_env(self) -> None:
+class TestSend(unittest.IsolatedAsyncioTestCase):
+    async def test_send_event_to_cloud_branch_env(self) -> None:
         """
-        Test that the SDK correctly syncs itself with Cloud.
+        Test that the SDK sends the correct headers to Cloud.
 
         We need to use a mock Cloud since the Dev Server doesn't have a mode
         that simulates Cloud.
@@ -55,6 +55,17 @@ class TestSend(unittest.TestCase):
             event_key=event_key,
         )
 
+        await client.send(inngest.Event(name="foo"))
+        assert state.headers.get("X-Inngest-Env") == ["my-env"]
+        assert state.headers.get("X-Inngest-SDK") == [
+            f"inngest-py:v{const.VERSION}"
+        ]
+        assert event_key in state.path
+
+        # Clear test state
+        state.headers = {}
+        state.path = ""
+
         client.send_sync(inngest.Event(name="foo"))
         assert state.headers.get("X-Inngest-Env") == ["my-env"]
         assert state.headers.get("X-Inngest-SDK") == [
@@ -71,6 +82,7 @@ class TestSend(unittest.TestCase):
         method_name = self._testMethodName
         client = inngest.Inngest(
             app_id=f"{class_name}-{method_name}",
+            event_api_base_url=f"http://localhost:{dev_server.PORT}",
             is_production=False,
         )
 
@@ -82,11 +94,40 @@ class TestSend(unittest.TestCase):
 
         await asyncio.gather(*sends)
 
-    def test_cloud_mode_without_event_key(self) -> None:
+    async def test_cloud_mode_without_event_key(self) -> None:
         client = inngest.Inngest(app_id="my-app")
 
         with self.assertRaises(errors.EventKeyUnspecifiedError):
+            await client.send(inngest.Event(name="foo"))
+
+        with self.assertRaises(errors.EventKeyUnspecifiedError):
             client.send_sync(inngest.Event(name="foo"))
+
+    async def test_partial_send_error(self) -> None:
+        """
+        Sending bulk events can result in a partial error. For example, sending
+        a valid event and an invalid event will result in 1 successfully sent
+        event and 1 error
+        """
+
+        client = inngest.Inngest(
+            app_id="my-app",
+            event_key="event-key-123abc",
+            event_api_base_url=f"http://localhost:{dev_server.PORT}",
+            is_production=False,
+        )
+
+        with self.assertRaises(errors.SendEventsError) as ctx:
+            await client.send(
+                [
+                    inngest.Event(name="foo"),
+                    inngest.Event(name=""),
+                    # This event will not be processed since the previous event
+                    # is invalid
+                    inngest.Event(name=""),
+                ]
+            )
+        assert len(ctx.exception.ids) == 1
 
 
 if __name__ == "__main__":

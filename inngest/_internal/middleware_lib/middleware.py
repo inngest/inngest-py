@@ -28,6 +28,15 @@ class Middleware:
         """
         return None
 
+    async def after_send_events(
+        self,
+        result: client_lib.SendEventsResult,
+    ) -> None:
+        """
+        After sending events.
+        """
+        return None
+
     async def before_execution(self) -> None:
         """
         Before executing new code. Called multiple times per run when using
@@ -88,6 +97,15 @@ class MiddlewareSync:
         """
         After executing new code. Called multiple times per run when using
         steps.
+        """
+        return None
+
+    def after_send_events(
+        self,
+        result: client_lib.SendEventsResult,
+    ) -> None:
+        """
+        After sending events.
         """
         return None
 

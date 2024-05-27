@@ -42,6 +42,7 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
         # Assert that the middleware hooks were called in the correct order
         assert state.hook_list == [
             "before_send_events",
+            "after_send_events",
             # Entry 1
             "transform_input",
             "before_execution",
@@ -52,6 +53,7 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
             "transform_input",
             "before_execution",
             "before_send_events",
+            "after_send_events",
             "after_execution",
             "transform_output",
             "before_response",
@@ -101,6 +103,12 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
         class Middleware(inngest.Middleware):
             async def after_execution(self) -> None:
                 state.hook_list.append("after_execution")
+
+            async def after_send_events(
+                self,
+                result: inngest.SendEventsResult,
+            ) -> None:
+                state.hook_list.append("after_send_events")
 
             async def before_response(self) -> None:
                 state.hook_list.append("before_response")
@@ -189,6 +197,12 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
         class Middleware(inngest.MiddlewareSync):
             def after_execution(self) -> None:
                 state.hook_list.append("after_execution")
+
+            def after_send_events(
+                self,
+                result: inngest.SendEventsResult,
+            ) -> None:
+                state.hook_list.append("after_send_events")
 
             def before_response(self) -> None:
                 state.hook_list.append("before_response")

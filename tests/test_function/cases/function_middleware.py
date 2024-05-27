@@ -42,6 +42,12 @@ def create(
         def after_execution(self) -> None:
             state.messages.append("hook:after_execution")
 
+        def after_send_events(
+            self,
+            result: inngest.SendEventsResult,
+        ) -> None:
+            state.messages.append("hook:after_send_events")
+
         def before_response(self) -> None:
             state.messages.append("hook:before_response")
 
@@ -49,7 +55,7 @@ def create(
             state.messages.append("hook:before_execution")
 
         def before_send_events(self, events: list[inngest.Event]) -> None:
-            state.messages.append("before_send_events")
+            state.messages.append("hook:before_send_events")
 
         def transform_input(
             self,
@@ -78,6 +84,12 @@ def create(
         async def after_execution(self) -> None:
             state.messages.append("hook:after_execution")
 
+        async def after_send_events(
+            self,
+            result: inngest.SendEventsResult,
+        ) -> None:
+            state.messages.append("hook:after_send_events")
+
         async def before_response(self) -> None:
             state.messages.append("hook:before_response")
 
@@ -88,7 +100,7 @@ def create(
             self,
             events: list[inngest.Event],
         ) -> None:
-            state.messages.append("before_send_events")
+            state.messages.append("hook:before_send_events")
 
         async def transform_input(
             self,
@@ -186,7 +198,8 @@ def create(
             "fn_logic: before step_1",
             "hook:before_execution",
             "fn_logic: after step_1",
-            "before_send_events",
+            "hook:before_send_events",
+            "hook:after_send_events",
             "hook:after_execution",
             "hook:transform_output",
             "hook:before_response",

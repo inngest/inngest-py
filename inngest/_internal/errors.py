@@ -171,6 +171,19 @@ class RetryAfterError(Error):
         self.quiet: bool = quiet
 
 
+class SendEventsError(Error):
+    def __init__(self, message: str, ids: list[str]) -> None:
+        """
+        Args:
+        ----
+            message: Error message
+            ids: List of event IDs that successfully sent
+        """
+
+        super().__init__(message)
+        self.ids = ids
+
+
 class StepError(Error):
     """
     Wraps a userland error. This is necessary because the Executor sends
