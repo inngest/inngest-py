@@ -1,7 +1,7 @@
 """Public entrypoint for the Inngest SDK."""
 
 
-from ._internal.client_lib import Inngest
+from ._internal.client_lib import Inngest, SendEventsResult
 from ._internal.errors import NonRetriableError, RetryAfterError, StepError
 from ._internal.event_lib import Event
 from ._internal.function import Context, Function
@@ -38,6 +38,7 @@ __all__ = [
     "NonRetriableError",
     "RateLimit",
     "RetryAfterError",
+    "SendEventsResult",
     "Step",
     "StepError",
     "StepMemos",

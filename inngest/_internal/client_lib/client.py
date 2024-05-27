@@ -8,7 +8,7 @@ import urllib.parse
 
 import httpx
 
-from . import (
+from inngest._internal import (
     const,
     env_lib,
     errors,
@@ -19,6 +19,8 @@ from . import (
     net,
     types,
 )
+
+from . import models
 
 # Dummy value
 _DEV_SERVER_EVENT_KEY = "NO_EVENT_KEY_SET"
@@ -404,6 +406,7 @@ class Inngest:
         if not isinstance(events, list):
             events = [events]
 
+        middleware = None
         if not skip_middleware:
             middleware = middleware_lib.MiddlewareManager.from_client(
                 self,
@@ -415,13 +418,27 @@ class Inngest:
         if isinstance(req, Exception):
             raise req
 
-        res = await net.fetch_with_thready_safety(
-            self._http_client,
-            self._http_client_sync,
-            req,
+        result = models.SendEventsResult.from_raw(
+            (
+                await net.fetch_with_thready_safety(
+                    self._http_client,
+                    self._http_client_sync,
+                    req,
+                )
+            ).json()
         )
+        if isinstance(result, Exception):
+            raise result
 
-        return _extract_ids(res.json())
+        if middleware is not None:
+            err = await middleware.after_send_events(result)
+            if isinstance(err, Exception):
+                raise err
+
+        if result.error is not None:
+            raise errors.SendEventsError(result.error, result.ids)
+
+        return result.ids
 
     def send_sync(
         self,
@@ -441,31 +458,38 @@ class Inngest:
         if not isinstance(events, list):
             events = [events]
 
+        middleware = None
         if not skip_middleware:
             middleware = middleware_lib.MiddlewareManager.from_client(
                 self,
                 raw_request=None,
             )
-            middleware.before_send_events_sync(events)
+            err = middleware.before_send_events_sync(events)
+            if isinstance(err, Exception):
+                raise err
 
         req = self._build_send_request(events)
         if isinstance(req, Exception):
             raise req
-        return _extract_ids((self._http_client_sync.send(req)).json())
+
+        result = models.SendEventsResult.from_raw(
+            (self._http_client_sync.send(req)).json(),
+        )
+        if isinstance(result, Exception):
+            raise result
+
+        if middleware is not None:
+            err = middleware.after_send_events_sync(result)
+            if isinstance(err, Exception):
+                raise err
+
+        if result.error is not None:
+            raise errors.SendEventsError(result.error, result.ids)
+
+        return result.ids
 
     def set_logger(self, logger: types.Logger) -> None:
         self.logger = logger
-
-
-def _extract_ids(body: object) -> list[str]:
-    if not isinstance(body, dict) or "ids" not in body:
-        raise errors.BodyInvalidError("unexpected response when sending events")
-
-    ids = body["ids"]
-    if not isinstance(ids, list):
-        raise errors.BodyInvalidError("unexpected response when sending events")
-
-    return ids
 
 
 def _get_mode(
@@ -489,4 +513,5 @@ def _get_mode(
     logger.debug(
         f"Cloud mode enabled. Set {const.EnvKey.DEV.value} to enable development mode"
     )
+    return const.ServerKind.CLOUD
     return const.ServerKind.CLOUD

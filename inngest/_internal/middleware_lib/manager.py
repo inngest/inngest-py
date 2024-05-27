@@ -98,6 +98,30 @@ class MiddlewareManager:
         except Exception as err:
             return err
 
+    async def after_send_events(
+        self,
+        result: client_lib.SendEventsResult,
+    ) -> types.MaybeError[None]:
+        try:
+            for m in self._middleware:
+                await transforms.maybe_await(m.after_send_events(result))
+            return None
+        except Exception as err:
+            return err
+
+    def after_send_events_sync(
+        self,
+        result: client_lib.SendEventsResult,
+    ) -> types.MaybeError[None]:
+        try:
+            for m in self._middleware:
+                if inspect.iscoroutinefunction(m.after_execution):
+                    return _mismatched_sync
+                m.after_send_events(result)
+            return None
+        except Exception as err:
+            return err
+
     async def before_execution(self) -> types.MaybeError[None]:
         hook = "before_execution"
         if hook in self._disabled_hooks:

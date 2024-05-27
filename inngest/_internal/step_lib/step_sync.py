@@ -4,6 +4,7 @@ import typing
 import typing_extensions
 
 from inngest._internal import errors, event_lib, execution, transforms, types
+from inngest._internal.client_lib import models as client_models
 
 from . import base
 
@@ -257,13 +258,31 @@ class StepSync(base.StepBase):
             else:
                 _events = [events]
 
-            self._middleware.before_send_events_sync(_events)
-            return self._client.send_sync(
-                events,
-                # Skip middleware since we're already running it above. Without
-                # this, we'll double-call middleware hooks
-                skip_middleware=True,
-            )
+            middleware_err = self._middleware.before_send_events_sync(_events)
+            if isinstance(middleware_err, Exception):
+                raise middleware_err
+
+            try:
+                result = client_models.SendEventsResult(
+                    ids=self._client.send_sync(
+                        events,
+                        # Skip middleware since we're already running it above. Without
+                        # this, we'll double-call middleware hooks
+                        skip_middleware=True,
+                    )
+                )
+            except errors.SendEventsError as err:
+                result = client_models.SendEventsResult(
+                    error=str(err),
+                    ids=err.ids,
+                )
+                raise err
+            finally:
+                middleware_err = self._middleware.after_send_events_sync(result)
+                if isinstance(middleware_err, Exception):
+                    raise middleware_err
+
+            return result.ids
 
         return self.run(step_id, fn)
 
