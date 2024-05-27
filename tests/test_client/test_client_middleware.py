@@ -123,7 +123,7 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
 
             async def transform_output(
                 self,
-                result: inngest.CallResult,
+                result: inngest.TransformOutputResult,
             ) -> None:
                 state.hook_list.append("transform_output")
                 if result.output == "original output":
@@ -211,7 +211,7 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
 
             def transform_output(
                 self,
-                result: inngest.CallResult,
+                result: inngest.TransformOutputResult,
             ) -> None:
                 state.hook_list.append("transform_output")
                 if result.output == "original output":

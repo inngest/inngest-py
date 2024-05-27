@@ -62,7 +62,7 @@ def create(
 
         def transform_output(
             self,
-            result: inngest.CallResult,
+            result: inngest.TransformOutputResult,
         ) -> None:
             state.messages.append("hook:transform_output")
             if result.output == "original output":
@@ -103,7 +103,7 @@ def create(
 
         async def transform_output(
             self,
-            result: inngest.CallResult,
+            result: inngest.TransformOutputResult,
         ) -> None:
             state.messages.append("hook:transform_output")
             if result.output == "original output":

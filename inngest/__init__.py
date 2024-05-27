@@ -4,7 +4,6 @@
 from ._internal.client_lib import Inngest
 from ._internal.errors import NonRetriableError, RetryAfterError, StepError
 from ._internal.event_lib import Event
-from ._internal.execution import CallResult
 from ._internal.function import Context, Function
 from ._internal.function_config import (
     Batch,
@@ -16,13 +15,16 @@ from ._internal.function_config import (
     TriggerCron,
     TriggerEvent,
 )
-from ._internal.middleware_lib import Middleware, MiddlewareSync
+from ._internal.middleware_lib import (
+    Middleware,
+    MiddlewareSync,
+    TransformOutputResult,
+)
 from ._internal.step_lib import Step, StepMemos, StepSync
 from ._internal.types import JSON
 
 __all__ = [
     "Batch",
-    "CallResult",
     "Cancel",
     "Concurrency",
     "Context",
@@ -41,6 +43,7 @@ __all__ = [
     "StepMemos",
     "StepSync",
     "Throttle",
+    "TransformOutputResult",
     "TriggerCron",
     "TriggerEvent",
 ]

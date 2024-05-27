@@ -61,7 +61,7 @@ class Middleware:
         """
         return None
 
-    async def transform_output(self, result: execution.CallResult) -> None:
+    async def transform_output(self, result: TransformOutputResult) -> None:
         """
         After a function or step returns. Used to modify the returned data.
         Called multiple times per run when using steps. Not called when an error
@@ -124,7 +124,7 @@ class MiddlewareSync:
         """
         return None
 
-    def transform_output(self, result: execution.CallResult) -> None:
+    def transform_output(self, result: TransformOutputResult) -> None:
         """
         After a function or step returns. Used to modify the returned data.
         Called multiple times per run when using steps. Not called when an error
@@ -140,7 +140,19 @@ UninitializedMiddleware = typing.Callable[
 
 
 @dataclasses.dataclass
-class OutputCtx:
-    data: object
+class TransformOutputResult:
+    # Mutations to these fields within middleware will be kept after running
+    # middleware
     error: typing.Optional[Exception]
-    step: typing.Optional[execution.StepInfo]
+    output: object
+
+    # Mutations to these fields within middleware will be discarded after
+    # running middleware
+    step: typing.Optional[TransformOutputStepInfo]
+
+
+@dataclasses.dataclass
+class TransformOutputStepInfo:
+    id: str
+    op: execution.Opcode
+    opts: typing.Optional[dict[str, object]]

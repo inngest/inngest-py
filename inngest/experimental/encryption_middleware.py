@@ -136,7 +136,7 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
         for event in ctx.events:
             event.data = self._decrypt_event_data(event.data)
 
-    def transform_output(self, result: inngest.CallResult) -> None:
+    def transform_output(self, result: inngest.TransformOutputResult) -> None:
         """
         Encrypt data before sending it to the Inngest server.
         """
