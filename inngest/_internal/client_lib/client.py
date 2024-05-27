@@ -514,4 +514,3 @@ def _get_mode(
         f"Cloud mode enabled. Set {const.EnvKey.DEV.value} to enable development mode"
     )
     return const.ServerKind.CLOUD
-    return const.ServerKind.CLOUD
