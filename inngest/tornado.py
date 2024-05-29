@@ -119,6 +119,7 @@ def serve(
             comm_res = handler.call_function_sync(
                 call=call,
                 fn_id=fn_id,
+                raw_request=self.request,
                 req_sig=req_sig,
                 target_hashed_id=step_id,
             )

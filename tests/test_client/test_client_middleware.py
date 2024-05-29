@@ -42,21 +42,29 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
         # Assert that the middleware hooks were called in the correct order
         assert state.hook_list == [
             "before_send_events",
+            "after_send_events",
             # Entry 1
             "transform_input",
+            "before_memoization",
+            "after_memoization",
             "before_execution",
             "after_execution",
             "transform_output",
             "before_response",
             # Entry 2
             "transform_input",
+            "before_memoization",
+            "after_memoization",
             "before_execution",
             "before_send_events",
+            "after_send_events",
             "after_execution",
             "transform_output",
             "before_response",
             # Entry 3
             "transform_input",
+            "before_memoization",
+            "after_memoization",
             "before_execution",
             "after_execution",
             "transform_output",
@@ -102,11 +110,23 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
             async def after_execution(self) -> None:
                 state.hook_list.append("after_execution")
 
-            async def before_response(self) -> None:
-                state.hook_list.append("before_response")
+            async def after_memoization(self) -> None:
+                state.hook_list.append("after_memoization")
+
+            async def after_send_events(
+                self,
+                result: inngest.SendEventsResult,
+            ) -> None:
+                state.hook_list.append("after_send_events")
 
             async def before_execution(self) -> None:
                 state.hook_list.append("before_execution")
+
+            async def before_memoization(self) -> None:
+                state.hook_list.append("before_memoization")
+
+            async def before_response(self) -> None:
+                state.hook_list.append("before_response")
 
             async def before_send_events(
                 self,
@@ -117,18 +137,18 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
             async def transform_input(
                 self,
                 ctx: inngest.Context,
-            ) -> inngest.Context:
+                function: inngest.Function,
+                steps: inngest.StepMemos,
+            ) -> None:
                 state.hook_list.append("transform_input")
-                return ctx
 
             async def transform_output(
                 self,
-                output: inngest.Output,
-            ) -> inngest.Output:
+                result: inngest.TransformOutputResult,
+            ) -> None:
                 state.hook_list.append("transform_output")
-                if output.data == "original output":
-                    output.data = "transformed output"
-                return output
+                if result.output == "original output":
+                    result.output = "transformed output"
 
         client = inngest.Inngest(
             api_base_url=dev_server.origin,
@@ -191,11 +211,23 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
             def after_execution(self) -> None:
                 state.hook_list.append("after_execution")
 
-            def before_response(self) -> None:
-                state.hook_list.append("before_response")
+            def after_memoization(self) -> None:
+                state.hook_list.append("after_memoization")
+
+            def after_send_events(
+                self,
+                result: inngest.SendEventsResult,
+            ) -> None:
+                state.hook_list.append("after_send_events")
 
             def before_execution(self) -> None:
                 state.hook_list.append("before_execution")
+
+            def before_memoization(self) -> None:
+                state.hook_list.append("before_memoization")
+
+            def before_response(self) -> None:
+                state.hook_list.append("before_response")
 
             def before_send_events(
                 self,
@@ -206,18 +238,18 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
             def transform_input(
                 self,
                 ctx: inngest.Context,
-            ) -> inngest.Context:
+                function: inngest.Function,
+                steps: inngest.StepMemos,
+            ) -> None:
                 state.hook_list.append("transform_input")
-                return ctx
 
             def transform_output(
                 self,
-                output: inngest.Output,
-            ) -> inngest.Output:
+                result: inngest.TransformOutputResult,
+            ) -> None:
                 state.hook_list.append("transform_output")
-                if output.data == "original output":
-                    output.data = "transformed output"
-                return output
+                if result.output == "original output":
+                    result.output = "transformed output"
 
         client = inngest.Inngest(
             api_base_url=dev_server.origin,

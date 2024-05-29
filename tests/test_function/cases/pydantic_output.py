@@ -1,11 +1,9 @@
 """
-We don't officially support returning a Pydantic object from a step. Returning a
-Pydantic object fails a type check, however it'll be converted to a dict at
-runtime. Users may be relying on this behavior, so it's probably best to avoid
-fixing it.
-
-Note that returning a Pydantic object from a function will fail at runtime.
+We don't support returning Pydantic models in steps or functions. This may
+change in the future.
 """
+
+import json
 
 import pydantic
 
@@ -67,13 +65,17 @@ def create(
 
     def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
-        tests.helper.client.wait_for_run_status(
+        run = tests.helper.client.wait_for_run_status(
             state.wait_for_run_id(),
-            tests.helper.RunStatus.COMPLETED,
+            tests.helper.RunStatus.FAILED,
         )
 
-        user = _User.model_validate(state.step_output)
-        assert user.name == "Alice"
+        assert run.output is not None
+        assert json.loads(run.output) == {
+            "code": "output_unserializable",
+            "message": '"a" returned unserializable data',
+            "name": "OutputUnserializableError",
+        }
 
     if is_sync:
         fn = fn_sync

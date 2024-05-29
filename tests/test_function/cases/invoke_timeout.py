@@ -88,9 +88,9 @@ def create(
         assert run.output is not None
         assert json.loads(run.output) == {
             "code": "step_errored",
-            "is_retriable": False,
             "message": "Timed out waiting for invoked function to complete",
             "name": "InngestInvokeTimeoutError",
+            "stack": None,
         }
 
     if is_sync:

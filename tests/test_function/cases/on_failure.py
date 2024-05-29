@@ -104,7 +104,6 @@ def create(
         output = json.loads(run.output)
         assert output == {
             "code": "unknown",
-            "is_retriable": True,
             "message": "intentional failure",
             "name": "MyError",
             "stack": unittest.mock.ANY,

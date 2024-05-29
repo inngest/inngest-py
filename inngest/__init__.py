@@ -1,10 +1,9 @@
 """Public entrypoint for the Inngest SDK."""
 
 
-from ._internal.client_lib import Inngest
+from ._internal.client_lib import Inngest, SendEventsResult
 from ._internal.errors import NonRetriableError, RetryAfterError, StepError
 from ._internal.event_lib import Event
-from ._internal.execution import Output
 from ._internal.function import Context, Function
 from ._internal.function_config import (
     Batch,
@@ -16,8 +15,12 @@ from ._internal.function_config import (
     TriggerCron,
     TriggerEvent,
 )
-from ._internal.middleware_lib import Middleware, MiddlewareSync
-from ._internal.step_lib import FunctionID, Step, StepSync
+from ._internal.middleware_lib import (
+    Middleware,
+    MiddlewareSync,
+    TransformOutputResult,
+)
+from ._internal.step_lib import Step, StepMemos, StepSync
 from ._internal.types import JSON
 
 __all__ = [
@@ -28,19 +31,20 @@ __all__ = [
     "Debounce",
     "Event",
     "Function",
-    "FunctionID",
     "Inngest",
     "JSON",
     "Middleware",
     "MiddlewareSync",
     "NonRetriableError",
-    "Output",
     "RateLimit",
     "RetryAfterError",
+    "SendEventsResult",
     "Step",
     "StepError",
+    "StepMemos",
     "StepSync",
     "Throttle",
+    "TransformOutputResult",
     "TriggerCron",
     "TriggerEvent",
 ]

@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import datetime
+import dataclasses
 import enum
 import typing
 
 import pydantic
 import typing_extensions
 
-from . import const, errors, event_lib, transforms, types
+from . import event_lib, transforms, types
 
 
 class Call(types.BaseModel):
@@ -28,70 +28,7 @@ class CallStack(types.BaseModel):
     stack: list[str]
 
 
-class CallError(types.BaseModel):
-    """
-    When an error that occurred during a call. Used for both function- and step-level
-    errors.
-    """
-
-    code: const.ErrorCode
-    is_retriable: bool
-    message: str
-    name: str
-    original_error: object = pydantic.Field(exclude=True)
-    quiet: bool = pydantic.Field(exclude=True)
-    retry_after: typing.Optional[datetime.datetime]
-    stack: typing.Optional[str]
-    step_id: typing.Optional[str]
-
-    @classmethod
-    def from_error(
-        cls,
-        err: Exception,
-        step_id: typing.Optional[str] = None,
-    ) -> CallError:
-        code = const.ErrorCode.UNKNOWN
-        if isinstance(err, errors.Error):
-            code = err.code
-            is_retriable = err.is_retriable
-            message = err.message
-            name = err.name
-            stack = err.stack
-        else:
-            is_retriable = True
-            message = str(err)
-            name = type(err).__name__
-            stack = transforms.get_traceback(err)
-
-        retry_after = None
-        if isinstance(err, errors.RetryAfterError):
-            retry_after = err.retry_after
-
-        quiet = False
-        if isinstance(err, errors.Quietable):
-            quiet = err.quiet
-
-        return cls(
-            code=code,
-            is_retriable=is_retriable,
-            message=message,
-            name=name,
-            original_error=err,
-            quiet=quiet,
-            retry_after=retry_after,
-            stack=stack,
-            step_id=step_id,
-        )
-
-
-class FunctionCallResponse(types.BaseModel):
-    """When a function successfully returns."""
-
-    data: object
-
-
-class StepResponse(types.BaseModel):
-    data: typing.Optional[Output] = None
+class StepInfo(types.BaseModel):
     display_name: str = pydantic.Field(..., serialization_alias="displayName")
     id: str
 
@@ -100,6 +37,12 @@ class StepResponse(types.BaseModel):
 
     op: Opcode
     opts: typing.Optional[dict[str, object]] = None
+
+
+class StepResponse(types.BaseModel):
+    output: object = None
+    original_error: object = pydantic.Field(default=None, exclude=True)
+    step: StepInfo
 
 
 class MemoizedError(types.BaseModel):
@@ -122,10 +65,7 @@ class Output(types.BaseModel):
     model_config = pydantic.ConfigDict(extra="forbid")
 
     data: object = None
-
-    # TODO: Change the type to MemoizedError. But that requires a breaking
-    # change, so do it in version 0.4
-    error: typing.Optional[dict[str, object]] = None
+    error: typing.Optional[MemoizedError] = None
 
 
 def is_step_call_responses(
@@ -136,9 +76,53 @@ def is_step_call_responses(
     return all(isinstance(item, StepResponse) for item in value)
 
 
-CallResult: typing_extensions.TypeAlias = typing.Union[
-    list[StepResponse], FunctionCallResponse, CallError
-]
+@dataclasses.dataclass
+class CallResult:
+    error: typing.Optional[Exception] = None
+
+    # Multiple results from a single call (only used for steps). This will only
+    # be longer than 1 for parallel steps. Otherwise, it will be 1 long for
+    # sequential steps
+    multi: typing.Optional[list[CallResult]] = None
+
+    # Need a sentinel value to differentiate between None and unset
+    output: object = types.empty_sentinel
+
+    # Step metadata (e.g. user-specified ID)
+    step: typing.Optional[StepInfo] = None
+
+    @property
+    def is_empty(self) -> bool:
+        return all(
+            [
+                self.error is None,
+                self.multi is None,
+                self.output is types.empty_sentinel,
+                self.step is None,
+            ]
+        )
+
+    @classmethod
+    def from_responses(
+        cls,
+        responses: list[StepResponse],
+    ) -> CallResult:
+        multi = []
+
+        for response in responses:
+            error = None
+            if isinstance(response.original_error, Exception):
+                error = response.original_error
+
+            multi.append(
+                cls(
+                    error=error,
+                    output=response.output,
+                    step=response.step,
+                )
+            )
+
+        return cls(multi=multi)
 
 
 class Opcode(enum.Enum):

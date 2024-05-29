@@ -132,6 +132,7 @@ def _create_handler_async(
                 await handler.call_function(
                     call=call,
                     fn_id=fn_id,
+                    raw_request=flask.request,
                     req_sig=req_sig,
                     target_hashed_id=step_id,
                 ),
@@ -222,6 +223,7 @@ def _create_handler_sync(
                 handler.call_function_sync(
                     call=call,
                     fn_id=fn_id,
+                    raw_request=flask.request,
                     req_sig=req_sig,
                     target_hashed_id=step_id,
                 ),

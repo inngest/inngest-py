@@ -3,7 +3,7 @@ import unittest
 
 import pytest
 
-from . import client_lib, const, errors, event_lib
+from inngest._internal import client_lib, const, errors, event_lib
 
 
 class Test(unittest.TestCase):

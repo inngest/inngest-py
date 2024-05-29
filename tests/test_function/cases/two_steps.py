@@ -35,9 +35,9 @@ def create(
     ) -> None:
         state.run_id = ctx.run_id
 
-        def step_1() -> list[dict[str, dict[str, int]]]:
+        def step_1() -> list[dict[str, inngest.JSON]]:
             state.step_1_counter += 1
-            return [{"foo": {"bar": 1}}]
+            return [{"foo": {"bar": 1}, "empty": None}]
 
         state.step_1_output = step.run("step_1", step_1)
 
@@ -57,9 +57,9 @@ def create(
     ) -> None:
         state.run_id = ctx.run_id
 
-        async def step_1() -> list[dict[str, dict[str, int]]]:
+        async def step_1() -> list[dict[str, inngest.JSON]]:
             state.step_1_counter += 1
-            return [{"foo": {"bar": 1}}]
+            return [{"foo": {"bar": 1}, "empty": None}]
 
         state.step_1_output = await step.run("step_1", step_1)
 
@@ -78,7 +78,7 @@ def create(
 
         assert state.step_1_counter == 1
         assert state.step_2_counter == 1
-        assert state.step_1_output == [{"foo": {"bar": 1}}]
+        assert state.step_1_output == [{"empty": None, "foo": {"bar": 1}}]
 
         step_1_output_in_api = json.loads(
             tests.helper.client.get_step_output(
@@ -86,7 +86,9 @@ def create(
                 step_id="step_1",
             )
         )
-        assert step_1_output_in_api == {"data": [{"foo": {"bar": 1}}]}
+        assert step_1_output_in_api == {
+            "data": [{"empty": None, "foo": {"bar": 1}}]
+        }
 
     if is_sync:
         fn = fn_sync

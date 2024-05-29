@@ -4,6 +4,7 @@ import typing
 import typing_extensions
 
 from inngest._internal import errors, event_lib, execution, transforms, types
+from inngest._internal.client_lib import models as client_models
 
 from . import base
 
@@ -21,7 +22,7 @@ class StepSync(base.StepBase):
         *,
         function: Function,
         data: typing.Optional[types.JSON] = None,
-        timeout: typing.Union[int, datetime.timedelta, None] = None,
+        timeout: typing.Union[int, datetime.timedelta],
         user: typing.Optional[types.JSON] = None,
         v: typing.Optional[str] = None,
     ) -> object:
@@ -60,7 +61,7 @@ class StepSync(base.StepBase):
         app_id: typing.Optional[str] = None,
         function_id: str,
         data: typing.Optional[types.JSON] = None,
-        timeout: typing.Union[int, datetime.timedelta, None] = None,
+        timeout: typing.Union[int, datetime.timedelta],
         user: typing.Optional[types.JSON] = None,
         v: typing.Optional[str] = None,
     ) -> object:
@@ -98,7 +99,7 @@ class StepSync(base.StepBase):
         if isinstance(err, Exception):
             raise err
 
-        timeout_str = transforms.to_maybe_duration_str(timeout)
+        timeout_str = transforms.to_duration_str(timeout)
         if isinstance(timeout_str, Exception):
             raise timeout_str
 
@@ -116,11 +117,13 @@ class StepSync(base.StepBase):
 
         raise base.ResponseInterrupt(
             execution.StepResponse(
-                display_name=parsed_step_id.user_facing,
-                id=parsed_step_id.hashed,
-                name=parsed_step_id.user_facing,
-                op=execution.Opcode.INVOKE,
-                opts=opts,
+                step=execution.StepInfo(
+                    display_name=parsed_step_id.user_facing,
+                    id=parsed_step_id.hashed,
+                    name=parsed_step_id.user_facing,
+                    op=execution.Opcode.INVOKE,
+                    opts=opts,
+                )
             )
         )
 
@@ -187,10 +190,12 @@ class StepSync(base.StepBase):
             # Plan this step because we're in parallel mode.
             raise base.ResponseInterrupt(
                 execution.StepResponse(
-                    display_name=parsed_step_id.user_facing,
-                    id=parsed_step_id.hashed,
-                    name=parsed_step_id.user_facing,
-                    op=execution.Opcode.PLANNED,
+                    step=execution.StepInfo(
+                        display_name=parsed_step_id.user_facing,
+                        id=parsed_step_id.hashed,
+                        name=parsed_step_id.user_facing,
+                        op=execution.Opcode.PLANNED,
+                    )
                 )
             )
 
@@ -203,11 +208,13 @@ class StepSync(base.StepBase):
 
             raise base.ResponseInterrupt(
                 execution.StepResponse(
-                    data=execution.Output(data=output),
-                    display_name=parsed_step_id.user_facing,
-                    id=parsed_step_id.hashed,
-                    name=parsed_step_id.user_facing,
-                    op=execution.Opcode.STEP_RUN,
+                    output=output,
+                    step=execution.StepInfo(
+                        display_name=parsed_step_id.user_facing,
+                        id=parsed_step_id.hashed,
+                        name=parsed_step_id.user_facing,
+                        op=execution.Opcode.STEP_RUN,
+                    ),
                 )
             )
         except (errors.NonRetriableError, errors.RetryAfterError) as err:
@@ -216,16 +223,14 @@ class StepSync(base.StepBase):
         except Exception as err:
             transforms.remove_first_traceback_frame(err)
 
-            error_dict = execution.MemoizedError.from_error(err).to_dict()
-            if isinstance(error_dict, Exception):
-                raise error_dict
-
             raise base.ResponseInterrupt(
                 execution.StepResponse(
-                    display_name=parsed_step_id.user_facing,
-                    data=execution.Output(error=error_dict),
-                    id=parsed_step_id.hashed,
-                    op=execution.Opcode.STEP_ERROR,
+                    original_error=err,
+                    step=execution.StepInfo(
+                        display_name=parsed_step_id.user_facing,
+                        id=parsed_step_id.hashed,
+                        op=execution.Opcode.STEP_ERROR,
+                    ),
                 )
             )
 
@@ -249,13 +254,31 @@ class StepSync(base.StepBase):
             else:
                 _events = [events]
 
-            self._middleware.before_send_events_sync(_events)
-            return self._client.send_sync(
-                events,
-                # Skip middleware since we're already running it above. Without
-                # this, we'll double-call middleware hooks
-                skip_middleware=True,
-            )
+            middleware_err = self._middleware.before_send_events_sync(_events)
+            if isinstance(middleware_err, Exception):
+                raise middleware_err
+
+            try:
+                result = client_models.SendEventsResult(
+                    ids=self._client.send_sync(
+                        events,
+                        # Skip middleware since we're already running it above. Without
+                        # this, we'll double-call middleware hooks
+                        skip_middleware=True,
+                    )
+                )
+            except errors.SendEventsError as err:
+                result = client_models.SendEventsResult(
+                    error=str(err),
+                    ids=err.ids,
+                )
+                raise err
+            finally:
+                middleware_err = self._middleware.after_send_events_sync(result)
+                if isinstance(middleware_err, Exception):
+                    raise middleware_err
+
+            return result.ids
 
         return self.run(step_id, fn)
 
@@ -309,10 +332,12 @@ class StepSync(base.StepBase):
 
         raise base.ResponseInterrupt(
             execution.StepResponse(
-                display_name=parsed_step_id.user_facing,
-                id=parsed_step_id.hashed,
-                name=transforms.to_iso_utc(until),
-                op=execution.Opcode.SLEEP,
+                step=execution.StepInfo(
+                    display_name=parsed_step_id.user_facing,
+                    id=parsed_step_id.hashed,
+                    name=transforms.to_iso_utc(until),
+                    op=execution.Opcode.SLEEP,
+                )
             )
         )
 
@@ -368,10 +393,12 @@ class StepSync(base.StepBase):
 
         raise base.ResponseInterrupt(
             execution.StepResponse(
-                display_name=parsed_step_id.user_facing,
-                id=parsed_step_id.hashed,
-                name=event,
-                op=execution.Opcode.WAIT_FOR_EVENT,
-                opts=opts,
+                step=execution.StepInfo(
+                    display_name=parsed_step_id.user_facing,
+                    id=parsed_step_id.hashed,
+                    name=event,
+                    op=execution.Opcode.WAIT_FOR_EVENT,
+                    opts=opts,
+                )
             )
         )

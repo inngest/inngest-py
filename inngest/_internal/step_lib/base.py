@@ -88,16 +88,12 @@ class StepBase:
 
         if not isinstance(memo, types.EmptySentinel):
             if memo.error is not None:
-                error = execution.MemoizedError.from_raw(memo.error)
-                if isinstance(error, Exception):
-                    raise error
-
                 # If there's a memoized error then raise an error, since the
                 # step exhausted its retries
                 raise errors.StepError(
-                    message=error.message,
-                    name=error.name,
-                    stack=error.stack,
+                    message=memo.error.message,
+                    name=memo.error.name,
+                    stack=memo.error.stack,
                 )
 
         return memo
@@ -114,16 +110,12 @@ class StepBase:
 
         if not isinstance(memo, types.EmptySentinel):
             if memo.error is not None:
-                error = execution.MemoizedError.from_raw(memo.error)
-                if isinstance(error, Exception):
-                    raise error
-
                 # If there's a memoized error then raise an error, since the
                 # step exhausted its retries
                 raise errors.StepError(
-                    message=error.message,
-                    name=error.name,
-                    stack=error.stack,
+                    message=memo.error.message,
+                    name=memo.error.name,
+                    stack=memo.error.stack,
                 )
 
         return memo
@@ -205,12 +197,6 @@ class ResponseInterrupt(BaseException):
 class SkipInterrupt(BaseException):
     def __init__(self, step_id: str) -> None:
         self.step_id = step_id
-
-
-@dataclasses.dataclass
-class FunctionID:
-    app_id: str
-    function_id: str
 
 
 class InvokeOpts(types.BaseModel):

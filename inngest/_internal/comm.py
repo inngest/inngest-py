@@ -24,6 +24,75 @@ from inngest._internal import (
 )
 
 
+class _ErrorData(types.BaseModel):
+    code: const.ErrorCode
+    message: str
+    name: str
+    stack: typing.Optional[str]
+
+    @classmethod
+    def from_error(cls, err: Exception) -> _ErrorData:
+        if isinstance(err, errors.Error):
+            code = err.code
+            message = err.message
+            name = err.name
+            stack = err.stack
+        else:
+            code = const.ErrorCode.UNKNOWN
+            message = str(err)
+            name = type(err).__name__
+            stack = transforms.get_traceback(err)
+
+        return cls(
+            code=code,
+            message=message,
+            name=name,
+            stack=stack,
+        )
+
+
+def _prep_call_result(
+    call_res: execution.CallResult,
+) -> types.MaybeError[object]:
+    """
+    Convert a CallResult to the shape the Inngest Server expects. For step-level
+    results this is a dict and for function-level results this is the output or
+    error.
+    """
+
+    if call_res.step is not None:
+        d = call_res.step.to_dict()
+        if isinstance(d, Exception):
+            # Unreachable
+            return d
+    else:
+        d = {}
+
+    if call_res.error is not None:
+        e = _ErrorData.from_error(call_res.error).to_dict()
+        if isinstance(e, Exception):
+            return e
+        d["error"] = e
+
+    if call_res.output is not types.empty_sentinel:
+        err = transforms.dump_json(call_res.output)
+        if isinstance(err, Exception):
+            msg = "returned unserializable data"
+            if call_res.step is not None:
+                msg = f'"{call_res.step.display_name}" {msg}'
+
+            return errors.OutputUnserializableError(msg)
+
+        d["data"] = call_res.output
+
+    is_function_level = call_res.step is None
+    if is_function_level:
+        # Don't nest function-level results
+        return d.get("error") or d.get("data")
+
+    return d
+
+
 class CommResponse:
     def __init__(
         self,
@@ -46,65 +115,43 @@ class CommResponse:
             const.HeaderKey.SERVER_TIMING.value: "handler",
         }
 
-        if execution.is_step_call_responses(call_res):
-            out: list[dict[str, object]] = []
-            for item in call_res:
-                d = item.to_dict()
+        if call_res.multi:
+            multi_body: list[object] = []
+            for item in call_res.multi:
+                d = _prep_call_result(item)
                 if isinstance(d, Exception):
-                    return cls.from_error(
-                        logger,
-                        errors.OutputUnserializableError(
-                            f'"{item.display_name}" returned unserializable data'
-                        ),
-                    )
+                    return cls.from_error(logger, d)
+                multi_body.append(d)
 
-                # Unnest data and error fields to work with the StepRun opcode.
-                # They should probably be unnested lower in the code, but this
-                # is a quick fix that doesn't break middleware contracts
-                nested_data = d.get("data")
-                if isinstance(nested_data, dict):
-                    d["data"] = nested_data.get("data")
-                    d["error"] = nested_data.get("error")
-
-                out.append(d)
+                if item.error is not None:
+                    if errors.is_retriable(item.error) is False:
+                        headers[const.HeaderKey.NO_RETRY.value] = "true"
 
             return cls(
-                body=transforms.prep_body(out),
+                body=multi_body,
                 headers=headers,
                 status_code=http.HTTPStatus.PARTIAL_CONTENT.value,
             )
 
-        if isinstance(call_res, execution.CallError):
-            if call_res.quiet is False:
-                logger.error(call_res.stack)
+        body = _prep_call_result(call_res)
+        status_code = http.HTTPStatus.OK.value
+        if isinstance(body, Exception):
+            return cls.from_error(logger, body)
 
-            d = call_res.to_dict()
-            if isinstance(d, Exception):
-                return cls.from_error(logger, d)
-
-            if call_res.is_retriable is False:
+        if call_res.error is not None:
+            status_code = http.HTTPStatus.INTERNAL_SERVER_ERROR.value
+            if errors.is_retriable(call_res.error) is False:
                 headers[const.HeaderKey.NO_RETRY.value] = "true"
 
-            if call_res.retry_after is not None:
+            if isinstance(call_res.error, errors.RetryAfterError):
                 headers[
                     const.HeaderKey.RETRY_AFTER.value
-                ] = transforms.to_iso_utc(call_res.retry_after)
+                ] = transforms.to_iso_utc(call_res.error.retry_after)
 
-            return cls(
-                body=transforms.prep_body(d),
-                headers=headers,
-                status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR.value,
-            )
-
-        if isinstance(call_res, execution.FunctionCallResponse):
-            return cls(
-                body=call_res.data,
-                headers=headers,
-            )
-
-        return cls.from_error(
-            logger,
-            errors.UnknownError("unknown call result"),
+        return cls(
+            body=body,
+            headers=headers,
+            status_code=status_code,
         )
 
     @classmethod
@@ -120,7 +167,8 @@ class CommResponse:
         else:
             code = const.ErrorCode.UNKNOWN.value
 
-        logger.error(f"{code}: {err!s}")
+        if errors.is_quiet(err) is False:
+            logger.error(f"{code}: {err!s}")
 
         return cls(
             body={
@@ -238,7 +286,7 @@ class CommHandler:
             "POST",
             registration_url,
             headers=headers,
-            json=transforms.prep_body(body),
+            json=transforms.deep_strip_none(body),
             params=params,
             timeout=30,
         )
@@ -248,6 +296,7 @@ class CommHandler:
         *,
         call: execution.Call,
         fn_id: str,
+        raw_request: object,
         req_sig: net.RequestSignature,
         target_hashed_id: str,
     ) -> CommResponse:
@@ -258,7 +307,10 @@ class CommHandler:
         else:
             target_step_id = target_hashed_id
 
-        middleware = middleware_lib.MiddlewareManager.from_client(self._client)
+        middleware = middleware_lib.MiddlewareManager.from_client(
+            self._client,
+            raw_request,
+        )
 
         # Validate the request signature.
         err = req_sig.validate(
@@ -266,12 +318,12 @@ class CommHandler:
             signing_key_fallback=self._signing_key_fallback,
         )
         if isinstance(err, Exception):
-            return await self._respond(middleware, err)
+            return await self._respond(err)
 
         # Get the function we should call.
         fn = self._get_function(fn_id)
         if isinstance(fn, Exception):
-            return await self._respond(middleware, fn)
+            return await self._respond(fn)
 
         events = call.events
         steps = call.steps
@@ -286,19 +338,16 @@ class CommHandler:
                     self._client._get_steps(call.ctx.run_id),
                 )
             except Exception as err:
-                return await self._respond(middleware, err)
+                return await self._respond(err)
         if events is None:
             # Should be unreachable. The Executor should always either send the
             # batch or tell the SDK to fetch the batch
 
-            return await self._respond(
-                middleware, Exception("events not in request")
-            )
+            return await self._respond(Exception("events not in request"))
 
         call_res = await fn.call(
             self._client,
             function.Context(
-                _steps=step_lib.StepMemos.from_raw(steps),
                 attempt=call.ctx.attempt,
                 event=call.event,
                 events=events,
@@ -307,16 +356,18 @@ class CommHandler:
             ),
             fn_id,
             middleware,
+            step_lib.StepMemos.from_raw(steps),
             target_step_id,
         )
 
-        return await self._respond(middleware, call_res)
+        return await self._respond(call_res)
 
     def call_function_sync(
         self,
         *,
         call: execution.Call,
         fn_id: str,
+        raw_request: object,
         req_sig: net.RequestSignature,
         target_hashed_id: str,
     ) -> CommResponse:
@@ -327,7 +378,10 @@ class CommHandler:
         else:
             target_step_id = target_hashed_id
 
-        middleware = middleware_lib.MiddlewareManager.from_client(self._client)
+        middleware = middleware_lib.MiddlewareManager.from_client(
+            self._client,
+            raw_request,
+        )
 
         # Validate the request signature.
         err = req_sig.validate(
@@ -335,12 +389,12 @@ class CommHandler:
             signing_key_fallback=self._signing_key_fallback,
         )
         if isinstance(err, Exception):
-            return self._respond_sync(middleware, err)
+            return self._respond_sync(err)
 
         # Get the function we should call.
         fn = self._get_function(fn_id)
         if isinstance(fn, Exception):
-            return self._respond_sync(middleware, fn)
+            return self._respond_sync(fn)
 
         events = call.events
         steps = call.steps
@@ -353,19 +407,16 @@ class CommHandler:
                 events = self._client._get_batch_sync(call.ctx.run_id)
                 steps = self._client._get_steps_sync(call.ctx.run_id)
             except Exception as err:
-                return self._respond_sync(middleware, err)
+                return self._respond_sync(err)
         if events is None:
             # Should be unreachable. The Executor should always either send the
             # batch or tell the SDK to fetch the batch
 
-            return self._respond_sync(
-                middleware, Exception("events not in request")
-            )
+            return self._respond_sync(Exception("events not in request"))
 
         call_res = fn.call_sync(
             self._client,
             function.Context(
-                _steps=step_lib.StepMemos.from_raw(steps),
                 attempt=call.ctx.attempt,
                 event=call.event,
                 events=events,
@@ -374,10 +425,11 @@ class CommHandler:
             ),
             fn_id,
             middleware,
+            step_lib.StepMemos.from_raw(steps),
             target_step_id,
         )
 
-        return self._respond_sync(middleware, call_res)
+        return self._respond_sync(call_res)
 
     def _get_function(self, fn_id: str) -> types.MaybeError[function.Function]:
         # Look for the function ID in the list of user functions, but also
@@ -620,13 +672,8 @@ class CommHandler:
 
     async def _respond(
         self,
-        middleware: middleware_lib.MiddlewareManager,
         value: typing.Union[execution.CallResult, Exception],
     ) -> CommResponse:
-        err = await middleware.before_response()
-        if isinstance(err, Exception):
-            return CommResponse.from_error(self._client.logger, err)
-
         if isinstance(value, Exception):
             return CommResponse.from_error(self._client.logger, value)
 
@@ -634,13 +681,8 @@ class CommHandler:
 
     def _respond_sync(
         self,
-        middleware: middleware_lib.MiddlewareManager,
         value: typing.Union[execution.CallResult, Exception],
     ) -> CommResponse:
-        err = middleware.before_response_sync()
-        if isinstance(err, Exception):
-            return CommResponse.from_error(self._client.logger, err)
-
         if isinstance(value, Exception):
             return CommResponse.from_error(self._client.logger, value)
 

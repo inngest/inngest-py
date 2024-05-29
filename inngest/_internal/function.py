@@ -24,10 +24,6 @@ from inngest._internal import (
 
 @dataclasses.dataclass
 class Context:
-    # TODO: Remove this in v0.4.0. It's only here to avoid a breaking change to
-    # Middleware.transform_input
-    _steps: step_lib.StepMemos
-
     attempt: int
     event: event_lib.Event
     events: list[event_lib.Event]
@@ -133,6 +129,14 @@ class Function:
         return _is_function_handler_async(self._opts.on_failure)
 
     @property
+    def local_id(self) -> str:
+        return self._opts.local_id
+
+    @property
+    def name(self) -> str:
+        return self._opts.name
+
+    @property
     def on_failure_fn_id(self) -> typing.Optional[str]:
         return self._on_failure_fn_id
 
@@ -167,24 +171,54 @@ class Function:
         ctx: Context,
         fn_id: str,
         middleware: middleware_lib.MiddlewareManager,
+        steps: step_lib.StepMemos,
         target_hashed_id: typing.Optional[str],
     ) -> execution.CallResult:
         middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
         for m in self._middleware:
             middleware.add(m)
 
+        # Move business logic to a private method to make it simpler to run the
+        # transform_output hook on every call result code path
+        call_res = await self._call(
+            client,
+            ctx,
+            fn_id,
+            middleware,
+            steps,
+            target_hashed_id,
+        )
+
+        err = await middleware.transform_output(call_res)
+        if isinstance(err, Exception):
+            return execution.CallResult(err)
+
+        err = await middleware.before_response()
+        if isinstance(err, Exception):
+            return execution.CallResult(err)
+
+        return call_res
+
+    async def _call(
+        self,
+        client: client_lib.Inngest,
+        ctx: Context,
+        fn_id: str,
+        middleware: middleware_lib.MiddlewareManager,
+        steps: step_lib.StepMemos,
+        target_hashed_id: typing.Optional[str],
+    ) -> execution.CallResult:
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
-        new_ctx = await middleware.transform_input(ctx)
-        if isinstance(new_ctx, Exception):
-            return execution.CallError.from_error(new_ctx)
-        ctx = new_ctx
+        middleware_err = await middleware.transform_input(ctx, self, steps)
+        if isinstance(middleware_err, Exception):
+            return execution.CallResult(middleware_err)
 
         # No memoized data means we're calling the function for the first time.
-        if ctx._steps.size == 0:
+        if steps.size == 0:
             err = await middleware.before_execution()
             if isinstance(err, Exception):
-                return execution.CallError.from_error(err)
+                return execution.CallResult(err)
 
         try:
             handler: typing.Union[FunctionHandlerAsync, FunctionHandlerSync]
@@ -192,12 +226,12 @@ class Function:
                 handler = self._handler
             elif self.on_failure_fn_id == fn_id:
                 if self._opts.on_failure is None:
-                    return execution.CallError.from_error(
+                    return execution.CallResult(
                         errors.FunctionNotFoundError("on_failure not defined")
                     )
                 handler = self._opts.on_failure
             else:
-                return execution.CallError.from_error(
+                return execution.CallResult(
                     errors.FunctionNotFoundError("function ID mismatch")
                 )
 
@@ -212,7 +246,7 @@ class Function:
                         ctx=ctx,
                         step=step_lib.Step(
                             client,
-                            ctx._steps,
+                            steps,
                             middleware,
                             step_lib.StepIDCounter(),
                             target_hashed_id,
@@ -223,7 +257,7 @@ class Function:
                         ctx=ctx,
                         step=step_lib.StepSync(
                             client,
-                            ctx._steps,
+                            steps,
                             middleware,
                             step_lib.StepIDCounter(),
                             target_hashed_id,
@@ -232,7 +266,7 @@ class Function:
                 else:
                     # Should be unreachable but Python's custom type guards don't
                     # support negative checks :(
-                    return execution.CallError.from_error(
+                    return execution.CallResult(
                         errors.UnknownError(
                             "unable to determine function handler type"
                         )
@@ -243,48 +277,29 @@ class Function:
 
             err = await middleware.after_execution()
             if isinstance(err, Exception):
-                return execution.CallError.from_error(err)
+                return execution.CallResult(err)
 
-            output = await middleware.transform_output(
-                # Function output isn't wrapped in an Output object, so we need
-                # to wrap it to make it compatible with middleware.
-                execution.Output(data=output)
-            )
-            if isinstance(output, Exception):
-                return execution.CallError.from_error(output)
-
-            if output is None:
-                return execution.FunctionCallResponse(data=None)
-            return execution.FunctionCallResponse(data=output.data)
+            return execution.CallResult(output=output)
         except step_lib.ResponseInterrupt as interrupt:
             err = await middleware.after_execution()
             if isinstance(err, Exception):
-                return execution.CallError.from_error(err)
+                return execution.CallResult(err)
 
-            # TODO: How should transform_output work with multiple responses?
-            if len(interrupt.responses) == 1:
-                output = await middleware.transform_output(
-                    interrupt.responses[0].data
-                )
-                if isinstance(output, Exception):
-                    return execution.CallError.from_error(output)
-                interrupt.responses[0].data = output
-
-            return interrupt.responses
+            return execution.CallResult.from_responses(interrupt.responses)
         except _UserError as err:
-            return execution.CallError.from_error(err.err)
+            return execution.CallResult(err.err)
         except step_lib.SkipInterrupt as err:
             # This should only happen in a non-deterministic scenario, where
             # step targeting is enabled and an unexpected step is encountered.
             # We don't currently have a way to recover from this scenario.
 
-            return execution.CallError.from_error(
+            return execution.CallResult(
                 errors.StepUnexpectedError(
                     f'found step "{err.step_id}" when targeting a different step'
                 )
             )
         except Exception as err:
-            return execution.CallError.from_error(err)
+            return execution.CallResult(err)
 
     def call_sync(
         self,
@@ -292,22 +307,54 @@ class Function:
         ctx: Context,
         fn_id: str,
         middleware: middleware_lib.MiddlewareManager,
+        steps: step_lib.StepMemos,
         target_hashed_id: typing.Optional[str],
     ) -> execution.CallResult:
         middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
         for m in self._middleware:
             middleware.add(m)
 
+        # Move business logic to a private method to make it simpler to run the
+        # transform_output hook on every call result code path
+        call_res = self._call_sync(
+            client,
+            ctx,
+            fn_id,
+            middleware,
+            steps,
+            target_hashed_id,
+        )
+
+        err = middleware.transform_output_sync(call_res)
+        if isinstance(err, Exception):
+            return execution.CallResult(err)
+
+        err = middleware.before_response_sync()
+        if isinstance(err, Exception):
+            return execution.CallResult(err)
+
+        return call_res
+
+    def _call_sync(
+        self,
+        client: client_lib.Inngest,
+        ctx: Context,
+        fn_id: str,
+        middleware: middleware_lib.MiddlewareManager,
+        steps: step_lib.StepMemos,
+        target_hashed_id: typing.Optional[str],
+    ) -> execution.CallResult:
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
-        new_ctx = middleware.transform_input_sync(ctx)
-        if isinstance(new_ctx, Exception):
-            return execution.CallError.from_error(new_ctx)
-        ctx = new_ctx
+        middleware_err = middleware.transform_input_sync(ctx, self, steps)
+        if isinstance(middleware_err, Exception):
+            return execution.CallResult(middleware_err)
 
         # No memoized data means we're calling the function for the first time.
-        if ctx._steps.size == 0:
-            middleware.before_execution_sync()
+        if steps.size == 0:
+            err = middleware.before_execution_sync()
+            if isinstance(err, Exception):
+                return execution.CallResult(err)
 
         try:
             handler: typing.Union[FunctionHandlerAsync, FunctionHandlerSync]
@@ -315,12 +362,12 @@ class Function:
                 handler = self._handler
             elif self.on_failure_fn_id == fn_id:
                 if self._opts.on_failure is None:
-                    return execution.CallError.from_error(
+                    return execution.CallResult(
                         errors.FunctionNotFoundError("on_failure not defined")
                     )
                 handler = self._opts.on_failure
             else:
-                return execution.CallError.from_error(
+                return execution.CallResult(
                     errors.FunctionNotFoundError("function ID mismatch")
                 )
 
@@ -330,7 +377,7 @@ class Function:
                         ctx=ctx,
                         step=step_lib.StepSync(
                             client,
-                            ctx._steps,
+                            steps,
                             middleware,
                             step_lib.StepIDCounter(),
                             target_hashed_id,
@@ -340,7 +387,7 @@ class Function:
                     transforms.remove_first_traceback_frame(user_err)
                     raise _UserError(user_err)
             else:
-                return execution.CallError.from_error(
+                return execution.CallResult(
                     errors.AsyncUnsupportedError(
                         "encountered async function in non-async context"
                     )
@@ -348,48 +395,29 @@ class Function:
 
             err = middleware.after_execution_sync()
             if isinstance(err, Exception):
-                return execution.CallError.from_error(err)
+                return execution.CallResult(err)
 
-            output = middleware.transform_output_sync(
-                # Function output isn't wrapped in an Output object, so we need
-                # to wrap it to make it compatible with middleware.
-                execution.Output(data=output)
-            )
-            if isinstance(output, Exception):
-                return execution.CallError.from_error(output)
-
-            if output is None:
-                return execution.FunctionCallResponse(data=None)
-            return execution.FunctionCallResponse(data=output.data)
+            return execution.CallResult(output=output)
         except step_lib.ResponseInterrupt as interrupt:
             err = middleware.after_execution_sync()
             if isinstance(err, Exception):
-                return execution.CallError.from_error(err)
+                return execution.CallResult(err)
 
-            # TODO: How should transform_output work with multiple responses?
-            if len(interrupt.responses) == 1:
-                output = middleware.transform_output_sync(
-                    interrupt.responses[0].data
-                )
-                if isinstance(output, Exception):
-                    return execution.CallError.from_error(output)
-                interrupt.responses[0].data = output
-
-            return interrupt.responses
+            return execution.CallResult.from_responses(interrupt.responses)
         except _UserError as err:
-            return execution.CallError.from_error(err.err)
+            return execution.CallResult(err.err)
         except step_lib.SkipInterrupt as err:
             # This should only happen in a non-deterministic scenario, where
             # step targeting is enabled and an unexpected step is encountered.
             # We don't currently have a way to recover from this scenario.
 
-            return execution.CallError.from_error(
+            return execution.CallResult(
                 errors.StepUnexpectedError(
                     f'found step "{err.step_id}" when targeting a different step'
                 )
             )
         except Exception as err:
-            return execution.CallError.from_error(err)
+            return execution.CallResult(err)
 
     def get_config(self, app_url: str) -> _Config:
         fn_id = self._opts.fully_qualified_id

@@ -27,16 +27,18 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
     def __init__(
         self,
         client: inngest.Inngest,
+        raw_request: object,
         secret_key: typing.Union[bytes, str],
     ) -> None:
         """
         Args:
         ----
             client: Inngest client.
+            raw_request: Framework/platform specific request object.
             secret_key: Fernet secret key used for encryption and decryption.
         """
 
-        super().__init__(client)
+        super().__init__(client, raw_request)
 
         if isinstance(secret_key, str):
             secret_key = bytes.fromhex(secret_key)
@@ -47,7 +49,7 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
     def factory(
         cls,
         secret_key: typing.Union[bytes, str],
-    ) -> typing.Callable[[inngest.Inngest], EncryptionMiddleware]:
+    ) -> typing.Callable[[inngest.Inngest, object], EncryptionMiddleware]:
         """
         Create an encryption middleware factory that can be passed to an Inngest
         client or function.
@@ -57,8 +59,11 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
             secret_key: Fernet secret key used for encryption and decryption.
         """
 
-        def _factory(client: inngest.Inngest) -> EncryptionMiddleware:
-            return cls(client, secret_key)
+        def _factory(
+            client: inngest.Inngest,
+            raw_request: object,
+        ) -> EncryptionMiddleware:
+            return cls(client, raw_request, secret_key)
 
         return _factory
 
@@ -114,12 +119,17 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
         for event in events:
             event.data = self._encrypt(event.data)
 
-    def transform_input(self, ctx: inngest.Context) -> inngest.Context:
+    def transform_input(
+        self,
+        ctx: inngest.Context,
+        function: inngest.Function,
+        steps: inngest.StepMemos,
+    ) -> None:
         """
         Decrypt data from the Inngest server.
         """
 
-        for step in ctx._steps.values():
+        for step in steps.values():
             step.data = self._decrypt(step.data)
 
         ctx.event.data = self._decrypt_event_data(ctx.event.data)
@@ -127,15 +137,13 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
         for event in ctx.events:
             event.data = self._decrypt_event_data(event.data)
 
-        return ctx
-
-    def transform_output(self, output: inngest.Output) -> inngest.Output:
+    def transform_output(self, result: inngest.TransformOutputResult) -> None:
         """
         Encrypt data before sending it to the Inngest server.
         """
 
-        output.data = self._encrypt(output.data)
-        return output
+        if result.output is not None:
+            result.output = self._encrypt(result.output)
 
 
 def _is_encrypted(value: object) -> bool:

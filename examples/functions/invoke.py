@@ -25,6 +25,7 @@ def create_async_functions(client: inngest.Inngest) -> list[inngest.Function]:
             "invoke",
             app_id=client.app_id,
             function_id="invokee",
+            timeout=60_000,
         )
         print(res)
 
@@ -56,6 +57,7 @@ def create_sync_functions(client: inngest.Inngest) -> list[inngest.Function]:
             "invoke",
             app_id=client.app_id,
             function_id="invokee",
+            timeout=60_000,
         )
         print(type(res))
         print(res)

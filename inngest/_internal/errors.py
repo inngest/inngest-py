@@ -131,11 +131,9 @@ class NonRetriableError(Error):
     def __init__(
         self,
         message: typing.Optional[str] = None,
-        cause: typing.Optional[typing.Mapping[str, object]] = None,
         quiet: bool = False,
     ) -> None:
         super().__init__(message)
-        self.cause = cause
         self.quiet = quiet
 
 
@@ -169,6 +167,19 @@ class RetryAfterError(Error):
 
         self.retry_after: datetime.datetime = retry_after
         self.quiet: bool = quiet
+
+
+class SendEventsError(Error):
+    def __init__(self, message: str, ids: list[str]) -> None:
+        """
+        Args:
+        ----
+            message: Error message
+            ids: List of event IDs that successfully sent
+        """
+
+        super().__init__(message)
+        self.ids = ids
 
 
 class StepError(Error):
@@ -227,6 +238,18 @@ class StepError(Error):
         self._stack = stack
 
 
+def is_retriable(err: Exception) -> bool:
+    if isinstance(err, Error):
+        return err.is_retriable
+    return True
+
+
+def is_quiet(err: Exception) -> bool:
+    if isinstance(err, _Quietable):
+        return err.quiet
+    return False
+
+
 @typing.runtime_checkable
-class Quietable(typing.Protocol):
+class _Quietable(typing.Protocol):
     quiet: bool

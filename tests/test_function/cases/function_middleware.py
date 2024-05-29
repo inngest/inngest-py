@@ -1,7 +1,13 @@
 import json
 
+import django.core.handlers.wsgi
+import fastapi
+import tornado.httputil
+import werkzeug.local
+
 import inngest
 import tests.helper
+from inngest._internal import const
 
 from . import base
 
@@ -10,7 +16,8 @@ _TEST_NAME = "function_middleware"
 
 class _State(base.BaseState):
     def __init__(self) -> None:
-        self.hook_list: list[str] = []
+        self.messages: list[str] = []
+        self.raw_request: object = None
 
 
 def create(
@@ -24,69 +31,105 @@ def create(
     state = _State()
 
     class _MiddlewareSync(inngest.MiddlewareSync):
-        def after_execution(self) -> None:
-            state.hook_list.append("after_execution")
+        def __init__(
+            self,
+            client: inngest.Inngest,
+            raw_request: object,
+        ) -> None:
+            super().__init__(client, raw_request)
+            state.raw_request = raw_request
 
-        def before_response(self) -> None:
-            # This hook is not called for function middleware but we'll include
-            # in anyway to verify that.
-            state.hook_list.append("before_response")
+        def after_execution(self) -> None:
+            state.messages.append("hook:after_execution")
+
+        def after_memoization(self) -> None:
+            state.messages.append("hook:after_memoization")
+
+        def after_send_events(
+            self,
+            result: inngest.SendEventsResult,
+        ) -> None:
+            state.messages.append("hook:after_send_events")
 
         def before_execution(self) -> None:
-            state.hook_list.append("before_execution")
+            state.messages.append("hook:before_execution")
+
+        def before_memoization(self) -> None:
+            state.messages.append("hook:before_memoization")
+
+        def before_response(self) -> None:
+            state.messages.append("hook:before_response")
 
         def before_send_events(self, events: list[inngest.Event]) -> None:
-            state.hook_list.append("before_send_events")
+            state.messages.append("hook:before_send_events")
 
         def transform_input(
             self,
             ctx: inngest.Context,
-        ) -> inngest.Context:
-            state.hook_list.append("transform_input")
-            return ctx
+            function: inngest.Function,
+            steps: inngest.StepMemos,
+        ) -> None:
+            state.messages.append("hook:transform_input")
 
         def transform_output(
             self,
-            output: inngest.Output,
-        ) -> inngest.Output:
-            state.hook_list.append("transform_output")
-            if output.data == "original output":
-                output.data = "transformed output"
-            return output
+            result: inngest.TransformOutputResult,
+        ) -> None:
+            state.messages.append("hook:transform_output")
+            if result.output == "original output":
+                result.output = "transformed output"
 
     class _MiddlewareAsync(inngest.Middleware):
-        async def after_execution(self) -> None:
-            state.hook_list.append("after_execution")
+        def __init__(
+            self,
+            client: inngest.Inngest,
+            raw_request: object,
+        ) -> None:
+            super().__init__(client, raw_request)
+            state.raw_request = raw_request
 
-        async def before_response(self) -> None:
-            # This hook is not called for function middleware but we'll include
-            # in anyway to verify that.
-            state.hook_list.append("before_response")
+        async def after_execution(self) -> None:
+            state.messages.append("hook:after_execution")
+
+        async def after_memoization(self) -> None:
+            state.messages.append("hook:after_memoization")
+
+        async def after_send_events(
+            self,
+            result: inngest.SendEventsResult,
+        ) -> None:
+            state.messages.append("hook:after_send_events")
 
         async def before_execution(self) -> None:
-            state.hook_list.append("before_execution")
+            state.messages.append("hook:before_execution")
+
+        async def before_memoization(self) -> None:
+            state.messages.append("hook:before_memoization")
+
+        async def before_response(self) -> None:
+            state.messages.append("hook:before_response")
 
         async def before_send_events(
             self,
             events: list[inngest.Event],
         ) -> None:
-            state.hook_list.append("before_send_events")
+            state.messages.append("hook:before_send_events")
 
         async def transform_input(
             self,
             ctx: inngest.Context,
-        ) -> inngest.Context:
-            state.hook_list.append("transform_input")
-            return ctx
+            function: inngest.Function,
+            steps: inngest.StepMemos,
+        ) -> None:
+            state.messages.append("hook:transform_input")
 
         async def transform_output(
             self,
-            output: inngest.Output,
-        ) -> inngest.Output:
-            state.hook_list.append("transform_output")
-            if output.data == "original output":
-                output.data = "transformed output"
-            return output
+            result: inngest.TransformOutputResult,
+        ) -> None:
+            state.messages.append("hook:transform_output")
+            if result.output == "original output":
+                result.output = "transformed output"
 
     @client.create_function(
         fn_id=fn_id,
@@ -103,8 +146,11 @@ def create(
         def _step_1() -> str:
             return "original output"
 
+        state.messages.append("fn_logic: before step_1")
         step.run("step_1", _step_1)
+        state.messages.append("fn_logic: after step_1")
         step.send_event("send", [inngest.Event(name="dummy")])
+        state.messages.append("fn_logic: after send")
 
     @client.create_function(
         fn_id=fn_id,
@@ -121,8 +167,11 @@ def create(
         async def _step_1() -> str:
             return "original output"
 
+        state.messages.append("fn_logic: before step_1")
         await step.run("step_1", _step_1)
+        state.messages.append("fn_logic: after step_1")
         await step.send_event("send", [inngest.Event(name="dummy")])
+        state.messages.append("fn_logic: after send")
 
     def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
@@ -132,24 +181,57 @@ def create(
             tests.helper.RunStatus.COMPLETED,
         )
 
+        if framework == const.Framework.DIGITAL_OCEAN.value:
+            assert isinstance(state.raw_request, dict)
+        elif framework == const.Framework.DJANGO.value:
+            assert isinstance(
+                state.raw_request, django.core.handlers.wsgi.WSGIRequest
+            )
+        elif framework == const.Framework.FAST_API.value:
+            assert isinstance(state.raw_request, fastapi.Request)
+        elif framework == const.Framework.FLASK.value:
+            assert isinstance(state.raw_request, werkzeug.local.LocalProxy)
+        elif framework == const.Framework.TORNADO.value:
+            assert isinstance(
+                state.raw_request, tornado.httputil.HTTPServerRequest
+            )
+        else:
+            raise ValueError(f"unknown framework: {framework}")
+
         # Assert that the middleware hooks were called in the correct order
-        assert state.hook_list == [
+        assert state.messages == [
             # Entry 1
-            "transform_input",
-            "before_execution",
-            "after_execution",
-            "transform_output",
+            "hook:transform_input",
+            "hook:before_memoization",
+            "hook:after_memoization",
+            "hook:before_execution",
+            "fn_logic: before step_1",
+            "hook:after_execution",
+            "hook:transform_output",
+            "hook:before_response",
             # Entry 2
-            "transform_input",
-            "before_execution",
-            "before_send_events",
-            "after_execution",
-            "transform_output",
+            "hook:transform_input",
+            "hook:before_memoization",
+            "fn_logic: before step_1",
+            "hook:after_memoization",
+            "hook:before_execution",
+            "fn_logic: after step_1",
+            "hook:before_send_events",
+            "hook:after_send_events",
+            "hook:after_execution",
+            "hook:transform_output",
+            "hook:before_response",
             # Entry 3
-            "transform_input",
-            "before_execution",
-            "after_execution",
-            "transform_output",
+            "hook:transform_input",
+            "hook:before_memoization",
+            "fn_logic: before step_1",
+            "fn_logic: after step_1",
+            "hook:after_memoization",
+            "hook:before_execution",
+            "fn_logic: after send",
+            "hook:after_execution",
+            "hook:transform_output",
+            "hook:before_response",
         ]
 
         step_1_output = json.loads(
