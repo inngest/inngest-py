@@ -128,15 +128,23 @@ class MiddlewareManager:
             # Only allow before_execution to be called once. This simplifies
             # code since execution can start at the function or step level.
             return None
+        self._disabled_hooks.add(hook)
+
+        # Also handle after_memoization here since it's always called
+        # immediately before before_execution
+        try:
+            for m in self._middleware:
+                await transforms.maybe_await(m.after_memoization())
+        except Exception as err:
+            return err
 
         try:
             for m in self._middleware:
                 await transforms.maybe_await(m.before_execution())
-
-            self._disabled_hooks.add(hook)
-            return None
         except Exception as err:
             return err
+
+        return None
 
     def before_execution_sync(self) -> types.MaybeError[None]:
         hook = "before_execution"
@@ -144,17 +152,27 @@ class MiddlewareManager:
             # Only allow before_execution to be called once. This simplifies
             # code since execution can start at the function or step level.
             return None
+        self._disabled_hooks.add(hook)
 
+        try:
+            for m in self._middleware:
+                if inspect.iscoroutinefunction(m.after_memoization):
+                    return _mismatched_sync
+                m.after_memoization()
+        except Exception as err:
+            return err
+
+        # Also handle after_memoization here since it's always called
+        # immediately before before_execution
         try:
             for m in self._middleware:
                 if inspect.iscoroutinefunction(m.before_execution):
                     return _mismatched_sync
                 m.before_execution()
-
-            self._disabled_hooks.add(hook)
-            return None
         except Exception as err:
             return err
+
+        return None
 
     async def before_response(self) -> types.MaybeError[None]:
         try:
@@ -208,9 +226,18 @@ class MiddlewareManager:
                 await transforms.maybe_await(
                     m.transform_input(ctx, steps),
                 )
-            return None
         except Exception as err:
             return err
+
+        # Also handle before_memoization here since it's always called
+        # immediately after transform_input
+        try:
+            for m in self._middleware:
+                await transforms.maybe_await(m.before_memoization())
+        except Exception as err:
+            return err
+
+        return None
 
     def transform_input_sync(
         self,
@@ -219,12 +246,23 @@ class MiddlewareManager:
     ) -> types.MaybeError[None]:
         try:
             for m in self._middleware:
-                if isinstance(m, Middleware):
+                if inspect.iscoroutinefunction(m.transform_input):
                     return _mismatched_sync
                 m.transform_input(ctx, steps)
-            return None
         except Exception as err:
             return err
+
+        # Also handle before_memoization here since it's always called
+        # immediately after transform_input
+        try:
+            for m in self._middleware:
+                if inspect.iscoroutinefunction(m.before_memoization):
+                    return _mismatched_sync
+                m.before_memoization()
+        except Exception as err:
+            return err
+
+        return None
 
     async def transform_output(
         self,

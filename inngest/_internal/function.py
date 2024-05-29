@@ -344,7 +344,9 @@ class Function:
 
         # No memoized data means we're calling the function for the first time.
         if steps.size == 0:
-            middleware.before_execution_sync()
+            err = middleware.before_execution_sync()
+            if isinstance(err, Exception):
+                return execution.CallResult(err)
 
         try:
             handler: typing.Union[FunctionHandlerAsync, FunctionHandlerSync]
