@@ -202,6 +202,7 @@ class SkipInterrupt(BaseException):
 class InvokeOpts(types.BaseModel):
     function_id: str
     payload: InvokeOptsPayload
+    timeout: typing.Optional[str]
 
 
 class InvokeOptsPayload(types.BaseModel):

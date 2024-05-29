@@ -102,6 +102,14 @@ def to_duration_str(
     return f"{ms // _Duration.week()}w"
 
 
+def to_maybe_duration_str(
+    ms: typing.Union[int, datetime.timedelta, None],
+) -> typing.Union[types.MaybeError[str], None]:
+    if ms is None:
+        return None
+    return to_duration_str(ms)
+
+
 def to_iso_utc(value: datetime.datetime) -> str:
     return (
         value.astimezone(datetime.timezone.utc).strftime(
