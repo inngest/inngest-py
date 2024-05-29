@@ -44,6 +44,7 @@ class LoggerMiddleware(MiddlewareSync):
     def transform_input(
         self,
         ctx: function.Context,
+        function: function.Function,
         steps: step_lib.StepMemos,
     ) -> None:
         self.logger.logger = ctx.logger

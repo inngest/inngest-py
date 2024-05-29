@@ -129,6 +129,14 @@ class Function:
         return _is_function_handler_async(self._opts.on_failure)
 
     @property
+    def local_id(self) -> str:
+        return self._opts.local_id
+
+    @property
+    def name(self) -> str:
+        return self._opts.name
+
+    @property
     def on_failure_fn_id(self) -> typing.Optional[str]:
         return self._on_failure_fn_id
 
@@ -202,7 +210,7 @@ class Function:
     ) -> execution.CallResult:
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
-        middleware_err = await middleware.transform_input(ctx, steps)
+        middleware_err = await middleware.transform_input(ctx, self, steps)
         if isinstance(middleware_err, Exception):
             return execution.CallResult(middleware_err)
 
@@ -338,7 +346,7 @@ class Function:
     ) -> execution.CallResult:
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
-        middleware_err = middleware.transform_input_sync(ctx, steps)
+        middleware_err = middleware.transform_input_sync(ctx, self, steps)
         if isinstance(middleware_err, Exception):
             return execution.CallResult(middleware_err)
 

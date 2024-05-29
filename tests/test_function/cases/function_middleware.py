@@ -66,6 +66,7 @@ def create(
         def transform_input(
             self,
             ctx: inngest.Context,
+            function: inngest.Function,
             steps: inngest.StepMemos,
         ) -> None:
             state.messages.append("hook:transform_input")
@@ -117,6 +118,7 @@ def create(
         async def transform_input(
             self,
             ctx: inngest.Context,
+            function: inngest.Function,
             steps: inngest.StepMemos,
         ) -> None:
             state.messages.append("hook:transform_input")

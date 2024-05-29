@@ -32,6 +32,7 @@ extra = [
     "pytest-django==4.7.0",
     "pytest-xdist[psutil]==3.3.1",
     "ruff==0.1.9",
+    "sentry-sdk==2.1.1",
     "toml==0.10.2",
     "tornado==6.3",
     "types-toml==0.10.8.7",
@@ -109,6 +110,7 @@ mccabe = { max-complexity = 21 }
 [tool.ruff.extend-per-file-ignores]
 "examples/**/*.py" = ['D', 'T20']
 "inngest/**/*_test.py" = ['C901', 'D', 'N', 'S', 'T20']
+"inngest/experimental/**/*.py" = ['D102', 'D417']
 "tests/**/*.py" = ['C901', 'D', 'N', 'S', 'T20']
 
 [tool.ruff.lint]
