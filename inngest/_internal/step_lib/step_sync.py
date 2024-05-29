@@ -22,7 +22,7 @@ class StepSync(base.StepBase):
         *,
         function: Function,
         data: typing.Optional[types.JSON] = None,
-        timeout: typing.Union[int, datetime.timedelta, None] = None,
+        timeout: typing.Union[int, datetime.timedelta],
         user: typing.Optional[types.JSON] = None,
         v: typing.Optional[str] = None,
     ) -> object:
@@ -61,7 +61,7 @@ class StepSync(base.StepBase):
         app_id: typing.Optional[str] = None,
         function_id: str,
         data: typing.Optional[types.JSON] = None,
-        timeout: typing.Union[int, datetime.timedelta, None] = None,
+        timeout: typing.Union[int, datetime.timedelta],
         user: typing.Optional[types.JSON] = None,
         v: typing.Optional[str] = None,
     ) -> object:
@@ -99,7 +99,7 @@ class StepSync(base.StepBase):
         if isinstance(err, Exception):
             raise err
 
-        timeout_str = transforms.to_maybe_duration_str(timeout)
+        timeout_str = transforms.to_duration_str(timeout)
         if isinstance(timeout_str, Exception):
             raise timeout_str
 
