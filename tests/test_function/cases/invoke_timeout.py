@@ -90,6 +90,7 @@ def create(
             "code": "step_errored",
             "message": "Timed out waiting for invoked function to complete",
             "name": "InngestInvokeTimeoutError",
+            "stack": None,
         }
 
     if is_sync:
