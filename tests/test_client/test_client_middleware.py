@@ -45,12 +45,16 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
             "after_send_events",
             # Entry 1
             "transform_input",
+            "before_memoization",
+            "after_memoization",
             "before_execution",
             "after_execution",
             "transform_output",
             "before_response",
             # Entry 2
             "transform_input",
+            "before_memoization",
+            "after_memoization",
             "before_execution",
             "before_send_events",
             "after_send_events",
@@ -59,6 +63,8 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
             "before_response",
             # Entry 3
             "transform_input",
+            "before_memoization",
+            "after_memoization",
             "before_execution",
             "after_execution",
             "transform_output",
@@ -104,17 +110,23 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
             async def after_execution(self) -> None:
                 state.hook_list.append("after_execution")
 
+            async def after_memoization(self) -> None:
+                state.hook_list.append("after_memoization")
+
             async def after_send_events(
                 self,
                 result: inngest.SendEventsResult,
             ) -> None:
                 state.hook_list.append("after_send_events")
 
-            async def before_response(self) -> None:
-                state.hook_list.append("before_response")
-
             async def before_execution(self) -> None:
                 state.hook_list.append("before_execution")
+
+            async def before_memoization(self) -> None:
+                state.hook_list.append("before_memoization")
+
+            async def before_response(self) -> None:
+                state.hook_list.append("before_response")
 
             async def before_send_events(
                 self,
@@ -198,17 +210,23 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
             def after_execution(self) -> None:
                 state.hook_list.append("after_execution")
 
+            def after_memoization(self) -> None:
+                state.hook_list.append("after_memoization")
+
             def after_send_events(
                 self,
                 result: inngest.SendEventsResult,
             ) -> None:
                 state.hook_list.append("after_send_events")
 
-            def before_response(self) -> None:
-                state.hook_list.append("before_response")
-
             def before_execution(self) -> None:
                 state.hook_list.append("before_execution")
+
+            def before_memoization(self) -> None:
+                state.hook_list.append("before_memoization")
+
+            def before_response(self) -> None:
+                state.hook_list.append("before_response")
 
             def before_send_events(
                 self,
