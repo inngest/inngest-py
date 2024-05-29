@@ -76,6 +76,7 @@ class Middleware:
     async def transform_input(
         self,
         ctx: function.Context,
+        function: function.Function,
         steps: step_lib.StepMemos,
     ) -> None:
         """
@@ -162,6 +163,7 @@ class MiddlewareSync:
     def transform_input(
         self,
         ctx: function.Context,
+        function: function.Function,
         steps: step_lib.StepMemos,
     ) -> None:
         """

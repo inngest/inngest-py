@@ -122,6 +122,7 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
     def transform_input(
         self,
         ctx: inngest.Context,
+        function: inngest.Function,
         steps: inngest.StepMemos,
     ) -> None:
         """

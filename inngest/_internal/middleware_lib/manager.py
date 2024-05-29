@@ -219,12 +219,13 @@ class MiddlewareManager:
     async def transform_input(
         self,
         ctx: function.Context,
+        function: function.Function,
         steps: step_lib.StepMemos,
     ) -> types.MaybeError[None]:
         try:
             for m in self._middleware:
                 await transforms.maybe_await(
-                    m.transform_input(ctx, steps),
+                    m.transform_input(ctx, function, steps),
                 )
         except Exception as err:
             return err
@@ -242,13 +243,14 @@ class MiddlewareManager:
     def transform_input_sync(
         self,
         ctx: function.Context,
+        function: function.Function,
         steps: step_lib.StepMemos,
     ) -> types.MaybeError[None]:
         try:
             for m in self._middleware:
                 if inspect.iscoroutinefunction(m.transform_input):
                     return _mismatched_sync
-                m.transform_input(ctx, steps)
+                m.transform_input(ctx, function, steps)
         except Exception as err:
             return err
 
