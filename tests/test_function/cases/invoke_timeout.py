@@ -1,24 +1,16 @@
-"""
-When an invoked function fails, `step.invoke` raises a NonRetriableError.
-"""
-
+import datetime
 import json
-import typing
 
 import inngest
 import tests.helper
 
 from . import base
 
-_TEST_NAME = "invoke_failure"
+_TEST_NAME = "invoke_timeout"
 
 
 class _State(base.BaseState):
-    raised_error: typing.Optional[inngest.StepError] = None
-
-
-class MyException(Exception):
-    pass
+    step_output: object = None
 
 
 def create(
@@ -40,7 +32,7 @@ def create(
         ctx: inngest.Context,
         step: inngest.StepSync,
     ) -> None:
-        raise MyException("oh no")
+        step.sleep("sleep", 60_000)
 
     @client.create_function(
         fn_id=fn_id,
@@ -52,16 +44,11 @@ def create(
         step: inngest.StepSync,
     ) -> None:
         state.run_id = ctx.run_id
-
-        try:
-            step.invoke(
-                "invoke",
-                function=fn_receiver_sync,
-                timeout=60_000,
-            )
-        except inngest.StepError as err:
-            state.raised_error = err
-            raise err
+        state.step_output = step.invoke(
+            "invoke",
+            function=fn_receiver_sync,
+            timeout=datetime.timedelta(seconds=1),
+        )
 
     @client.create_function(
         fn_id=f"{fn_id}/invokee",
@@ -72,7 +59,7 @@ def create(
         ctx: inngest.Context,
         step: inngest.Step,
     ) -> None:
-        raise MyException("oh no")
+        await step.sleep("sleep", 60_000)
 
     @client.create_function(
         fn_id=fn_id,
@@ -84,16 +71,11 @@ def create(
         step: inngest.Step,
     ) -> None:
         state.run_id = ctx.run_id
-
-        try:
-            await step.invoke(
-                "invoke",
-                function=fn_receiver_async,
-                timeout=60_000,
-            )
-        except inngest.StepError as err:
-            state.raised_error = err
-            raise err
+        state.step_output = await step.invoke(
+            "invoke",
+            function=fn_receiver_async,
+            timeout=datetime.timedelta(seconds=1),
+        )
 
     def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
@@ -102,17 +84,14 @@ def create(
             run_id,
             tests.helper.RunStatus.FAILED,
         )
-        assert run.output is not None
-        output = json.loads(run.output)
-        assert output["message"] == "oh no"
-        assert output["name"] == "MyException"
 
-        # `step.invoke` raises an error that contains details about the invoked
-        # function's error.
-        assert state.raised_error is not None
-        assert state.raised_error.message == "oh no"
-        assert state.raised_error.name == "MyException"
-        assert isinstance(state.raised_error.stack, str)
+        assert run.output is not None
+        assert json.loads(run.output) == {
+            "code": "step_errored",
+            "message": "Timed out waiting for invoked function to complete",
+            "name": "InngestInvokeTimeoutError",
+            "stack": None,
+        }
 
     if is_sync:
         fn = [fn_receiver_sync, fn_sender_sync]

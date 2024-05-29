@@ -22,6 +22,7 @@ class StepSync(base.StepBase):
         *,
         function: Function,
         data: typing.Optional[types.JSON] = None,
+        timeout: typing.Union[int, datetime.timedelta],
         user: typing.Optional[types.JSON] = None,
         v: typing.Optional[str] = None,
     ) -> object:
@@ -34,15 +35,12 @@ class StepSync(base.StepBase):
 
         Args:
         ----
-            step_id: Durable step ID. Should usually be unique within a
-                function, but it's OK to reuse as long as your function is
-                deterministic.
+            step_id: Durable step ID. Should usually be unique within a function, but it's OK to reuse as long as your function is deterministic.
 
             function: The function object to invoke.
-            data: Will become `event.data` in the invoked function. Must be JSON
-                serializable.
-            user: Will become `event.user` in the invoked function. Must be JSON
-                serializable.
+            data: Will become `event.data` in the invoked function. Must be JSON serializable.
+            timeout: The maximum number of milliseconds to wait for the function to complete.
+            user: Will become `event.user` in the invoked function. Must be JSON serializable.
             v: Will become `event.v` in the invoked function.
         """
 
@@ -51,6 +49,7 @@ class StepSync(base.StepBase):
             app_id=self._client.app_id,
             function_id=function._opts.local_id,
             data=data,
+            timeout=timeout,
             user=user,
             v=v,
         )
@@ -62,6 +61,7 @@ class StepSync(base.StepBase):
         app_id: typing.Optional[str] = None,
         function_id: str,
         data: typing.Optional[types.JSON] = None,
+        timeout: typing.Union[int, datetime.timedelta],
         user: typing.Optional[types.JSON] = None,
         v: typing.Optional[str] = None,
     ) -> object:
@@ -77,17 +77,13 @@ class StepSync(base.StepBase):
 
         Args:
         ----
-            step_id: Durable step ID. Should usually be unique within a
-                function, but it's OK to reuse as long as your function is
-                deterministic.
+            step_id: Durable step ID. Should usually be unique within a function, but it's OK to reuse as long as your function is deterministic.
 
-            app_id: The app ID of the function to invoke. Not necessary if this
-                function and the invoked function are in the same app.
+            app_id: The app ID of the function to invoke. Not necessary if this function and the invoked function are in the same app.
             function_id: The ID of the function to invoke.
-            data: Will become `event.data` in the invoked function. Must be JSON
-                serializable.
-            user: Will become `event.user` in the invoked function. Must be JSON
-                serializable.
+            data: Will become `event.data` in the invoked function. Must be JSON serializable.
+            timeout: The maximum number of milliseconds to wait for the function to complete.
+            user: Will become `event.user` in the invoked function. Must be JSON serializable.
             v: Will become `event.v` in the invoked function.
         """
 
@@ -103,6 +99,10 @@ class StepSync(base.StepBase):
         if isinstance(err, Exception):
             raise err
 
+        timeout_str = transforms.to_duration_str(timeout)
+        if isinstance(timeout_str, Exception):
+            raise timeout_str
+
         opts = base.InvokeOpts(
             function_id=f"{app_id}-{function_id}",
             payload=base.InvokeOptsPayload(
@@ -110,6 +110,7 @@ class StepSync(base.StepBase):
                 user=user,
                 v=v,
             ),
+            timeout=timeout_str,
         ).to_dict()
         if isinstance(opts, Exception):
             raise opts
@@ -135,8 +136,7 @@ class StepSync(base.StepBase):
 
         Args:
         ----
-            callables: An arbitrary number of step callbacks to run. These are
-                callables that contain the step (e.g. `lambda: step.run("my_step", my_step_fn)`.
+            callables: An arbitrary number of step callbacks to run. These are callables that contain the step (e.g. `lambda: step.run("my_step", my_step_fn)`.
         """
 
         self._inside_parallel = True
@@ -172,9 +172,7 @@ class StepSync(base.StepBase):
 
         Args:
         ----
-            step_id: Durable step ID. Should usually be unique within a
-                function, but it's OK to reuse as long as your function is
-                deterministic.
+            step_id: Durable step ID. Should usually be unique within a function, but it's OK to reuse as long as your function is deterministic.
             handler: The logic to run.
             *handler_args: Arguments to pass to the handler.
         """
@@ -246,9 +244,7 @@ class StepSync(base.StepBase):
 
         Args:
         ----
-            step_id: Durable step ID. Should usually be unique within a
-                function, but it's OK to reuse as long as your function is
-                deterministic.
+            step_id: Durable step ID. Should usually be unique within a function, but it's OK to reuse as long as your function is deterministic.
             events: An event or list of events to send.
         """
 
@@ -296,9 +292,7 @@ class StepSync(base.StepBase):
 
         Args:
         ----
-            step_id: Durable step ID. Should usually be unique within a
-                function, but it's OK to reuse as long as your function is
-                deterministic.
+            step_id: Durable step ID. Should usually be unique within a function, but it's OK to reuse as long as your function is deterministic.
             duration: The number of milliseconds to sleep.
         """
         if isinstance(duration, int):
@@ -320,9 +314,7 @@ class StepSync(base.StepBase):
 
         Args:
         ----
-            step_id: Durable step ID. Should usually be unique within a
-                function, but it's OK to reuse as long as your function is
-                deterministic.
+            step_id: Durable step ID. Should usually be unique within a function, but it's OK to reuse as long as your function is deterministic.
             until: The time to sleep until.
         """
 
@@ -362,9 +354,7 @@ class StepSync(base.StepBase):
 
         Args:
         ----
-            step_id: Durable step ID. Should usually be unique within a
-                function, but it's OK to reuse as long as your function is
-                deterministic.
+            step_id: Durable step ID. Should usually be unique within a function, but it's OK to reuse as long as your function is deterministic.
             event: Event name.
             if_exp: An expression to filter events.
             timeout: The maximum number of milliseconds to wait for the event.
