@@ -2,6 +2,9 @@ import dataclasses
 import unittest
 
 import inngest
+from tests import base
+
+create_test_name = base.create_test_name
 
 
 @dataclasses.dataclass

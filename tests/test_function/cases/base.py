@@ -7,6 +7,7 @@ from inngest._internal import const
 from tests import base
 
 BaseState = base.BaseState
+create_test_name = base.create_test_name
 wait_for = base.wait_for
 
 
@@ -37,12 +38,3 @@ def create_fn_id(test_name: str) -> str:
         suffix += f"-{worker_id}"
 
     return test_name + suffix
-
-
-def create_test_name(
-    test_name: str,
-    is_sync: bool,
-) -> str:
-    if is_sync:
-        test_name += "_sync"
-    return test_name

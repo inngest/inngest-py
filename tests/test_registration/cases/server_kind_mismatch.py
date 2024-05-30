@@ -4,7 +4,7 @@ from inngest._internal import const
 
 from . import base
 
-_TEST_NAME = "server_kind_mismatch"
+_TEST_NAME = base.create_test_name(__file__)
 
 
 def create(framework: const.Framework) -> base.Case:
