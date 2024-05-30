@@ -73,6 +73,10 @@ def create_app_id(framework: str) -> str:
     return framework + suffix
 
 
+def create_test_name(file: str) -> str:
+    return os.path.basename(file).replace(".py", "").removeprefix("test_")
+
+
 def register(
     app_port: int,
     path: typing.Optional[str] = "/api/inngest",

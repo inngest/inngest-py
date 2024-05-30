@@ -6,8 +6,6 @@ from inngest._internal import const
 
 from . import base
 
-_TEST_NAME = "multiple_triggers"
-
 
 @dataclass
 class StateAndEvent:
@@ -20,7 +18,7 @@ def create(
     framework: const.Framework,
     is_sync: bool,
 ) -> base.Case:
-    test_name = base.create_test_name(_TEST_NAME, is_sync)
+    test_name = base.create_test_name(__file__)
     fn_id = base.create_fn_id(test_name)
 
     states_events = [

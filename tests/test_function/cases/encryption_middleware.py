@@ -12,8 +12,6 @@ from inngest.experimental.encryption_middleware import EncryptionMiddleware
 
 from . import base
 
-_TEST_NAME = "encryption_middleware"
-
 _secret_key = nacl.utils.random(nacl.secret.SecretBox.KEY_SIZE)
 _box = nacl.secret.SecretBox(_secret_key)
 
@@ -53,7 +51,7 @@ def create(
     framework: const.Framework,
     is_sync: bool,
 ) -> base.Case:
-    test_name = base.create_test_name(_TEST_NAME, is_sync)
+    test_name = base.create_test_name(__file__)
     event_name = base.create_event_name(framework, test_name)
     fn_id = base.create_fn_id(test_name)
     state = _State()

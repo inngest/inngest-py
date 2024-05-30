@@ -10,3 +10,6 @@ TestCase = base.TestCase
 class Case:
     name: str
     run_test: typing.Callable[[TestCase], None]
+
+
+create_test_name = base.create_test_name
