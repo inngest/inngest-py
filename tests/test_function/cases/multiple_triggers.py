@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 import inngest
 import tests.helper
+from inngest._internal import const
 
 from . import base
 
@@ -14,7 +15,11 @@ class StateAndEvent:
     event_name: str
 
 
-def create(client: inngest.Inngest, framework: str, is_sync: bool) -> base.Case:
+def create(
+    client: inngest.Inngest,
+    framework: const.Framework,
+    is_sync: bool,
+) -> base.Case:
     test_name = base.create_test_name(_TEST_NAME, is_sync)
     fn_id = base.create_fn_id(test_name)
 

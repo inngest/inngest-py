@@ -12,7 +12,7 @@ from . import base
 _TEST_NAME = "cloud_branch_env"
 
 
-def create(framework: str) -> base.Case:
+def create(framework: const.Framework) -> base.Case:
     def run_test(self: base.TestCase) -> None:
         """
         Test that the SDK correctly syncs itself with Cloud when using a branch
@@ -49,7 +49,7 @@ def create(framework: str) -> base.Case:
 
         client = inngest.Inngest(
             api_base_url=f"http://localhost:{mock_cloud.port}",
-            app_id=f"{framework}-{_TEST_NAME}",
+            app_id=f"{framework.value}-{_TEST_NAME}",
             env="my-env",
             signing_key="signkey-prod-0486c9",
         )
@@ -70,7 +70,7 @@ def create(framework: str) -> base.Case:
         assert res.status_code == 200
         assert state.headers.get("Authorization") is not None
         assert state.headers.get("X-Inngest-Env") == ["my-env"]
-        assert state.headers.get("X-Inngest-Framework") == [framework]
+        assert state.headers.get("X-Inngest-Framework") == [framework.value]
         assert state.headers.get("X-Inngest-SDK") == [
             f"inngest-py:v{const.VERSION}"
         ]

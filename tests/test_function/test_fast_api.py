@@ -6,12 +6,13 @@ import fastapi.testclient
 
 import inngest
 import inngest.fast_api
+from inngest._internal import const
 from tests import base, dev_server, http_proxy
 
 from . import cases
 
-_framework = "fast_api"
-_app_id = f"{_framework}-functions"
+_framework = const.Framework.FAST_API
+_app_id = f"{_framework.value}-functions"
 
 _client = inngest.Inngest(
     api_base_url=dev_server.origin,

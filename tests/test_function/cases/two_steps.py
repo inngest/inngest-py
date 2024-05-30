@@ -2,6 +2,7 @@ import json
 
 import inngest
 import tests.helper
+from inngest._internal import const
 
 from . import base
 
@@ -16,7 +17,7 @@ class _State(base.BaseState):
 
 def create(
     client: inngest.Inngest,
-    framework: str,
+    framework: const.Framework,
     is_sync: bool,
 ) -> base.Case:
     test_name = base.create_test_name(_TEST_NAME, is_sync)

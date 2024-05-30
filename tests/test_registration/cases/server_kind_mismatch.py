@@ -7,7 +7,7 @@ from . import base
 _TEST_NAME = "server_kind_mismatch"
 
 
-def create(framework: str) -> base.Case:
+def create(framework: const.Framework) -> base.Case:
     def run_test(self: base.TestCase) -> None:
         """
         Ensure that Dev Server cannot initiate a registration request when the
@@ -15,7 +15,7 @@ def create(framework: str) -> base.Case:
         """
 
         client = inngest.Inngest(
-            app_id=f"{framework}-{_TEST_NAME}",
+            app_id=f"{framework.value}-{_TEST_NAME}",
             event_key="test",
             signing_key="signkey-prod-000000",
         )

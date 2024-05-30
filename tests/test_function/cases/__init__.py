@@ -1,4 +1,5 @@
 import inngest
+from inngest._internal import const
 
 from . import (
     async_gather,
@@ -86,7 +87,7 @@ _modules = (
 
 def create_async_cases(
     client: inngest.Inngest,
-    framework: str,
+    framework: const.Framework,
 ) -> list[base.Case]:
     return [
         module.create(client, framework, is_sync=False) for module in _modules
@@ -95,7 +96,7 @@ def create_async_cases(
 
 def create_sync_cases(
     client: inngest.Inngest,
-    framework: str,
+    framework: const.Framework,
 ) -> list[base.Case]:
     return [
         module.create(client, framework, is_sync=True) for module in _modules
