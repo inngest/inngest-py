@@ -43,7 +43,6 @@ def create(
         state.step_output = step.invoke(
             "invoke",
             function=fn_receiver_sync,
-            timeout=60_000,
         )
 
     @client.create_function(
@@ -70,7 +69,6 @@ def create(
         state.step_output = await step.invoke(
             "invoke",
             function=fn_receiver_async,
-            timeout=60_000,
         )
 
     def run_test(self: base.TestClass) -> None:

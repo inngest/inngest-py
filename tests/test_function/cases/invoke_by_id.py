@@ -44,7 +44,6 @@ def create(
             "invoke",
             app_id=client.app_id,
             function_id=f"{fn_id}/invokee",
-            timeout=60_000,
         )
 
     @client.create_function(
@@ -72,7 +71,6 @@ def create(
             "invoke",
             app_id=client.app_id,
             function_id=f"{fn_id}/invokee",
-            timeout=60_000,
         )
 
     def run_test(self: base.TestClass) -> None:

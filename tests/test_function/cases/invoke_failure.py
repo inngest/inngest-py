@@ -56,7 +56,6 @@ def create(
             step.invoke(
                 "invoke",
                 function=fn_receiver_sync,
-                timeout=60_000,
             )
         except inngest.StepError as err:
             state.raised_error = err
@@ -88,7 +87,6 @@ def create(
             await step.invoke(
                 "invoke",
                 function=fn_receiver_async,
-                timeout=60_000,
             )
         except inngest.StepError as err:
             state.raised_error = err
