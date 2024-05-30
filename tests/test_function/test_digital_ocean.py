@@ -13,8 +13,8 @@ from tests import base, dev_server, http_proxy
 
 from . import cases
 
-_framework = const.Framework.DIGITAL_OCEAN.value
-_app_id = f"{_framework}-functions"
+_framework = const.Framework.DIGITAL_OCEAN
+_app_id = f"{_framework.value}-functions"
 
 _client = inngest.Inngest(
     api_base_url=dev_server.origin,

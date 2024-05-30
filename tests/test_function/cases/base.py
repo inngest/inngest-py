@@ -3,6 +3,7 @@ import os
 import typing
 
 import inngest
+from inngest._internal import const
 from tests import base
 
 BaseState = base.BaseState
@@ -20,13 +21,13 @@ class Case:
     run_test: typing.Callable[[TestClass], None]
 
 
-def create_event_name(framework: str, test_name: str) -> str:
+def create_event_name(framework: const.Framework, test_name: str) -> str:
     suffix = ""
     worker_id = os.getenv("PYTEST_XDIST_WORKER")
     if worker_id:
         suffix += f"-{worker_id}"
 
-    return f"{framework}/{test_name}{suffix}"
+    return f"{framework.value}/{test_name}{suffix}"
 
 
 def create_fn_id(test_name: str) -> str:

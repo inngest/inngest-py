@@ -7,10 +7,10 @@ import pytest
 
 import inngest
 import inngest.flask
-from inngest._internal import errors
+from inngest._internal import const, errors
 
-_framework = "flask"
-_app_id = f"{_framework}-serve"
+_framework = const.Framework.FLASK
+_app_id = f"{_framework.value}-serve"
 
 
 class TestServe(unittest.TestCase):

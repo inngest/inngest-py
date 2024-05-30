@@ -22,7 +22,7 @@ class _State(base.BaseState):
 
 def create(
     client: inngest.Inngest,
-    framework: str,
+    framework: const.Framework,
     is_sync: bool,
 ) -> base.Case:
     test_name = base.create_test_name(_TEST_NAME, is_sync)
@@ -181,22 +181,22 @@ def create(
             tests.helper.RunStatus.COMPLETED,
         )
 
-        if framework == const.Framework.DIGITAL_OCEAN.value:
+        if framework == const.Framework.DIGITAL_OCEAN:
             assert isinstance(state.raw_request, dict)
-        elif framework == const.Framework.DJANGO.value:
+        elif framework == const.Framework.DJANGO:
             assert isinstance(
                 state.raw_request, django.core.handlers.wsgi.WSGIRequest
             )
-        elif framework == const.Framework.FAST_API.value:
+        elif framework == const.Framework.FAST_API:
             assert isinstance(state.raw_request, fastapi.Request)
-        elif framework == const.Framework.FLASK.value:
+        elif framework == const.Framework.FLASK:
             assert isinstance(state.raw_request, werkzeug.local.LocalProxy)
-        elif framework == const.Framework.TORNADO.value:
+        elif framework == const.Framework.TORNADO:
             assert isinstance(
                 state.raw_request, tornado.httputil.HTTPServerRequest
             )
         else:
-            raise ValueError(f"unknown framework: {framework}")
+            raise ValueError(f"unknown framework: {framework.value}")
 
         # Assert that the middleware hooks were called in the correct order
         assert state.messages == [

@@ -7,12 +7,13 @@ import flask.testing
 
 import inngest
 import inngest.flask
+from inngest._internal import const
 from tests import base, dev_server, http_proxy
 
 from . import cases
 
-_framework = "flask"
-_app_id = f"{_framework}-functions"
+_framework = const.Framework.FLASK
+_app_id = f"{_framework.value}-functions"
 
 _client = inngest.Inngest(
     api_base_url=dev_server.origin,

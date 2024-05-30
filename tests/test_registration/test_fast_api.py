@@ -5,10 +5,11 @@ import fastapi.testclient
 
 import inngest
 import inngest.fast_api
+from inngest._internal import const
 
 from . import base, cases
 
-_framework = "fast_api"
+_framework = const.Framework.FAST_API
 
 
 class TestRegistration(base.TestCase):
