@@ -281,7 +281,7 @@ def _to_response(
     server_kind: typing.Optional[const.ServerKind],
 ) -> django.http.HttpResponse:
     body = transforms.dump_json(comm_res.body)
-    if isinstance(body, Exception):
+    if isinstance(comm_res.body, Exception):
         comm_res = comm.CommResponse.from_error(client.logger, body)
         body = json.dumps(comm_res.body)
 
