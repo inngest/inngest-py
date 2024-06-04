@@ -95,6 +95,7 @@ def create(
 
         assert state.raised_err is not None
         assert isinstance(state.raised_err, inngest.StepError)
+        assert state.raised_err.name == "InngestInvokeTimeoutError"
 
         assert run.output is not None
         assert json.loads(run.output) == {
