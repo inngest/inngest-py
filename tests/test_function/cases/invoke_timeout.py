@@ -1,5 +1,6 @@
 import datetime
 import json
+import typing
 
 import inngest
 import tests.helper
@@ -9,7 +10,7 @@ from . import base
 
 
 class _State(base.BaseState):
-    step_output: object = None
+    raised_err: typing.Optional[Exception] = None
 
 
 def create(
@@ -43,11 +44,15 @@ def create(
         step: inngest.StepSync,
     ) -> None:
         state.run_id = ctx.run_id
-        state.step_output = step.invoke(
-            "invoke",
-            function=fn_receiver_sync,
-            timeout=datetime.timedelta(seconds=1),
-        )
+        try:
+            step.invoke(
+                "invoke",
+                function=fn_receiver_sync,
+                timeout=datetime.timedelta(seconds=1),
+            )
+        except Exception as e:
+            state.raised_err = e
+            raise e
 
     @client.create_function(
         fn_id=f"{fn_id}/invokee",
@@ -70,11 +75,15 @@ def create(
         step: inngest.Step,
     ) -> None:
         state.run_id = ctx.run_id
-        state.step_output = await step.invoke(
-            "invoke",
-            function=fn_receiver_async,
-            timeout=datetime.timedelta(seconds=1),
-        )
+        try:
+            await step.invoke(
+                "invoke",
+                function=fn_receiver_async,
+                timeout=datetime.timedelta(seconds=1),
+            )
+        except Exception as e:
+            state.raised_err = e
+            raise e
 
     def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
@@ -83,6 +92,9 @@ def create(
             run_id,
             tests.helper.RunStatus.FAILED,
         )
+
+        assert state.raised_err is not None
+        assert isinstance(state.raised_err, inngest.StepError)
 
         assert run.output is not None
         assert json.loads(run.output) == {
