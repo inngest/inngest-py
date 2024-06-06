@@ -1,7 +1,8 @@
 """
 Sentry middleware for Inngest.
 
-NOT STABLE! This is an experimental feature and may change in the future.
+NOT STABLE! This is an experimental feature and may change in the future. If
+you'd like to use it, we recommend copying this file into your source code.
 """
 
 from __future__ import annotations
