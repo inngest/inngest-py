@@ -277,7 +277,7 @@ class Inngest:
 
         return decorator
 
-    async def _get(self, url: str) -> httpx.Response:
+    async def _get(self, url: str) -> types.MaybeError[httpx.Response]:
         """
         Perform an asynchronous HTTP GET request. Handles authn
         """
@@ -292,7 +292,7 @@ class Inngest:
             ),
         )
 
-        return await net.fetch_with_auth_fallback(
+        res = await net.fetch_with_auth_fallback(
             self._http_client,
             self._http_client_sync,
             req,
@@ -300,7 +300,12 @@ class Inngest:
             signing_key_fallback=self._signing_key_fallback,
         )
 
-    def _get_sync(self, url: str) -> httpx.Response:
+        if res.status_code >= 400:
+            return Exception(f"HTTP error: {res.status_code} {res.text}")
+
+        return res
+
+    def _get_sync(self, url: str) -> types.MaybeError[httpx.Response]:
         """
         Perform a synchronous HTTP GET request. Handles authn
         """
@@ -315,14 +320,21 @@ class Inngest:
             ),
         )
 
-        return net.fetch_with_auth_fallback_sync(
+        res = net.fetch_with_auth_fallback_sync(
             self._http_client_sync,
             req,
             signing_key=self._signing_key,
             signing_key_fallback=self._signing_key_fallback,
         )
 
-    async def _get_batch(self, run_id: str) -> list[event_lib.Event]:
+        if res.status_code >= 400:
+            return Exception(f"HTTP error: {res.status_code} {res.text}")
+
+        return res
+
+    async def _get_batch(
+        self, run_id: str
+    ) -> types.MaybeError[list[event_lib.Event]]:
         """
         Fetch a batch of events from the API
         """
@@ -331,7 +343,11 @@ class Inngest:
             self._api_origin,
             f"/v0/runs/{run_id}/batch",
         )
-        data = (await self._get(url)).json()
+        res = await self._get(url)
+        if isinstance(res, Exception):
+            return res
+
+        data = res.json()
         if not isinstance(data, list):
             raise errors.BodyInvalidError("batch data is not an array")
 
@@ -340,7 +356,9 @@ class Inngest:
             events.append(event_lib.Event.model_validate(e))
         return events
 
-    def _get_batch_sync(self, run_id: str) -> list[event_lib.Event]:
+    def _get_batch_sync(
+        self, run_id: str
+    ) -> types.MaybeError[list[event_lib.Event]]:
         """
         Fetch a batch of events from the API
         """
@@ -349,7 +367,11 @@ class Inngest:
             self._api_origin,
             f"/v0/runs/{run_id}/batch",
         )
-        data = self._get_sync(url).json()
+        res = self._get_sync(url)
+        if isinstance(res, Exception):
+            return res
+
+        data = res.json()
         if not isinstance(data, list):
             raise errors.BodyInvalidError("batch data is not an array")
 
@@ -358,7 +380,9 @@ class Inngest:
             events.append(event_lib.Event.model_validate(e))
         return events
 
-    async def _get_steps(self, run_id: str) -> dict[str, object]:
+    async def _get_steps(
+        self, run_id: str
+    ) -> types.MaybeError[dict[str, object]]:
         """
         Fetch memoized step data from the API
         """
@@ -367,13 +391,19 @@ class Inngest:
             self._api_origin,
             f"/v0/runs/{run_id}/actions",
         )
-        data = (await self._get(url)).json()
+        res = await self._get(url)
+        if isinstance(res, Exception):
+            return res
+
+        data = res.json()
         if not isinstance(data, dict):
             raise errors.BodyInvalidError("step data is not an object")
 
         return data
 
-    def _get_steps_sync(self, run_id: str) -> dict[str, object]:
+    def _get_steps_sync(
+        self, run_id: str
+    ) -> types.MaybeError[dict[str, object]]:
         """
         Fetch memoized step data from the API
         """
@@ -382,7 +412,11 @@ class Inngest:
             self._api_origin,
             f"/v0/runs/{run_id}/actions",
         )
-        data = self._get_sync(url).json()
+        res = self._get_sync(url)
+        if isinstance(res, Exception):
+            return res
+
+        data = res.json()
         if not isinstance(data, dict):
             raise errors.BodyInvalidError("step data is not an object")
 

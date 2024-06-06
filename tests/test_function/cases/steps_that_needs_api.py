@@ -4,6 +4,7 @@ from the Executor to the SDK. The SDK will need to fetch the memoized step data
 from the API
 """
 
+import functools
 
 import inngest
 import tests.helper
@@ -41,8 +42,7 @@ def create(
 
         # Create a large enough total step output to force the SDK to fetch the
         # memoized step data from the API
-        steps = []
-        for i in range(5):
+        for i in range(10):
 
             def fn(step_id: str) -> str:
                 state.step_counters[step_id] = (
@@ -50,13 +50,8 @@ def create(
                 )
                 return "a" * 1024 * 1024
 
-            steps.append(
-                lambda step_id=f"step_{i}": step.run(
-                    step_id,
-                    lambda: fn(step_id),
-                )
-            )
-        step.parallel(tuple(steps))
+            step_id = f"step_{i}"
+            step.run(step_id, functools.partial(fn, step_id))
 
     @client.create_function(
         fn_id=fn_id,
@@ -71,8 +66,7 @@ def create(
 
         # Create a large enough total step output to force the SDK to fetch the
         # memoized step data from the API
-        steps = []
-        for i in range(5):
+        for i in range(10):
 
             def fn(step_id: str) -> str:
                 state.step_counters[step_id] = (
@@ -80,13 +74,8 @@ def create(
                 )
                 return "a" * 1024 * 1024
 
-            steps.append(
-                lambda step_id=f"step_{i}": step.run(
-                    step_id,
-                    lambda: fn(step_id),
-                )
-            )
-        await step.parallel(tuple(steps))
+            step_id = f"step_{i}"
+            await step.run(step_id, functools.partial(fn, step_id))
 
     def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))

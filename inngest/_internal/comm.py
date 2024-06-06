@@ -332,13 +332,14 @@ class CommHandler:
             # to big, so the Executor is telling the SDK to fetch them from the
             # API
 
-            try:
-                events, steps = await asyncio.gather(
-                    self._client._get_batch(call.ctx.run_id),
-                    self._client._get_steps(call.ctx.run_id),
-                )
-            except Exception as err:
-                return await self._respond(err)
+            events, steps = await asyncio.gather(
+                self._client._get_batch(call.ctx.run_id),
+                self._client._get_steps(call.ctx.run_id),
+            )
+            if isinstance(events, Exception):
+                return await self._respond(events)
+            if isinstance(steps, Exception):
+                return await self._respond(steps)
         if events is None:
             # Should be unreachable. The Executor should always either send the
             # batch or tell the SDK to fetch the batch
@@ -403,11 +404,13 @@ class CommHandler:
             # to big, so the Executor is telling the SDK to fetch them from the
             # API
 
-            try:
-                events = self._client._get_batch_sync(call.ctx.run_id)
-                steps = self._client._get_steps_sync(call.ctx.run_id)
-            except Exception as err:
-                return self._respond_sync(err)
+            events = self._client._get_batch_sync(call.ctx.run_id)
+            if isinstance(events, Exception):
+                return self._respond_sync(events)
+
+            steps = self._client._get_steps_sync(call.ctx.run_id)
+            if isinstance(steps, Exception):
+                return self._respond_sync(steps)
         if events is None:
             # Should be unreachable. The Executor should always either send the
             # batch or tell the SDK to fetch the batch
