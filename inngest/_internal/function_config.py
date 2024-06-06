@@ -78,19 +78,24 @@ class Debounce(_BaseConfig):
 
 class FunctionConfig(_BaseConfig):
     batch_events: typing.Optional[Batch] = pydantic.Field(
-        default=None, serialization_alias="batchEvents"
+        ..., serialization_alias="batchEvents"
     )
-    cancel: typing.Optional[list[Cancel]] = None
-    concurrency: typing.Optional[list[Concurrency]] = None
-    debounce: typing.Optional[Debounce] = None
+    cancel: typing.Optional[list[Cancel]]
+    concurrency: typing.Optional[list[Concurrency]]
+    debounce: typing.Optional[Debounce]
     id: str
-    name: typing.Optional[str] = None
+    name: typing.Optional[str]
+    priority: typing.Optional[Priority]
     rate_limit: typing.Optional[RateLimit] = pydantic.Field(
-        default=None, serialization_alias="rateLimit"
+        ..., serialization_alias="rateLimit"
     )
     steps: dict[str, Step]
-    throttle: typing.Optional[Throttle] = None
+    throttle: typing.Optional[Throttle]
     triggers: list[typing.Union[TriggerCron, TriggerEvent]]
+
+
+class Priority(_BaseConfig):
+    run: str
 
 
 class RateLimit(_BaseConfig):

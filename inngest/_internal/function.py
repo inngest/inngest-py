@@ -90,6 +90,7 @@ class FunctionOpts(types.BaseModel):
     on_failure: typing.Union[
         FunctionHandlerAsync, FunctionHandlerSync, None
     ] = None
+    priority: typing.Optional[function_config.Priority] = None
     rate_limit: typing.Optional[function_config.RateLimit] = None
     retries: typing.Optional[int] = None
     throttle: typing.Optional[function_config.Throttle] = None
@@ -446,6 +447,7 @@ class Function:
             debounce=self._opts.debounce,
             id=fn_id,
             name=name,
+            priority=self._opts.priority,
             rate_limit=self._opts.rate_limit,
             steps={
                 const.ROOT_STEP_ID: function_config.Step(
@@ -476,8 +478,14 @@ class Function:
             )
 
             on_failure = function_config.FunctionConfig(
+                batch_events=None,
+                cancel=None,
+                concurrency=None,
+                debounce=None,
                 id=self.on_failure_fn_id,
                 name=f"{name} (failure)",
+                priority=None,
+                rate_limit=None,
                 steps={
                     const.ROOT_STEP_ID: function_config.Step(
                         id=const.ROOT_STEP_ID,
@@ -489,6 +497,7 @@ class Function:
                         ),
                     )
                 },
+                throttle=None,
                 triggers=[
                     function_config.TriggerEvent(
                         event=const.InternalEvents.FUNCTION_FAILED.value,

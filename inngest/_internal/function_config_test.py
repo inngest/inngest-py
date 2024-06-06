@@ -29,6 +29,9 @@ def test_serialization() -> None:
         ),
         id="foo",
         name="foo",
+        priority=function_config.Priority(
+            run="event.data.plan == 'enterprise' ? 180 : 0",
+        ),
         steps={
             "foo": function_config.Step(
                 id="foo",
@@ -80,6 +83,9 @@ def test_serialization() -> None:
         },
         "id": "foo",
         "name": "foo",
+        "priority": {
+            "run": "event.data.plan == 'enterprise' ? 180 : 0",
+        },
         "rateLimit": {
             "key": "foo",
             "limit": 1,

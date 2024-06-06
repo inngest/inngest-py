@@ -207,6 +207,7 @@ class Inngest:
         on_failure: typing.Union[
             function.FunctionHandlerAsync, function.FunctionHandlerSync, None
         ] = None,
+        priority: typing.Optional[function_config.Priority] = None,
         rate_limit: typing.Optional[function_config.RateLimit] = None,
         retries: typing.Optional[int] = None,
         throttle: typing.Optional[function_config.Throttle] = None,
@@ -236,11 +237,11 @@ class Inngest:
             cancel: Run cancellation config.
             concurrency: Concurrency config.
             debounce: Debouncing config.
-            fn_id: Function ID. Changing this ID will make Inngest think this is a
-                new function.
+            fn_id: Function ID. Changing this ID will make Inngest think this is a new function.
             middleware: Middleware to apply to this function.
             name: Human-readable function name. (Defaults to the function ID).
             on_failure: Function to call when this function fails.
+            priority: Prioritize function runs.
             rate_limit: Rate limiting config.
             retries: Number of times to retry this function.
             throttle: Throttling config.
@@ -266,6 +267,7 @@ class Inngest:
                     local_id=fn_id,
                     name=name or fn_id,
                     on_failure=on_failure,
+                    priority=priority,
                     rate_limit=rate_limit,
                     retries=retries,
                     throttle=throttle,
