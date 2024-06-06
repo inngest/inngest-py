@@ -332,13 +332,16 @@ class CommHandler:
             # to big, so the Executor is telling the SDK to fetch them from the
             # API
 
-            try:
-                events, steps = await asyncio.gather(
-                    self._client._get_batch(call.ctx.run_id),
-                    self._client._get_steps(call.ctx.run_id),
-                )
-            except Exception as err:
-                return await self._respond(err)
+            fetched_events, fetched_steps = await asyncio.gather(
+                self._client._get_batch(call.ctx.run_id),
+                self._client._get_steps(call.ctx.run_id),
+            )
+            if isinstance(fetched_events, Exception):
+                return await self._respond(fetched_events)
+            events = fetched_events
+            if isinstance(fetched_steps, Exception):
+                return await self._respond(fetched_steps)
+            steps = fetched_steps
         if events is None:
             # Should be unreachable. The Executor should always either send the
             # batch or tell the SDK to fetch the batch
@@ -403,11 +406,15 @@ class CommHandler:
             # to big, so the Executor is telling the SDK to fetch them from the
             # API
 
-            try:
-                events = self._client._get_batch_sync(call.ctx.run_id)
-                steps = self._client._get_steps_sync(call.ctx.run_id)
-            except Exception as err:
-                return self._respond_sync(err)
+            fetched_events = self._client._get_batch_sync(call.ctx.run_id)
+            if isinstance(fetched_events, Exception):
+                return self._respond_sync(fetched_events)
+            events = fetched_events
+
+            fetched_steps = self._client._get_steps_sync(call.ctx.run_id)
+            if isinstance(fetched_steps, Exception):
+                return self._respond_sync(fetched_steps)
+            steps = fetched_steps
         if events is None:
             # Should be unreachable. The Executor should always either send the
             # batch or tell the SDK to fetch the batch

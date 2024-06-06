@@ -39,6 +39,8 @@ for case in _cases:
 
 django.conf.settings.configure(
     ALLOWED_HOSTS=["*"],
+    # We send up to 4 MB
+    DATA_UPLOAD_MAX_MEMORY_SIZE=1024 * 1024 * 5,
     DEBUG=True,
     ROOT_URLCONF=__name__,
     SECRET_KEY="fake",
