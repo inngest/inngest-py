@@ -158,7 +158,7 @@ class Step(base.StepBase):
             # It doesn't matter what we return here -- we just don't want return
             # early. Another parallel step is responsible for interrupting with
             # the plan
-            return _early_return_sentinel  # type: ignore
+            return _early_return_sentinel
 
         self._handle_skip(parsed_step_id)
 
