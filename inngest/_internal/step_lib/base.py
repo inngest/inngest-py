@@ -73,6 +73,13 @@ class StepBase:
         self._inside_parallel = False
         self._memos = memos
         self._middleware = middleware
+
+        # Counter used for tracking the number of parallel steps
+        self._parallel_counter = 0
+
+        # List of plans for parallel steps
+        self._parallel_plans: list[execution.StepResponse] = []
+
         self._step_id_counter = step_id_counter
         self._target_hashed_id = target_hashed_id
 
@@ -122,7 +129,7 @@ class StepBase:
 
     def _handle_skip(
         self,
-        parsed_step_id: _ParsedStepID,
+        parsed_step_id: ParsedStepID,
     ) -> None:
         """
         Handle a skip interrupt. Step targeting is enabled and this step is not
@@ -135,7 +142,7 @@ class StepBase:
             # Skip this step because a different step is targeted.
             raise SkipInterrupt(parsed_step_id.user_facing)
 
-    def _parse_step_id(self, step_id: str) -> _ParsedStepID:
+    def _parse_step_id(self, step_id: str) -> ParsedStepID:
         """
         Parse a user-specified step ID into a hashed ID and a deduped
         user-facing step ID.
@@ -145,14 +152,14 @@ class StepBase:
         if id_count > 1:
             step_id = f"{step_id}:{id_count - 1}"
 
-        return _ParsedStepID(
+        return ParsedStepID(
             hashed=transforms.hash_step_id(step_id),
             user_facing=step_id,
         )
 
 
 @dataclasses.dataclass
-class _ParsedStepID:
+class ParsedStepID:
     hashed: str
     user_facing: str
 

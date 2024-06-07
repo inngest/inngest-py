@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import typing
 
@@ -15,7 +16,66 @@ else:
     Function = object
 
 
+class _EarlyReturnSentinel:
+    pass
+
+
+_early_return_sentinel = _EarlyReturnSentinel()
+
+
 class Step(base.StepBase):
+    async def _handle_parallel_plan(
+        self,
+        parsed_step_id: base.ParsedStepID,
+    ) -> typing.Optional[_EarlyReturnSentinel]:
+        """
+        Handle the logic necessary for planning parallel steps. This is used for
+        making asyncio.gather work. The step.parallel method uses a different
+        approach
+        """
+
+        if self._inside_parallel:
+            # The user is using step.parallel, so we'll let that method handle
+            # parallel logic
+            return None
+
+        self._parallel_counter += 1
+
+        # Only 1 step should be responsible for planning parallel steps, so
+        # we'll pick the first parallel step
+        is_planner = self._parallel_counter == 1
+
+        # Wait for the next event loop tick, allowing us to encounter the other
+        # parallel steps
+        await asyncio.sleep(0)
+
+        if self._parallel_counter == 1:
+            # If we only encountered 1 step then we aren't in parallel steps
+            return None
+
+        self._parallel_plans.append(
+            execution.StepResponse(
+                step=execution.StepInfo(
+                    display_name=parsed_step_id.user_facing,
+                    id=parsed_step_id.hashed,
+                    name=parsed_step_id.user_facing,
+                    op=execution.Opcode.PLANNED,
+                )
+            )
+        )
+        self._parallel_counter -= 1
+
+        # Wait for the next event loop tick, allowing the other parallel
+        # steps to add their plans
+        await asyncio.sleep(0)
+
+        if not is_planner:
+            # Nothing left to do since another parallel step is responsible
+            # for interrupting with the plan
+            return _early_return_sentinel
+
+        raise base.ResponseInterrupt(self._parallel_plans)
+
     async def invoke(
         self,
         step_id: str,
@@ -92,6 +152,13 @@ class Step(base.StepBase):
         memo = await self._get_memo(parsed_step_id.hashed)
         if not isinstance(memo, types.EmptySentinel):
             return memo.data
+
+        early_exit = await self._handle_parallel_plan(parsed_step_id)
+        if early_exit is _early_return_sentinel:
+            # It doesn't matter what we return here -- we just don't want return
+            # early. Another parallel step is responsible for interrupting with
+            # the plan
+            return _early_return_sentinel  # type: ignore
 
         self._handle_skip(parsed_step_id)
 
@@ -210,6 +277,13 @@ class Step(base.StepBase):
         memo = await self._get_memo(parsed_step_id.hashed)
         if not isinstance(memo, types.EmptySentinel):
             return memo.data  # type: ignore
+
+        early_exit = await self._handle_parallel_plan(parsed_step_id)
+        if early_exit is _early_return_sentinel:
+            # It doesn't matter what we return here -- we just don't want return
+            # early. Another parallel step is responsible for interrupting with
+            # the plan
+            return _early_return_sentinel  # type: ignore
 
         self._handle_skip(parsed_step_id)
 
@@ -356,6 +430,13 @@ class Step(base.StepBase):
         if not isinstance(memo, types.EmptySentinel):
             return memo.data  # type: ignore
 
+        early_exit = await self._handle_parallel_plan(parsed_step_id)
+        if early_exit is _early_return_sentinel:
+            # It doesn't matter what we return here -- we just don't want return
+            # early. Another parallel step is responsible for interrupting with
+            # the plan
+            return _early_return_sentinel  # type: ignore
+
         self._handle_skip(parsed_step_id)
 
         err = await self._middleware.before_execution()
@@ -402,6 +483,13 @@ class Step(base.StepBase):
 
             # Fulfilled by an event
             return event_lib.Event.model_validate(memo.data)
+
+        early_exit = await self._handle_parallel_plan(parsed_step_id)
+        if early_exit is _early_return_sentinel:
+            # It doesn't matter what we return here -- we just don't want return
+            # early. Another parallel step is responsible for interrupting with
+            # the plan
+            return _early_return_sentinel  # type: ignore
 
         self._handle_skip(parsed_step_id)
 

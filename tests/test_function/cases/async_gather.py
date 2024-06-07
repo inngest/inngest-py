@@ -1,8 +1,3 @@
-"""
-We don't support `async.gather` yet. This test demonstrates the bug that happens
-when using `async.gather`: a step is executed twice
-"""
-
 import asyncio
 
 import inngest
@@ -13,8 +8,10 @@ from . import base
 
 
 class _State(base.BaseState):
+    parallel_result: object = None
     step_1a_counter = 0
     step_1b_counter = 0
+    step_2_counter = 0
 
 
 def create(
@@ -50,7 +47,7 @@ def create(
     ) -> None:
         state.run_id = ctx.run_id
 
-        def _step_1a() -> int:
+        async def _step_1a() -> int:
             state.step_1a_counter += 1
             return 1
 
@@ -58,10 +55,17 @@ def create(
             state.step_1b_counter += 1
             return 2
 
-        await asyncio.gather(
+        state.parallel_result = await asyncio.gather(
             step.run("1a", _step_1a),
             step.run("1b", _step_1b),
+            step.sleep("1c", 1000),
+            step.wait_for_event("1d", event="foo", timeout=1000),
         )
+
+        def _step_2() -> None:
+            state.step_2_counter += 1
+
+        await step.run("2", _step_2)
 
     def run_test(self: base.TestClass) -> None:
         if is_sync:
@@ -74,8 +78,10 @@ def create(
             tests.helper.RunStatus.COMPLETED,
         )
 
-        # If `async.gather` worked as expected, the counters would each be 1
-        assert state.step_1a_counter + state.step_1b_counter == 3
+        assert state.step_1a_counter == 1
+        assert state.step_1b_counter == 1
+        assert state.step_2_counter == 1
+        assert state.parallel_result == [1, 2, None, None]
 
     if is_sync:
         fn = fn_sync
