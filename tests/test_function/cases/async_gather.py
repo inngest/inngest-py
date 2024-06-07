@@ -48,6 +48,7 @@ def create(
         state.run_id = ctx.run_id
 
         async def _step_1a() -> int:
+            await asyncio.sleep(1)
             state.step_1a_counter += 1
             return 1
 

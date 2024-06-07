@@ -133,7 +133,8 @@ class StepBase:
     ) -> None:
         """
         Handle a skip interrupt. Step targeting is enabled and this step is not
-        the target then skip the step.
+        the target then skip the step. It's necessary for the step.parallel
+        method but never reached when using asyncio.gather
         """
 
         is_targeting_enabled = self._target_hashed_id is not None
