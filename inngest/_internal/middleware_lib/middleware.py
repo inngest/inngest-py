@@ -75,7 +75,7 @@ class Middleware:
 
     async def transform_input(
         self,
-        ctx: function.Context,
+        ctx: execution.Context,
         function: function.Function,
         steps: step_lib.StepMemos,
     ) -> None:
@@ -162,7 +162,7 @@ class MiddlewareSync:
 
     def transform_input(
         self,
-        ctx: function.Context,
+        ctx: execution.Context,
         function: function.Function,
         steps: step_lib.StepMemos,
     ) -> None:
@@ -202,5 +202,5 @@ class TransformOutputResult:
 @dataclasses.dataclass
 class TransformOutputStepInfo:
     id: str
-    op: execution.Opcode
+    op: step_lib.Opcode
     opts: typing.Optional[dict[str, object]]

@@ -1,6 +1,6 @@
 import inngest
 import tests.helper
-from inngest._internal import const, execution, middleware_lib
+from inngest._internal import const, middleware_lib, step_lib
 
 from . import base
 
@@ -94,7 +94,7 @@ def create(
                     output="1.1 (step)",
                     step=middleware_lib.TransformOutputStepInfo(
                         id="1.1",
-                        op=execution.Opcode.STEP_RUN,
+                        op=step_lib.Opcode.STEP_RUN,
                         opts=None,
                     ),
                 ),
@@ -103,7 +103,7 @@ def create(
                     output="1.2 (step)",
                     step=middleware_lib.TransformOutputStepInfo(
                         id="1.2",
-                        op=execution.Opcode.STEP_RUN,
+                        op=step_lib.Opcode.STEP_RUN,
                         opts=None,
                     ),
                 ),

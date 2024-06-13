@@ -4,7 +4,8 @@
 from ._internal.client_lib import Inngest, SendEventsResult
 from ._internal.errors import NonRetriableError, RetryAfterError, StepError
 from ._internal.event_lib import Event
-from ._internal.function import Context, Function
+from ._internal.execution import Context
+from ._internal.function import Function
 from ._internal.function_config import (
     Batch,
     Cancel,

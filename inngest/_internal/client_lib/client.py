@@ -13,6 +13,7 @@ from inngest._internal import (
     env_lib,
     errors,
     event_lib,
+    execution,
     function,
     function_config,
     middleware_lib,
@@ -205,7 +206,7 @@ class Inngest:
         ] = None,
         name: typing.Optional[str] = None,
         on_failure: typing.Union[
-            function.FunctionHandlerAsync, function.FunctionHandlerSync, None
+            execution.FunctionHandlerAsync, execution.FunctionHandlerSync, None
         ] = None,
         priority: typing.Optional[function_config.Priority] = None,
         rate_limit: typing.Optional[function_config.RateLimit] = None,
@@ -223,7 +224,7 @@ class Inngest:
     ) -> typing.Callable[
         [
             typing.Union[
-                function.FunctionHandlerAsync, function.FunctionHandlerSync
+                execution.FunctionHandlerAsync, execution.FunctionHandlerSync
             ]
         ],
         function.Function,
@@ -252,11 +253,10 @@ class Inngest:
 
         def decorator(
             func: typing.Union[
-                function.FunctionHandlerAsync, function.FunctionHandlerSync
+                execution.FunctionHandlerAsync, execution.FunctionHandlerSync
             ],
         ) -> function.Function:
             triggers = trigger if isinstance(trigger, list) else [trigger]
-
             return function.Function(
                 function.FunctionOpts(
                     batch_events=batch_events,

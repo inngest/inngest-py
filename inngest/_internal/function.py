@@ -6,29 +6,18 @@ import typing
 import urllib.parse
 
 import pydantic
-import typing_extensions
 
 from inngest._internal import (
     client_lib,
     const,
     errors,
-    event_lib,
     execution,
     function_config,
     middleware_lib,
+    orchestrator,
     step_lib,
-    transforms,
     types,
 )
-
-
-@dataclasses.dataclass
-class Context:
-    attempt: int
-    event: event_lib.Event
-    events: list[event_lib.Event]
-    logger: types.Logger
-    run_id: str
 
 
 @dataclasses.dataclass
@@ -38,38 +27,6 @@ class _Config:
 
     # The internal on_failure function
     on_failure: typing.Optional[function_config.FunctionConfig]
-
-
-@typing.runtime_checkable
-class FunctionHandlerAsync(typing.Protocol):
-    def __call__(
-        self,
-        ctx: Context,
-        step: step_lib.Step,
-    ) -> typing.Awaitable[types.JSON]:
-        ...
-
-
-@typing.runtime_checkable
-class FunctionHandlerSync(typing.Protocol):
-    def __call__(
-        self,
-        ctx: Context,
-        step: step_lib.StepSync,
-    ) -> types.JSON:
-        ...
-
-
-def _is_function_handler_async(
-    value: typing.Union[FunctionHandlerAsync, FunctionHandlerSync],
-) -> typing_extensions.TypeGuard[FunctionHandlerAsync]:
-    return inspect.iscoroutinefunction(value)
-
-
-def _is_function_handler_sync(
-    value: typing.Union[FunctionHandlerAsync, FunctionHandlerSync],
-) -> typing_extensions.TypeGuard[FunctionHandlerSync]:
-    return not inspect.iscoroutinefunction(value)
 
 
 class FunctionOpts(types.BaseModel):
@@ -88,7 +45,7 @@ class FunctionOpts(types.BaseModel):
 
     name: str
     on_failure: typing.Union[
-        FunctionHandlerAsync, FunctionHandlerSync, None
+        execution.FunctionHandlerAsync, execution.FunctionHandlerSync, None
     ] = None
     priority: typing.Optional[function_config.Priority] = None
     rate_limit: typing.Optional[function_config.RateLimit] = None
@@ -103,7 +60,9 @@ class FunctionOpts(types.BaseModel):
 
 
 class Function:
-    _handler: typing.Union[FunctionHandlerAsync, FunctionHandlerSync]
+    _handler: typing.Union[
+        execution.FunctionHandlerAsync, execution.FunctionHandlerSync
+    ]
     _on_failure_fn_id: typing.Optional[str] = None
     _opts: FunctionOpts
     _triggers: list[
@@ -117,7 +76,7 @@ class Function:
     @property
     def is_handler_async(self) -> bool:
         """Whether the main handler is async."""
-        return _is_function_handler_async(self._handler)
+        return inspect.iscoroutinefunction(self._handler)
 
     @property
     def is_on_failure_handler_async(self) -> typing.Optional[bool]:
@@ -127,7 +86,7 @@ class Function:
         """
         if self._opts.on_failure is None:
             return None
-        return _is_function_handler_async(self._opts.on_failure)
+        return inspect.iscoroutinefunction(self._opts.on_failure)
 
     @property
     def local_id(self) -> str:
@@ -153,7 +112,9 @@ class Function:
                 ]
             ],
         ],
-        handler: typing.Union[FunctionHandlerAsync, FunctionHandlerSync],
+        handler: typing.Union[
+            execution.FunctionHandlerAsync, execution.FunctionHandlerSync
+        ],
         middleware: typing.Optional[
             list[middleware_lib.UninitializedMiddleware]
         ] = None,
@@ -168,8 +129,9 @@ class Function:
 
     async def call(
         self,
+        call_context: execution.CallContext,
         client: client_lib.Inngest,
-        ctx: Context,
+        ctx: execution.Context,
         fn_id: str,
         middleware: middleware_lib.MiddlewareManager,
         steps: step_lib.StepMemos,
@@ -179,15 +141,33 @@ class Function:
         for m in self._middleware:
             middleware.add(m)
 
-        # Move business logic to a private method to make it simpler to run the
-        # transform_output hook on every call result code path
-        call_res = await self._call(
+        handler: typing.Union[
+            execution.FunctionHandlerAsync, execution.FunctionHandlerSync
+        ]
+        if self.id == fn_id:
+            handler = self._handler
+        elif self.on_failure_fn_id == fn_id:
+            if self._opts.on_failure is None:
+                return execution.CallResult(
+                    errors.FunctionNotFoundError("on_failure not defined")
+                )
+            handler = self._opts.on_failure
+        else:
+            return execution.CallResult(
+                errors.FunctionNotFoundError("function ID mismatch")
+            )
+
+        orc = orchestrator.OrchestratorV0(
+            steps,
+            middleware,
+            target_hashed_id,
+        )
+
+        call_res = await orc.run(
             client,
             ctx,
-            fn_id,
-            middleware,
-            steps,
-            target_hashed_id,
+            handler,
+            self,
         )
 
         err = await middleware.transform_output(call_res)
@@ -200,112 +180,10 @@ class Function:
 
         return call_res
 
-    async def _call(
-        self,
-        client: client_lib.Inngest,
-        ctx: Context,
-        fn_id: str,
-        middleware: middleware_lib.MiddlewareManager,
-        steps: step_lib.StepMemos,
-        target_hashed_id: typing.Optional[str],
-    ) -> execution.CallResult:
-        # Give middleware the opportunity to change some of params passed to the
-        # user's handler.
-        middleware_err = await middleware.transform_input(ctx, self, steps)
-        if isinstance(middleware_err, Exception):
-            return execution.CallResult(middleware_err)
-
-        # No memoized data means we're calling the function for the first time.
-        if steps.size == 0:
-            err = await middleware.before_execution()
-            if isinstance(err, Exception):
-                return execution.CallResult(err)
-
-        try:
-            handler: typing.Union[FunctionHandlerAsync, FunctionHandlerSync]
-            if self.id == fn_id:
-                handler = self._handler
-            elif self.on_failure_fn_id == fn_id:
-                if self._opts.on_failure is None:
-                    return execution.CallResult(
-                        errors.FunctionNotFoundError("on_failure not defined")
-                    )
-                handler = self._opts.on_failure
-            else:
-                return execution.CallResult(
-                    errors.FunctionNotFoundError("function ID mismatch")
-                )
-
-            output: object
-
-            try:
-                # # Determine whether the handler is async (i.e. if we need to await
-                # # it). Sync functions are OK in async contexts, so it's OK if the
-                # # handler is sync.
-                if _is_function_handler_async(handler):
-                    output = await handler(
-                        ctx=ctx,
-                        step=step_lib.Step(
-                            client,
-                            steps,
-                            middleware,
-                            step_lib.StepIDCounter(),
-                            target_hashed_id,
-                        ),
-                    )
-                elif _is_function_handler_sync(handler):
-                    output = handler(
-                        ctx=ctx,
-                        step=step_lib.StepSync(
-                            client,
-                            steps,
-                            middleware,
-                            step_lib.StepIDCounter(),
-                            target_hashed_id,
-                        ),
-                    )
-                else:
-                    # Should be unreachable but Python's custom type guards don't
-                    # support negative checks :(
-                    return execution.CallResult(
-                        errors.UnknownError(
-                            "unable to determine function handler type"
-                        )
-                    )
-            except Exception as user_err:
-                transforms.remove_first_traceback_frame(user_err)
-                raise _UserError(user_err)
-
-            err = await middleware.after_execution()
-            if isinstance(err, Exception):
-                return execution.CallResult(err)
-
-            return execution.CallResult(output=output)
-        except step_lib.ResponseInterrupt as interrupt:
-            err = await middleware.after_execution()
-            if isinstance(err, Exception):
-                return execution.CallResult(err)
-
-            return execution.CallResult.from_responses(interrupt.responses)
-        except _UserError as err:
-            return execution.CallResult(err.err)
-        except step_lib.SkipInterrupt as err:
-            # This should only happen in a non-deterministic scenario, where
-            # step targeting is enabled and an unexpected step is encountered.
-            # We don't currently have a way to recover from this scenario.
-
-            return execution.CallResult(
-                errors.StepUnexpectedError(
-                    f'found step "{err.step_id}" when targeting a different step'
-                )
-            )
-        except Exception as err:
-            return execution.CallResult(err)
-
     def call_sync(
         self,
         client: client_lib.Inngest,
-        ctx: Context,
+        ctx: execution.Context,
         fn_id: str,
         middleware: middleware_lib.MiddlewareManager,
         steps: step_lib.StepMemos,
@@ -315,15 +193,31 @@ class Function:
         for m in self._middleware:
             middleware.add(m)
 
-        # Move business logic to a private method to make it simpler to run the
-        # transform_output hook on every call result code path
-        call_res = self._call_sync(
+        handler: typing.Union[
+            execution.FunctionHandlerAsync, execution.FunctionHandlerSync
+        ]
+        if self.id == fn_id:
+            handler = self._handler
+        elif self.on_failure_fn_id == fn_id:
+            if self._opts.on_failure is None:
+                return execution.CallResult(
+                    errors.FunctionNotFoundError("on_failure not defined")
+                )
+            handler = self._opts.on_failure
+        else:
+            return execution.CallResult(
+                errors.FunctionNotFoundError("function ID mismatch")
+            )
+
+        call_res = orchestrator.OrchestratorV0Sync(
+            steps,
+            middleware,
+            target_hashed_id,
+        ).run(
             client,
             ctx,
-            fn_id,
-            middleware,
-            steps,
-            target_hashed_id,
+            handler,
+            self,
         )
 
         err = middleware.transform_output_sync(call_res)
@@ -335,90 +229,6 @@ class Function:
             return execution.CallResult(err)
 
         return call_res
-
-    def _call_sync(
-        self,
-        client: client_lib.Inngest,
-        ctx: Context,
-        fn_id: str,
-        middleware: middleware_lib.MiddlewareManager,
-        steps: step_lib.StepMemos,
-        target_hashed_id: typing.Optional[str],
-    ) -> execution.CallResult:
-        # Give middleware the opportunity to change some of params passed to the
-        # user's handler.
-        middleware_err = middleware.transform_input_sync(ctx, self, steps)
-        if isinstance(middleware_err, Exception):
-            return execution.CallResult(middleware_err)
-
-        # No memoized data means we're calling the function for the first time.
-        if steps.size == 0:
-            err = middleware.before_execution_sync()
-            if isinstance(err, Exception):
-                return execution.CallResult(err)
-
-        try:
-            handler: typing.Union[FunctionHandlerAsync, FunctionHandlerSync]
-            if self.id == fn_id:
-                handler = self._handler
-            elif self.on_failure_fn_id == fn_id:
-                if self._opts.on_failure is None:
-                    return execution.CallResult(
-                        errors.FunctionNotFoundError("on_failure not defined")
-                    )
-                handler = self._opts.on_failure
-            else:
-                return execution.CallResult(
-                    errors.FunctionNotFoundError("function ID mismatch")
-                )
-
-            if _is_function_handler_sync(handler):
-                try:
-                    output: object = handler(
-                        ctx=ctx,
-                        step=step_lib.StepSync(
-                            client,
-                            steps,
-                            middleware,
-                            step_lib.StepIDCounter(),
-                            target_hashed_id,
-                        ),
-                    )
-                except Exception as user_err:
-                    transforms.remove_first_traceback_frame(user_err)
-                    raise _UserError(user_err)
-            else:
-                return execution.CallResult(
-                    errors.AsyncUnsupportedError(
-                        "encountered async function in non-async context"
-                    )
-                )
-
-            err = middleware.after_execution_sync()
-            if isinstance(err, Exception):
-                return execution.CallResult(err)
-
-            return execution.CallResult(output=output)
-        except step_lib.ResponseInterrupt as interrupt:
-            err = middleware.after_execution_sync()
-            if isinstance(err, Exception):
-                return execution.CallResult(err)
-
-            return execution.CallResult.from_responses(interrupt.responses)
-        except _UserError as err:
-            return execution.CallResult(err.err)
-        except step_lib.SkipInterrupt as err:
-            # This should only happen in a non-deterministic scenario, where
-            # step targeting is enabled and an unexpected step is encountered.
-            # We don't currently have a way to recover from this scenario.
-
-            return execution.CallResult(
-                errors.StepUnexpectedError(
-                    f'found step "{err.step_id}" when targeting a different step'
-                )
-            )
-        except Exception as err:
-            return execution.CallResult(err)
 
     def get_config(self, app_url: str) -> _Config:
         fn_id = self._opts.fully_qualified_id
@@ -510,12 +320,3 @@ class Function:
 
     def get_id(self) -> str:
         return self._opts.fully_qualified_id
-
-
-class _UserError(Exception):
-    """
-    Wrap an error that occurred in user code.
-    """
-
-    def __init__(self, err: Exception) -> None:
-        self.err = err
