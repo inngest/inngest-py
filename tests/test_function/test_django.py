@@ -56,7 +56,7 @@ urlpatterns = [
 ]
 
 
-class TestFunctions(unittest.TestCase):
+class TestFunctions(unittest.IsolatedAsyncioTestCase):
     client: inngest.Inngest
     django_client: django.test.Client
     proxy: http_proxy.Proxy

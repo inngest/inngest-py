@@ -38,7 +38,7 @@ for case in _cases:
 #   the Dev Server since sometimes it converts 127.0.0.1 to localhost.
 # - Binds to a different random port for each test, which necessitates
 #   registration on each test.
-class TestFunctions(unittest.TestCase):
+class TestFunctions(unittest.IsolatedAsyncioTestCase):
     client = _client
     tornado_thread: threading.Thread
 

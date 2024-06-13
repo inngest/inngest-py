@@ -92,7 +92,7 @@ def create(
             else:
                 raise Exception(f"unexpected i: {i}")
 
-    def run_test(self: base.TestClass) -> None:
+    async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
         run_id = state.wait_for_run_id()
         tests.helper.client.wait_for_run_status(

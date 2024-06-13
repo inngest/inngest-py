@@ -2,7 +2,8 @@ import inngest
 from inngest._internal import const
 
 from . import (
-    async_gather,
+    asyncio_gather,
+    asyncio_race,
     base,
     batch_that_needs_api,
     cancel,
@@ -44,7 +45,8 @@ from . import (
 )
 
 _modules = (
-    async_gather,
+    asyncio_gather,
+    asyncio_race,
     batch_that_needs_api,
     cancel,
     change_step_error,

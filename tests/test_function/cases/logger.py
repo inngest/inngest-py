@@ -113,7 +113,7 @@ def create(
 
         ctx.logger.info("function end")
 
-    def run_test(self: base.TestClass) -> None:
+    async def run_test(self: base.TestClass) -> None:
         self.client.set_logger(_logger)
         self.client.send_sync(inngest.Event(name=event_name))
         run_id = state.wait_for_run_id()

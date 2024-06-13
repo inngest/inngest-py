@@ -11,5 +11,6 @@
   "mypy-type-checker.importStrategy": "fromEnvironment",
   "mypy-type-checker.preferDaemon": true,
   "python.analysis.typeCheckingMode": "basic",
-  "python.languageServer": "Pylance"
+  "python.languageServer": "Pylance",
+  "ruff.fixAll": true
 }

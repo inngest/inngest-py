@@ -1,13 +1,14 @@
-import typing
+import threading
 import unittest
 
 import fastapi
 import fastapi.testclient
+import uvicorn
 
 import inngest
 import inngest.fast_api
 from inngest._internal import const
-from tests import base, dev_server, http_proxy
+from tests import base, dev_server, net
 
 from . import cases
 
@@ -30,49 +31,37 @@ for case in _cases:
         _fns.append(case.fn)
 
 
-class TestFunctions(unittest.TestCase):
-    app: fastapi.FastAPI
-    client: inngest.Inngest
-    dev_server_port: int
-    fast_api_client: fastapi.testclient.TestClient
-    proxy: http_proxy.Proxy
+class TestFunctions(unittest.IsolatedAsyncioTestCase):
+    client = _client
+    app_thread: threading.Thread
 
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
-        cls.app = fastapi.FastAPI()
-        cls.client = _client
 
-        inngest.fast_api.serve(
-            cls.app,
-            cls.client,
-            _fns,
-        )
-        cls.fast_api_client = fastapi.testclient.TestClient(cls.app)
-        cls.proxy = http_proxy.Proxy(cls.on_proxy_request).start()
-        base.register(cls.proxy.port)
+        port = net.get_available_port()
+
+        def start_app() -> None:
+            app = fastapi.FastAPI()
+            inngest.fast_api.serve(
+                app,
+                _client,
+                _fns,
+            )
+            uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")
+
+        # Start FastAPI in a thread instead of using their test client, since
+        # their test client doesn't seem to actually run requests in parallel
+        # (this is evident in the flakiness of our asyncio race test). If we fix
+        # this issue, we can go back to their test client
+        cls.app_thread = threading.Thread(daemon=True, target=start_app)
+        cls.app_thread.start()
+        base.register(port)
 
     @classmethod
     def tearDownClass(cls) -> None:
         super().tearDownClass()
-        cls.proxy.stop()
-
-    @classmethod
-    def on_proxy_request(
-        cls,
-        *,
-        body: typing.Optional[bytes],
-        headers: dict[str, list[str]],
-        method: str,
-        path: str,
-    ) -> http_proxy.Response:
-        return http_proxy.on_proxy_fast_api_request(
-            cls.fast_api_client,
-            body=body,
-            headers=headers,
-            method=method,
-            path=path,
-        )
+        cls.app_thread.join(timeout=1)
 
 
 for case in _cases:

@@ -77,7 +77,7 @@ def create(
             step_id = f"step_{i}"
             await step.run(step_id, functools.partial(fn, step_id))
 
-    def run_test(self: base.TestClass) -> None:
+    async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
 
         run_id = state.wait_for_run_id()

@@ -51,7 +51,7 @@ def create(
         state.run_count += 1
         state.run_id = ctx.run_id
 
-    def run_test(self: base.TestClass) -> None:
+    async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(
             [
                 inngest.Event(name=event_name),

@@ -61,7 +61,7 @@ def create(
                 state_event.state.run_id = ctx.run_id
                 break
 
-    def run_test(self: base.TestClass) -> None:
+    async def run_test(self: base.TestClass) -> None:
         def trigger_event_and_wait(state_event: StateAndEvent) -> None:
             self.client.send_sync(inngest.Event(name=state_event.event_name))
             run_id = state_event.state.wait_for_run_id()

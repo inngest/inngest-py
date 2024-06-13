@@ -221,6 +221,7 @@ class Inngest:
                 ]
             ],
         ],
+        _experimental_execution: bool = False,
     ) -> typing.Callable[
         [
             typing.Union[
@@ -263,6 +264,7 @@ class Inngest:
                     cancel=cancel,
                     concurrency=concurrency,
                     debounce=debounce,
+                    experimental_execution=_experimental_execution,
                     fully_qualified_id=fully_qualified_fn_id,
                     local_id=fn_id,
                     name=name or fn_id,

@@ -59,7 +59,7 @@ def create(
         state.run_id = ctx.run_id
         state.events = ctx.events
 
-    def run_test(self: base.TestClass) -> None:
+    async def run_test(self: base.TestClass) -> None:
         # Send a large (in terms of bytes, not event count) enough batch to
         # ensure that the SDK needs to fetch the batch from the API
         events = []

@@ -36,6 +36,7 @@ class FunctionOpts(types.BaseModel):
     cancel: typing.Optional[list[function_config.Cancel]] = None
     concurrency: typing.Optional[list[function_config.Concurrency]] = None
     debounce: typing.Optional[function_config.Debounce] = None
+    experimental_execution: bool = False
 
     # Unique within an environment
     fully_qualified_id: str
@@ -119,6 +120,7 @@ class Function:
             list[middleware_lib.UninitializedMiddleware]
         ] = None,
     ) -> None:
+        self._experimental_execution = opts.experimental_execution
         self._handler = handler
         self._middleware = middleware or []
         self._opts = opts
@@ -157,11 +159,20 @@ class Function:
                 errors.FunctionNotFoundError("function ID mismatch")
             )
 
-        orc = orchestrator.OrchestratorV0(
-            steps,
-            middleware,
-            target_hashed_id,
-        )
+        orc: orchestrator.BaseOrchestrator
+        if self._experimental_execution:
+            orc = orchestrator.OrchestratorExperimental(
+                steps,
+                middleware,
+                call_context.stack.stack,
+                target_hashed_id,
+            )
+        else:
+            orc = orchestrator.OrchestratorV0(
+                steps,
+                middleware,
+                target_hashed_id,
+            )
 
         call_res = await orc.run(
             client,

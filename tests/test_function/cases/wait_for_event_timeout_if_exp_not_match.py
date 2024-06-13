@@ -2,8 +2,8 @@
 Wait for event times out if its expression isn't matched
 """
 
+import asyncio
 import datetime
-import time
 import typing
 
 import inngest
@@ -63,7 +63,7 @@ def create(
             timeout=datetime.timedelta(seconds=1),
         )
 
-    def run_test(self: base.TestClass) -> None:
+    async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(
             inngest.Event(
                 data={"id": 123},
@@ -73,7 +73,7 @@ def create(
         run_id = state.wait_for_run_id()
 
         # Sleep long enough for the wait_for_event to register.
-        time.sleep(0.5)
+        await asyncio.sleep(0.5)
 
         self.client.send_sync(
             inngest.Event(
