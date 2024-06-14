@@ -41,7 +41,7 @@ def create(
         state.run_id = ctx.run_id
         return {"foo": {"bar": 1}}
 
-    def run_test(self: base.TestClass) -> None:
+    async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
         run_id = state.wait_for_run_id()
         run = tests.helper.client.wait_for_run_status(

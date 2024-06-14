@@ -31,7 +31,7 @@ for case in _cases:
         _fns.append(case.fn)
 
 
-class TestFunctions(unittest.TestCase):
+class TestFunctions(unittest.IsolatedAsyncioTestCase):
     app: flask.testing.FlaskClient
     client: inngest.Inngest
     dev_server_port: int

@@ -76,7 +76,7 @@ def create(
         # still running after the test is done.
         state.is_done = True
 
-    def run_test(self: base.TestClass) -> None:
+    async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name, data={"id": 123}))
         run_id = state.wait_for_run_id()
         self.client.send_sync(

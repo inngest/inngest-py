@@ -81,11 +81,17 @@ def register(
     app_port: int,
     path: typing.Optional[str] = "/api/inngest",
 ) -> None:
-    res = httpx.put(
-        urllib.parse.urljoin(f"http://{net.HOST}:{app_port}", path),
-        timeout=5,
-    )
-    assert res.status_code == 200
+    start = time.time()
+    while time.time() < start + 5:
+        try:
+            res = httpx.put(
+                urllib.parse.urljoin(f"http://{net.HOST}:{app_port}", path),
+                timeout=5,
+            )
+            assert res.status_code == 200
+            return
+        except Exception:
+            time.sleep(0.1)
 
 
 def set_up(case: _FrameworkTestCase) -> None:

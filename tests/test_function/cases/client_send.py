@@ -1,5 +1,3 @@
-import asyncio
-
 import inngest
 import tests.helper
 from inngest._internal import const
@@ -39,8 +37,8 @@ def create(
     ) -> None:
         state.run_id = ctx.run_id
 
-    def run_test(self: base.TestClass) -> None:
-        asyncio.run(self.client.send(inngest.Event(name=event_name)))
+    async def run_test(self: base.TestClass) -> None:
+        await self.client.send(inngest.Event(name=event_name))
         run_id = state.wait_for_run_id()
         tests.helper.client.wait_for_run_status(
             run_id,

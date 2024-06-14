@@ -112,7 +112,7 @@ def create(
 
         return "function output"
 
-    def run_test(self: base.TestClass) -> None:
+    async def run_test(self: base.TestClass) -> None:
         # Send an event that contains an encrypted field
         self.client.send_sync(
             inngest.Event(

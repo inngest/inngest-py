@@ -19,7 +19,7 @@ class TestClass(typing.Protocol):
 class Case:
     fn: typing.Union[inngest.Function, list[inngest.Function]]
     name: str
-    run_test: typing.Callable[[TestClass], None]
+    run_test: typing.Callable[[TestClass], typing.Awaitable[None]]
 
 
 def create_event_name(framework: const.Framework, test_name: str) -> str:
