@@ -349,8 +349,9 @@ class CommHandler:
             return await self._respond(Exception("events not in request"))
 
         call_res = await fn.call(
+            call.ctx,
             self._client,
-            function.Context(
+            execution.Context(
                 attempt=call.ctx.attempt,
                 event=call.event,
                 events=events,
@@ -423,7 +424,7 @@ class CommHandler:
 
         call_res = fn.call_sync(
             self._client,
-            function.Context(
+            execution.Context(
                 attempt=call.ctx.attempt,
                 event=call.event,
                 events=events,

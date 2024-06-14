@@ -218,7 +218,7 @@ class MiddlewareManager:
 
     async def transform_input(
         self,
-        ctx: function.Context,
+        ctx: execution.Context,
         function: function.Function,
         steps: step_lib.StepMemos,
     ) -> types.MaybeError[None]:
@@ -242,7 +242,7 @@ class MiddlewareManager:
 
     def transform_input_sync(
         self,
-        ctx: function.Context,
+        ctx: execution.Context,
         function: function.Function,
         steps: step_lib.StepMemos,
     ) -> types.MaybeError[None]:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import enum
 import threading
 import typing
 
@@ -122,7 +123,7 @@ class StepBase:
 
     def _handle_skip(
         self,
-        parsed_step_id: _ParsedStepID,
+        parsed_step_id: ParsedStepID,
     ) -> None:
         """
         Handle a skip interrupt. Step targeting is enabled and this step is not
@@ -135,7 +136,7 @@ class StepBase:
             # Skip this step because a different step is targeted.
             raise SkipInterrupt(parsed_step_id.user_facing)
 
-    def _parse_step_id(self, step_id: str) -> _ParsedStepID:
+    def _parse_step_id(self, step_id: str) -> ParsedStepID:
         """
         Parse a user-specified step ID into a hashed ID and a deduped
         user-facing step ID.
@@ -145,14 +146,14 @@ class StepBase:
         if id_count > 1:
             step_id = f"{step_id}:{id_count - 1}"
 
-        return _ParsedStepID(
+        return ParsedStepID(
             hashed=transforms.hash_step_id(step_id),
             user_facing=step_id,
         )
 
 
 @dataclasses.dataclass
-class _ParsedStepID:
+class ParsedStepID:
     hashed: str
     user_facing: str
 
@@ -185,9 +186,7 @@ class ResponseInterrupt(BaseException):
 
     def __init__(
         self,
-        responses: typing.Union[
-            execution.StepResponse, list[execution.StepResponse]
-        ],
+        responses: typing.Union[StepResponse, list[StepResponse]],
     ) -> None:
         if not isinstance(responses, list):
             responses = [responses]
@@ -214,3 +213,29 @@ class InvokeOptsPayload(types.BaseModel):
 class WaitForEventOpts(types.BaseModel):
     if_exp: typing.Optional[str] = pydantic.Field(..., serialization_alias="if")
     timeout: str
+
+
+class Opcode(enum.Enum):
+    INVOKE = "InvokeFunction"
+    PLANNED = "StepPlanned"
+    SLEEP = "Sleep"
+    STEP_RUN = "StepRun"
+    STEP_ERROR = "StepError"
+    WAIT_FOR_EVENT = "WaitForEvent"
+
+
+class StepInfo(types.BaseModel):
+    display_name: str = pydantic.Field(..., serialization_alias="displayName")
+    id: str
+
+    # Deprecated
+    name: typing.Optional[str] = None
+
+    op: Opcode
+    opts: typing.Optional[dict[str, object]] = None
+
+
+class StepResponse(types.BaseModel):
+    output: object = None
+    original_error: object = pydantic.Field(default=None, exclude=True)
+    step: StepInfo
