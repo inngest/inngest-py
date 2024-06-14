@@ -103,8 +103,9 @@ def create_sync_cases(
     cases = []
     for module in _modules:
         case = module.create(client, framework, is_sync=True)
-        if isinstance(case.fn, list) and len(case.fn) > 1:
-            cases.append(case)
+        if isinstance(case.fn, list) and len(case.fn) == 0:
+            continue
+        cases.append(case)
 
     return cases
 
