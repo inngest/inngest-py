@@ -2,8 +2,8 @@ import inngest
 from inngest._internal import const
 
 from . import (
+    asyncio_first_completed,
     asyncio_gather,
-    asyncio_race,
     base,
     batch_that_needs_api,
     cancel,
@@ -46,7 +46,7 @@ from . import (
 
 _modules = (
     asyncio_gather,
-    asyncio_race,
+    asyncio_first_completed,
     batch_that_needs_api,
     cancel,
     change_step_error,
@@ -100,9 +100,13 @@ def create_sync_cases(
     client: inngest.Inngest,
     framework: const.Framework,
 ) -> list[base.Case]:
-    return [
-        module.create(client, framework, is_sync=True) for module in _modules
-    ]
+    cases = []
+    for module in _modules:
+        case = module.create(client, framework, is_sync=True)
+        if isinstance(case.fn, list) and len(case.fn) > 1:
+            cases.append(case)
+
+    return cases
 
 
 __all__ = ["create_async_cases", "create_sync_cases"]

@@ -26,18 +26,6 @@ def create(
     state = _State()
 
     @client.create_function(
-        fn_id=fn_id,
-        retries=0,
-        trigger=inngest.TriggerEvent(event=event_name),
-    )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
-        # This test is not applicable for sync functions
-        pass
-
-    @client.create_function(
         fn_id=f"{fn_id}/child",
         retries=0,
         trigger=inngest.TriggerEvent(event="never"),
@@ -116,7 +104,8 @@ def create(
         assert state.output == [None, "slow", "fast", None, None, None]
 
     if is_sync:
-        fn = [fn_sync]
+        # This test is not applicable for sync functions
+        fn = []
     else:
         fn = [fn_async, fn_child_async]
 
