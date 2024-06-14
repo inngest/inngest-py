@@ -164,7 +164,7 @@ class Function:
             orc = orchestrator.OrchestratorExperimental(
                 steps,
                 middleware,
-                call_context.stack.stack,
+                call_context.stack.stack or [],
                 target_hashed_id,
             )
         else:

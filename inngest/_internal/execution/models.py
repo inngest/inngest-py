@@ -27,7 +27,7 @@ class CallContext(types.BaseModel):
 
 
 class CallStack(types.BaseModel):
-    stack: list[str]
+    stack: typing.Optional[list[str]] = None
 
 
 @dataclasses.dataclass

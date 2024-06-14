@@ -24,8 +24,3 @@ async def wait_for_next_loop() -> None:
     fut = asyncio.Future[None]()
     loop.call_soon(lambda: fut.set_result(None))
     await fut
-
-
-async def wait_forever() -> None:
-    while True:
-        await asyncio.sleep(60)
