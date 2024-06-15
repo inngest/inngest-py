@@ -53,7 +53,7 @@ def serve(
         server_kind: typing.Optional[const.ServerKind] = None
 
         try:
-            if not isinstance(event, dict) and "http" not in event:
+            if "http" not in event:
                 raise errors.BodyInvalidError('missing "http" key in event')
 
             http = _EventHTTP.from_raw(event["http"])
