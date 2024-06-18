@@ -12,12 +12,11 @@ from inngest._internal import (
     const,
     env_lib,
     errors,
-    event_lib,
     execution,
     function,
-    function_config,
     middleware_lib,
     net,
+    server_lib,
     types,
 )
 
@@ -91,7 +90,7 @@ class Inngest:
         self._mode = _get_mode(self.logger, is_production)
 
         # TODO: Delete this during next major version bump
-        self.is_production = self._mode == const.ServerKind.CLOUD
+        self.is_production = self._mode == server_lib.ServerKind.CLOUD
 
         self.middleware = middleware or []
         self._event_key = event_key or os.getenv(const.EnvKey.EVENT_KEY.value)
@@ -120,7 +119,7 @@ class Inngest:
 
         api_origin = api_base_url or os.getenv(const.EnvKey.API_BASE_URL.value)
         if api_origin is None:
-            if self._mode == const.ServerKind.DEV_SERVER:
+            if self._mode == server_lib.ServerKind.DEV_SERVER:
                 api_origin = const.DEV_SERVER_ORIGIN
             else:
                 api_origin = const.DEFAULT_API_ORIGIN
@@ -130,7 +129,7 @@ class Inngest:
             const.EnvKey.EVENT_API_BASE_URL.value
         )
         if event_origin is None:
-            if self._mode == const.ServerKind.DEV_SERVER:
+            if self._mode == server_lib.ServerKind.DEV_SERVER:
                 event_origin = const.DEV_SERVER_ORIGIN
             else:
                 event_origin = const.DEFAULT_EVENT_ORIGIN
@@ -141,13 +140,13 @@ class Inngest:
 
     def _build_send_request(
         self,
-        events: list[event_lib.Event],
+        events: list[server_lib.Event],
     ) -> types.MaybeError[httpx.Request]:
         event_key: str
         if self._event_key is not None:
             event_key = self._event_key
         else:
-            if self._mode == const.ServerKind.DEV_SERVER:
+            if self._mode == server_lib.ServerKind.DEV_SERVER:
                 event_key = _DEV_SERVER_EVENT_KEY
             else:
                 return errors.EventKeyUnspecifiedError()
@@ -196,10 +195,10 @@ class Inngest:
     def create_function(
         self,
         *,
-        batch_events: typing.Optional[function_config.Batch] = None,
-        cancel: typing.Optional[list[function_config.Cancel]] = None,
-        concurrency: typing.Optional[list[function_config.Concurrency]] = None,
-        debounce: typing.Optional[function_config.Debounce] = None,
+        batch_events: typing.Optional[server_lib.Batch] = None,
+        cancel: typing.Optional[list[server_lib.Cancel]] = None,
+        concurrency: typing.Optional[list[server_lib.Concurrency]] = None,
+        debounce: typing.Optional[server_lib.Debounce] = None,
         fn_id: str,
         middleware: typing.Optional[
             list[middleware_lib.UninitializedMiddleware]
@@ -208,18 +207,14 @@ class Inngest:
         on_failure: typing.Union[
             execution.FunctionHandlerAsync, execution.FunctionHandlerSync, None
         ] = None,
-        priority: typing.Optional[function_config.Priority] = None,
-        rate_limit: typing.Optional[function_config.RateLimit] = None,
+        priority: typing.Optional[server_lib.Priority] = None,
+        rate_limit: typing.Optional[server_lib.RateLimit] = None,
         retries: typing.Optional[int] = None,
-        throttle: typing.Optional[function_config.Throttle] = None,
+        throttle: typing.Optional[server_lib.Throttle] = None,
         trigger: typing.Union[
-            function_config.TriggerCron,
-            function_config.TriggerEvent,
-            list[
-                typing.Union[
-                    function_config.TriggerCron, function_config.TriggerEvent
-                ]
-            ],
+            server_lib.TriggerCron,
+            server_lib.TriggerEvent,
+            list[typing.Union[server_lib.TriggerCron, server_lib.TriggerEvent]],
         ],
         _experimental_execution: bool = False,
     ) -> typing.Callable[
@@ -338,7 +333,7 @@ class Inngest:
 
     async def _get_batch(
         self, run_id: str
-    ) -> types.MaybeError[list[event_lib.Event]]:
+    ) -> types.MaybeError[list[server_lib.Event]]:
         """
         Fetch a batch of events from the API
         """
@@ -357,12 +352,12 @@ class Inngest:
 
         events = []
         for e in data:
-            events.append(event_lib.Event.model_validate(e))
+            events.append(server_lib.Event.model_validate(e))
         return events
 
     def _get_batch_sync(
         self, run_id: str
-    ) -> types.MaybeError[list[event_lib.Event]]:
+    ) -> types.MaybeError[list[server_lib.Event]]:
         """
         Fetch a batch of events from the API
         """
@@ -381,7 +376,7 @@ class Inngest:
 
         events = []
         for e in data:
-            events.append(event_lib.Event.model_validate(e))
+            events.append(server_lib.Event.model_validate(e))
         return events
 
     async def _get_steps(
@@ -428,7 +423,7 @@ class Inngest:
 
     async def send(
         self,
-        events: typing.Union[event_lib.Event, list[event_lib.Event]],
+        events: typing.Union[server_lib.Event, list[server_lib.Event]],
         *,
         skip_middleware: bool = False,
     ) -> list[str]:
@@ -480,7 +475,7 @@ class Inngest:
 
     def send_sync(
         self,
-        events: typing.Union[event_lib.Event, list[event_lib.Event]],
+        events: typing.Union[server_lib.Event, list[server_lib.Event]],
         *,
         skip_middleware: bool = False,
     ) -> list[str]:
@@ -533,22 +528,22 @@ class Inngest:
 def _get_mode(
     logger: types.Logger,
     is_production: typing.Optional[bool],
-) -> const.ServerKind:
+) -> server_lib.ServerKind:
     if is_production is not None:
         if is_production:
             logger.debug("Cloud mode enabled by client argument")
-            return const.ServerKind.CLOUD
+            return server_lib.ServerKind.CLOUD
 
         logger.debug("Dev Server mode enabled by client argument")
-        return const.ServerKind.DEV_SERVER
+        return server_lib.ServerKind.DEV_SERVER
 
     if env_lib.is_true(const.EnvKey.DEV):
         logger.debug(
             f"Dev Server mode enabled by {const.EnvKey.DEV.value} env var"
         )
-        return const.ServerKind.DEV_SERVER
+        return server_lib.ServerKind.DEV_SERVER
 
     logger.debug(
         f"Cloud mode enabled. Set {const.EnvKey.DEV.value} to enable development mode"
     )
-    return const.ServerKind.CLOUD
+    return server_lib.ServerKind.CLOUD

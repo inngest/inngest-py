@@ -8,15 +8,14 @@ import tornado.web
 from inngest._internal import (
     client_lib,
     comm,
-    const,
     errors,
-    execution,
     function,
     net,
+    server_lib,
     transforms,
 )
 
-FRAMEWORK = const.Framework.TORNADO
+FRAMEWORK = server_lib.Framework.TORNADO
 
 
 def serve(
@@ -78,21 +77,21 @@ def serve(
         def post(self) -> None:
             fn_id: typing.Optional[str]
             raw_fn_id = self.request.query_arguments.get(
-                const.QueryParamKey.FUNCTION_ID.value
+                server_lib.QueryParamKey.FUNCTION_ID.value
             )
             if raw_fn_id is None or len(raw_fn_id) == 0:
                 raise errors.QueryParamMissingError(
-                    const.QueryParamKey.FUNCTION_ID.value
+                    server_lib.QueryParamKey.FUNCTION_ID.value
                 )
             fn_id = raw_fn_id[0].decode("utf-8")
 
             step_id: typing.Optional[str]
             raw_step_id = self.request.query_arguments.get(
-                const.QueryParamKey.STEP_ID.value
+                server_lib.QueryParamKey.STEP_ID.value
             )
             if raw_step_id is None or len(raw_step_id) == 0:
                 raise errors.QueryParamMissingError(
-                    const.QueryParamKey.STEP_ID.value
+                    server_lib.QueryParamKey.STEP_ID.value
                 )
             step_id = raw_step_id[0].decode("utf-8")
 
@@ -109,7 +108,9 @@ def serve(
                 mode=client._mode,
             )
 
-            call = execution.Call.from_raw(json.loads(self.request.body))
+            call = server_lib.ServerRequest.from_raw(
+                json.loads(self.request.body)
+            )
             if isinstance(call, Exception):
                 return self._write_comm_response(
                     comm.CommResponse.from_error(client.logger, call),
@@ -136,7 +137,7 @@ def serve(
 
             sync_id: typing.Optional[str] = None
             raw_sync_id = self.request.query_arguments.get(
-                const.QueryParamKey.SYNC_ID.value
+                server_lib.QueryParamKey.SYNC_ID.value
             )
             if raw_sync_id is not None:
                 sync_id = raw_sync_id[0].decode("utf-8")
@@ -156,7 +157,7 @@ def serve(
         def _write_comm_response(
             self,
             comm_res: comm.CommResponse,
-            server_kind: typing.Optional[const.ServerKind],
+            server_kind: typing.Optional[server_lib.ServerKind],
         ) -> None:
             body = transforms.dump_json(comm_res.body)
             if isinstance(body, Exception):

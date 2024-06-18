@@ -1,5 +1,5 @@
 import inngest
-from inngest._internal import const
+from inngest._internal import server_lib
 
 from . import (
     asyncio_first_completed,
@@ -89,7 +89,7 @@ _modules = (
 
 def create_async_cases(
     client: inngest.Inngest,
-    framework: const.Framework,
+    framework: server_lib.Framework,
 ) -> list[base.Case]:
     return [
         module.create(client, framework, is_sync=False) for module in _modules
@@ -98,7 +98,7 @@ def create_async_cases(
 
 def create_sync_cases(
     client: inngest.Inngest,
-    framework: const.Framework,
+    framework: server_lib.Framework,
 ) -> list[base.Case]:
     cases = []
     for module in _modules:

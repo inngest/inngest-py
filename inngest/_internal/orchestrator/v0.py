@@ -3,7 +3,14 @@ from __future__ import annotations
 import asyncio
 import typing
 
-from inngest._internal import errors, execution, step_lib, transforms, types
+from inngest._internal import (
+    errors,
+    execution,
+    server_lib,
+    step_lib,
+    transforms,
+    types,
+)
 
 from .utils import is_function_handler_async, is_function_handler_sync
 
@@ -71,15 +78,15 @@ class OrchestratorV0:
 
         is_targeting_enabled = self._target_hashed_id is not None
         if inside_parallel and not is_targeting_enabled:
-            if step_info.op == step_lib.Opcode.STEP_RUN:
-                step_info.op = step_lib.Opcode.PLANNED
+            if step_info.op == server_lib.Opcode.STEP_RUN:
+                step_info.op = server_lib.Opcode.PLANNED
 
             # Plan this step because we're in parallel mode.
             raise step_lib.ResponseInterrupt(
                 step_lib.StepResponse(step=step_info)
             )
 
-        if step_info.op == step_lib.Opcode.STEP_RUN:
+        if step_info.op == server_lib.Opcode.STEP_RUN:
             return step
 
         raise step_lib.ResponseInterrupt(step_lib.StepResponse(step=step_info))

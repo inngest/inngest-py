@@ -3,7 +3,14 @@ from __future__ import annotations
 import asyncio
 import typing
 
-from inngest._internal import errors, execution, step_lib, transforms, types
+from inngest._internal import (
+    errors,
+    execution,
+    server_lib,
+    step_lib,
+    transforms,
+    types,
+)
 
 from .utils import (
     is_function_handler_async,
@@ -232,8 +239,8 @@ class OrchestratorExperimental:
                 step.output, types.EmptySentinel
             )
             if not is_memoized:
-                if step.info.op == step_lib.Opcode.STEP_RUN:
-                    step.info.op = step_lib.Opcode.PLANNED
+                if step.info.op == server_lib.Opcode.STEP_RUN:
+                    step.info.op = server_lib.Opcode.PLANNED
                 plans.append(step_lib.StepResponse(step=step.info))
 
         if len(plans) > 0:

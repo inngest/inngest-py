@@ -8,11 +8,11 @@ import tornado.web
 
 import inngest
 import inngest.tornado
-from inngest._internal import const
+from inngest._internal import server_lib
 
 from . import base, cases
 
-_framework = const.Framework.TORNADO
+_framework = server_lib.Framework.TORNADO
 
 
 class TestRegistration(tornado.testing.AsyncHTTPTestCase):

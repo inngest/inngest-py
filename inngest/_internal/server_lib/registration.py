@@ -5,7 +5,9 @@ import typing
 
 import pydantic
 
-from . import errors, transforms, types
+from inngest._internal import errors, transforms, types
+
+from .consts import DeployType, Framework
 
 
 class _BaseConfig(types.BaseModel):
@@ -157,3 +159,13 @@ class TriggerCron(_BaseConfig):
 class TriggerEvent(_BaseConfig):
     event: str
     expression: typing.Optional[str] = None
+
+
+class RegisterRequest(types.BaseModel):
+    app_name: str = pydantic.Field(..., serialization_alias="appname")
+    deploy_type: DeployType
+    framework: Framework
+    functions: list[FunctionConfig] = pydantic.Field(min_length=1)
+    sdk: str
+    url: str
+    v: str

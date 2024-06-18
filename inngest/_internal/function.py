@@ -9,12 +9,11 @@ import pydantic
 
 from inngest._internal import (
     client_lib,
-    const,
     errors,
     execution,
-    function_config,
     middleware_lib,
     orchestrator,
+    server_lib,
     step_lib,
     types,
 )
@@ -23,19 +22,19 @@ from inngest._internal import (
 @dataclasses.dataclass
 class _Config:
     # The user-defined function
-    main: function_config.FunctionConfig
+    main: server_lib.FunctionConfig
 
     # The internal on_failure function
-    on_failure: typing.Optional[function_config.FunctionConfig]
+    on_failure: typing.Optional[server_lib.FunctionConfig]
 
 
 class FunctionOpts(types.BaseModel):
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
-    batch_events: typing.Optional[function_config.Batch] = None
-    cancel: typing.Optional[list[function_config.Cancel]] = None
-    concurrency: typing.Optional[list[function_config.Concurrency]] = None
-    debounce: typing.Optional[function_config.Debounce] = None
+    batch_events: typing.Optional[server_lib.Batch] = None
+    cancel: typing.Optional[list[server_lib.Cancel]] = None
+    concurrency: typing.Optional[list[server_lib.Concurrency]] = None
+    debounce: typing.Optional[server_lib.Debounce] = None
     experimental_execution: bool = False
 
     # Unique within an environment
@@ -48,10 +47,10 @@ class FunctionOpts(types.BaseModel):
     on_failure: typing.Union[
         execution.FunctionHandlerAsync, execution.FunctionHandlerSync, None
     ] = None
-    priority: typing.Optional[function_config.Priority] = None
-    rate_limit: typing.Optional[function_config.RateLimit] = None
+    priority: typing.Optional[server_lib.Priority] = None
+    rate_limit: typing.Optional[server_lib.RateLimit] = None
     retries: typing.Optional[int] = None
-    throttle: typing.Optional[function_config.Throttle] = None
+    throttle: typing.Optional[server_lib.Throttle] = None
 
     def convert_validation_error(
         self,
@@ -67,7 +66,7 @@ class Function:
     _on_failure_fn_id: typing.Optional[str] = None
     _opts: FunctionOpts
     _triggers: list[
-        typing.Union[function_config.TriggerCron, function_config.TriggerEvent]
+        typing.Union[server_lib.TriggerCron, server_lib.TriggerEvent]
     ]
 
     @property
@@ -105,13 +104,9 @@ class Function:
         self,
         opts: FunctionOpts,
         trigger: typing.Union[
-            function_config.TriggerCron,
-            function_config.TriggerEvent,
-            list[
-                typing.Union[
-                    function_config.TriggerCron, function_config.TriggerEvent
-                ]
-            ],
+            server_lib.TriggerCron,
+            server_lib.TriggerEvent,
+            list[typing.Union[server_lib.TriggerCron, server_lib.TriggerEvent]],
         ],
         handler: typing.Union[
             execution.FunctionHandlerAsync, execution.FunctionHandlerSync
@@ -131,11 +126,11 @@ class Function:
 
     async def call(
         self,
-        call_context: execution.CallContext,
         client: client_lib.Inngest,
         ctx: execution.Context,
         fn_id: str,
         middleware: middleware_lib.MiddlewareManager,
+        stack: list[str],
         steps: step_lib.StepMemos,
         target_hashed_id: typing.Optional[str],
     ) -> execution.CallResult:
@@ -164,7 +159,7 @@ class Function:
             orc = orchestrator.OrchestratorExperimental(
                 steps,
                 middleware,
-                call_context.stack.stack or [],
+                stack,
                 target_hashed_id,
             )
         else:
@@ -246,7 +241,7 @@ class Function:
         name = self._opts.name
 
         if self._opts.retries is not None:
-            retries = function_config.Retries(attempts=self._opts.retries)
+            retries = server_lib.Retries(attempts=self._opts.retries)
         else:
             retries = None
 
@@ -256,12 +251,12 @@ class Function:
             + urllib.parse.urlencode(
                 {
                     "fnId": fn_id,
-                    "stepId": const.ROOT_STEP_ID,
+                    "stepId": server_lib.ROOT_STEP_ID,
                 }
             )
         )
 
-        main = function_config.FunctionConfig(
+        main = server_lib.FunctionConfig(
             batch_events=self._opts.batch_events,
             cancel=self._opts.cancel,
             concurrency=self._opts.concurrency,
@@ -271,11 +266,11 @@ class Function:
             priority=self._opts.priority,
             rate_limit=self._opts.rate_limit,
             steps={
-                const.ROOT_STEP_ID: function_config.Step(
-                    id=const.ROOT_STEP_ID,
-                    name=const.ROOT_STEP_ID,
+                server_lib.ROOT_STEP_ID: server_lib.Step(
+                    id=server_lib.ROOT_STEP_ID,
+                    name=server_lib.ROOT_STEP_ID,
                     retries=retries,
-                    runtime=function_config.Runtime(
+                    runtime=server_lib.Runtime(
                         type="http",
                         url=url,
                     ),
@@ -293,12 +288,12 @@ class Function:
                 + urllib.parse.urlencode(
                     {
                         "fnId": self.on_failure_fn_id,
-                        "stepId": const.ROOT_STEP_ID,
+                        "stepId": server_lib.ROOT_STEP_ID,
                     }
                 )
             )
 
-            on_failure = function_config.FunctionConfig(
+            on_failure = server_lib.FunctionConfig(
                 batch_events=None,
                 cancel=None,
                 concurrency=None,
@@ -308,11 +303,11 @@ class Function:
                 priority=None,
                 rate_limit=None,
                 steps={
-                    const.ROOT_STEP_ID: function_config.Step(
-                        id=const.ROOT_STEP_ID,
-                        name=const.ROOT_STEP_ID,
-                        retries=function_config.Retries(attempts=0),
-                        runtime=function_config.Runtime(
+                    server_lib.ROOT_STEP_ID: server_lib.Step(
+                        id=server_lib.ROOT_STEP_ID,
+                        name=server_lib.ROOT_STEP_ID,
+                        retries=server_lib.Retries(attempts=0),
+                        runtime=server_lib.Runtime(
                             type="http",
                             url=url,
                         ),
@@ -320,8 +315,8 @@ class Function:
                 },
                 throttle=None,
                 triggers=[
-                    function_config.TriggerEvent(
-                        event=const.InternalEvents.FUNCTION_FAILED.value,
+                    server_lib.TriggerEvent(
+                        event=server_lib.InternalEvents.FUNCTION_FAILED.value,
                         expression=f"event.data.function_id == '{self.id}'",
                     )
                 ],

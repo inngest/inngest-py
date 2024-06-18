@@ -8,15 +8,14 @@ import flask
 from ._internal import (
     client_lib,
     comm,
-    const,
     errors,
-    execution,
     function,
     net,
+    server_lib,
     transforms,
 )
 
-FRAMEWORK = const.Framework.FLASK
+FRAMEWORK = server_lib.Framework.FLASK
 
 
 def serve(
@@ -106,20 +105,24 @@ def _create_handler_async(
 
         if flask.request.method == "POST":
             fn_id = flask.request.args.get(
-                const.QueryParamKey.FUNCTION_ID.value
+                server_lib.QueryParamKey.FUNCTION_ID.value
             )
             if fn_id is None:
                 raise errors.QueryParamMissingError(
-                    const.QueryParamKey.FUNCTION_ID.value
+                    server_lib.QueryParamKey.FUNCTION_ID.value
                 )
 
-            step_id = flask.request.args.get(const.QueryParamKey.STEP_ID.value)
+            step_id = flask.request.args.get(
+                server_lib.QueryParamKey.STEP_ID.value
+            )
             if step_id is None:
                 raise errors.QueryParamMissingError(
-                    const.QueryParamKey.STEP_ID.value
+                    server_lib.QueryParamKey.STEP_ID.value
                 )
 
-            call = execution.Call.from_raw(json.loads(flask.request.data))
+            call = server_lib.ServerRequest.from_raw(
+                json.loads(flask.request.data)
+            )
             if isinstance(call, Exception):
                 return _to_response(
                     client,
@@ -140,7 +143,9 @@ def _create_handler_async(
             )
 
         if flask.request.method == "PUT":
-            sync_id = flask.request.args.get(const.QueryParamKey.SYNC_ID.value)
+            sync_id = flask.request.args.get(
+                server_lib.QueryParamKey.SYNC_ID.value
+            )
 
             return _to_response(
                 client,
@@ -197,20 +202,24 @@ def _create_handler_sync(
 
         if flask.request.method == "POST":
             fn_id = flask.request.args.get(
-                const.QueryParamKey.FUNCTION_ID.value
+                server_lib.QueryParamKey.FUNCTION_ID.value
             )
             if fn_id is None:
                 raise errors.QueryParamMissingError(
-                    const.QueryParamKey.FUNCTION_ID.value
+                    server_lib.QueryParamKey.FUNCTION_ID.value
                 )
 
-            step_id = flask.request.args.get(const.QueryParamKey.STEP_ID.value)
+            step_id = flask.request.args.get(
+                server_lib.QueryParamKey.STEP_ID.value
+            )
             if step_id is None:
                 raise errors.QueryParamMissingError(
-                    const.QueryParamKey.STEP_ID.value
+                    server_lib.QueryParamKey.STEP_ID.value
                 )
 
-            call = execution.Call.from_raw(json.loads(flask.request.data))
+            call = server_lib.ServerRequest.from_raw(
+                json.loads(flask.request.data)
+            )
             if isinstance(call, Exception):
                 return _to_response(
                     client,
@@ -231,7 +240,9 @@ def _create_handler_sync(
             )
 
         if flask.request.method == "PUT":
-            sync_id = flask.request.args.get(const.QueryParamKey.SYNC_ID.value)
+            sync_id = flask.request.args.get(
+                server_lib.QueryParamKey.SYNC_ID.value
+            )
 
             return _to_response(
                 client,
@@ -254,7 +265,7 @@ def _create_handler_sync(
 def _to_response(
     client: client_lib.Inngest,
     comm_res: comm.CommResponse,
-    server_kind: typing.Optional[const.ServerKind],
+    server_kind: typing.Optional[server_lib.ServerKind],
 ) -> flask.Response:
     body = transforms.dump_json(comm_res.body)
     if isinstance(body, Exception):

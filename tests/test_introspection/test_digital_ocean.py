@@ -6,13 +6,13 @@ import flask.testing
 import inngest
 import inngest.digital_ocean
 import inngest.fast_api
-from inngest._internal import const
+from inngest._internal import server_lib
 from inngest.experimental import digital_ocean_simulator
 from tests import base
 
 
 class TestIntrospection(base.BaseTestIntrospection):
-    framework = const.Framework.DIGITAL_OCEAN
+    framework = server_lib.Framework.DIGITAL_OCEAN
 
     def _serve(self, client: inngest.Inngest) -> flask.testing.FlaskClient:
         main = inngest.digital_ocean.serve(
@@ -53,7 +53,7 @@ class TestIntrospection(base.BaseTestIntrospection):
         res = app_client.get(
             digital_ocean_simulator.FULL_PATH,
             headers={
-                const.HeaderKey.SIGNATURE.value: self.create_signature(),
+                server_lib.HeaderKey.SIGNATURE.value: self.create_signature(),
             },
         )
         assert res.status_code == 200

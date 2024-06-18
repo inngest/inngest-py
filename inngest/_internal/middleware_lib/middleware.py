@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import typing
 
-from inngest._internal import event_lib, execution, function, step_lib
+from inngest._internal import execution, function, server_lib, step_lib
 
 if typing.TYPE_CHECKING:
     from inngest._internal import client_lib
@@ -67,7 +67,7 @@ class Middleware:
         """
         return None
 
-    async def before_send_events(self, events: list[event_lib.Event]) -> None:
+    async def before_send_events(self, events: list[server_lib.Event]) -> None:
         """
         Before sending events.
         """
@@ -154,7 +154,7 @@ class MiddlewareSync:
         """
         return None
 
-    def before_send_events(self, events: list[event_lib.Event]) -> None:
+    def before_send_events(self, events: list[server_lib.Event]) -> None:
         """
         Before sending events.
         """
@@ -202,5 +202,5 @@ class TransformOutputResult:
 @dataclasses.dataclass
 class TransformOutputStepInfo:
     id: str
-    op: step_lib.Opcode
+    op: server_lib.Opcode
     opts: typing.Optional[dict[str, object]]

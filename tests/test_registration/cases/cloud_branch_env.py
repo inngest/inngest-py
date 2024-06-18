@@ -4,7 +4,7 @@ import typing
 
 import inngest
 import inngest.fast_api
-from inngest._internal import const
+from inngest._internal import const, server_lib
 from tests import http_proxy
 
 from . import base
@@ -12,7 +12,7 @@ from . import base
 _TEST_NAME = base.create_test_name(__file__)
 
 
-def create(framework: const.Framework) -> base.Case:
+def create(framework: server_lib.Framework) -> base.Case:
     def run_test(self: base.TestCase) -> None:
         """
         Test that the SDK correctly syncs itself with Cloud when using a branch

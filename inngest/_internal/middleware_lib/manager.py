@@ -5,9 +5,9 @@ import typing
 
 from inngest._internal import (
     errors,
-    event_lib,
     execution,
     function,
+    server_lib,
     step_lib,
     transforms,
     types,
@@ -194,7 +194,7 @@ class MiddlewareManager:
 
     async def before_send_events(
         self,
-        events: list[event_lib.Event],
+        events: list[server_lib.Event],
     ) -> types.MaybeError[None]:
         try:
             for m in self._middleware:
@@ -205,7 +205,7 @@ class MiddlewareManager:
 
     def before_send_events_sync(
         self,
-        events: list[event_lib.Event],
+        events: list[server_lib.Event],
     ) -> types.MaybeError[None]:
         try:
             for m in self._middleware:

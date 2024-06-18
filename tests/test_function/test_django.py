@@ -12,12 +12,12 @@ import django.test
 
 import inngest
 import inngest.django
-from inngest._internal import const
+from inngest._internal import server_lib
 from tests import base, dev_server, http_proxy
 
 from . import cases
 
-_framework = const.Framework.DJANGO
+_framework = server_lib.Framework.DJANGO
 _app_id = f"{_framework.value}-functions"
 
 

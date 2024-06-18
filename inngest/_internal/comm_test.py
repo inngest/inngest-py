@@ -5,7 +5,7 @@ import logging
 import unittest
 
 import inngest
-from inngest._internal import const, errors
+from inngest._internal import errors, server_lib
 
 from . import comm
 
@@ -54,7 +54,7 @@ class Test_get_function_configs(unittest.TestCase):
         handler = comm.CommHandler(
             api_base_url="http://foo.bar",
             client=client,
-            framework=const.Framework.FLASK,
+            framework=server_lib.Framework.FLASK,
             functions=[fn],
         )
 
@@ -69,7 +69,7 @@ class Test_get_function_configs(unittest.TestCase):
         handler = comm.CommHandler(
             api_base_url="http://foo.bar",
             client=client,
-            framework=const.Framework.FLASK,
+            framework=server_lib.Framework.FLASK,
             functions=functions,
         )
 

@@ -6,7 +6,7 @@ import re
 import traceback
 import typing
 
-from . import const, errors, types
+from inngest._internal import errors, server_lib, types
 
 
 def get_traceback(err: Exception) -> str:
@@ -132,13 +132,13 @@ def get_major_version(version: str) -> types.MaybeError[int]:
 
 def get_server_kind(
     headers: dict[str, str],
-) -> typing.Union[const.ServerKind, None, Exception]:
-    value = headers.get(const.HeaderKey.SERVER_KIND.value, None)
+) -> typing.Union[server_lib.ServerKind, None, Exception]:
+    value = headers.get(server_lib.HeaderKey.SERVER_KIND.value, None)
     if value is None:
         return None
 
     try:
-        return const.ServerKind(value)
+        return server_lib.ServerKind(value)
     except ValueError:
         return Exception(f"invalid server kind: {value}")
 

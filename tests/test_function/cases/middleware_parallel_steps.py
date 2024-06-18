@@ -1,6 +1,6 @@
 import inngest
 import tests.helper
-from inngest._internal import const, middleware_lib, step_lib
+from inngest._internal import middleware_lib, server_lib
 
 from . import base
 
@@ -13,7 +13,7 @@ class _State(base.BaseState):
 
 def create(
     client: inngest.Inngest,
-    framework: const.Framework,
+    framework: server_lib.Framework,
     is_sync: bool,
 ) -> base.Case:
     test_name = base.create_test_name(__file__)
@@ -94,7 +94,7 @@ def create(
                     output="1.1 (step)",
                     step=middleware_lib.TransformOutputStepInfo(
                         id="1.1",
-                        op=step_lib.Opcode.STEP_RUN,
+                        op=server_lib.Opcode.STEP_RUN,
                         opts=None,
                     ),
                 ),
@@ -103,7 +103,7 @@ def create(
                     output="1.2 (step)",
                     step=middleware_lib.TransformOutputStepInfo(
                         id="1.2",
-                        op=step_lib.Opcode.STEP_RUN,
+                        op=server_lib.Opcode.STEP_RUN,
                         opts=None,
                     ),
                 ),

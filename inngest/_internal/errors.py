@@ -5,7 +5,7 @@ import typing
 
 import pydantic
 
-from . import const, transforms
+from inngest._internal import server_lib, transforms
 
 
 class Error(Exception):
@@ -13,7 +13,7 @@ class Error(Exception):
     Base error for all our custom errors
     """
 
-    code: const.ErrorCode
+    code: server_lib.ErrorCode
     include_stack: bool = True
     is_retriable: bool = True
 
@@ -34,11 +34,11 @@ class Error(Exception):
 
 
 class URLInvalidError(Error):
-    code = const.ErrorCode.URL_INVALID
+    code = server_lib.ErrorCode.URL_INVALID
 
 
 class FunctionConfigInvalidError(Error):
-    code = const.ErrorCode.FUNCTION_CONFIG_INVALID
+    code = server_lib.ErrorCode.FUNCTION_CONFIG_INVALID
 
     @classmethod
     def from_validation_error(
@@ -74,58 +74,58 @@ class FunctionConfigInvalidError(Error):
 
 
 class AsyncUnsupportedError(Error):
-    code = const.ErrorCode.ASYNC_UNSUPPORTED
+    code = server_lib.ErrorCode.ASYNC_UNSUPPORTED
 
 
 class SigVerificationFailedError(Error):
-    code = const.ErrorCode.SIG_VERIFICATION_FAILED
+    code = server_lib.ErrorCode.SIG_VERIFICATION_FAILED
 
 
 class BodyInvalidError(Error):
-    code = const.ErrorCode.BODY_INVALID
+    code = server_lib.ErrorCode.BODY_INVALID
 
 
 class EventKeyUnspecifiedError(Error):
-    code = const.ErrorCode.EVENT_KEY_UNSPECIFIED
+    code = server_lib.ErrorCode.EVENT_KEY_UNSPECIFIED
 
 
 class FunctionNotFoundError(Error):
-    code = const.ErrorCode.FUNCTION_NOT_FOUND
+    code = server_lib.ErrorCode.FUNCTION_NOT_FOUND
 
 
 class HeaderMissingError(Error):
-    code = const.ErrorCode.HEADER_MISSING
+    code = server_lib.ErrorCode.HEADER_MISSING
 
 
 class QueryParamMissingError(Error):
-    code = const.ErrorCode.QUERY_PARAM_MISSING
+    code = server_lib.ErrorCode.QUERY_PARAM_MISSING
 
 
 class SigningKeyMissingError(Error):
-    code = const.ErrorCode.SIGNING_KEY_UNSPECIFIED
+    code = server_lib.ErrorCode.SIGNING_KEY_UNSPECIFIED
 
 
 class RegistrationFailedError(Error):
-    code = const.ErrorCode.REGISTRATION_FAILED
+    code = server_lib.ErrorCode.REGISTRATION_FAILED
 
 
 class UnknownError(Error):
-    code = const.ErrorCode.UNKNOWN
+    code = server_lib.ErrorCode.UNKNOWN
 
 
 class StepUnexpectedError(Error):
-    code = const.ErrorCode.STEP_UNEXPECTED
+    code = server_lib.ErrorCode.STEP_UNEXPECTED
     include_stack = False
 
 
 class OutputUnserializableError(Error):
-    code = const.ErrorCode.OUTPUT_UNSERIALIZABLE
+    code = server_lib.ErrorCode.OUTPUT_UNSERIALIZABLE
 
 
 class NonRetriableError(Error):
     """End users can raise this error to prevent retries."""
 
-    code = const.ErrorCode.NON_RETRIABLE_ERROR
+    code = server_lib.ErrorCode.NON_RETRIABLE_ERROR
     is_retriable = False
 
     def __init__(
@@ -138,7 +138,7 @@ class NonRetriableError(Error):
 
 
 class RetryAfterError(Error):
-    code = const.ErrorCode.RETRY_AFTER_ERROR
+    code = server_lib.ErrorCode.RETRY_AFTER_ERROR
 
     def __init__(
         self,
@@ -189,7 +189,7 @@ class StepError(Error):
     class.
     """
 
-    code = const.ErrorCode.STEP_ERRORED
+    code = server_lib.ErrorCode.STEP_ERRORED
 
     # Not retriable since this error is thrown after exhausting retries
     is_retriable = False

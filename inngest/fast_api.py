@@ -5,17 +5,9 @@ import typing
 
 import fastapi
 
-from ._internal import (
-    client_lib,
-    comm,
-    const,
-    execution,
-    function,
-    net,
-    transforms,
-)
+from ._internal import client_lib, comm, function, net, server_lib, transforms
 
-FRAMEWORK = const.Framework.FAST_API
+FRAMEWORK = server_lib.Framework.FAST_API
 
 
 def serve(
@@ -87,7 +79,7 @@ def serve(
             client.logger.error(server_kind)
             server_kind = None
 
-        call = execution.Call.from_raw(json.loads(body))
+        call = server_lib.ServerRequest.from_raw(json.loads(body))
         if isinstance(call, Exception):
             return _to_response(
                 client,
@@ -122,7 +114,9 @@ def serve(
             client.logger.error(server_kind)
             server_kind = None
 
-        sync_id = request.query_params.get(const.QueryParamKey.SYNC_ID.value)
+        sync_id = request.query_params.get(
+            server_lib.QueryParamKey.SYNC_ID.value
+        )
 
         return _to_response(
             client,
@@ -142,7 +136,7 @@ def serve(
 def _to_response(
     client: client_lib.Inngest,
     comm_res: comm.CommResponse,
-    server_kind: typing.Union[const.ServerKind, None],
+    server_kind: typing.Union[server_lib.ServerKind, None],
 ) -> fastapi.responses.Response:
     body = transforms.dump_json(comm_res.body)
     if isinstance(body, Exception):

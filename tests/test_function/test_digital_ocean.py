@@ -7,13 +7,13 @@ import flask.testing
 import inngest
 import inngest.digital_ocean
 import inngest.fast_api
-from inngest._internal import const
+from inngest._internal import server_lib
 from inngest.experimental import digital_ocean_simulator
 from tests import base, dev_server, http_proxy
 
 from . import cases
 
-_framework = const.Framework.DIGITAL_OCEAN
+_framework = server_lib.Framework.DIGITAL_OCEAN
 _app_id = f"{_framework.value}-functions"
 
 _client = inngest.Inngest(

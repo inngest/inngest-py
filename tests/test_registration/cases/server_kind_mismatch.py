@@ -1,13 +1,13 @@
 import inngest
 import inngest.fast_api
-from inngest._internal import const
+from inngest._internal import server_lib
 
 from . import base
 
 _TEST_NAME = base.create_test_name(__file__)
 
 
-def create(framework: const.Framework) -> base.Case:
+def create(framework: server_lib.Framework) -> base.Case:
     def run_test(self: base.TestCase) -> None:
         """
         Ensure that Dev Server cannot initiate a registration request when the
@@ -34,12 +34,14 @@ def create(framework: const.Framework) -> base.Case:
         self.serve(client, [fn])
 
         headers = {
-            const.HeaderKey.SERVER_KIND.value.lower(): const.ServerKind.DEV_SERVER.value,
+            server_lib.HeaderKey.SERVER_KIND.value.lower(): server_lib.ServerKind.DEV_SERVER.value,
         }
         res = self.register(headers)
         assert res.status_code == 400
         assert isinstance(res.body, dict)
-        assert res.body["code"] == const.ErrorCode.SERVER_KIND_MISMATCH.value
+        assert (
+            res.body["code"] == server_lib.ErrorCode.SERVER_KIND_MISMATCH.value
+        )
 
     return base.Case(
         name=_TEST_NAME,

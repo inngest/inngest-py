@@ -9,7 +9,7 @@ import unittest.mock
 
 import httpx
 
-from . import const, errors, net, transforms
+from inngest._internal import const, errors, net, server_lib, transforms
 
 _signing_key = "signkey-prod-000000"
 _signing_key_fallback = "signkey-prod-111111"
@@ -104,11 +104,11 @@ class Test_RequestSignature(unittest.TestCase):
         unix_ms = round(time.time() * 1000)
         sig = _sign(body, _signing_key, unix_ms)
         headers = {
-            const.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
+            server_lib.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
         }
 
         req_sig = net.RequestSignature(
-            body, headers, mode=const.ServerKind.CLOUD
+            body, headers, mode=server_lib.ServerKind.CLOUD
         )
         assert not isinstance(
             req_sig.validate(
@@ -127,12 +127,12 @@ class Test_RequestSignature(unittest.TestCase):
         unix_ms = round(time.time() * 1000)
         sig = _sign(body, _signing_key, unix_ms)
         headers = {
-            const.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
+            server_lib.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
         }
 
         body = json.dumps({"msg": "you've been hacked"}).encode("utf-8")
         req_sig = net.RequestSignature(
-            body, headers, mode=const.ServerKind.CLOUD
+            body, headers, mode=server_lib.ServerKind.CLOUD
         )
 
         validation = req_sig.validate(
@@ -151,11 +151,11 @@ class Test_RequestSignature(unittest.TestCase):
         unix_ms = round(time.time() * 1000)
         sig = _sign(body, _signing_key_fallback, unix_ms)
         headers = {
-            const.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
+            server_lib.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
         }
 
         req_sig = net.RequestSignature(
-            body, headers, mode=const.ServerKind.CLOUD
+            body, headers, mode=server_lib.ServerKind.CLOUD
         )
         assert not isinstance(
             req_sig.validate(
@@ -174,11 +174,11 @@ class Test_RequestSignature(unittest.TestCase):
         unix_ms = round(time.time() * 1000)
         sig = _sign(body, "something-else", unix_ms)
         headers = {
-            const.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
+            server_lib.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
         }
 
         req_sig = net.RequestSignature(
-            body, headers, mode=const.ServerKind.CLOUD
+            body, headers, mode=server_lib.ServerKind.CLOUD
         )
         assert isinstance(
             req_sig.validate(

@@ -11,16 +11,15 @@ import urllib.parse
 from ._internal import (
     client_lib,
     comm,
-    const,
     errors,
-    execution,
     function,
     net,
+    server_lib,
     transforms,
     types,
 )
 
-FRAMEWORK = const.Framework.DIGITAL_OCEAN
+FRAMEWORK = server_lib.Framework.DIGITAL_OCEAN
 
 
 def serve(
@@ -50,7 +49,7 @@ def serve(
     )
 
     def main(event: dict[str, object], context: _Context) -> _Response:
-        server_kind: typing.Optional[const.ServerKind] = None
+        server_kind: typing.Optional[server_lib.ServerKind] = None
 
         try:
             if not isinstance(event, dict) and "http" not in event:
@@ -110,21 +109,23 @@ def serve(
 
                 # These are sent as query params but DigitalOcean munges them with the body
                 fn_id = _get_first(
-                    query_params.get(const.QueryParamKey.FUNCTION_ID.value),
+                    query_params.get(
+                        server_lib.QueryParamKey.FUNCTION_ID.value
+                    ),
                 )
                 step_id = _get_first(
-                    query_params.get(const.QueryParamKey.STEP_ID.value),
+                    query_params.get(server_lib.QueryParamKey.STEP_ID.value),
                 )
 
                 if fn_id is None:
                     raise errors.QueryParamMissingError(
-                        const.QueryParamKey.FUNCTION_ID.value
+                        server_lib.QueryParamKey.FUNCTION_ID.value
                     )
                 if step_id is None:
                     raise errors.QueryParamMissingError(
-                        const.QueryParamKey.STEP_ID.value
+                        server_lib.QueryParamKey.STEP_ID.value
                     )
-                call = execution.Call.from_raw(body)
+                call = server_lib.ServerRequest.from_raw(body)
                 if isinstance(call, Exception):
                     raise call
 
@@ -156,7 +157,7 @@ def serve(
 
                 request_url = urllib.parse.urljoin(context.api_host, path)
                 sync_id = _get_first(
-                    query_params.get(const.QueryParamKey.SYNC_ID.value),
+                    query_params.get(server_lib.QueryParamKey.SYNC_ID.value),
                 )
 
                 return _to_response(
@@ -207,7 +208,7 @@ def _to_body_bytes(body: typing.Optional[str]) -> bytes:
 def _to_response(
     client: client_lib.Inngest,
     comm_res: comm.CommResponse,
-    server_kind: typing.Union[const.ServerKind, None],
+    server_kind: typing.Union[server_lib.ServerKind, None],
 ) -> _Response:
     return {
         "body": comm_res.body,  # type: ignore

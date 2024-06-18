@@ -5,12 +5,12 @@ import fastapi.testclient
 
 import inngest
 import inngest.fast_api
-from inngest._internal import const
+from inngest._internal import server_lib
 from tests import base
 
 
 class TestIntrospection(base.BaseTestIntrospection):
-    framework = const.Framework.FAST_API
+    framework = server_lib.Framework.FAST_API
 
     def _serve(self, client: inngest.Inngest) -> fastapi.testclient.TestClient:
         app = fastapi.FastAPI()
@@ -49,7 +49,7 @@ class TestIntrospection(base.BaseTestIntrospection):
         res = fast_api_client.get(
             "/api/inngest",
             headers={
-                const.HeaderKey.SIGNATURE.value: self.create_signature(),
+                server_lib.HeaderKey.SIGNATURE.value: self.create_signature(),
             },
         )
         assert res.status_code == 200
