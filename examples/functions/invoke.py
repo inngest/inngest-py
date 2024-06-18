@@ -43,7 +43,6 @@ def create_sync_functions(client: inngest.Inngest) -> list[inngest.Function]:
         step: inngest.StepSync,
     ) -> str:
         raise Exception("oh no")
-        return "Hello from invokee"
 
     @client.create_function(
         fn_id="invoker",
