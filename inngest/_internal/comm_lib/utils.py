@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import typing
 
 from inngest._internal import server_lib, types
