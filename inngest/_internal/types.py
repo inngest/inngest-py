@@ -87,6 +87,9 @@ class BaseModel(pydantic.BaseModel):
         raw: object,
     ) -> typing.Union[BaseModelT, Exception]:
         try:
+            if isinstance(raw, (str, bytes)):
+                raw = cls.model_validate_json(raw)
+
             return cls.model_validate(raw)
         except Exception as err:
             return err

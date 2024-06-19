@@ -11,15 +11,7 @@ import django.http
 import django.urls
 import django.views.decorators.csrf
 
-from ._internal import (
-    client_lib,
-    comm,
-    errors,
-    function,
-    net,
-    server_lib,
-    transforms,
-)
+from ._internal import client_lib, comm_lib, function, server_lib, transforms
 
 FRAMEWORK = server_lib.Framework.DJANGO
 
@@ -44,7 +36,7 @@ def serve(
         serve_path: Path to serve Inngest from.
     """
 
-    handler = comm.CommHandler(
+    handler = comm_lib.CommHandler(
         api_base_url=client.api_origin,
         client=client,
         framework=FRAMEWORK,
@@ -74,7 +66,7 @@ def serve(
 
 def _create_handler_sync(
     client: client_lib.Inngest,
-    handler: comm.CommHandler,
+    handler: comm_lib.CommHandler,
     *,
     serve_origin: typing.Optional[str],
     serve_path: typing.Optional[str],
@@ -82,79 +74,38 @@ def _create_handler_sync(
     def inngest_api(
         request: django.http.HttpRequest,
     ) -> django.http.HttpResponse:
-        headers = net.normalize_headers(dict(request.headers.items()))
-
-        server_kind = transforms.get_server_kind(headers)
-        if isinstance(server_kind, Exception):
-            client.logger.error(server_kind)
-            server_kind = None
-
-        req_sig = net.RequestSignature(
-            body=request.body,
-            headers=headers,
-            mode=client._mode,
-        )
-
         if request.method == "GET":
             return _to_response(
                 client,
                 handler.inspect(
+                    body=request.body,
+                    headers=dict(request.headers.items()),
                     serve_origin=serve_origin,
                     serve_path=serve_path,
-                    server_kind=server_kind,
-                    req_sig=req_sig,
                 ),
-                server_kind,
             )
 
         if request.method == "POST":
-            fn_id = request.GET.get(server_lib.QueryParamKey.FUNCTION_ID.value)
-            if fn_id is None:
-                raise errors.QueryParamMissingError(
-                    server_lib.QueryParamKey.FUNCTION_ID.value
-                )
-
-            step_id = request.GET.get(server_lib.QueryParamKey.STEP_ID.value)
-            if step_id is None:
-                raise errors.QueryParamMissingError(
-                    server_lib.QueryParamKey.STEP_ID.value
-                )
-
-            call = server_lib.ServerRequest.from_raw(json.loads(request.body))
-            if isinstance(call, Exception):
-                return _to_response(
-                    client,
-                    comm.CommResponse.from_error(client.logger, call),
-                    server_kind,
-                )
-
             return _to_response(
                 client,
                 handler.call_function_sync(
-                    call=call,
-                    fn_id=fn_id,
+                    body=request.body,
+                    headers=dict(request.headers.items()),
+                    query_params=dict(request.GET.items()),
                     raw_request=request,
-                    req_sig=req_sig,
-                    target_hashed_id=step_id,
                 ),
-                server_kind,
             )
 
         if request.method == "PUT":
-            sync_id = request.GET.get(server_lib.QueryParamKey.SYNC_ID.value)
-
             return _to_response(
                 client,
                 handler.register_sync(
-                    app_url=net.create_serve_url(
-                        request_url=request.build_absolute_uri(),
-                        serve_origin=serve_origin,
-                        serve_path=serve_path,
-                    ),
-                    server_kind=server_kind,
-                    sync_id=sync_id,
+                    headers=dict(request.headers.items()),
+                    query_params=dict(request.GET.items()),
+                    request_url=request.build_absolute_uri(),
+                    serve_origin=serve_origin,
+                    serve_path=serve_path,
                 ),
-                server_kind,
             )
 
         return django.http.JsonResponse(
@@ -170,7 +121,7 @@ def _create_handler_sync(
 
 def _create_handler_async(
     client: client_lib.Inngest,
-    handler: comm.CommHandler,
+    handler: comm_lib.CommHandler,
     *,
     serve_origin: typing.Optional[str],
     serve_path: typing.Optional[str],
@@ -188,79 +139,38 @@ def _create_handler_async(
     async def inngest_api(
         request: django.http.HttpRequest,
     ) -> django.http.HttpResponse:
-        headers = net.normalize_headers(dict(request.headers.items()))
-
-        server_kind = transforms.get_server_kind(headers)
-        if isinstance(server_kind, Exception):
-            client.logger.error(server_kind)
-            server_kind = None
-
-        req_sig = net.RequestSignature(
-            body=request.body,
-            headers=headers,
-            mode=client._mode,
-        )
-
         if request.method == "GET":
             return _to_response(
                 client,
                 handler.inspect(
+                    body=json.loads(request.body),
+                    headers=dict(request.headers.items()),
                     serve_origin=serve_origin,
                     serve_path=serve_path,
-                    server_kind=server_kind,
-                    req_sig=req_sig,
                 ),
-                server_kind,
             )
 
         if request.method == "POST":
-            fn_id = request.GET.get(server_lib.QueryParamKey.FUNCTION_ID.value)
-            if fn_id is None:
-                raise errors.QueryParamMissingError(
-                    server_lib.QueryParamKey.FUNCTION_ID.value
-                )
-
-            step_id = request.GET.get(server_lib.QueryParamKey.STEP_ID.value)
-            if step_id is None:
-                raise errors.QueryParamMissingError(
-                    server_lib.QueryParamKey.STEP_ID.value
-                )
-
-            call = server_lib.ServerRequest.from_raw(json.loads(request.body))
-            if isinstance(call, Exception):
-                return _to_response(
-                    client,
-                    comm.CommResponse.from_error(client.logger, call),
-                    server_kind,
-                )
-
             return _to_response(
                 client,
                 await handler.call_function(
-                    call=call,
-                    fn_id=fn_id,
+                    body=json.loads(request.body),
+                    headers=dict(request.headers.items()),
+                    query_params=dict(request.GET.items()),
                     raw_request=request,
-                    req_sig=req_sig,
-                    target_hashed_id=step_id,
                 ),
-                server_kind,
             )
 
         if request.method == "PUT":
-            sync_id = request.GET.get(server_lib.QueryParamKey.SYNC_ID.value)
-
             return _to_response(
                 client,
                 await handler.register(
-                    app_url=net.create_serve_url(
-                        request_url=request.build_absolute_uri(),
-                        serve_origin=serve_origin,
-                        serve_path=serve_path,
-                    ),
-                    server_kind=server_kind,
-                    sync_id=sync_id,
+                    headers=dict(request.headers.items()),
+                    query_params=dict(request.GET.items()),
+                    request_url=request.build_absolute_uri(),
+                    serve_origin=serve_origin,
+                    serve_path=serve_path,
                 ),
-                server_kind,
             )
 
         return django.http.JsonResponse(
@@ -276,23 +186,15 @@ def _create_handler_async(
 
 def _to_response(
     client: client_lib.Inngest,
-    comm_res: comm.CommResponse,
-    server_kind: typing.Optional[server_lib.ServerKind],
+    comm_res: comm_lib.CommResponse,
 ) -> django.http.HttpResponse:
     body = transforms.dump_json(comm_res.body)
     if isinstance(body, Exception):
-        comm_res = comm.CommResponse.from_error(client.logger, body)
+        comm_res = comm_lib.CommResponse.from_error(client.logger, body)
         body = json.dumps(comm_res.body)
 
     return django.http.HttpResponse(
         body.encode("utf-8"),
-        headers={
-            **comm_res.headers,
-            **net.create_headers(
-                env=client.env,
-                framework=FRAMEWORK,
-                server_kind=server_kind,
-            ),
-        },
+        headers=comm_res.headers,
         status=comm_res.status_code,
     )

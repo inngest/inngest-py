@@ -5,7 +5,7 @@ import typing
 
 import fastapi
 
-from ._internal import client_lib, comm, function, net, server_lib, transforms
+from ._internal import client_lib, comm_lib, function, server_lib, transforms
 
 FRAMEWORK = server_lib.Framework.FAST_API
 
@@ -31,7 +31,7 @@ def serve(
         serve_path: Path to serve the functions from.
     """
 
-    handler = comm.CommHandler(
+    handler = comm_lib.CommHandler(
         api_base_url=client.api_origin,
         client=client,
         framework=FRAMEWORK,
@@ -42,116 +42,57 @@ def serve(
     async def get_api_inngest(
         request: fastapi.Request,
     ) -> fastapi.Response:
-        body = await request.body()
-        headers = net.normalize_headers(dict(request.headers.items()))
-
-        server_kind = transforms.get_server_kind(headers)
-        if isinstance(server_kind, Exception):
-            client.logger.error(server_kind)
-            server_kind = None
-
         return _to_response(
             client,
             handler.inspect(
+                body=await request.body(),
+                headers=dict(request.headers.items()),
                 serve_origin=serve_origin,
                 serve_path=serve_path,
-                server_kind=server_kind,
-                req_sig=net.RequestSignature(
-                    body=body,
-                    headers=headers,
-                    mode=client._mode,
-                ),
             ),
-            server_kind,
         )
 
     @app.post("/api/inngest")
     async def post_inngest_api(
-        fnId: str,  # noqa: N803
-        stepId: str,  # noqa: N803
         request: fastapi.Request,
     ) -> fastapi.Response:
-        body = await request.body()
-        headers = net.normalize_headers(dict(request.headers.items()))
-
-        server_kind = transforms.get_server_kind(headers)
-        if isinstance(server_kind, Exception):
-            client.logger.error(server_kind)
-            server_kind = None
-
-        call = server_lib.ServerRequest.from_raw(json.loads(body))
-        if isinstance(call, Exception):
-            return _to_response(
-                client,
-                comm.CommResponse.from_error(client.logger, call),
-                server_kind,
-            )
-
         return _to_response(
             client,
             await handler.call_function(
-                call=call,
-                fn_id=fnId,
+                body=await request.body(),
+                headers=dict(request.headers.items()),
+                query_params=dict(request.query_params.items()),
                 raw_request=request,
-                req_sig=net.RequestSignature(
-                    body=body,
-                    headers=headers,
-                    mode=client._mode,
-                ),
-                target_hashed_id=stepId,
             ),
-            server_kind,
         )
 
     @app.put("/api/inngest")
     async def put_inngest_api(
         request: fastapi.Request,
     ) -> fastapi.Response:
-        headers = net.normalize_headers(dict(request.headers.items()))
-
-        server_kind = transforms.get_server_kind(headers)
-        if isinstance(server_kind, Exception):
-            client.logger.error(server_kind)
-            server_kind = None
-
-        sync_id = request.query_params.get(
-            server_lib.QueryParamKey.SYNC_ID.value
-        )
-
         return _to_response(
             client,
             await handler.register(
-                app_url=net.create_serve_url(
-                    request_url=str(request.url),
-                    serve_origin=serve_origin,
-                    serve_path=serve_path,
-                ),
-                server_kind=server_kind,
-                sync_id=sync_id,
+                headers=dict(request.headers.items()),
+                query_params=dict(request.query_params.items()),
+                request_url=str(request.url),
+                serve_origin=serve_origin,
+                serve_path=serve_path,
             ),
-            server_kind,
         )
 
 
 def _to_response(
     client: client_lib.Inngest,
-    comm_res: comm.CommResponse,
-    server_kind: typing.Union[server_lib.ServerKind, None],
+    comm_res: comm_lib.CommResponse,
 ) -> fastapi.responses.Response:
     body = transforms.dump_json(comm_res.body)
     if isinstance(body, Exception):
-        comm_res = comm.CommResponse.from_error(client.logger, body)
+        comm_res = comm_lib.CommResponse.from_error(client.logger, body)
         body = json.dumps(comm_res.body)
 
     return fastapi.responses.Response(
         content=body.encode("utf-8"),
-        headers={
-            **comm_res.headers,
-            **net.create_headers(
-                env=client.env,
-                framework=FRAMEWORK,
-                server_kind=server_kind,
-            ),
-        },
+        headers=comm_res.headers,
         status_code=comm_res.status_code,
     )

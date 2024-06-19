@@ -161,7 +161,7 @@ class TriggerEvent(_BaseConfig):
     expression: typing.Optional[str] = None
 
 
-class RegisterRequest(types.BaseModel):
+class SynchronizeRequest(types.BaseModel):
     app_name: str = pydantic.Field(..., serialization_alias="appname")
     deploy_type: DeployType
     framework: Framework

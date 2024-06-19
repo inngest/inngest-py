@@ -7,7 +7,7 @@ import unittest
 import inngest
 from inngest._internal import errors, server_lib
 
-from . import comm
+from .handler import CommHandler
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -51,7 +51,7 @@ class Test_get_function_configs(unittest.TestCase):
         ) -> int:
             return 1
 
-        handler = comm.CommHandler(
+        handler = CommHandler(
             api_base_url="http://foo.bar",
             client=client,
             framework=server_lib.Framework.FLASK,
@@ -66,7 +66,7 @@ class Test_get_function_configs(unittest.TestCase):
     def test_no_functions(self) -> None:
         functions: list[inngest.Function] = []
 
-        handler = comm.CommHandler(
+        handler = CommHandler(
             api_base_url="http://foo.bar",
             client=client,
             framework=server_lib.Framework.FLASK,

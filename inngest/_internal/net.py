@@ -55,6 +55,7 @@ def create_headers(
     headers = {
         server_lib.HeaderKey.CONTENT_TYPE.value: "application/json",
         server_lib.HeaderKey.SDK.value: f"inngest-{const.LANGUAGE}:v{const.VERSION}",
+        server_lib.HeaderKey.REQUEST_VERSION.value: server_lib.PREFERRED_EXECUTION_VERSION,
         server_lib.HeaderKey.USER_AGENT.value: f"inngest-{const.LANGUAGE}:v{const.VERSION}",
     }
 
@@ -188,7 +189,9 @@ def fetch_with_auth_fallback_sync(
     return res
 
 
-def normalize_headers(headers: dict[str, str]) -> dict[str, str]:
+def normalize_headers(
+    headers: typing.Union[dict[str, str], dict[str, list[str]]],
+) -> dict[str, str]:
     """
     Ensure that known headers are in the correct casing.
     """
@@ -200,7 +203,10 @@ def normalize_headers(headers: dict[str, str]) -> dict[str, str]:
             if k.lower() == header_key.value.lower():
                 k = header_key.value
 
-        new_headers[k] = v
+        if isinstance(v, list):
+            new_headers[k] = v[0]
+        else:
+            new_headers[k] = v
 
     return new_headers
 
@@ -240,76 +246,91 @@ async def fetch_with_thready_safety(
     )
 
 
-class RequestSignature:
-    _signature: typing.Optional[str] = None
-    _timestamp: typing.Optional[int] = None
-
-    def __init__(
-        self,
-        body: bytes,
-        headers: dict[str, str],
-        mode: server_lib.ServerKind,
-    ) -> None:
-        self._body = body
-        self._mode = mode
-
-        sig_header = headers.get(server_lib.HeaderKey.SIGNATURE.value)
-        if sig_header is not None:
-            parsed = urllib.parse.parse_qs(sig_header)
-            if "t" in parsed:
-                self._timestamp = int(parsed["t"][0])
-            if "s" in parsed:
-                self._signature = parsed["s"][0]
-
-    def _validate(
-        self,
-        signing_key: typing.Optional[str],
-    ) -> types.MaybeError[None]:
-        if self._mode == server_lib.ServerKind.DEV_SERVER:
-            return None
-
-        if signing_key is None:
-            return errors.SigningKeyMissingError(
-                "cannot validate signature in production mode without a signing key"
-            )
-
-        if self._signature is None:
-            return errors.HeaderMissingError(
-                f"cannot validate signature in production mode without a {server_lib.HeaderKey.SIGNATURE.value} header"
-            )
-
-        mac = hmac.new(
-            transforms.remove_signing_key_prefix(signing_key).encode("utf-8"),
-            self._body,
-            hashlib.sha256,
-        )
-        mac.update(str(self._timestamp).encode("utf-8"))
-        if not hmac.compare_digest(self._signature, mac.hexdigest()):
-            return errors.SigVerificationFailedError()
-
+def _validate_request(
+    *,
+    body: bytes,
+    headers: dict[str, str],
+    mode: server_lib.ServerKind,
+    signing_key: typing.Optional[str],
+) -> types.MaybeError[None]:
+    if mode == server_lib.ServerKind.DEV_SERVER:
         return None
 
-    def validate(
-        self,
-        *,
-        signing_key: typing.Optional[str],
-        signing_key_fallback: typing.Optional[str],
-    ) -> types.MaybeError[None]:
-        """
-        Validate the request signature. Falls back to the fallback signing key if
-        signature validation fails with the primary signing key.
+    timestamp = None
+    signature = None
+    sig_header = headers.get(server_lib.HeaderKey.SIGNATURE.value)
+    if sig_header is None:
+        return errors.HeaderMissingError(
+            f"cannot validate signature in production mode without a {server_lib.HeaderKey.SIGNATURE.value} header"
+        )
+    else:
+        parsed = urllib.parse.parse_qs(sig_header)
+        if "t" in parsed:
+            timestamp = int(parsed["t"][0])
+        if "s" in parsed:
+            signature = parsed["s"][0]
 
-        Args:
-        ----
-            signing_key: The primary signing key.
-            signing_key_fallback: The fallback signing key.
-        """
+    if signing_key is None:
+        return errors.SigningKeyMissingError(
+            "cannot validate signature in production mode without a signing key"
+        )
 
-        err = self._validate(signing_key)
-        if err is not None and signing_key_fallback is not None:
-            # If the signature validation failed but there's a "fallback"
-            # signing key, attempt to validate the signature with the fallback
-            # key
-            err = self._validate(signing_key_fallback)
+    if signature is None:
+        return Exception(
+            f"{server_lib.HeaderKey.SIGNATURE.value} header is malformed"
+        )
 
-        return err
+    mac = hmac.new(
+        transforms.remove_signing_key_prefix(signing_key).encode("utf-8"),
+        body,
+        hashlib.sha256,
+    )
+
+    if timestamp:
+        mac.update(str(timestamp).encode("utf-8"))
+
+    if not hmac.compare_digest(signature, mac.hexdigest()):
+        return errors.SigVerificationFailedError()
+
+    return None
+
+
+def validate_request(
+    *,
+    body: bytes,
+    headers: dict[str, str],
+    mode: server_lib.ServerKind,
+    signing_key: typing.Optional[str],
+    signing_key_fallback: typing.Optional[str],
+) -> types.MaybeError[None]:
+    """
+    Validate the request signature. Falls back to the fallback signing key if
+    signature validation fails with the primary signing key.
+
+    Args:
+    ----
+        body: Request body.
+        headers: Request headers.
+        mode: Server mode.
+        signing_key: Primary signing key.
+        signing_key_fallback: Fallback signing key.
+    """
+
+    err = _validate_request(
+        body=body,
+        headers=headers,
+        mode=mode,
+        signing_key=signing_key,
+    )
+    if err is not None and signing_key_fallback is not None:
+        # If the signature validation failed but there's a "fallback"
+        # signing key, attempt to validate the signature with the fallback
+        # key
+        err = _validate_request(
+            body=body,
+            headers=headers,
+            mode=mode,
+            signing_key=signing_key_fallback,
+        )
+
+    return err

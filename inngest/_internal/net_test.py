@@ -107,11 +107,11 @@ class Test_RequestSignature(unittest.TestCase):
             server_lib.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
         }
 
-        req_sig = net.RequestSignature(
-            body, headers, mode=server_lib.ServerKind.CLOUD
-        )
         assert not isinstance(
-            req_sig.validate(
+            net.validate_request(
+                body=body,
+                headers=headers,
+                mode=server_lib.ServerKind.CLOUD,
                 signing_key=_signing_key,
                 signing_key_fallback=None,
             ),
@@ -131,11 +131,11 @@ class Test_RequestSignature(unittest.TestCase):
         }
 
         body = json.dumps({"msg": "you've been hacked"}).encode("utf-8")
-        req_sig = net.RequestSignature(
-            body, headers, mode=server_lib.ServerKind.CLOUD
-        )
 
-        validation = req_sig.validate(
+        validation = net.validate_request(
+            body=body,
+            headers=headers,
+            mode=server_lib.ServerKind.CLOUD,
             signing_key=_signing_key,
             signing_key_fallback=None,
         )
@@ -154,11 +154,11 @@ class Test_RequestSignature(unittest.TestCase):
             server_lib.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
         }
 
-        req_sig = net.RequestSignature(
-            body, headers, mode=server_lib.ServerKind.CLOUD
-        )
         assert not isinstance(
-            req_sig.validate(
+            net.validate_request(
+                body=body,
+                headers=headers,
+                mode=server_lib.ServerKind.CLOUD,
                 signing_key=_signing_key,
                 signing_key_fallback=_signing_key_fallback,
             ),
@@ -177,11 +177,11 @@ class Test_RequestSignature(unittest.TestCase):
             server_lib.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
         }
 
-        req_sig = net.RequestSignature(
-            body, headers, mode=server_lib.ServerKind.CLOUD
-        )
         assert isinstance(
-            req_sig.validate(
+            net.validate_request(
+                body=body,
+                headers=headers,
+                mode=server_lib.ServerKind.CLOUD,
                 signing_key=_signing_key,
                 signing_key_fallback=_signing_key_fallback,
             ),

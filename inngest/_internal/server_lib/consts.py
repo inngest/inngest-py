@@ -27,6 +27,14 @@ class ErrorCode(enum.Enum):
     URL_INVALID = "url_invalid"
 
 
+class ExecutionVersion(enum.Enum):
+    V0 = "0"
+    V1 = "1"
+
+
+PREFERRED_EXECUTION_VERSION: typing.Final = ExecutionVersion.V1.value
+
+
 class Framework(enum.Enum):
     DIGITAL_OCEAN = "digitalocean"
     DJANGO = "django"
@@ -42,6 +50,7 @@ class HeaderKey(enum.Enum):
     EXPECTED_SERVER_KIND = "X-Inngest-Expected-Server-Kind"
     FRAMEWORK = "X-Inngest-Framework"
     NO_RETRY = "X-Inngest-No-Retry"
+    REQUEST_VERSION = "X-Inngest-Req-Version"
     RETRY_AFTER = "Retry-After"
     SDK = "X-Inngest-SDK"
     SERVER_KIND = "X-Inngest-Server-Kind"
