@@ -8,16 +8,7 @@ import json
 import typing
 import urllib.parse
 
-from ._internal import (
-    client_lib,
-    comm,
-    errors,
-    function,
-    net,
-    server_lib,
-    transforms,
-    types,
-)
+from ._internal import client_lib, comm_lib, errors, function, server_lib, types
 
 FRAMEWORK = server_lib.Framework.DIGITAL_OCEAN
 
@@ -41,7 +32,7 @@ def serve(
         serve_path: The entire function path (e.g. /api/v1/web/fn-b094417f/sample/hello).
     """
 
-    handler = comm.CommHandler(
+    handler = comm_lib.CommHandler(
         api_base_url=client.api_origin,
         client=client,
         framework=FRAMEWORK,
@@ -49,8 +40,6 @@ def serve(
     )
 
     def main(event: dict[str, object], context: _Context) -> _Response:
-        server_kind: typing.Optional[server_lib.ServerKind] = None
-
         try:
             if "http" not in event:
                 raise errors.BodyInvalidError('missing "http" key in event')
@@ -68,33 +57,16 @@ def serve(
                     'missing "queryString" event.http; have you set "web: raw"?'
                 )
 
-            headers = net.normalize_headers(http.headers)
-
-            _server_kind = transforms.get_server_kind(headers)
-            if not isinstance(_server_kind, Exception):
-                server_kind = _server_kind
-            else:
-                client.logger.error(_server_kind)
-                server_kind = None
-
-            req_sig = net.RequestSignature(
-                body=_to_body_bytes(http.body),
-                headers=headers,
-                mode=client._mode,
-            )
-
             query_params = urllib.parse.parse_qs(http.queryString)
 
             if http.method == "GET":
                 return _to_response(
-                    client,
                     handler.inspect(
+                        body=_to_body_bytes(http.body),
+                        headers=http.headers,
                         serve_origin=serve_origin,
                         serve_path=serve_path,
-                        server_kind=server_kind,
-                        req_sig=req_sig,
                     ),
-                    server_kind,
                 )
 
             if http.method == "POST":
@@ -130,18 +102,15 @@ def serve(
                     raise call
 
                 return _to_response(
-                    client,
                     handler.call_function_sync(
-                        call=call,
-                        fn_id=fn_id,
+                        body=_to_body_bytes(http.body),
+                        headers=http.headers,
+                        query_params=query_params,
                         raw_request={
                             "context": context,
                             "event": event,
                         },
-                        req_sig=req_sig,
-                        target_hashed_id=step_id,
                     ),
-                    server_kind,
                 )
 
             if http.method == "PUT":
@@ -156,37 +125,26 @@ def serve(
                 path = "/api/v1/web" + context.function_name
 
                 request_url = urllib.parse.urljoin(context.api_host, path)
-                sync_id = _get_first(
-                    query_params.get(server_lib.QueryParamKey.SYNC_ID.value),
-                )
 
                 return _to_response(
-                    client,
                     handler.register_sync(
-                        app_url=net.create_serve_url(
-                            request_url=request_url,
-                            serve_origin=serve_origin,
-                            serve_path=serve_path,
-                        ),
-                        server_kind=server_kind,
-                        sync_id=sync_id,
+                        headers=http.headers,
+                        query_params=urllib.parse.parse_qs(http.queryString),
+                        request_url=request_url,
+                        serve_origin=serve_origin,
+                        serve_path=serve_path,
                     ),
-                    server_kind,
                 )
 
             raise Exception(f"unsupported method: {http.method}")
         except Exception as e:
-            comm_res = comm.CommResponse.from_error(client.logger, e)
+            comm_res = comm_lib.CommResponse.from_error(client.logger, e)
             if isinstance(
                 e, (errors.BodyInvalidError, errors.QueryParamMissingError)
             ):
                 comm_res.status_code = 400
 
-            return _to_response(
-                client,
-                comm_res,
-                server_kind,
-            )
+            return _to_response(comm_res)
 
     return main
 
@@ -206,20 +164,11 @@ def _to_body_bytes(body: typing.Optional[str]) -> bytes:
 
 
 def _to_response(
-    client: client_lib.Inngest,
-    comm_res: comm.CommResponse,
-    server_kind: typing.Union[server_lib.ServerKind, None],
+    comm_res: comm_lib.CommResponse,
 ) -> _Response:
     return {
         "body": comm_res.body,  # type: ignore
-        "headers": {
-            **comm_res.headers,
-            **net.create_headers(
-                env=client.env,
-                framework=FRAMEWORK,
-                server_kind=server_kind,
-            ),
-        },
+        "headers": comm_res.headers,
         "statusCode": comm_res.status_code,
     }
 

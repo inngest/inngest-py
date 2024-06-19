@@ -7,10 +7,8 @@ import tornado.web
 
 from inngest._internal import (
     client_lib,
-    comm,
-    errors,
+    comm_lib,
     function,
-    net,
     server_lib,
     transforms,
 )
@@ -38,7 +36,7 @@ def serve(
         serve_origin: Origin to serve the functions from.
         serve_path: Path to serve the functions from.
     """
-    handler = comm.CommHandler(
+    handler = comm_lib.CommHandler(
         api_base_url=client.api_origin,
         client=client,
         framework=FRAMEWORK,
@@ -52,129 +50,54 @@ def serve(
             return None
 
         def get(self) -> None:
-            headers = net.normalize_headers(dict(self.request.headers.items()))
-
-            server_kind = transforms.get_server_kind(headers)
-            if isinstance(server_kind, Exception):
-                client.logger.error(server_kind)
-                server_kind = None
-
-            req_sig = net.RequestSignature(
-                body=self.request.body,
-                headers=headers,
-                mode=client._mode,
-            )
-
             comm_res = handler.inspect(
+                body=self.request.body,
+                headers=dict(self.request.headers.items()),
                 serve_origin=serve_origin,
                 serve_path=serve_path,
-                server_kind=server_kind,
-                req_sig=req_sig,
             )
 
-            self._write_comm_response(comm_res, server_kind)
+            self._write_comm_response(comm_res)
 
         def post(self) -> None:
-            fn_id: typing.Optional[str]
-            raw_fn_id = self.request.query_arguments.get(
-                server_lib.QueryParamKey.FUNCTION_ID.value
-            )
-            if raw_fn_id is None or len(raw_fn_id) == 0:
-                raise errors.QueryParamMissingError(
-                    server_lib.QueryParamKey.FUNCTION_ID.value
-                )
-            fn_id = raw_fn_id[0].decode("utf-8")
-
-            step_id: typing.Optional[str]
-            raw_step_id = self.request.query_arguments.get(
-                server_lib.QueryParamKey.STEP_ID.value
-            )
-            if raw_step_id is None or len(raw_step_id) == 0:
-                raise errors.QueryParamMissingError(
-                    server_lib.QueryParamKey.STEP_ID.value
-                )
-            step_id = raw_step_id[0].decode("utf-8")
-
-            headers = net.normalize_headers(dict(self.request.headers.items()))
-
-            server_kind = transforms.get_server_kind(headers)
-            if isinstance(server_kind, Exception):
-                client.logger.error(server_kind)
-                server_kind = None
-
-            req_sig = net.RequestSignature(
-                body=self.request.body,
-                headers=headers,
-                mode=client._mode,
-            )
-
-            call = server_lib.ServerRequest.from_raw(
-                json.loads(self.request.body)
-            )
-            if isinstance(call, Exception):
-                return self._write_comm_response(
-                    comm.CommResponse.from_error(client.logger, call),
-                    server_kind,
-                )
-
             comm_res = handler.call_function_sync(
-                call=call,
-                fn_id=fn_id,
+                body=self.request.body,
+                headers=dict(self.request.headers.items()),
+                query_params=_parse_query_params(self.request.query_arguments),
                 raw_request=self.request,
-                req_sig=req_sig,
-                target_hashed_id=step_id,
             )
 
-            self._write_comm_response(comm_res, server_kind)
+            self._write_comm_response(comm_res)
 
         def put(self) -> None:
-            headers = net.normalize_headers(dict(self.request.headers.items()))
-
-            server_kind = transforms.get_server_kind(headers)
-            if isinstance(server_kind, Exception):
-                client.logger.error(server_kind)
-                server_kind = None
-
-            sync_id: typing.Optional[str] = None
-            raw_sync_id = self.request.query_arguments.get(
-                server_lib.QueryParamKey.SYNC_ID.value
-            )
-            if raw_sync_id is not None:
-                sync_id = raw_sync_id[0].decode("utf-8")
-
             comm_res = handler.register_sync(
-                app_url=net.create_serve_url(
-                    request_url=self.request.full_url(),
-                    serve_origin=serve_origin,
-                    serve_path=serve_path,
-                ),
-                server_kind=server_kind,
-                sync_id=sync_id,
+                headers=dict(self.request.headers.items()),
+                query_params=_parse_query_params(self.request.query_arguments),
+                request_url=self.request.full_url(),
+                serve_origin=serve_origin,
+                serve_path=serve_path,
             )
 
-            self._write_comm_response(comm_res, server_kind)
+            self._write_comm_response(comm_res)
 
         def _write_comm_response(
             self,
-            comm_res: comm.CommResponse,
-            server_kind: typing.Optional[server_lib.ServerKind],
+            comm_res: comm_lib.CommResponse,
         ) -> None:
             body = transforms.dump_json(comm_res.body)
             if isinstance(body, Exception):
-                comm_res = comm.CommResponse.from_error(client.logger, body)
+                comm_res = comm_lib.CommResponse.from_error(client.logger, body)
                 body = json.dumps(comm_res.body)
 
             self.write(body)
 
             for k, v in comm_res.headers.items():
                 self.add_header(k, v)
-            for k, v in net.create_headers(
-                env=client.env,
-                framework=FRAMEWORK,
-                server_kind=server_kind,
-            ).items():
-                self.add_header(k, v)
 
             self.set_status(comm_res.status_code)
 
     app.add_handlers(r".*", [("/api/inngest", InngestHandler)])
+
+
+def _parse_query_params(raw: dict[str, list[bytes]]) -> dict[str, str]:
+    return {k: v[0].decode("utf-8") for k, v in raw.items()}
