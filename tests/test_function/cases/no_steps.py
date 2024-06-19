@@ -2,14 +2,14 @@ import json
 
 import inngest
 import tests.helper
-from inngest._internal import const
+from inngest._internal import server_lib
 
 from . import base
 
 
 def create(
     client: inngest.Inngest,
-    framework: const.Framework,
+    framework: server_lib.Framework,
     is_sync: bool,
 ) -> base.Case:
     test_name = base.create_test_name(__file__)

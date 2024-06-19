@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-import enum
 import threading
 import typing
 
@@ -12,6 +11,7 @@ from inngest._internal import (
     errors,
     execution,
     middleware_lib,
+    server_lib,
     transforms,
     types,
 )
@@ -215,15 +215,6 @@ class WaitForEventOpts(types.BaseModel):
     timeout: str
 
 
-class Opcode(enum.Enum):
-    INVOKE = "InvokeFunction"
-    PLANNED = "StepPlanned"
-    SLEEP = "Sleep"
-    STEP_RUN = "StepRun"
-    STEP_ERROR = "StepError"
-    WAIT_FOR_EVENT = "WaitForEvent"
-
-
 class StepInfo(types.BaseModel):
     display_name: str = pydantic.Field(..., serialization_alias="displayName")
     id: str
@@ -231,7 +222,7 @@ class StepInfo(types.BaseModel):
     # Deprecated
     name: typing.Optional[str] = None
 
-    op: Opcode
+    op: server_lib.Opcode
     opts: typing.Optional[dict[str, object]] = None
 
 

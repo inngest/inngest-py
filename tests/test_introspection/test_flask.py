@@ -6,12 +6,12 @@ import flask.testing
 
 import inngest
 import inngest.flask
-from inngest._internal import const
+from inngest._internal import server_lib
 from tests import base
 
 
 class TestIntrospection(base.BaseTestIntrospection):
-    framework = const.Framework.FLASK
+    framework = server_lib.Framework.FLASK
 
     def _serve(self, client: inngest.Inngest) -> flask.testing.FlaskClient:
         app = flask.Flask(__name__)
@@ -50,7 +50,7 @@ class TestIntrospection(base.BaseTestIntrospection):
         res = flask_client.get(
             "/api/inngest",
             headers={
-                const.HeaderKey.SIGNATURE.value: self.create_signature(),
+                server_lib.HeaderKey.SIGNATURE.value: self.create_signature(),
             },
         )
         assert res.status_code == 200

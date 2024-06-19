@@ -1,5 +1,4 @@
 from .base import (
-    Opcode,
     ParsedStepID,
     ResponseInterrupt,
     SkipInterrupt,
@@ -19,7 +18,6 @@ __all__ = [
     "StepIDCounter",
     "StepInfo",
     "StepMemos",
-    "Opcode",
     "StepResponse",
     "StepSync",
 ]

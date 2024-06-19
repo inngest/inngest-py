@@ -10,7 +10,14 @@ import urllib.parse
 
 import httpx
 
-from . import async_lib, const, errors, transforms, types
+from inngest._internal import (
+    async_lib,
+    const,
+    errors,
+    server_lib,
+    transforms,
+    types,
+)
 
 
 class ThreadAwareAsyncHTTPClient(httpx.AsyncClient):
@@ -37,8 +44,8 @@ class ThreadAwareAsyncHTTPClient(httpx.AsyncClient):
 def create_headers(
     *,
     env: typing.Optional[str],
-    framework: typing.Optional[const.Framework],
-    server_kind: typing.Optional[const.ServerKind],
+    framework: typing.Optional[server_lib.Framework],
+    server_kind: typing.Optional[server_lib.ServerKind],
 ) -> dict[str, str]:
     """
     Create standard headers that should exist on every possible outgoing
@@ -46,17 +53,19 @@ def create_headers(
     """
 
     headers = {
-        const.HeaderKey.CONTENT_TYPE.value: "application/json",
-        const.HeaderKey.SDK.value: f"inngest-{const.LANGUAGE}:v{const.VERSION}",
-        const.HeaderKey.USER_AGENT.value: f"inngest-{const.LANGUAGE}:v{const.VERSION}",
+        server_lib.HeaderKey.CONTENT_TYPE.value: "application/json",
+        server_lib.HeaderKey.SDK.value: f"inngest-{const.LANGUAGE}:v{const.VERSION}",
+        server_lib.HeaderKey.USER_AGENT.value: f"inngest-{const.LANGUAGE}:v{const.VERSION}",
     }
 
     if env is not None:
-        headers[const.HeaderKey.ENV.value] = env
+        headers[server_lib.HeaderKey.ENV.value] = env
     if framework is not None:
-        headers[const.HeaderKey.FRAMEWORK.value] = framework.value
+        headers[server_lib.HeaderKey.FRAMEWORK.value] = framework.value
     if server_kind is not None:
-        headers[const.HeaderKey.EXPECTED_SERVER_KIND.value] = server_kind.value
+        headers[
+            server_lib.HeaderKey.EXPECTED_SERVER_KIND.value
+        ] = server_kind.value
 
     return headers
 
@@ -120,7 +129,7 @@ async def fetch_with_auth_fallback(
 
     if signing_key is not None:
         request.headers[
-            const.HeaderKey.AUTHORIZATION.value
+            server_lib.HeaderKey.AUTHORIZATION.value
         ] = f"Bearer {transforms.hash_signing_key(signing_key)}"
 
     res = await fetch_with_thready_safety(
@@ -135,7 +144,7 @@ async def fetch_with_auth_fallback(
     ):
         # Try again with the signing key fallback
         request.headers[
-            const.HeaderKey.AUTHORIZATION.value
+            server_lib.HeaderKey.AUTHORIZATION.value
         ] = f"Bearer {transforms.hash_signing_key(signing_key_fallback)}"
 
         res = await fetch_with_thready_safety(
@@ -161,7 +170,7 @@ def fetch_with_auth_fallback_sync(
 
     if signing_key is not None:
         request.headers[
-            const.HeaderKey.AUTHORIZATION.value
+            server_lib.HeaderKey.AUTHORIZATION.value
         ] = f"Bearer {transforms.hash_signing_key(signing_key)}"
 
     res = client.send(request)
@@ -172,7 +181,7 @@ def fetch_with_auth_fallback_sync(
     ):
         # Try again with the signing key fallback
         request.headers[
-            const.HeaderKey.AUTHORIZATION.value
+            server_lib.HeaderKey.AUTHORIZATION.value
         ] = f"Bearer {transforms.hash_signing_key(signing_key_fallback)}"
         res = client.send(request)
 
@@ -187,7 +196,7 @@ def normalize_headers(headers: dict[str, str]) -> dict[str, str]:
     new_headers = {}
 
     for k, v in headers.items():
-        for header_key in const.HeaderKey:
+        for header_key in server_lib.HeaderKey:
             if k.lower() == header_key.value.lower():
                 k = header_key.value
 
@@ -239,12 +248,12 @@ class RequestSignature:
         self,
         body: bytes,
         headers: dict[str, str],
-        mode: const.ServerKind,
+        mode: server_lib.ServerKind,
     ) -> None:
         self._body = body
         self._mode = mode
 
-        sig_header = headers.get(const.HeaderKey.SIGNATURE.value)
+        sig_header = headers.get(server_lib.HeaderKey.SIGNATURE.value)
         if sig_header is not None:
             parsed = urllib.parse.parse_qs(sig_header)
             if "t" in parsed:
@@ -256,7 +265,7 @@ class RequestSignature:
         self,
         signing_key: typing.Optional[str],
     ) -> types.MaybeError[None]:
-        if self._mode == const.ServerKind.DEV_SERVER:
+        if self._mode == server_lib.ServerKind.DEV_SERVER:
             return None
 
         if signing_key is None:
@@ -266,7 +275,7 @@ class RequestSignature:
 
         if self._signature is None:
             return errors.HeaderMissingError(
-                f"cannot validate signature in production mode without a {const.HeaderKey.SIGNATURE.value} header"
+                f"cannot validate signature in production mode without a {server_lib.HeaderKey.SIGNATURE.value} header"
             )
 
         mac = hmac.new(

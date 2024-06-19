@@ -10,7 +10,7 @@ import urllib.parse
 import httpx
 
 import inngest
-from inngest._internal import const, transforms, types
+from inngest._internal import const, server_lib, transforms, types
 
 from . import http_proxy, net
 
@@ -108,7 +108,7 @@ class IntrospectionResponse(types.BaseModel):
 
 
 class BaseTestIntrospection(unittest.TestCase):
-    framework: const.Framework
+    framework: server_lib.Framework
     signing_key = "signkey-prod-123abc"
 
     def setUp(self) -> None:

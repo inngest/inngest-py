@@ -7,12 +7,12 @@ import uvicorn
 
 import inngest
 import inngest.fast_api
-from inngest._internal import const
+from inngest._internal import server_lib
 from tests import base, dev_server, net
 
 from . import cases
 
-_framework = const.Framework.FAST_API
+_framework = server_lib.Framework.FAST_API
 _app_id = f"{_framework.value}-functions"
 
 _client = inngest.Inngest(

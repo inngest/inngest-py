@@ -4,7 +4,7 @@ import typing
 
 import pydantic
 
-from . import types
+from inngest._internal import types
 
 
 class Event(types.BaseModel):

@@ -1,58 +1,72 @@
 import datetime
 
-from . import function_config
+from .registration import (
+    Batch,
+    Cancel,
+    Concurrency,
+    Debounce,
+    FunctionConfig,
+    Priority,
+    RateLimit,
+    Retries,
+    Runtime,
+    Step,
+    Throttle,
+    TriggerCron,
+    TriggerEvent,
+)
 
 
 def test_serialization() -> None:
-    data = function_config.FunctionConfig(
-        batch_events=function_config.Batch(
+    data = FunctionConfig(
+        batch_events=Batch(
             max_size=10,
             timeout=datetime.timedelta(seconds=60),
         ),
         cancel=[
-            function_config.Cancel(
+            Cancel(
                 event="foo",
                 if_exp="foo",
                 timeout=datetime.timedelta(seconds=60),
             )
         ],
         concurrency=[
-            function_config.Concurrency(
+            Concurrency(
                 key="foo",
                 limit=1,
                 scope="account",
             )
         ],
-        debounce=function_config.Debounce(
+        debounce=Debounce(
             key="foo",
             period=datetime.timedelta(seconds=60),
         ),
         id="foo",
         name="foo",
-        priority=function_config.Priority(
+        priority=Priority(
             run="event.data.plan == 'enterprise' ? 180 : 0",
         ),
         steps={
-            "foo": function_config.Step(
+            "foo": Step(
                 id="foo",
                 name="foo",
-                retries=function_config.Retries(attempts=1),
-                runtime=function_config.Runtime(type="http", url="foo"),
+                retries=Retries(attempts=1),
+                runtime=Runtime(type="http", url="foo"),
             )
         },
-        rate_limit=function_config.RateLimit(
+        rate_limit=RateLimit(
             key="foo",
             limit=1,
             period=datetime.timedelta(seconds=60),
         ),
-        throttle=function_config.Throttle(
+        throttle=Throttle(
             key="foo",
             count=1,
             period=datetime.timedelta(seconds=60),
         ),
         triggers=[
-            function_config.TriggerCron(cron="foo"),
-            function_config.TriggerEvent(event="foo", expression="foo"),
+            TriggerCron(cron="foo"),
+            TriggerEvent(event="foo", expression="foo"),
         ],
     ).to_dict()
     if isinstance(data, Exception):

@@ -1,23 +1,23 @@
 import pydantic
 import pytest
 
-from . import event_lib
+from .event import Event
 
 
 def test_data_missing() -> None:
-    event_lib.Event(name="foo")
+    Event(name="foo")
 
 
 def test_data_list() -> None:
     with pytest.raises(pydantic.ValidationError):
-        event_lib.Event(
+        Event(
             data=[1, 2, 3],  # type: ignore[arg-type]
             name="foo",
         )
 
 
 def test_data_nested() -> None:
-    event_lib.Event(
+    Event(
         data={
             "foo": {
                 "bar": {
@@ -31,7 +31,7 @@ def test_data_nested() -> None:
 
 def test_data_invalid() -> None:
     with pytest.raises(pydantic.ValidationError):
-        event_lib.Event(
+        Event(
             data={
                 "foo": object(),  # type: ignore[dict-item]
             },

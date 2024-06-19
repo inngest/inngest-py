@@ -14,10 +14,9 @@ from inngest._internal import (
     errors,
     execution,
     function,
-    function_config,
     middleware_lib,
     net,
-    registration,
+    server_lib,
     step_lib,
     transforms,
     types,
@@ -25,7 +24,7 @@ from inngest._internal import (
 
 
 class _ErrorData(types.BaseModel):
-    code: const.ErrorCode
+    code: server_lib.ErrorCode
     message: str
     name: str
     stack: typing.Optional[str]
@@ -38,7 +37,7 @@ class _ErrorData(types.BaseModel):
             name = err.name
             stack = err.stack
         else:
-            code = const.ErrorCode.UNKNOWN
+            code = server_lib.ErrorCode.UNKNOWN
             message = str(err)
             name = type(err).__name__
             stack = transforms.get_traceback(err)
@@ -112,7 +111,7 @@ class CommResponse:
         call_res: execution.CallResult,
     ) -> CommResponse:
         headers = {
-            const.HeaderKey.SERVER_TIMING.value: "handler",
+            server_lib.HeaderKey.SERVER_TIMING.value: "handler",
         }
 
         if call_res.multi:
@@ -125,7 +124,7 @@ class CommResponse:
 
                 if item.error is not None:
                     if errors.is_retriable(item.error) is False:
-                        headers[const.HeaderKey.NO_RETRY.value] = "true"
+                        headers[server_lib.HeaderKey.NO_RETRY.value] = "true"
 
             return cls(
                 body=multi_body,
@@ -141,11 +140,11 @@ class CommResponse:
         if call_res.error is not None:
             status_code = http.HTTPStatus.INTERNAL_SERVER_ERROR.value
             if errors.is_retriable(call_res.error) is False:
-                headers[const.HeaderKey.NO_RETRY.value] = "true"
+                headers[server_lib.HeaderKey.NO_RETRY.value] = "true"
 
             if isinstance(call_res.error, errors.RetryAfterError):
                 headers[
-                    const.HeaderKey.RETRY_AFTER.value
+                    server_lib.HeaderKey.RETRY_AFTER.value
                 ] = transforms.to_iso_utc(call_res.error.retry_after)
 
         return cls(
@@ -165,7 +164,7 @@ class CommResponse:
         if isinstance(err, errors.Error):
             code = err.code.value
         else:
-            code = const.ErrorCode.UNKNOWN.value
+            code = server_lib.ErrorCode.UNKNOWN.value
 
         if errors.is_quiet(err) is False:
             logger.error(f"{code}: {err!s}")
@@ -182,7 +181,7 @@ class CommResponse:
     @classmethod
     def from_error_code(
         cls,
-        code: const.ErrorCode,
+        code: server_lib.ErrorCode,
         message: str,
         status: http.HTTPStatus = http.HTTPStatus.INTERNAL_SERVER_ERROR,
     ) -> CommResponse:
@@ -199,8 +198,8 @@ class CommHandler:
     _base_url: str
     _client: client_lib.Inngest
     _fns: dict[str, function.Function]
-    _framework: const.Framework
-    _mode: const.ServerKind
+    _framework: server_lib.Framework
+    _mode: server_lib.ServerKind
     _signing_key: typing.Optional[str]
     _signing_key_fallback: typing.Optional[str]
 
@@ -209,7 +208,7 @@ class CommHandler:
         *,
         api_base_url: typing.Optional[str] = None,
         client: client_lib.Inngest,
-        framework: const.Framework,
+        framework: server_lib.Framework,
         functions: list[function.Function],
     ) -> None:
         self._client = client
@@ -220,7 +219,7 @@ class CommHandler:
             const.EnvKey.API_BASE_URL.value
         )
         if api_base_url is None:
-            if self._mode == const.ServerKind.DEV_SERVER:
+            if self._mode == server_lib.ServerKind.DEV_SERVER:
                 api_base_url = const.DEV_SERVER_ORIGIN
             else:
                 api_base_url = const.DEFAULT_API_ORIGIN
@@ -248,7 +247,7 @@ class CommHandler:
         self,
         *,
         app_url: str,
-        server_kind: typing.Optional[const.ServerKind],
+        server_kind: typing.Optional[server_lib.ServerKind],
         sync_id: typing.Optional[str],
     ) -> types.MaybeError[httpx.Request]:
         registration_url = urllib.parse.urljoin(
@@ -260,9 +259,9 @@ class CommHandler:
         if isinstance(fn_configs, Exception):
             return fn_configs
 
-        body = registration.RegisterRequest(
+        body = server_lib.RegisterRequest(
             app_name=self._client.app_id,
-            deploy_type=registration.DeployType.PING,
+            deploy_type=server_lib.DeployType.PING,
             framework=self._framework,
             functions=fn_configs,
             sdk=f"{const.LANGUAGE}:v{const.VERSION}",
@@ -280,7 +279,7 @@ class CommHandler:
 
         params = {}
         if sync_id is not None:
-            params[const.QueryParamKey.SYNC_ID.value] = sync_id
+            params[server_lib.QueryParamKey.SYNC_ID.value] = sync_id
 
         return self._client._http_client_sync.build_request(
             "POST",
@@ -294,7 +293,7 @@ class CommHandler:
     async def call_function(
         self,
         *,
-        call: execution.Call,
+        call: server_lib.ServerRequest,
         fn_id: str,
         raw_request: object,
         req_sig: net.RequestSignature,
@@ -302,7 +301,7 @@ class CommHandler:
     ) -> CommResponse:
         """Handle a function call from the Executor."""
 
-        if target_hashed_id == execution.UNSPECIFIED_STEP_ID:
+        if target_hashed_id == server_lib.UNSPECIFIED_STEP_ID:
             target_step_id = None
         else:
             target_step_id = target_hashed_id
@@ -349,7 +348,6 @@ class CommHandler:
             return await self._respond(Exception("events not in request"))
 
         call_res = await fn.call(
-            call.ctx,
             self._client,
             execution.Context(
                 attempt=call.ctx.attempt,
@@ -360,6 +358,7 @@ class CommHandler:
             ),
             fn_id,
             middleware,
+            call.ctx.stack.stack or [],
             step_lib.StepMemos.from_raw(steps),
             target_step_id,
         )
@@ -369,7 +368,7 @@ class CommHandler:
     def call_function_sync(
         self,
         *,
-        call: execution.Call,
+        call: server_lib.ServerRequest,
         fn_id: str,
         raw_request: object,
         req_sig: net.RequestSignature,
@@ -377,7 +376,7 @@ class CommHandler:
     ) -> CommResponse:
         """Handle a function call from the Executor."""
 
-        if target_hashed_id == execution.UNSPECIFIED_STEP_ID:
+        if target_hashed_id == server_lib.UNSPECIFIED_STEP_ID:
             target_step_id = None
         else:
             target_step_id = target_hashed_id
@@ -465,8 +464,8 @@ class CommHandler:
     def get_function_configs(
         self,
         app_url: str,
-    ) -> types.MaybeError[list[function_config.FunctionConfig]]:
-        configs: list[function_config.FunctionConfig] = []
+    ) -> types.MaybeError[list[server_lib.FunctionConfig]]:
+        configs: list[server_lib.FunctionConfig] = []
         for fn in self._fns.values():
             config = fn.get_config(app_url)
             configs.append(config.main)
@@ -484,7 +483,7 @@ class CommHandler:
         req_sig: net.RequestSignature,
         serve_origin: typing.Optional[str],
         serve_path: typing.Optional[str],
-        server_kind: typing.Optional[const.ServerKind],
+        server_kind: typing.Optional[server_lib.ServerKind],
     ) -> CommResponse:
         """Handle Dev Server's auto-discovery."""
 
@@ -502,7 +501,7 @@ class CommHandler:
             signing_key=self._signing_key,
             signing_key_fallback=self._signing_key_fallback,
         )
-        if self._client._mode != const.ServerKind.CLOUD or isinstance(
+        if self._client._mode != server_lib.ServerKind.CLOUD or isinstance(
             err, Exception
         ):
             authentication_succeeded = None
@@ -574,7 +573,7 @@ class CommHandler:
     def _parse_registration_response(
         self,
         server_res: httpx.Response,
-        server_kind: typing.Optional[const.ServerKind],
+        server_kind: typing.Optional[server_lib.ServerKind],
     ) -> CommResponse:
         try:
             server_res_body = server_res.json()
@@ -615,7 +614,7 @@ class CommHandler:
         self,
         *,
         app_url: str,
-        server_kind: typing.Optional[const.ServerKind],
+        server_kind: typing.Optional[server_lib.ServerKind],
         sync_id: typing.Optional[str],
     ) -> CommResponse:
         """Handle a registration call."""
@@ -649,7 +648,7 @@ class CommHandler:
         self,
         *,
         app_url: str,
-        server_kind: typing.Optional[const.ServerKind],
+        server_kind: typing.Optional[server_lib.ServerKind],
         sync_id: typing.Optional[str],
     ) -> CommResponse:
         """Handle a registration call."""
@@ -698,18 +697,18 @@ class CommHandler:
 
     def _validate_registration(
         self,
-        server_kind: typing.Optional[const.ServerKind],
+        server_kind: typing.Optional[server_lib.ServerKind],
     ) -> typing.Optional[CommResponse]:
         if server_kind is not None and server_kind != self._mode:
             msg: str
-            if server_kind == const.ServerKind.DEV_SERVER:
+            if server_kind == server_lib.ServerKind.DEV_SERVER:
                 msg = "Sync rejected since it's from a Dev Server but expected Cloud"
             else:
                 msg = "Sync rejected since it's from Cloud but expected Dev Server"
 
             self._client.logger.error(msg)
             return CommResponse.from_error_code(
-                const.ErrorCode.SERVER_KIND_MISMATCH,
+                server_lib.ErrorCode.SERVER_KIND_MISMATCH,
                 msg,
                 http.HTTPStatus.BAD_REQUEST,
             )
@@ -725,7 +724,7 @@ class _UnauthenticatedIntrospection(types.BaseModel):
     has_event_key: bool
     has_signing_key: bool
     has_signing_key_fallback: bool
-    mode: const.ServerKind
+    mode: server_lib.ServerKind
 
 
 class _AuthenticatedIntrospection(_UnauthenticatedIntrospection):

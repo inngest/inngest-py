@@ -9,12 +9,12 @@ import tornado.web
 
 import inngest
 import inngest.tornado
-from inngest._internal import const
+from inngest._internal import server_lib
 from tests import base, dev_server, net
 
 from . import cases
 
-_framework = const.Framework.TORNADO
+_framework = server_lib.Framework.TORNADO
 _app_id = f"{_framework.value}-functions"
 
 _client = inngest.Inngest(

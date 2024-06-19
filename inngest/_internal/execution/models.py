@@ -6,28 +6,10 @@ import typing
 
 import pydantic
 
-from inngest._internal import errors, event_lib, transforms, types
+from inngest._internal import errors, server_lib, transforms, types
 
 if typing.TYPE_CHECKING:
     from inngest._internal import step_lib
-
-
-class Call(types.BaseModel):
-    ctx: CallContext
-    event: event_lib.Event
-    events: typing.Optional[list[event_lib.Event]] = None
-    steps: dict[str, object]
-    use_api: bool
-
-
-class CallContext(types.BaseModel):
-    attempt: int
-    run_id: str
-    stack: CallStack
-
-
-class CallStack(types.BaseModel):
-    stack: typing.Optional[list[str]] = None
 
 
 @dataclasses.dataclass
@@ -82,8 +64,8 @@ class CallResult:
 @dataclasses.dataclass
 class Context:
     attempt: int
-    event: event_lib.Event
-    events: list[event_lib.Event]
+    event: server_lib.Event
+    events: list[server_lib.Event]
     logger: types.Logger
     run_id: str
 

@@ -14,15 +14,14 @@ import django.views.decorators.csrf
 from ._internal import (
     client_lib,
     comm,
-    const,
     errors,
-    execution,
     function,
     net,
+    server_lib,
     transforms,
 )
 
-FRAMEWORK = const.Framework.DJANGO
+FRAMEWORK = server_lib.Framework.DJANGO
 
 
 def serve(
@@ -109,19 +108,19 @@ def _create_handler_sync(
             )
 
         if request.method == "POST":
-            fn_id = request.GET.get(const.QueryParamKey.FUNCTION_ID.value)
+            fn_id = request.GET.get(server_lib.QueryParamKey.FUNCTION_ID.value)
             if fn_id is None:
                 raise errors.QueryParamMissingError(
-                    const.QueryParamKey.FUNCTION_ID.value
+                    server_lib.QueryParamKey.FUNCTION_ID.value
                 )
 
-            step_id = request.GET.get(const.QueryParamKey.STEP_ID.value)
+            step_id = request.GET.get(server_lib.QueryParamKey.STEP_ID.value)
             if step_id is None:
                 raise errors.QueryParamMissingError(
-                    const.QueryParamKey.STEP_ID.value
+                    server_lib.QueryParamKey.STEP_ID.value
                 )
 
-            call = execution.Call.from_raw(json.loads(request.body))
+            call = server_lib.ServerRequest.from_raw(json.loads(request.body))
             if isinstance(call, Exception):
                 return _to_response(
                     client,
@@ -142,7 +141,7 @@ def _create_handler_sync(
             )
 
         if request.method == "PUT":
-            sync_id = request.GET.get(const.QueryParamKey.SYNC_ID.value)
+            sync_id = request.GET.get(server_lib.QueryParamKey.SYNC_ID.value)
 
             return _to_response(
                 client,
@@ -215,19 +214,19 @@ def _create_handler_async(
             )
 
         if request.method == "POST":
-            fn_id = request.GET.get(const.QueryParamKey.FUNCTION_ID.value)
+            fn_id = request.GET.get(server_lib.QueryParamKey.FUNCTION_ID.value)
             if fn_id is None:
                 raise errors.QueryParamMissingError(
-                    const.QueryParamKey.FUNCTION_ID.value
+                    server_lib.QueryParamKey.FUNCTION_ID.value
                 )
 
-            step_id = request.GET.get(const.QueryParamKey.STEP_ID.value)
+            step_id = request.GET.get(server_lib.QueryParamKey.STEP_ID.value)
             if step_id is None:
                 raise errors.QueryParamMissingError(
-                    const.QueryParamKey.STEP_ID.value
+                    server_lib.QueryParamKey.STEP_ID.value
                 )
 
-            call = execution.Call.from_raw(json.loads(request.body))
+            call = server_lib.ServerRequest.from_raw(json.loads(request.body))
             if isinstance(call, Exception):
                 return _to_response(
                     client,
@@ -248,7 +247,7 @@ def _create_handler_async(
             )
 
         if request.method == "PUT":
-            sync_id = request.GET.get(const.QueryParamKey.SYNC_ID.value)
+            sync_id = request.GET.get(server_lib.QueryParamKey.SYNC_ID.value)
 
             return _to_response(
                 client,
@@ -278,7 +277,7 @@ def _create_handler_async(
 def _to_response(
     client: client_lib.Inngest,
     comm_res: comm.CommResponse,
-    server_kind: typing.Optional[const.ServerKind],
+    server_kind: typing.Optional[server_lib.ServerKind],
 ) -> django.http.HttpResponse:
     body = transforms.dump_json(comm_res.body)
     if isinstance(body, Exception):

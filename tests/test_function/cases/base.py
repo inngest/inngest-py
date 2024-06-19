@@ -3,7 +3,7 @@ import os
 import typing
 
 import inngest
-from inngest._internal import const
+from inngest._internal import server_lib
 from tests import base
 
 BaseState = base.BaseState
@@ -22,7 +22,7 @@ class Case:
     run_test: typing.Callable[[TestClass], typing.Awaitable[None]]
 
 
-def create_event_name(framework: const.Framework, test_name: str) -> str:
+def create_event_name(framework: server_lib.Framework, test_name: str) -> str:
     suffix = ""
     worker_id = os.getenv("PYTEST_XDIST_WORKER")
     if worker_id:

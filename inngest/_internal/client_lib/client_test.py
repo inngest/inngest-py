@@ -3,7 +3,7 @@ import unittest
 
 import pytest
 
-from inngest._internal import client_lib, const, errors, event_lib
+from inngest._internal import client_lib, const, errors, server_lib
 
 
 class Test(unittest.TestCase):
@@ -76,7 +76,7 @@ class Test(unittest.TestCase):
         )
 
         with pytest.raises(errors.EventKeyUnspecifiedError):
-            client.send_sync(event_lib.Event(name="foo"))
+            client.send_sync(server_lib.Event(name="foo"))
 
     def test_signing_key_env_var(self) -> None:
         os.environ[const.EnvKey.SIGNING_KEY.value] = "foo2"

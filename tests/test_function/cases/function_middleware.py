@@ -7,7 +7,7 @@ import werkzeug.local
 
 import inngest
 import tests.helper
-from inngest._internal import const
+from inngest._internal import server_lib
 
 from . import base
 
@@ -20,7 +20,7 @@ class _State(base.BaseState):
 
 def create(
     client: inngest.Inngest,
-    framework: const.Framework,
+    framework: server_lib.Framework,
     is_sync: bool,
 ) -> base.Case:
     test_name = base.create_test_name(__file__)
@@ -179,17 +179,17 @@ def create(
             tests.helper.RunStatus.COMPLETED,
         )
 
-        if framework == const.Framework.DIGITAL_OCEAN:
+        if framework == server_lib.Framework.DIGITAL_OCEAN:
             assert isinstance(state.raw_request, dict)
-        elif framework == const.Framework.DJANGO:
+        elif framework == server_lib.Framework.DJANGO:
             assert isinstance(
                 state.raw_request, django.core.handlers.wsgi.WSGIRequest
             )
-        elif framework == const.Framework.FAST_API:
+        elif framework == server_lib.Framework.FAST_API:
             assert isinstance(state.raw_request, fastapi.Request)
-        elif framework == const.Framework.FLASK:
+        elif framework == server_lib.Framework.FLASK:
             assert isinstance(state.raw_request, werkzeug.local.LocalProxy)
-        elif framework == const.Framework.TORNADO:
+        elif framework == server_lib.Framework.TORNADO:
             assert isinstance(
                 state.raw_request, tornado.httputil.HTTPServerRequest
             )

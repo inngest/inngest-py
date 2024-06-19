@@ -8,7 +8,7 @@ import typing_extensions
 from inngest._internal import (  # execution,
     client_lib,
     errors,
-    event_lib,
+    server_lib,
     transforms,
     types,
 )
@@ -134,7 +134,7 @@ class Step(base.StepBase):
             display_name=parsed_step_id.user_facing,
             id=parsed_step_id.hashed,
             name=parsed_step_id.user_facing,
-            op=base.Opcode.INVOKE,
+            op=server_lib.Opcode.INVOKE,
             opts=opts,
         )
 
@@ -235,7 +235,7 @@ class Step(base.StepBase):
             display_name=parsed_step_id.user_facing,
             id=parsed_step_id.hashed,
             name=parsed_step_id.user_facing,
-            op=base.Opcode.STEP_RUN,
+            op=server_lib.Opcode.STEP_RUN,
         )
 
         async with await self._execution.report_step(
@@ -268,7 +268,7 @@ class Step(base.StepBase):
             except Exception as err:
                 transforms.remove_first_traceback_frame(err)
 
-                step_info.op = base.Opcode.STEP_ERROR
+                step_info.op = server_lib.Opcode.STEP_ERROR
 
                 raise base.ResponseInterrupt(
                     base.StepResponse(
@@ -280,7 +280,7 @@ class Step(base.StepBase):
     async def send_event(
         self,
         step_id: str,
-        events: typing.Union[event_lib.Event, list[event_lib.Event]],
+        events: typing.Union[server_lib.Event, list[server_lib.Event]],
     ) -> list[str]:
         """
         Send an event or list of events.
@@ -371,7 +371,7 @@ class Step(base.StepBase):
             display_name=parsed_step_id.user_facing,
             id=parsed_step_id.hashed,
             name=transforms.to_iso_utc(until),
-            op=base.Opcode.SLEEP,
+            op=server_lib.Opcode.SLEEP,
         )
 
         async with await self._execution.report_step(
@@ -394,7 +394,7 @@ class Step(base.StepBase):
         event: str,
         if_exp: typing.Optional[str] = None,
         timeout: typing.Union[int, datetime.timedelta],
-    ) -> typing.Optional[event_lib.Event]:
+    ) -> typing.Optional[server_lib.Event]:
         """
         Wait for an event to be sent.
 
@@ -423,7 +423,7 @@ class Step(base.StepBase):
             id=parsed_step_id.hashed,
             display_name=parsed_step_id.user_facing,
             name=event,
-            op=base.Opcode.WAIT_FOR_EVENT,
+            op=server_lib.Opcode.WAIT_FOR_EVENT,
             opts=opts,
         )
 
@@ -441,6 +441,6 @@ class Step(base.StepBase):
                     return None
 
                 # Fulfilled by an event
-                return event_lib.Event.model_validate(step.output)
+                return server_lib.Event.model_validate(step.output)
 
         raise Exception("unreachable")

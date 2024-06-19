@@ -7,9 +7,9 @@ import pytest
 
 import inngest
 import inngest.flask
-from inngest._internal import const, errors
+from inngest._internal import errors, server_lib
 
-_framework = const.Framework.FLASK
+_framework = server_lib.Framework.FLASK
 _app_id = f"{_framework.value}-serve"
 
 

@@ -6,11 +6,11 @@ import flask.testing
 
 import inngest
 import inngest.flask
-from inngest._internal import const
+from inngest._internal import server_lib
 
 from . import base, cases
 
-_framework = const.Framework.FLASK
+_framework = server_lib.Framework.FLASK
 
 
 class TestRegistration(base.TestCase):
