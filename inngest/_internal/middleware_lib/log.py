@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from inngest._internal import client_lib, execution, function, step_lib, types
+from inngest._internal import (
+    client_lib,
+    execution_lib,
+    function,
+    step_lib,
+    types,
+)
 
 from .middleware import MiddlewareSync
 
@@ -43,7 +49,7 @@ class LoggerMiddleware(MiddlewareSync):
 
     def transform_input(
         self,
-        ctx: execution.Context,
+        ctx: execution_lib.Context,
         function: function.Function,
         steps: step_lib.StepMemos,
     ) -> None:

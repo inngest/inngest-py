@@ -5,7 +5,7 @@ import typing
 
 from inngest._internal import (
     errors,
-    execution,
+    execution_lib,
     function,
     server_lib,
     step_lib,
@@ -218,7 +218,7 @@ class MiddlewareManager:
 
     async def transform_input(
         self,
-        ctx: execution.Context,
+        ctx: execution_lib.Context,
         function: function.Function,
         steps: step_lib.StepMemos,
     ) -> types.MaybeError[None]:
@@ -242,7 +242,7 @@ class MiddlewareManager:
 
     def transform_input_sync(
         self,
-        ctx: execution.Context,
+        ctx: execution_lib.Context,
         function: function.Function,
         steps: step_lib.StepMemos,
     ) -> types.MaybeError[None]:
@@ -268,7 +268,7 @@ class MiddlewareManager:
 
     async def transform_output(
         self,
-        call_res: execution.CallResult,
+        call_res: execution_lib.CallResult,
     ) -> types.MaybeError[None]:
         # This should only happen when planning parallel steps
         if call_res.multi is not None:
@@ -309,7 +309,7 @@ class MiddlewareManager:
 
     def transform_output_sync(
         self,
-        call_res: execution.CallResult,
+        call_res: execution_lib.CallResult,
     ) -> types.MaybeError[None]:
         # This should only happen when planning parallel steps
         if call_res.multi is not None:

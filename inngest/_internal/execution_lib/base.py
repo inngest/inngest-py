@@ -3,41 +3,43 @@ from __future__ import annotations
 import typing
 
 if typing.TYPE_CHECKING:
-    from inngest._internal import client_lib, execution, function, step_lib
+    from inngest._internal import client_lib, execution_lib, function, step_lib
 
 
-class BaseOrchestrator(typing.Protocol):
+class BaseExecution(typing.Protocol):
     version: str
 
     async def report_step(
         self,
         step_info: step_lib.StepInfo,
         inside_parallel: bool,
-    ) -> execution.ReportedStep:
+    ) -> execution_lib.ReportedStep:
         ...
 
     async def run(
         self,
         client: client_lib.Inngest,
-        ctx: execution.Context,
+        ctx: execution_lib.Context,
         handler: typing.Union[
-            execution.FunctionHandlerAsync, execution.FunctionHandlerSync
+            execution_lib.FunctionHandlerAsync,
+            execution_lib.FunctionHandlerSync,
         ],
         fn: function.Function,
-    ) -> execution.CallResult:
+    ) -> execution_lib.CallResult:
         ...
 
 
-class BaseOrchestratorSync(typing.Protocol):
+class BaseExecutionSync(typing.Protocol):
     version: str
 
     def run(
         self,
         client: client_lib.Inngest,
-        ctx: execution.Context,
+        ctx: execution_lib.Context,
         handler: typing.Union[
-            execution.FunctionHandlerAsync, execution.FunctionHandlerSync
+            execution_lib.FunctionHandlerAsync,
+            execution_lib.FunctionHandlerSync,
         ],
         fn: function.Function,
-    ) -> execution.CallResult:
+    ) -> execution_lib.CallResult:
         ...

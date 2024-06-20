@@ -12,7 +12,7 @@ from inngest._internal import (
     client_lib,
     const,
     errors,
-    execution,
+    execution_lib,
     function,
     middleware_lib,
     net,
@@ -51,7 +51,7 @@ class _ErrorData(types.BaseModel):
 
 
 def _prep_call_result(
-    call_res: execution.CallResult,
+    call_res: execution_lib.CallResult,
 ) -> types.MaybeError[object]:
     """
     Convert a CallResult to the shape the Inngest Server expects. For step-level
@@ -108,7 +108,7 @@ class CommResponse:
     def from_call_result(
         cls,
         logger: types.Logger,
-        call_res: execution.CallResult,
+        call_res: execution_lib.CallResult,
     ) -> CommResponse:
         headers = {
             server_lib.HeaderKey.SERVER_TIMING.value: "handler",
@@ -349,7 +349,7 @@ class CommHandler:
 
         call_res = await fn.call(
             self._client,
-            execution.Context(
+            execution_lib.Context(
                 attempt=call.ctx.attempt,
                 event=call.event,
                 events=events,
@@ -423,7 +423,7 @@ class CommHandler:
 
         call_res = fn.call_sync(
             self._client,
-            execution.Context(
+            execution_lib.Context(
                 attempt=call.ctx.attempt,
                 event=call.event,
                 events=events,
@@ -679,7 +679,7 @@ class CommHandler:
 
     async def _respond(
         self,
-        value: typing.Union[execution.CallResult, Exception],
+        value: typing.Union[execution_lib.CallResult, Exception],
     ) -> CommResponse:
         if isinstance(value, Exception):
             return CommResponse.from_error(self._client.logger, value)
@@ -688,7 +688,7 @@ class CommHandler:
 
     def _respond_sync(
         self,
-        value: typing.Union[execution.CallResult, Exception],
+        value: typing.Union[execution_lib.CallResult, Exception],
     ) -> CommResponse:
         if isinstance(value, Exception):
             return CommResponse.from_error(self._client.logger, value)

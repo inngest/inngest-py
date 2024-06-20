@@ -5,7 +5,7 @@ import typing
 
 from inngest._internal import (
     errors,
-    execution,
+    execution_lib,
     server_lib,
     step_lib,
     transforms,
@@ -22,7 +22,7 @@ if typing.TYPE_CHECKING:
     from inngest._internal import client_lib, function, middleware_lib
 
 
-class OrchestratorExperimental:
+class ExecutionExperimental:
     version = "experimental"
 
     def __init__(
@@ -34,9 +34,9 @@ class OrchestratorExperimental:
     ) -> None:
         self._memos = memos
         self._middleware = middleware
-        self._pending_steps: dict[str, execution.ReportedStep] = {}
-        self._skipped_steps: list[execution.ReportedStep] = []
-        self._staged_steps: list[execution.ReportedStep] = []
+        self._pending_steps: dict[str, execution_lib.ReportedStep] = {}
+        self._skipped_steps: list[execution_lib.ReportedStep] = []
+        self._staged_steps: list[execution_lib.ReportedStep] = []
         self._stack = stack
         self._target_hashed_id = target_hashed_id
 
@@ -44,9 +44,9 @@ class OrchestratorExperimental:
         self,
         step_info: step_lib.StepInfo,
         inside_parallel: bool,
-    ) -> execution.ReportedStep:
-        step_signal = asyncio.Future[execution.ReportedStep]()
-        self._pending_steps[step_info.id] = execution.ReportedStep(
+    ) -> execution_lib.ReportedStep:
+        step_signal = asyncio.Future[execution_lib.ReportedStep]()
+        self._pending_steps[step_info.id] = execution_lib.ReportedStep(
             step_signal, step_info
         )
         step_count = len(self._pending_steps)
@@ -62,25 +62,26 @@ class OrchestratorExperimental:
     async def run(
         self,
         client: client_lib.Inngest,
-        ctx: execution.Context,
+        ctx: execution_lib.Context,
         handler: typing.Union[
-            execution.FunctionHandlerAsync, execution.FunctionHandlerSync
+            execution_lib.FunctionHandlerAsync,
+            execution_lib.FunctionHandlerSync,
         ],
         fn: function.Function,
-    ) -> execution.CallResult:
+    ) -> execution_lib.CallResult:
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
         middleware_err = await self._middleware.transform_input(
             ctx, fn, self._memos
         )
         if isinstance(middleware_err, Exception):
-            return execution.CallResult(middleware_err)
+            return execution_lib.CallResult(middleware_err)
 
         # No memoized data means we're calling the function for the first time.
         if self._memos.size == 0:
             err = await self._middleware.before_execution()
             if isinstance(err, Exception):
-                return execution.CallResult(err)
+                return execution_lib.CallResult(err)
 
         try:
             output: object
@@ -115,40 +116,40 @@ class OrchestratorExperimental:
                 else:
                     # Should be unreachable but Python's custom type guards don't
                     # support negative checks :(
-                    return execution.CallResult(
+                    return execution_lib.CallResult(
                         errors.UnknownError(
                             "unable to determine function handler type"
                         )
                     )
             except Exception as user_err:
                 transforms.remove_first_traceback_frame(user_err)
-                raise execution.UserError(user_err)
+                raise execution_lib.UserError(user_err)
 
             err = await self._middleware.after_execution()
             if isinstance(err, Exception):
-                return execution.CallResult(err)
+                return execution_lib.CallResult(err)
 
-            return execution.CallResult(output=output)
+            return execution_lib.CallResult(output=output)
         except step_lib.ResponseInterrupt as interrupt:
             err = await self._middleware.after_execution()
             if isinstance(err, Exception):
-                return execution.CallResult(err)
+                return execution_lib.CallResult(err)
 
-            return execution.CallResult.from_responses(interrupt.responses)
-        except execution.UserError as err:
-            return execution.CallResult(err.err)
+            return execution_lib.CallResult.from_responses(interrupt.responses)
+        except execution_lib.UserError as err:
+            return execution_lib.CallResult(err.err)
         except step_lib.SkipInterrupt as err:
             # This should only happen in a non-deterministic scenario, where
             # step targeting is enabled and an unexpected step is encountered.
             # We don't currently have a way to recover from this scenario.
 
-            return execution.CallResult(
+            return execution_lib.CallResult(
                 errors.StepUnexpectedError(
                     f'found step "{err.step_id}" when targeting a different step'
                 )
             )
         except Exception as err:
-            return execution.CallResult(err)
+            return execution_lib.CallResult(err)
         finally:
             await self._post_run_cleanup()
 
@@ -251,7 +252,7 @@ class OrchestratorExperimental:
         Stages steps for execution in the proper order
         """
 
-        def sort_key(step: execution.ReportedStep) -> int:
+        def sort_key(step: execution_lib.ReportedStep) -> int:
             try:
                 return self._stack.index(step.info.id)
             except ValueError:
@@ -278,26 +279,27 @@ class ExecutionV0Sync:
     def run(
         self,
         client: client_lib.Inngest,
-        ctx: execution.Context,
+        ctx: execution_lib.Context,
         handler: typing.Union[
-            execution.FunctionHandlerAsync, execution.FunctionHandlerSync
+            execution_lib.FunctionHandlerAsync,
+            execution_lib.FunctionHandlerSync,
         ],
         fn: function.Function,
         target_hashed_id: typing.Optional[str],
-    ) -> execution.CallResult:
+    ) -> execution_lib.CallResult:
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
         middleware_err = self._middleware.transform_input_sync(
             ctx, fn, self._memos
         )
         if isinstance(middleware_err, Exception):
-            return execution.CallResult(middleware_err)
+            return execution_lib.CallResult(middleware_err)
 
         # No memoized data means we're calling the function for the first time.
         if self._memos.size == 0:
             err = self._middleware.before_execution_sync()
             if isinstance(err, Exception):
-                return execution.CallResult(err)
+                return execution_lib.CallResult(err)
 
         try:
             if is_function_handler_sync(handler):
@@ -314,9 +316,9 @@ class ExecutionV0Sync:
                     )
                 except Exception as user_err:
                     transforms.remove_first_traceback_frame(user_err)
-                    raise execution.UserError(user_err)
+                    raise execution_lib.UserError(user_err)
             else:
-                return execution.CallResult(
+                return execution_lib.CallResult(
                     errors.AsyncUnsupportedError(
                         "encountered async function in non-async context"
                     )
@@ -324,26 +326,26 @@ class ExecutionV0Sync:
 
             err = self._middleware.after_execution_sync()
             if isinstance(err, Exception):
-                return execution.CallResult(err)
+                return execution_lib.CallResult(err)
 
-            return execution.CallResult(output=output)
+            return execution_lib.CallResult(output=output)
         except step_lib.ResponseInterrupt as interrupt:
             err = self._middleware.after_execution_sync()
             if isinstance(err, Exception):
-                return execution.CallResult(err)
+                return execution_lib.CallResult(err)
 
-            return execution.CallResult.from_responses(interrupt.responses)
-        except execution.UserError as err:
-            return execution.CallResult(err.err)
+            return execution_lib.CallResult.from_responses(interrupt.responses)
+        except execution_lib.UserError as err:
+            return execution_lib.CallResult(err.err)
         except step_lib.SkipInterrupt as err:
             # This should only happen in a non-deterministic scenario, where
             # step targeting is enabled and an unexpected step is encountered.
             # We don't currently have a way to recover from this scenario.
 
-            return execution.CallResult(
+            return execution_lib.CallResult(
                 errors.StepUnexpectedError(
                     f'found step "{err.step_id}" when targeting a different step'
                 )
             )
         except Exception as err:
-            return execution.CallResult(err)
+            return execution_lib.CallResult(err)

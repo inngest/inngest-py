@@ -12,7 +12,6 @@ from inngest._internal import (
     const,
     env_lib,
     errors,
-    execution,
     function,
     middleware_lib,
     net,
@@ -21,6 +20,9 @@ from inngest._internal import (
 )
 
 from . import models
+
+if typing.TYPE_CHECKING:
+    from inngest._internal import execution_lib
 
 # Dummy value
 _DEV_SERVER_EVENT_KEY = "NO_EVENT_KEY_SET"
@@ -205,7 +207,9 @@ class Inngest:
         ] = None,
         name: typing.Optional[str] = None,
         on_failure: typing.Union[
-            execution.FunctionHandlerAsync, execution.FunctionHandlerSync, None
+            execution_lib.FunctionHandlerAsync,
+            execution_lib.FunctionHandlerSync,
+            None,
         ] = None,
         priority: typing.Optional[server_lib.Priority] = None,
         rate_limit: typing.Optional[server_lib.RateLimit] = None,
@@ -220,7 +224,8 @@ class Inngest:
     ) -> typing.Callable[
         [
             typing.Union[
-                execution.FunctionHandlerAsync, execution.FunctionHandlerSync
+                execution_lib.FunctionHandlerAsync,
+                execution_lib.FunctionHandlerSync,
             ]
         ],
         function.Function,
@@ -249,7 +254,8 @@ class Inngest:
 
         def decorator(
             func: typing.Union[
-                execution.FunctionHandlerAsync, execution.FunctionHandlerSync
+                execution_lib.FunctionHandlerAsync,
+                execution_lib.FunctionHandlerSync,
             ],
         ) -> function.Function:
             triggers = trigger if isinstance(trigger, list) else [trigger]

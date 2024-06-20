@@ -3,7 +3,7 @@
 
 from ._internal.client_lib import Inngest, SendEventsResult
 from ._internal.errors import NonRetriableError, RetryAfterError, StepError
-from ._internal.execution import Context
+from ._internal.execution_lib import Context
 from ._internal.function import Function
 from ._internal.middleware_lib import (
     Middleware,

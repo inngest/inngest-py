@@ -9,12 +9,34 @@ import pydantic
 from inngest._internal import (
     client_lib,
     errors,
-    execution,
     middleware_lib,
     server_lib,
     transforms,
     types,
 )
+
+
+class MemoizedError(types.BaseModel):
+    message: str
+    name: str
+    stack: typing.Optional[str] = None
+
+    @classmethod
+    def from_error(cls, err: Exception) -> MemoizedError:
+        return cls(
+            message=str(err),
+            name=type(err).__name__,
+            stack=transforms.get_traceback(err),
+        )
+
+
+class Output(types.BaseModel):
+    # Fail validation if any extra fields exist, because this will prevent
+    # accidentally assuming user data is nested data
+    model_config = pydantic.ConfigDict(extra="forbid")
+
+    data: object = None
+    error: typing.Optional[MemoizedError] = None
 
 
 class StepMemos:
@@ -24,15 +46,13 @@ class StepMemos:
     def size(self) -> int:
         return len(self._memos)
 
-    def __init__(self, memos: dict[str, execution.Output]) -> None:
+    def __init__(self, memos: dict[str, Output]) -> None:
         self._memos = memos
 
-    def values(self) -> typing.Iterator[execution.Output]:
+    def values(self) -> typing.Iterator[Output]:
         return iter(self._memos.values())
 
-    def pop(
-        self, hashed_id: str
-    ) -> typing.Union[execution.Output, types.EmptySentinel]:
+    def pop(self, hashed_id: str) -> typing.Union[Output, types.EmptySentinel]:
         if hashed_id in self._memos:
             memo = self._memos[hashed_id]
 
@@ -49,13 +69,13 @@ class StepMemos:
     def from_raw(cls, raw: dict[str, object]) -> StepMemos:
         memos = {}
         for k, v in raw.items():
-            output = execution.Output.from_raw(v)
+            output = Output.from_raw(v)
             if isinstance(output, Exception):
                 # Not all steps nest their output in an Output-compatible object
                 # (i.e. they don't nest output in a data field). For example,
                 # `step.run` nests its output in a data field but
                 # `step.waitForEvent` will not nest its fulfilling event.
-                output = execution.Output(data=v)
+                output = Output(data=v)
 
             memos[k] = output
         return cls(memos)
@@ -80,7 +100,7 @@ class StepBase:
     async def _get_memo(
         self,
         hashed_id: str,
-    ) -> typing.Union[execution.Output, types.EmptySentinel]:
+    ) -> typing.Union[Output, types.EmptySentinel]:
         memo = self._memos.pop(hashed_id)
 
         # If there are no more memos then all future code is new.
@@ -102,7 +122,7 @@ class StepBase:
     def _get_memo_sync(
         self,
         hashed_id: str,
-    ) -> typing.Union[execution.Output, types.EmptySentinel]:
+    ) -> typing.Union[Output, types.EmptySentinel]:
         memo = self._memos.pop(hashed_id)
 
         # If there are no more memos then all future code is new.
