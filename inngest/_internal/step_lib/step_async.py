@@ -5,27 +5,21 @@ import typing
 
 import typing_extensions
 
-from inngest._internal import (  # execution,
-    client_lib,
-    errors,
-    server_lib,
-    transforms,
-    types,
-)
+from inngest._internal import client_lib, errors, server_lib, transforms, types
 from inngest._internal.client_lib import models as client_models
 
 from . import base
 
 # Avoid circular import at runtime
 if typing.TYPE_CHECKING:
-    from inngest._internal import function, middleware_lib, orchestrator
+    from inngest._internal import execution_lib, function, middleware_lib
 
 
 class Step(base.StepBase):
     def __init__(
         self,
         client: client_lib.Inngest,
-        exe: orchestrator.BaseOrchestrator,
+        exe: execution_lib.BaseExecution,
         memos: base.StepMemos,
         middleware: middleware_lib.MiddlewareManager,
         step_id_counter: base.StepIDCounter,

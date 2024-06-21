@@ -13,7 +13,7 @@ from inngest._internal import (
     client_lib,
     const,
     errors,
-    execution,
+    execution_lib,
     function,
     middleware_lib,
     net,
@@ -264,7 +264,7 @@ class CommHandler:
             return Exception("events not in request")
         call_res = await fn.call(
             self._client,
-            execution.Context(
+            execution_lib.Context(
                 attempt=request.ctx.attempt,
                 event=request.event,
                 events=events,
@@ -361,7 +361,7 @@ class CommHandler:
 
         call_res = fn.call_sync(
             self._client,
-            execution.Context(
+            execution_lib.Context(
                 attempt=request.ctx.attempt,
                 event=request.event,
                 events=events,

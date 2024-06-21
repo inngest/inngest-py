@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import typing
 
-from inngest._internal import execution, function, server_lib, step_lib
+from inngest._internal import execution_lib, function, server_lib, step_lib
 
 if typing.TYPE_CHECKING:
     from inngest._internal import client_lib
@@ -75,7 +75,7 @@ class Middleware:
 
     async def transform_input(
         self,
-        ctx: execution.Context,
+        ctx: execution_lib.Context,
         function: function.Function,
         steps: step_lib.StepMemos,
     ) -> None:
@@ -162,7 +162,7 @@ class MiddlewareSync:
 
     def transform_input(
         self,
-        ctx: execution.Context,
+        ctx: execution_lib.Context,
         function: function.Function,
         steps: step_lib.StepMemos,
     ) -> None:

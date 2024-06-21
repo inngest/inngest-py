@@ -4,7 +4,7 @@ import typing
 
 import typing_extensions
 
-from ..execution.models import FunctionHandlerAsync, FunctionHandlerSync
+from ..execution_lib.models import FunctionHandlerAsync, FunctionHandlerSync
 
 
 def is_function_handler_async(

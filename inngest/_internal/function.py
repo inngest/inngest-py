@@ -10,9 +10,8 @@ import pydantic
 from inngest._internal import (
     client_lib,
     errors,
-    execution,
+    execution_lib,
     middleware_lib,
-    orchestrator,
     server_lib,
     step_lib,
     types,
@@ -45,7 +44,9 @@ class FunctionOpts(types.BaseModel):
 
     name: str
     on_failure: typing.Union[
-        execution.FunctionHandlerAsync, execution.FunctionHandlerSync, None
+        execution_lib.FunctionHandlerAsync,
+        execution_lib.FunctionHandlerSync,
+        None,
     ] = None
     priority: typing.Optional[server_lib.Priority] = None
     rate_limit: typing.Optional[server_lib.RateLimit] = None
@@ -61,7 +62,7 @@ class FunctionOpts(types.BaseModel):
 
 class Function:
     _handler: typing.Union[
-        execution.FunctionHandlerAsync, execution.FunctionHandlerSync
+        execution_lib.FunctionHandlerAsync, execution_lib.FunctionHandlerSync
     ]
     _on_failure_fn_id: typing.Optional[str] = None
     _opts: FunctionOpts
@@ -109,7 +110,8 @@ class Function:
             list[typing.Union[server_lib.TriggerCron, server_lib.TriggerEvent]],
         ],
         handler: typing.Union[
-            execution.FunctionHandlerAsync, execution.FunctionHandlerSync
+            execution_lib.FunctionHandlerAsync,
+            execution_lib.FunctionHandlerSync,
         ],
         middleware: typing.Optional[
             list[middleware_lib.UninitializedMiddleware]
@@ -127,49 +129,50 @@ class Function:
     async def call(
         self,
         client: client_lib.Inngest,
-        ctx: execution.Context,
+        ctx: execution_lib.Context,
         fn_id: str,
         middleware: middleware_lib.MiddlewareManager,
         stack: list[str],
         steps: step_lib.StepMemos,
         target_hashed_id: typing.Optional[str],
-    ) -> execution.CallResult:
+    ) -> execution_lib.CallResult:
         middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
         for m in self._middleware:
             middleware.add(m)
 
         handler: typing.Union[
-            execution.FunctionHandlerAsync, execution.FunctionHandlerSync
+            execution_lib.FunctionHandlerAsync,
+            execution_lib.FunctionHandlerSync,
         ]
         if self.id == fn_id:
             handler = self._handler
         elif self.on_failure_fn_id == fn_id:
             if self._opts.on_failure is None:
-                return execution.CallResult(
+                return execution_lib.CallResult(
                     errors.FunctionNotFoundError("on_failure not defined")
                 )
             handler = self._opts.on_failure
         else:
-            return execution.CallResult(
+            return execution_lib.CallResult(
                 errors.FunctionNotFoundError("function ID mismatch")
             )
 
-        orc: orchestrator.BaseOrchestrator
+        execution: execution_lib.BaseExecution
         if self._experimental_execution:
-            orc = orchestrator.OrchestratorExperimental(
+            execution = execution_lib.ExecutionExperimental(
                 steps,
                 middleware,
                 stack,
                 target_hashed_id,
             )
         else:
-            orc = orchestrator.OrchestratorV0(
+            execution = execution_lib.ExecutionV0(
                 steps,
                 middleware,
                 target_hashed_id,
             )
 
-        call_res = await orc.run(
+        call_res = await execution.run(
             client,
             ctx,
             handler,
@@ -178,44 +181,45 @@ class Function:
 
         err = await middleware.transform_output(call_res)
         if isinstance(err, Exception):
-            return execution.CallResult(err)
+            return execution_lib.CallResult(err)
 
         err = await middleware.before_response()
         if isinstance(err, Exception):
-            return execution.CallResult(err)
+            return execution_lib.CallResult(err)
 
         return call_res
 
     def call_sync(
         self,
         client: client_lib.Inngest,
-        ctx: execution.Context,
+        ctx: execution_lib.Context,
         fn_id: str,
         middleware: middleware_lib.MiddlewareManager,
         steps: step_lib.StepMemos,
         target_hashed_id: typing.Optional[str],
-    ) -> execution.CallResult:
+    ) -> execution_lib.CallResult:
         middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
         for m in self._middleware:
             middleware.add(m)
 
         handler: typing.Union[
-            execution.FunctionHandlerAsync, execution.FunctionHandlerSync
+            execution_lib.FunctionHandlerAsync,
+            execution_lib.FunctionHandlerSync,
         ]
         if self.id == fn_id:
             handler = self._handler
         elif self.on_failure_fn_id == fn_id:
             if self._opts.on_failure is None:
-                return execution.CallResult(
+                return execution_lib.CallResult(
                     errors.FunctionNotFoundError("on_failure not defined")
                 )
             handler = self._opts.on_failure
         else:
-            return execution.CallResult(
+            return execution_lib.CallResult(
                 errors.FunctionNotFoundError("function ID mismatch")
             )
 
-        call_res = orchestrator.OrchestratorV0Sync(
+        call_res = execution_lib.ExecutionV0Sync(
             steps,
             middleware,
             target_hashed_id,
@@ -228,11 +232,11 @@ class Function:
 
         err = middleware.transform_output_sync(call_res)
         if isinstance(err, Exception):
-            return execution.CallResult(err)
+            return execution_lib.CallResult(err)
 
         err = middleware.before_response_sync()
         if isinstance(err, Exception):
-            return execution.CallResult(err)
+            return execution_lib.CallResult(err)
 
         return call_res
 

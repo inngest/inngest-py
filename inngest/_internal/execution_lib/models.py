@@ -4,9 +4,7 @@ import asyncio
 import dataclasses
 import typing
 
-import pydantic
-
-from inngest._internal import errors, server_lib, transforms, types
+from inngest._internal import errors, server_lib, types
 
 if typing.TYPE_CHECKING:
     from inngest._internal import step_lib
@@ -88,29 +86,6 @@ class FunctionHandlerSync(typing.Protocol):
         step: step_lib.StepSync,
     ) -> types.JSON:
         ...
-
-
-class Output(types.BaseModel):
-    # Fail validation if any extra fields exist, because this will prevent
-    # accidentally assuming user data is nested data
-    model_config = pydantic.ConfigDict(extra="forbid")
-
-    data: object = None
-    error: typing.Optional[MemoizedError] = None
-
-
-class MemoizedError(types.BaseModel):
-    message: str
-    name: str
-    stack: typing.Optional[str] = None
-
-    @classmethod
-    def from_error(cls, err: Exception) -> MemoizedError:
-        return cls(
-            message=str(err),
-            name=type(err).__name__,
-            stack=transforms.get_traceback(err),
-        )
 
 
 class ReportedStep:
