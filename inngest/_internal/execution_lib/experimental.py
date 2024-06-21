@@ -98,6 +98,7 @@ class ExecutionExperimental:
                             self,
                             self._memos,
                             self._middleware,
+                            self._request,
                             step_lib.StepIDCounter(),
                             self._target_hashed_id,
                         ),
@@ -109,6 +110,7 @@ class ExecutionExperimental:
                             client,
                             self._memos,
                             self._middleware,
+                            self._request,
                             step_lib.StepIDCounter(),
                             self._target_hashed_id,
                         ),
@@ -289,11 +291,13 @@ class ExecutionV0Sync:
         self,
         memos: step_lib.StepMemos,
         middleware: middleware_lib.MiddlewareManager,
+        request: server_lib.ServerRequest,
     ) -> None:
         self._condition = asyncio.Condition()
         self._memos = memos
         self._middleware = middleware
         self._pending_report_count = 0
+        self._request = request
 
     def run(
         self,
@@ -329,6 +333,7 @@ class ExecutionV0Sync:
                             client,
                             self._memos,
                             self._middleware,
+                            self._request,
                             step_lib.StepIDCounter(),
                             target_hashed_id,
                         ),

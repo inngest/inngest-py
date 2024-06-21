@@ -22,6 +22,7 @@ class Step(base.StepBase):
         exe: execution_lib.BaseExecution,
         memos: base.StepMemos,
         middleware: middleware_lib.MiddlewareManager,
+        request: server_lib.ServerRequest,
         step_id_counter: base.StepIDCounter,
         target_hashed_id: typing.Optional[str],
     ) -> None:
@@ -29,6 +30,7 @@ class Step(base.StepBase):
             client,
             memos,
             middleware,
+            request,
             step_id_counter,
             target_hashed_id,
         )

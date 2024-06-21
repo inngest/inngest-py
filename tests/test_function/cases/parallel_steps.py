@@ -1,5 +1,3 @@
-import json
-import typing
 import unittest.mock
 
 import inngest
@@ -10,9 +8,10 @@ from . import base
 
 
 class _State(base.BaseState):
-    request_counter = 0
     step_1a_counter = 0
     step_1b_counter = 0
+    step_after_counter = 0
+    parallel_output: object = None
 
 
 def create(
@@ -33,9 +32,8 @@ def create(
     def fn_sync(
         ctx: inngest.Context,
         step: inngest.StepSync,
-    ) -> tuple[typing.Union[int, list[str]], ...]:
+    ) -> None:
         state.run_id = ctx.run_id
-        state.request_counter += 1
 
         def _step_1a() -> int:
             state.step_1a_counter += 1
@@ -45,7 +43,7 @@ def create(
             state.step_1b_counter += 1
             return 2
 
-        return step.parallel(
+        state.parallel_output = step.parallel(
             (
                 lambda: step.run("1a", _step_1a),
                 lambda: step.run("1b", _step_1b),
@@ -54,6 +52,11 @@ def create(
                 ),
             )
         )
+
+        def _step_after() -> None:
+            state.step_after_counter += 1
+
+        step.run("after", _step_after)
 
     @client.create_function(
         fn_id=fn_id,
@@ -63,19 +66,18 @@ def create(
     async def fn_async(
         ctx: inngest.Context,
         step: inngest.Step,
-    ) -> tuple[typing.Union[int, list[str], None], ...]:
+    ) -> None:
         state.run_id = ctx.run_id
-        state.request_counter += 1
 
-        def _step_1a() -> int:
+        async def _step_1a() -> int:
             state.step_1a_counter += 1
             return 1
 
-        def _step_1b() -> int:
+        async def _step_1b() -> int:
             state.step_1b_counter += 1
             return 2
 
-        return await step.parallel(
+        state.parallel_output = await step.parallel(
             (
                 lambda: step.run("1a", _step_1a),
                 lambda: step.run("1b", _step_1b),
@@ -85,32 +87,24 @@ def create(
             )
         )
 
+        async def _step_after() -> None:
+            state.step_after_counter += 1
+
+        await step.run("after", _step_after)
+
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
 
-        def assert_request_count() -> None:
-            # Not sure the best way to test that parallelism happened, so we'll
-            # assert that the number of requests is greater than the number of
-            # steps.
-            #
-            # The request count varies for some reason, so asserting an exact
-            # number (instead of >) results in flakey tests. We should find out
-            # why, but in the meantime this works.
-            assert state.request_counter > 4
-
-        base.wait_for(assert_request_count)
-
         run_id = state.wait_for_run_id()
-        run = tests.helper.client.wait_for_run_status(
+        tests.helper.client.wait_for_run_status(
             run_id,
             tests.helper.RunStatus.COMPLETED,
         )
-        assert run.output is not None
-        output = json.loads(run.output)
-        assert output == [1, 2, [unittest.mock.ANY]]
 
+        assert state.parallel_output == (1, 2, [unittest.mock.ANY])
         assert state.step_1a_counter == 1
         assert state.step_1b_counter == 1
+        assert state.step_after_counter == 1
 
     if is_sync:
         fn = fn_sync

@@ -169,6 +169,7 @@ class Function:
             execution = execution_lib.ExecutionV0(
                 steps,
                 middleware,
+                request,
                 target_hashed_id,
             )
 
@@ -195,6 +196,7 @@ class Function:
         ctx: execution_lib.Context,
         fn_id: str,
         middleware: middleware_lib.MiddlewareManager,
+        request: server_lib.ServerRequest,
         steps: step_lib.StepMemos,
         target_hashed_id: typing.Optional[str],
     ) -> execution_lib.CallResult:
@@ -222,6 +224,7 @@ class Function:
         call_res = execution_lib.ExecutionV0Sync(
             steps,
             middleware,
+            request,
             target_hashed_id,
         ).run(
             client,
