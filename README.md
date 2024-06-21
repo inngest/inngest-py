@@ -35,21 +35,7 @@ Python 3.9 is the minimum version we support.
 
 ## Getting started
 
-Install `inngest` in your project:
-
-```sh
-pip install inngest
-```
-
-Write a basic function and serve it (see the [basic](#basic-no-steps) example for guidance).
-
-Start the Dev Server (the local version of our cloud platform):
-
-```sh
-npx inngest-cli@latest dev
-```
-
-Browse to http://127.0.0.1:8288 and you should see your app! Visit our docs to read more about the [Dev Server](https://www.inngest.com/docs/local-development).
+[Quick start guide](https://www.inngest.com/docs/getting-started/quick-start/python)
 
 ## Examples
 

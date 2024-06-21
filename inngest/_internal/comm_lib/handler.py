@@ -7,6 +7,7 @@ import typing
 import urllib.parse
 
 import httpx
+import typing_extensions
 
 from inngest._internal import (
     client_lib,
@@ -22,176 +23,74 @@ from inngest._internal import (
     types,
 )
 
+from .models import (
+    AuthenticatedInspection,
+    CommResponse,
+    UnauthenticatedInspection,
+)
+from .utils import parse_query_params
 
-class _ErrorData(types.BaseModel):
-    code: server_lib.ErrorCode
-    message: str
-    name: str
-    stack: typing.Optional[str]
-
-    @classmethod
-    def from_error(cls, err: Exception) -> _ErrorData:
-        if isinstance(err, errors.Error):
-            code = err.code
-            message = err.message
-            name = err.name
-            stack = err.stack
-        else:
-            code = server_lib.ErrorCode.UNKNOWN
-            message = str(err)
-            name = type(err).__name__
-            stack = transforms.get_traceback(err)
-
-        return cls(
-            code=code,
-            message=message,
-            name=name,
-            stack=stack,
-        )
+_ParamsT = typing_extensions.ParamSpec("_ParamsT")
 
 
-def _prep_call_result(
-    call_res: execution_lib.CallResult,
-) -> types.MaybeError[object]:
-    """
-    Convert a CallResult to the shape the Inngest Server expects. For step-level
-    results this is a dict and for function-level results this is the output or
-    error.
-    """
-
-    if call_res.step is not None:
-        d = call_res.step.to_dict()
-        if isinstance(d, Exception):
-            # Unreachable
-            return d
-    else:
-        d = {}
-
-    if call_res.error is not None:
-        e = _ErrorData.from_error(call_res.error).to_dict()
-        if isinstance(e, Exception):
-            return e
-        d["error"] = e
-
-    if call_res.output is not types.empty_sentinel:
-        err = transforms.dump_json(call_res.output)
-        if isinstance(err, Exception):
-            msg = "returned unserializable data"
-            if call_res.step is not None:
-                msg = f'"{call_res.step.display_name}" {msg}'
-
-            return errors.OutputUnserializableError(msg)
-
-        d["data"] = call_res.output
-
-    is_function_level = call_res.step is None
-    if is_function_level:
-        # Don't nest function-level results
-        return d.get("error") or d.get("data")
-
-    return d
-
-
-class CommResponse:
-    def __init__(
-        self,
-        *,
-        body: object = None,
-        headers: typing.Optional[dict[str, str]] = None,
-        status_code: int = http.HTTPStatus.OK.value,
-    ) -> None:
-        self.headers = headers or {}
-        self.body = body
-        self.status_code = status_code
-
-    @classmethod
-    def from_call_result(
-        cls,
-        logger: types.Logger,
-        call_res: execution_lib.CallResult,
+def _prep_response(
+    f: typing.Callable[
+        _ParamsT, typing.Awaitable[typing.Union[CommResponse, Exception]]
+    ],
+) -> typing.Callable[_ParamsT, typing.Awaitable[CommResponse]]:
+    async def inner(
+        *args: _ParamsT.args,
+        **kwargs: _ParamsT.kwargs,
     ) -> CommResponse:
-        headers = {
-            server_lib.HeaderKey.SERVER_TIMING.value: "handler",
+        comm_handler = args[0]
+        if not isinstance(comm_handler, CommHandler):
+            raise ValueError("First argument must be a CommHandler instance.")
+
+        res = await f(*args, **kwargs)
+        if isinstance(res, Exception):
+            res = CommResponse.from_error(comm_handler._client.logger, res)
+
+        res.headers = {
+            **res.headers,
+            **net.create_headers(
+                env=comm_handler._client.env,
+                framework=comm_handler._framework,
+                server_kind=comm_handler._client._mode,
+            ),
         }
 
-        if call_res.multi:
-            multi_body: list[object] = []
-            for item in call_res.multi:
-                d = _prep_call_result(item)
-                if isinstance(d, Exception):
-                    return cls.from_error(logger, d)
-                multi_body.append(d)
+        return res
 
-                if item.error is not None:
-                    if errors.is_retriable(item.error) is False:
-                        headers[server_lib.HeaderKey.NO_RETRY.value] = "true"
+    return inner
 
-            return cls(
-                body=multi_body,
-                headers=headers,
-                status_code=http.HTTPStatus.PARTIAL_CONTENT.value,
-            )
 
-        body = _prep_call_result(call_res)
-        status_code = http.HTTPStatus.OK.value
-        if isinstance(body, Exception):
-            return cls.from_error(logger, body)
-
-        if call_res.error is not None:
-            status_code = http.HTTPStatus.INTERNAL_SERVER_ERROR.value
-            if errors.is_retriable(call_res.error) is False:
-                headers[server_lib.HeaderKey.NO_RETRY.value] = "true"
-
-            if isinstance(call_res.error, errors.RetryAfterError):
-                headers[
-                    server_lib.HeaderKey.RETRY_AFTER.value
-                ] = transforms.to_iso_utc(call_res.error.retry_after)
-
-        return cls(
-            body=body,
-            headers=headers,
-            status_code=status_code,
-        )
-
-    @classmethod
-    def from_error(
-        cls,
-        logger: types.Logger,
-        err: Exception,
-        status: http.HTTPStatus = http.HTTPStatus.INTERNAL_SERVER_ERROR,
+def _prep_response_sync(
+    f: typing.Callable[_ParamsT, typing.Union[CommResponse, Exception]],
+) -> typing.Callable[_ParamsT, CommResponse]:
+    def inner(
+        *args: _ParamsT.args,
+        **kwargs: _ParamsT.kwargs,
     ) -> CommResponse:
-        code: typing.Optional[str] = None
-        if isinstance(err, errors.Error):
-            code = err.code.value
-        else:
-            code = server_lib.ErrorCode.UNKNOWN.value
+        comm_handler = args[0]
+        if not isinstance(comm_handler, CommHandler):
+            raise ValueError("First argument must be a CommHandler instance.")
 
-        if errors.is_quiet(err) is False:
-            logger.error(f"{code}: {err!s}")
+        res = f(*args, **kwargs)
+        if isinstance(res, Exception):
+            res = CommResponse.from_error(comm_handler._client.logger, res)
 
-        return cls(
-            body={
-                "code": code,
-                "message": str(err),
-                "name": type(err).__name__,
-            },
-            status_code=status.value,
-        )
+        res.headers = {
+            **res.headers,
+            **net.create_headers(
+                env=comm_handler._client.env,
+                framework=comm_handler._framework,
+                server_kind=comm_handler._client._mode,
+            ),
+        }
 
-    @classmethod
-    def from_error_code(
-        cls,
-        code: server_lib.ErrorCode,
-        message: str,
-        status: http.HTTPStatus = http.HTTPStatus.INTERNAL_SERVER_ERROR,
-    ) -> CommResponse:
-        return cls(
-            body={
-                "code": code.value,
-                "message": message,
-            },
-            status_code=status.value,
-        )
+        return res
+
+    return inner
 
 
 class CommHandler:
@@ -243,7 +142,7 @@ class CommHandler:
 
         self._signing_key_fallback = client.signing_key_fallback
 
-    def _build_registration_request(
+    def _build_register_request(
         self,
         *,
         app_url: str,
@@ -259,7 +158,7 @@ class CommHandler:
         if isinstance(fn_configs, Exception):
             return fn_configs
 
-        body = server_lib.RegisterRequest(
+        body = server_lib.SynchronizeRequest(
             app_name=self._client.app_id,
             deploy_type=server_lib.DeployType.PING,
             framework=self._framework,
@@ -290,21 +189,23 @@ class CommHandler:
             timeout=30,
         )
 
+    @_prep_response
     async def call_function(
         self,
         *,
-        call: server_lib.ServerRequest,
-        fn_id: str,
+        body: bytes,
+        headers: typing.Union[dict[str, str], dict[str, list[str]]],
+        query_params: typing.Union[dict[str, str], dict[str, list[str]]],
         raw_request: object,
-        req_sig: net.RequestSignature,
-        target_hashed_id: str,
-    ) -> CommResponse:
+    ) -> typing.Union[CommResponse, Exception]:
         """Handle a function call from the Executor."""
 
-        if target_hashed_id == server_lib.UNSPECIFIED_STEP_ID:
-            target_step_id = None
-        else:
-            target_step_id = target_hashed_id
+        headers = net.normalize_headers(headers)
+
+        server_kind = transforms.get_server_kind(headers)
+        if isinstance(server_kind, Exception):
+            self._client.logger.error(server_kind)
+            server_kind = None
 
         middleware = middleware_lib.MiddlewareManager.from_client(
             self._client,
@@ -312,74 +213,96 @@ class CommHandler:
         )
 
         # Validate the request signature.
-        err = req_sig.validate(
+        err = net.validate_request(
+            body=body,
+            headers=headers,
+            mode=self._client._mode,
             signing_key=self._signing_key,
             signing_key_fallback=self._signing_key_fallback,
         )
         if isinstance(err, Exception):
-            return await self._respond(err)
+            return err
+
+        request = server_lib.ServerRequest.from_raw(body)
+        if isinstance(request, Exception):
+            return request
+
+        params = parse_query_params(query_params)
+        if isinstance(params, Exception):
+            return params
+        if params.fn_id is None:
+            return errors.QueryParamMissingError(
+                server_lib.QueryParamKey.FUNCTION_ID.value
+            )
 
         # Get the function we should call.
-        fn = self._get_function(fn_id)
+        fn = self._get_function(params.fn_id)
         if isinstance(fn, Exception):
-            return await self._respond(fn)
+            return fn
 
-        events = call.events
-        steps = call.steps
-        if call.use_api:
+        events = request.events
+        steps = request.steps
+        if request.use_api:
             # Putting the batch and memoized steps in the request would make it
             # to big, so the Executor is telling the SDK to fetch them from the
             # API
 
             fetched_events, fetched_steps = await asyncio.gather(
-                self._client._get_batch(call.ctx.run_id),
-                self._client._get_steps(call.ctx.run_id),
+                self._client._get_batch(request.ctx.run_id),
+                self._client._get_steps(request.ctx.run_id),
             )
             if isinstance(fetched_events, Exception):
-                return await self._respond(fetched_events)
+                return fetched_events
             events = fetched_events
             if isinstance(fetched_steps, Exception):
-                return await self._respond(fetched_steps)
+                return fetched_steps
             steps = fetched_steps
         if events is None:
             # Should be unreachable. The Executor should always either send the
             # batch or tell the SDK to fetch the batch
 
-            return await self._respond(Exception("events not in request"))
-
+            return Exception("events not in request")
         call_res = await fn.call(
             self._client,
             execution_lib.Context(
-                attempt=call.ctx.attempt,
-                event=call.event,
+                attempt=request.ctx.attempt,
+                event=request.event,
                 events=events,
                 logger=self._client.logger,
-                run_id=call.ctx.run_id,
+                run_id=request.ctx.run_id,
             ),
-            fn_id,
+            params.fn_id,
             middleware,
-            call.ctx.stack.stack or [],
+            request.ctx.stack.stack or [],
             step_lib.StepMemos.from_raw(steps),
-            target_step_id,
+            params.step_id,
         )
 
-        return await self._respond(call_res)
+        return CommResponse.from_call_result(
+            self._client.logger,
+            call_res,
+            self._client.env,
+            self._framework,
+            server_kind,
+        )
 
+    @_prep_response_sync
     def call_function_sync(
         self,
         *,
-        call: server_lib.ServerRequest,
-        fn_id: str,
+        body: bytes,
+        headers: typing.Union[dict[str, str], dict[str, list[str]]],
+        query_params: typing.Union[dict[str, str], dict[str, list[str]]],
         raw_request: object,
-        req_sig: net.RequestSignature,
-        target_hashed_id: str,
-    ) -> CommResponse:
+    ) -> typing.Union[CommResponse, Exception]:
         """Handle a function call from the Executor."""
 
-        if target_hashed_id == server_lib.UNSPECIFIED_STEP_ID:
-            target_step_id = None
-        else:
-            target_step_id = target_hashed_id
+        headers = net.normalize_headers(headers)
+
+        server_kind = transforms.get_server_kind(headers)
+        if isinstance(server_kind, Exception):
+            self._client.logger.error(server_kind)
+            server_kind = None
 
         middleware = middleware_lib.MiddlewareManager.from_client(
             self._client,
@@ -387,56 +310,77 @@ class CommHandler:
         )
 
         # Validate the request signature.
-        err = req_sig.validate(
+        err = net.validate_request(
+            body=body,
+            headers=headers,
+            mode=self._client._mode,
             signing_key=self._signing_key,
             signing_key_fallback=self._signing_key_fallback,
         )
         if isinstance(err, Exception):
-            return self._respond_sync(err)
+            return err
+
+        request = server_lib.ServerRequest.from_raw(body)
+        if isinstance(request, Exception):
+            return request
+
+        params = parse_query_params(query_params)
+        if isinstance(params, Exception):
+            return params
+        if params.fn_id is None:
+            return errors.QueryParamMissingError(
+                server_lib.QueryParamKey.FUNCTION_ID.value
+            )
 
         # Get the function we should call.
-        fn = self._get_function(fn_id)
+        fn = self._get_function(params.fn_id)
         if isinstance(fn, Exception):
-            return self._respond_sync(fn)
+            return fn
 
-        events = call.events
-        steps = call.steps
-        if call.use_api:
+        events = request.events
+        steps = request.steps
+        if request.use_api:
             # Putting the batch and memoized steps in the request would make it
             # to big, so the Executor is telling the SDK to fetch them from the
             # API
 
-            fetched_events = self._client._get_batch_sync(call.ctx.run_id)
+            fetched_events = self._client._get_batch_sync(request.ctx.run_id)
             if isinstance(fetched_events, Exception):
-                return self._respond_sync(fetched_events)
+                return fetched_events
             events = fetched_events
 
-            fetched_steps = self._client._get_steps_sync(call.ctx.run_id)
+            fetched_steps = self._client._get_steps_sync(request.ctx.run_id)
             if isinstance(fetched_steps, Exception):
-                return self._respond_sync(fetched_steps)
+                return fetched_steps
             steps = fetched_steps
         if events is None:
             # Should be unreachable. The Executor should always either send the
             # batch or tell the SDK to fetch the batch
 
-            return self._respond_sync(Exception("events not in request"))
+            return Exception("events not in request")
 
         call_res = fn.call_sync(
             self._client,
             execution_lib.Context(
-                attempt=call.ctx.attempt,
-                event=call.event,
+                attempt=request.ctx.attempt,
+                event=request.event,
                 events=events,
                 logger=self._client.logger,
-                run_id=call.ctx.run_id,
+                run_id=request.ctx.run_id,
             ),
-            fn_id,
+            params.fn_id,
             middleware,
             step_lib.StepMemos.from_raw(steps),
-            target_step_id,
+            params.step_id,
         )
 
-        return self._respond_sync(call_res)
+        return CommResponse.from_call_result(
+            self._client.logger,
+            call_res,
+            self._client.env,
+            self._framework,
+            server_kind,
+        )
 
     def _get_function(self, fn_id: str) -> types.MaybeError[function.Function]:
         # Look for the function ID in the list of user functions, but also
@@ -477,27 +421,36 @@ class CommHandler:
             return errors.FunctionConfigInvalidError("no functions found")
         return configs
 
+    @_prep_response_sync
     def inspect(
         self,
         *,
-        req_sig: net.RequestSignature,
+        body: bytes,
+        headers: typing.Union[dict[str, str], dict[str, list[str]]],
         serve_origin: typing.Optional[str],
         serve_path: typing.Optional[str],
-        server_kind: typing.Optional[server_lib.ServerKind],
     ) -> CommResponse:
         """Handle Dev Server's auto-discovery."""
+
+        headers = net.normalize_headers(headers)
+
+        server_kind = transforms.get_server_kind(headers)
+        if isinstance(server_kind, Exception):
+            self._client.logger.error(server_kind)
+            server_kind = None
 
         if server_kind is not None and server_kind != self._mode:
             # Tell Dev Server to leave the app alone since it's in production
             # mode.
             return CommResponse(
                 body={},
-                headers={},
                 status_code=403,
             )
-
         # Validate the request signature.
-        err = req_sig.validate(
+        err = net.validate_request(
+            body=body,
+            headers=headers,
+            mode=self._client._mode,
             signing_key=self._signing_key,
             signing_key_fallback=self._signing_key_fallback,
         )
@@ -508,7 +461,7 @@ class CommHandler:
             if isinstance(err, Exception):
                 authentication_succeeded = False
 
-            body = _UnauthenticatedIntrospection(
+            res_body = UnauthenticatedInspection(
                 authentication_succeeded=authentication_succeeded,
                 function_count=len(self._fns),
                 has_event_key=self._client.event_key is not None,
@@ -535,7 +488,7 @@ class CommHandler:
                 else None
             )
 
-            body = _AuthenticatedIntrospection(
+            res_body = AuthenticatedInspection(
                 api_origin=self._client.api_origin,
                 app_id=self._client.app_id,
                 authentication_succeeded=True,
@@ -554,7 +507,7 @@ class CommHandler:
                 signing_key_hash=signing_key_hash,
             )
 
-        body_json = body.to_dict()
+        body_json = res_body.to_dict()
         if isinstance(body, Exception):
             body_json = {
                 "error": "failed to serialize inspection data",
@@ -562,18 +515,12 @@ class CommHandler:
 
         return CommResponse(
             body=body_json,
-            headers=net.create_headers(
-                env=self._client.env,
-                framework=self._framework,
-                server_kind=server_kind,
-            ),
             status_code=200,
         )
 
     def _parse_registration_response(
         self,
         server_res: httpx.Response,
-        server_kind: typing.Optional[server_lib.ServerKind],
     ) -> CommResponse:
         try:
             server_res_body = server_res.json()
@@ -592,11 +539,6 @@ class CommHandler:
         if server_res.status_code < 400:
             return CommResponse(
                 body=server_res_body,
-                headers=net.create_headers(
-                    env=self._client.env,
-                    framework=self._framework,
-                    server_kind=server_kind,
-                ),
                 status_code=http.HTTPStatus.OK,
             )
 
@@ -610,26 +552,46 @@ class CommHandler:
         comm_res.status_code = server_res.status_code
         return comm_res
 
+    @_prep_response
     async def register(
-        self,
+        self: CommHandler,
         *,
-        app_url: str,
-        server_kind: typing.Optional[server_lib.ServerKind],
-        sync_id: typing.Optional[str],
-    ) -> CommResponse:
+        headers: typing.Union[dict[str, str], dict[str, list[str]]],
+        query_params: typing.Union[dict[str, str], dict[str, list[str]]],
+        request_url: str,
+        serve_origin: typing.Optional[str],
+        serve_path: typing.Optional[str],
+    ) -> typing.Union[CommResponse, Exception]:
         """Handle a registration call."""
+
+        headers = net.normalize_headers(headers)
+
+        app_url = net.create_serve_url(
+            request_url=request_url,
+            serve_origin=serve_origin,
+            serve_path=serve_path,
+        )
+
+        server_kind = transforms.get_server_kind(headers)
+        if isinstance(server_kind, Exception):
+            self._client.logger.error(server_kind)
+            server_kind = None
 
         comm_res = self._validate_registration(server_kind)
         if comm_res is not None:
             return comm_res
 
-        req = self._build_registration_request(
+        params = parse_query_params(query_params)
+        if isinstance(params, Exception):
+            return params
+
+        req = self._build_register_request(
             app_url=app_url,
             server_kind=server_kind,
-            sync_id=sync_id,
+            sync_id=params.sync_id,
         )
         if isinstance(req, Exception):
-            return CommResponse.from_error(self._client.logger, req)
+            return req
 
         res = await net.fetch_with_auth_fallback(
             self._client._http_client,
@@ -639,31 +601,48 @@ class CommHandler:
             signing_key_fallback=self._signing_key_fallback,
         )
 
-        return self._parse_registration_response(
-            res,
-            server_kind,
+        return self._parse_registration_response(res)
+
+    @_prep_response_sync
+    def register_sync(
+        self: CommHandler,
+        *,
+        headers: typing.Union[dict[str, str], dict[str, list[str]]],
+        query_params: typing.Union[dict[str, str], dict[str, list[str]]],
+        request_url: str,
+        serve_origin: typing.Optional[str],
+        serve_path: typing.Optional[str],
+    ) -> typing.Union[CommResponse, Exception]:
+        """Handle a registration call."""
+
+        headers = net.normalize_headers(headers)
+
+        app_url = net.create_serve_url(
+            request_url=request_url,
+            serve_origin=serve_origin,
+            serve_path=serve_path,
         )
 
-    def register_sync(
-        self,
-        *,
-        app_url: str,
-        server_kind: typing.Optional[server_lib.ServerKind],
-        sync_id: typing.Optional[str],
-    ) -> CommResponse:
-        """Handle a registration call."""
+        server_kind = transforms.get_server_kind(headers)
+        if isinstance(server_kind, Exception):
+            self._client.logger.error(server_kind)
+            server_kind = None
 
         comm_res = self._validate_registration(server_kind)
         if comm_res is not None:
             return comm_res
 
-        req = self._build_registration_request(
+        params = parse_query_params(query_params)
+        if isinstance(params, Exception):
+            return params
+
+        req = self._build_register_request(
             app_url=app_url,
             server_kind=server_kind,
-            sync_id=sync_id,
+            sync_id=params.sync_id,
         )
         if isinstance(req, Exception):
-            return CommResponse.from_error(self._client.logger, req)
+            return req
 
         res = net.fetch_with_auth_fallback_sync(
             self._client._http_client_sync,
@@ -672,28 +651,7 @@ class CommHandler:
             signing_key_fallback=self._signing_key_fallback,
         )
 
-        return self._parse_registration_response(
-            res,
-            server_kind,
-        )
-
-    async def _respond(
-        self,
-        value: typing.Union[execution_lib.CallResult, Exception],
-    ) -> CommResponse:
-        if isinstance(value, Exception):
-            return CommResponse.from_error(self._client.logger, value)
-
-        return CommResponse.from_call_result(self._client.logger, value)
-
-    def _respond_sync(
-        self,
-        value: typing.Union[execution_lib.CallResult, Exception],
-    ) -> CommResponse:
-        if isinstance(value, Exception):
-            return CommResponse.from_error(self._client.logger, value)
-
-        return CommResponse.from_call_result(self._client.logger, value)
+        return self._parse_registration_response(res)
 
     def _validate_registration(
         self,
@@ -714,30 +672,3 @@ class CommHandler:
             )
 
         return None
-
-
-class _UnauthenticatedIntrospection(types.BaseModel):
-    schema_version: str = "2024-05-24"
-
-    authentication_succeeded: typing.Optional[bool]
-    function_count: int
-    has_event_key: bool
-    has_signing_key: bool
-    has_signing_key_fallback: bool
-    mode: server_lib.ServerKind
-
-
-class _AuthenticatedIntrospection(_UnauthenticatedIntrospection):
-    api_origin: str
-    app_id: str
-    authentication_succeeded: bool = True
-    env: typing.Optional[str]
-    event_api_origin: str
-    event_key_hash: typing.Optional[str]
-    framework: str
-    sdk_language: str = const.LANGUAGE
-    sdk_version: str = const.VERSION
-    serve_origin: typing.Optional[str]
-    serve_path: typing.Optional[str]
-    signing_key_fallback_hash: typing.Optional[str]
-    signing_key_hash: typing.Optional[str]
