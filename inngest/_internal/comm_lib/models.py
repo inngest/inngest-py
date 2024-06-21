@@ -6,7 +6,7 @@ import typing
 from inngest._internal import (
     const,
     errors,
-    execution,
+    execution_lib,
     net,
     server_lib,
     transforms,
@@ -30,7 +30,7 @@ class CommResponse:
     def from_call_result(
         cls,
         logger: types.Logger,
-        call_res: execution.CallResult,
+        call_res: execution_lib.CallResult,
         env: typing.Optional[str],
         framework: server_lib.Framework,
         server_kind: typing.Optional[server_lib.ServerKind],
@@ -125,7 +125,7 @@ class CommResponse:
 
     def prep_call_result(
         self,
-        call_res: execution.CallResult,
+        call_res: execution_lib.CallResult,
     ) -> types.MaybeError[object]:
         """
         Convert a CallResult to the shape the Inngest Server expects. For step-level
@@ -167,7 +167,7 @@ class CommResponse:
 
 
 def _prep_call_result(
-    call_res: execution.CallResult,
+    call_res: execution_lib.CallResult,
 ) -> types.MaybeError[object]:
     """
     Convert a CallResult to the shape the Inngest Server expects. For step-level
