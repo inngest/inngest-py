@@ -203,19 +203,25 @@ class StepSync(base.StepBase):
         if isinstance(err, Exception):
             raise err
 
+        step_info = base.StepInfo(
+            display_name=parsed_step_id.user_facing,
+            id=parsed_step_id.hashed,
+            name=parsed_step_id.user_facing,
+            op=server_lib.Opcode.STEP_RUN,
+        )
+
+        if (
+            self._request.ctx.disable_immediate_execution is True
+            and not is_targeting_enabled
+        ):
+            step_info.op = server_lib.Opcode.PLANNED
+            raise base.ResponseInterrupt(base.StepResponse(step=step_info))
+
         try:
             output = handler(*handler_args)
 
             raise base.ResponseInterrupt(
-                base.StepResponse(
-                    output=output,
-                    step=base.StepInfo(
-                        display_name=parsed_step_id.user_facing,
-                        id=parsed_step_id.hashed,
-                        name=parsed_step_id.user_facing,
-                        op=server_lib.Opcode.STEP_RUN,
-                    ),
-                )
+                base.StepResponse(output=output, step=step_info)
             )
         except (errors.NonRetriableError, errors.RetryAfterError) as err:
             # Bubble up these error types to the function level

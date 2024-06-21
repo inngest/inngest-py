@@ -25,10 +25,12 @@ class ExecutionV0:
         self,
         memos: step_lib.StepMemos,
         middleware: middleware_lib.MiddlewareManager,
+        request: server_lib.ServerRequest,
         target_hashed_id: typing.Optional[str],
     ) -> None:
         self._memos = memos
         self._middleware = middleware
+        self._request = request
         self._target_hashed_id = target_hashed_id
 
     def _handle_skip(
@@ -86,6 +88,20 @@ class ExecutionV0:
                 step_lib.StepResponse(step=step_info)
             )
 
+        if (
+            step_info.op == server_lib.Opcode.STEP_RUN
+            and self._request.ctx.disable_immediate_execution is True
+            and not is_targeting_enabled
+        ):
+            # We should only get here when encountering a new, single step.run
+            # after parallel steps
+
+            step_info.op = server_lib.Opcode.PLANNED
+
+            raise step_lib.ResponseInterrupt(
+                step_lib.StepResponse(step=step_info)
+            )
+
         if step_info.op == server_lib.Opcode.STEP_RUN:
             return step
 
@@ -132,6 +148,7 @@ class ExecutionV0:
                             self,
                             self._memos,
                             self._middleware,
+                            self._request,
                             step_lib.StepIDCounter(),
                             self._target_hashed_id,
                         ),
@@ -143,6 +160,7 @@ class ExecutionV0:
                             client,
                             self._memos,
                             self._middleware,
+                            self._request,
                             step_lib.StepIDCounter(),
                             self._target_hashed_id,
                         ),
@@ -193,10 +211,12 @@ class ExecutionV0Sync:
         self,
         memos: step_lib.StepMemos,
         middleware: middleware_lib.MiddlewareManager,
+        request: server_lib.ServerRequest,
         target_hashed_id: typing.Optional[str],
     ) -> None:
         self._memos = memos
         self._middleware = middleware
+        self._request = request
         self._target_hashed_id = target_hashed_id
 
     def run(
@@ -232,6 +252,7 @@ class ExecutionV0Sync:
                             client,
                             self._memos,
                             self._middleware,
+                            self._request,
                             step_lib.StepIDCounter(),
                             self._target_hashed_id,
                         ),

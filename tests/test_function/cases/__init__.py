@@ -4,6 +4,7 @@ from inngest._internal import server_lib
 from . import (
     asyncio_first_completed,
     asyncio_gather,
+    asyncio_immediate_execution,
     base,
     batch_that_needs_api,
     cancel,
@@ -47,6 +48,7 @@ from . import (
 _modules = (
     asyncio_gather,
     asyncio_first_completed,
+    asyncio_immediate_execution,
     batch_that_needs_api,
     cancel,
     change_step_error,

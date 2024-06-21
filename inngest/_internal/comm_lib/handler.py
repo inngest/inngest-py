@@ -273,7 +273,7 @@ class CommHandler:
             ),
             params.fn_id,
             middleware,
-            request.ctx.stack.stack or [],
+            request,
             step_lib.StepMemos.from_raw(steps),
             params.step_id,
         )
@@ -370,6 +370,7 @@ class CommHandler:
             ),
             params.fn_id,
             middleware,
+            request,
             step_lib.StepMemos.from_raw(steps),
             params.step_id,
         )
