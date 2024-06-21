@@ -29,15 +29,15 @@ class ExecutionExperimental:
         self,
         memos: step_lib.StepMemos,
         middleware: middleware_lib.MiddlewareManager,
-        stack: list[str],
+        request: server_lib.ServerRequest,
         target_hashed_id: typing.Optional[str],
     ) -> None:
         self._memos = memos
         self._middleware = middleware
         self._pending_steps: dict[str, execution_lib.ReportedStep] = {}
+        self._request = request
         self._skipped_steps: list[execution_lib.ReportedStep] = []
         self._staged_steps: list[execution_lib.ReportedStep] = []
-        self._stack = stack
         self._target_hashed_id = target_hashed_id
 
     async def report_step(
@@ -233,6 +233,15 @@ class ExecutionExperimental:
         self._staged_steps = []
 
     def _plan(self) -> None:
+        if (
+            len(self._pending_steps) == 1
+            and self._request.ctx.disable_immediate_execution is False
+        ):
+            # Don't plan since there aren't parallel steps and the Server didn't
+            # disable immediate execution. We expect immediate execution to be
+            # disabled if we previously had parallel steps
+            return
+
         plans = []
 
         for step in list(self._pending_steps.values()):
@@ -252,14 +261,24 @@ class ExecutionExperimental:
         Stages steps for execution in the proper order
         """
 
+        stack = self._request.ctx.stack.stack or []
+
         def sort_key(step: execution_lib.ReportedStep) -> int:
             try:
-                return self._stack.index(step.info.id)
+                return stack.index(step.info.id)
             except ValueError:
                 # Unreachable
                 raise Exception(f"step {step.info.id} not found in stack")
 
-        self._staged_steps = sorted(self._pending_steps.values(), key=sort_key)
+        if len(self._pending_steps) == 1:
+            # Don't sort if there's only one step since we might be immediately
+            # executing it. In that situation, it won't appear in the stack and
+            # we don't want that to cause a sorting error
+            self._staged_steps = list(self._pending_steps.values())
+        else:
+            self._staged_steps = sorted(
+                self._pending_steps.values(), key=sort_key
+            )
 
         for step in self._staged_steps:
             self._pending_steps.pop(step.info.id)

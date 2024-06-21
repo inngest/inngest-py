@@ -105,10 +105,6 @@ def create(
         await step.run("after", after)
 
     async def run_test(self: base.TestClass) -> None:
-        if is_sync:
-            # This test is not applicable for sync functions
-            return
-
         self.client.send_sync(inngest.Event(name=event_name))
         tests.helper.client.wait_for_run_status(
             state.wait_for_run_id(),

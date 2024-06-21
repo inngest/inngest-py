@@ -1,5 +1,11 @@
+"""
+Test that we're properly handling disabled_immediate_execution. That's how the
+Server says "plan non-parallel steps because we previously had parallel steps".
+This is necessary because the Server schedules a "discovery" step after each
+parallel step
+"""
+
 import asyncio
-import datetime
 
 import inngest
 import tests.helper
@@ -9,10 +15,7 @@ from . import base
 
 
 class _State(base.BaseState):
-    after_counter = 0
-    fast_counter = 0
-    output: object = None
-    slow_counter = 0
+    request_counter = 0
 
 
 def create(
@@ -48,44 +51,10 @@ def create(
         step: inngest.Step,
     ) -> None:
         state.run_id = ctx.run_id
+        state.request_counter += 1
 
-        async def fast() -> str:
-            state.fast_counter += 1
-            return "fast"
-
-        async def slow() -> str:
-            state.slow_counter += 1
-            await asyncio.sleep(1)
-            return "slow"
-
-        state.output = await asyncio.gather(
-            asyncio.create_task(
-                step.invoke("invoke", function=fn_child_async),
-            ),
-            asyncio.create_task(step.run("slow", slow)),
-            asyncio.create_task(step.run("fast", fast)),
-            asyncio.create_task(
-                step.sleep("sleep", datetime.timedelta(seconds=1))
-            ),
-            asyncio.create_task(
-                step.sleep_until(
-                    "sleep_until",
-                    datetime.datetime.now() + datetime.timedelta(seconds=1),
-                )
-            ),
-            asyncio.create_task(
-                step.wait_for_event(
-                    "wait",
-                    event="never",
-                    timeout=datetime.timedelta(seconds=1),
-                )
-            ),
-        )
-
-        def after() -> None:
-            state.after_counter += 1
-
-        await step.run("after", after)
+        await step.run("a", lambda: None)
+        await step.run("b", lambda: None)
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
@@ -94,10 +63,7 @@ def create(
             tests.helper.RunStatus.COMPLETED,
         )
 
-        assert state.fast_counter == 1
-        assert state.slow_counter == 1
-        assert state.after_counter == 1
-        assert state.output == [None, "slow", "fast", None, None, None]
+        assert state.request_counter == 3
 
     if is_sync:
         # This test is not applicable for sync functions
