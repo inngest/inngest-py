@@ -245,10 +245,6 @@ class Step(base.StepBase):
             elif not isinstance(step.output, types.EmptySentinel):
                 return step.output  # type: ignore
 
-            err = await self._middleware.before_execution()
-            if isinstance(err, Exception):
-                raise err
-
             try:
                 output = await transforms.maybe_await(handler(*handler_args))
 
