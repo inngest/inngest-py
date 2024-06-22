@@ -1,3 +1,4 @@
+import datetime
 import unittest.mock
 
 import inngest
@@ -25,6 +26,18 @@ def create(
     state = _State()
 
     @client.create_function(
+        fn_id=f"{fn_id}/child",
+        retries=0,
+        trigger=inngest.TriggerEvent(event="never"),
+    )
+    def fn_child_sync(
+        ctx: inngest.Context,
+        step: inngest.StepSync,
+    ) -> str:
+        step.sleep("sleep", datetime.timedelta(seconds=1))
+        return "done"
+
+    @client.create_function(
         fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
@@ -45,10 +58,21 @@ def create(
 
         state.parallel_output = step.parallel(
             (
+                lambda: step.invoke("invoke", function=fn_child_sync),
                 lambda: step.run("1a", _step_1a),
                 lambda: step.run("1b", _step_1b),
                 lambda: step.send_event(
                     "send", events=inngest.Event(name="noop")
+                ),
+                lambda: step.sleep("sleep", datetime.timedelta(seconds=1)),
+                lambda: step.sleep_until(
+                    "sleep_until",
+                    datetime.datetime.now() + datetime.timedelta(seconds=1),
+                ),
+                lambda: step.wait_for_event(
+                    "wait",
+                    event="never",
+                    timeout=datetime.timedelta(seconds=1),
                 ),
             )
         )
@@ -57,6 +81,18 @@ def create(
             state.step_after_counter += 1
 
         step.run("after", _step_after)
+
+    @client.create_function(
+        fn_id=f"{fn_id}/child",
+        retries=0,
+        trigger=inngest.TriggerEvent(event="never"),
+    )
+    async def fn_child_async(
+        ctx: inngest.Context,
+        step: inngest.Step,
+    ) -> str:
+        await step.sleep("sleep", datetime.timedelta(seconds=1))
+        return "done"
 
     @client.create_function(
         fn_id=fn_id,
@@ -79,10 +115,21 @@ def create(
 
         state.parallel_output = await step.parallel(
             (
+                lambda: step.invoke("invoke", function=fn_child_async),
                 lambda: step.run("1a", _step_1a),
                 lambda: step.run("1b", _step_1b),
                 lambda: step.send_event(
                     "send", events=inngest.Event(name="noop")
+                ),
+                lambda: step.sleep("sleep", datetime.timedelta(seconds=1)),
+                lambda: step.sleep_until(
+                    "sleep_until",
+                    datetime.datetime.now() + datetime.timedelta(seconds=1),
+                ),
+                lambda: step.wait_for_event(
+                    "wait",
+                    event="never",
+                    timeout=datetime.timedelta(seconds=1),
                 ),
             )
         )
@@ -101,15 +148,23 @@ def create(
             tests.helper.RunStatus.COMPLETED,
         )
 
-        assert state.parallel_output == (1, 2, [unittest.mock.ANY])
+        assert state.parallel_output == (
+            "done",
+            1,
+            2,
+            [unittest.mock.ANY],
+            None,
+            None,
+            None,
+        )
         assert state.step_1a_counter == 1
         assert state.step_1b_counter == 1
         assert state.step_after_counter == 1
 
     if is_sync:
-        fn = fn_sync
+        fn = [fn_sync, fn_child_sync]
     else:
-        fn = fn_async
+        fn = [fn_async, fn_child_async]
 
     return base.Case(
         fn=fn,

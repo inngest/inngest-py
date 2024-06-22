@@ -130,6 +130,20 @@ class ReportedStep:
         await self._done_signal
 
 
+class ReportedStepSync:
+    def __init__(self, step_info: step_lib.StepInfo) -> None:
+        self.error: typing.Optional[errors.StepError] = None
+        self.info = step_info
+        self.output: object = types.empty_sentinel
+        self.skip = False
+
+    def __enter__(self) -> ReportedStepSync:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        pass
+
+
 class UserError(Exception):
     """
     Wrap an error that occurred in user code.

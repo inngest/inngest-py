@@ -2,8 +2,17 @@ from __future__ import annotations
 
 import typing
 
+from .models import (
+    CallResult,
+    Context,
+    FunctionHandlerAsync,
+    FunctionHandlerSync,
+    ReportedStep,
+    ReportedStepSync,
+)
+
 if typing.TYPE_CHECKING:
-    from inngest._internal import client_lib, execution_lib, function, step_lib
+    from inngest._internal import client_lib, function, step_lib
 
 
 class BaseExecution(typing.Protocol):
@@ -13,33 +22,40 @@ class BaseExecution(typing.Protocol):
         self,
         step_info: step_lib.StepInfo,
         inside_parallel: bool,
-    ) -> execution_lib.ReportedStep:
+    ) -> ReportedStep:
         ...
 
     async def run(
         self,
         client: client_lib.Inngest,
-        ctx: execution_lib.Context,
+        ctx: Context,
         handler: typing.Union[
-            execution_lib.FunctionHandlerAsync,
-            execution_lib.FunctionHandlerSync,
+            FunctionHandlerAsync,
+            FunctionHandlerSync,
         ],
         fn: function.Function,
-    ) -> execution_lib.CallResult:
+    ) -> CallResult:
         ...
 
 
 class BaseExecutionSync(typing.Protocol):
     version: str
 
+    def report_step(
+        self,
+        step_info: step_lib.StepInfo,
+        inside_parallel: bool,
+    ) -> ReportedStepSync:
+        ...
+
     def run(
         self,
         client: client_lib.Inngest,
-        ctx: execution_lib.Context,
+        ctx: Context,
         handler: typing.Union[
-            execution_lib.FunctionHandlerAsync,
-            execution_lib.FunctionHandlerSync,
+            FunctionHandlerAsync,
+            FunctionHandlerSync,
         ],
         fn: function.Function,
-    ) -> execution_lib.CallResult:
+    ) -> CallResult:
         ...

@@ -43,7 +43,7 @@ def create(
         ctx: inngest.Context,
         step: inngest.Step,
     ) -> None:
-        await asyncio.sleep(1)
+        await step.sleep("sleep", datetime.timedelta(seconds=1))
 
     @client.create_function(
         fn_id=fn_id,
