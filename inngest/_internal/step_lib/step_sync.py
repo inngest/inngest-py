@@ -12,10 +12,34 @@ from . import base
 
 # Avoid circular import at runtime
 if typing.TYPE_CHECKING:
-    from inngest._internal import function
+    from inngest._internal import (
+        client_lib,
+        execution_lib,
+        function,
+        middleware_lib,
+    )
 
 
 class StepSync(base.StepBase):
+    def __init__(
+        self,
+        client: client_lib.Inngest,
+        exe: execution_lib.BaseExecutionSync,
+        memos: base.StepMemos,
+        middleware: middleware_lib.MiddlewareManager,
+        step_id_counter: base.StepIDCounter,
+        target_hashed_id: typing.Optional[str],
+    ) -> None:
+        super().__init__(
+            client,
+            memos,
+            middleware,
+            step_id_counter,
+            target_hashed_id,
+        )
+
+        self._execution = exe
+
     def invoke(
         self,
         step_id: str,
@@ -115,17 +139,26 @@ class StepSync(base.StepBase):
         if isinstance(opts, Exception):
             raise opts
 
-        raise base.ResponseInterrupt(
-            base.StepResponse(
-                step=base.StepInfo(
-                    display_name=parsed_step_id.user_facing,
-                    id=parsed_step_id.hashed,
-                    name=parsed_step_id.user_facing,
-                    op=server_lib.Opcode.INVOKE,
-                    opts=opts,
-                )
-            )
+        step_info = base.StepInfo(
+            display_name=parsed_step_id.user_facing,
+            id=parsed_step_id.hashed,
+            name=parsed_step_id.user_facing,
+            op=server_lib.Opcode.INVOKE,
+            opts=opts,
         )
+
+        with self._execution.report_step(
+            step_info,
+            self._inside_parallel,
+        ) as step:
+            if step.skip:
+                raise base.SkipInterrupt(parsed_step_id.user_facing)
+            if step.error is not None:
+                raise step.error
+            elif not isinstance(step.output, types.EmptySentinel):
+                return step.output
+
+        raise Exception("unreachable")
 
     def parallel(
         self,
@@ -179,30 +212,6 @@ class StepSync(base.StepBase):
 
         parsed_step_id = self._parse_step_id(step_id)
 
-        memo = self._get_memo_sync(parsed_step_id.hashed)
-        if not isinstance(memo, types.EmptySentinel):
-            return memo.data  # type: ignore
-
-        self._handle_skip(parsed_step_id)
-
-        is_targeting_enabled = self._target_hashed_id is not None
-        if self._inside_parallel and not is_targeting_enabled:
-            # Plan this step because we're in parallel mode.
-            raise base.ResponseInterrupt(
-                base.StepResponse(
-                    step=base.StepInfo(
-                        display_name=parsed_step_id.user_facing,
-                        id=parsed_step_id.hashed,
-                        name=parsed_step_id.user_facing,
-                        op=server_lib.Opcode.PLANNED,
-                    )
-                )
-            )
-
-        err = self._middleware.before_execution_sync()
-        if isinstance(err, Exception):
-            raise err
-
         step_info = base.StepInfo(
             display_name=parsed_step_id.user_facing,
             id=parsed_step_id.hashed,
@@ -210,35 +219,40 @@ class StepSync(base.StepBase):
             op=server_lib.Opcode.STEP_RUN,
         )
 
-        if (
-            self._request.ctx.disable_immediate_execution is True
-            and not is_targeting_enabled
-        ):
-            step_info.op = server_lib.Opcode.PLANNED
-            raise base.ResponseInterrupt(base.StepResponse(step=step_info))
+        with self._execution.report_step(
+            step_info,
+            self._inside_parallel,
+        ) as step:
+            if step.skip:
+                raise base.SkipInterrupt(parsed_step_id.user_facing)
+            if step.error is not None:
+                raise step.error
+            elif not isinstance(step.output, types.EmptySentinel):
+                return step.output  # type: ignore
 
-        try:
-            output = handler(*handler_args)
+            try:
+                output = handler(*handler_args)
 
-            raise base.ResponseInterrupt(
-                base.StepResponse(output=output, step=step_info)
-            )
-        except (errors.NonRetriableError, errors.RetryAfterError) as err:
-            # Bubble up these error types to the function level
-            raise err
-        except Exception as err:
-            transforms.remove_first_traceback_frame(err)
-
-            raise base.ResponseInterrupt(
-                base.StepResponse(
-                    original_error=err,
-                    step=base.StepInfo(
-                        display_name=parsed_step_id.user_facing,
-                        id=parsed_step_id.hashed,
-                        op=server_lib.Opcode.STEP_ERROR,
-                    ),
+                raise base.ResponseInterrupt(
+                    base.StepResponse(
+                        output=output,
+                        step=step_info,
+                    )
                 )
-            )
+            except (errors.NonRetriableError, errors.RetryAfterError) as err:
+                # Bubble up these error types to the function level
+                raise err
+            except Exception as err:
+                transforms.remove_first_traceback_frame(err)
+
+                step_info.op = server_lib.Opcode.STEP_ERROR
+
+                raise base.ResponseInterrupt(
+                    base.StepResponse(
+                        original_error=err,
+                        step=step_info,
+                    )
+                )
 
     def send_event(
         self,
@@ -326,26 +340,25 @@ class StepSync(base.StepBase):
 
         parsed_step_id = self._parse_step_id(step_id)
 
-        memo = self._get_memo_sync(parsed_step_id.hashed)
-        if not isinstance(memo, types.EmptySentinel):
-            return memo.data  # type: ignore
-
-        self._handle_skip(parsed_step_id)
-
-        err = self._middleware.before_execution_sync()
-        if isinstance(err, Exception):
-            raise err
-
-        raise base.ResponseInterrupt(
-            base.StepResponse(
-                step=base.StepInfo(
-                    display_name=parsed_step_id.user_facing,
-                    id=parsed_step_id.hashed,
-                    name=transforms.to_iso_utc(until),
-                    op=server_lib.Opcode.SLEEP,
-                )
-            )
+        step_info = base.StepInfo(
+            display_name=parsed_step_id.user_facing,
+            id=parsed_step_id.hashed,
+            name=transforms.to_iso_utc(until),
+            op=server_lib.Opcode.SLEEP,
         )
+
+        with self._execution.report_step(
+            step_info,
+            self._inside_parallel,
+        ) as step:
+            if step.skip:
+                raise base.SkipInterrupt(parsed_step_id.user_facing)
+            if step.error is not None:
+                raise step.error
+            elif not isinstance(step.output, types.EmptySentinel):
+                return step.output  # type: ignore
+
+        raise Exception("unreachable")
 
     def wait_for_event(
         self,
@@ -397,14 +410,28 @@ class StepSync(base.StepBase):
         if isinstance(opts, Exception):
             raise opts
 
-        raise base.ResponseInterrupt(
-            base.StepResponse(
-                step=base.StepInfo(
-                    display_name=parsed_step_id.user_facing,
-                    id=parsed_step_id.hashed,
-                    name=event,
-                    op=server_lib.Opcode.WAIT_FOR_EVENT,
-                    opts=opts,
-                )
-            )
+        step_info = base.StepInfo(
+            id=parsed_step_id.hashed,
+            display_name=parsed_step_id.user_facing,
+            name=event,
+            op=server_lib.Opcode.WAIT_FOR_EVENT,
+            opts=opts,
         )
+
+        with self._execution.report_step(
+            step_info,
+            self._inside_parallel,
+        ) as step:
+            if step.skip:
+                raise base.SkipInterrupt(parsed_step_id.user_facing)
+            if step.error is not None:
+                raise step.error
+            elif not isinstance(step.output, types.EmptySentinel):
+                if step.output is None:
+                    # Timeout
+                    return None
+
+                # Fulfilled by an event
+                return server_lib.Event.model_validate(step.output)
+
+        raise Exception("unreachable")

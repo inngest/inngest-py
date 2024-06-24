@@ -22,7 +22,6 @@ class Step(base.StepBase):
         exe: execution_lib.BaseExecution,
         memos: base.StepMemos,
         middleware: middleware_lib.MiddlewareManager,
-        request: server_lib.ServerRequest,
         step_id_counter: base.StepIDCounter,
         target_hashed_id: typing.Optional[str],
     ) -> None:
@@ -30,7 +29,6 @@ class Step(base.StepBase):
             client,
             memos,
             middleware,
-            request,
             step_id_counter,
             target_hashed_id,
         )
@@ -244,10 +242,6 @@ class Step(base.StepBase):
                 raise step.error
             elif not isinstance(step.output, types.EmptySentinel):
                 return step.output  # type: ignore
-
-            err = await self._middleware.before_execution()
-            if isinstance(err, Exception):
-                raise err
 
             try:
                 output = await transforms.maybe_await(handler(*handler_args))

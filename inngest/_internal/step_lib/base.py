@@ -87,7 +87,6 @@ class StepBase:
         client: client_lib.Inngest,
         memos: StepMemos,
         middleware: middleware_lib.MiddlewareManager,
-        request: server_lib.ServerRequest,
         step_id_counter: StepIDCounter,
         target_hashed_id: typing.Optional[str],
     ) -> None:
@@ -95,7 +94,6 @@ class StepBase:
         self._inside_parallel = False
         self._memos = memos
         self._middleware = middleware
-        self._request = request
         self._step_id_counter = step_id_counter
         self._target_hashed_id = target_hashed_id
 

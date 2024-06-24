@@ -17,6 +17,7 @@ from .utils import (
     is_function_handler_sync,
     wait_for_next_loop,
 )
+from .v0 import ExecutionV0Sync
 
 if typing.TYPE_CHECKING:
     from inngest._internal import client_lib, function, middleware_lib
@@ -38,6 +39,12 @@ class ExecutionExperimental:
         self._request = request
         self._skipped_steps: list[execution_lib.ReportedStep] = []
         self._staged_steps: list[execution_lib.ReportedStep] = []
+        self._sync = ExecutionV0Sync(
+            memos,
+            middleware,
+            request,
+            target_hashed_id,
+        )
         self._target_hashed_id = target_hashed_id
 
     async def report_step(
@@ -98,7 +105,6 @@ class ExecutionExperimental:
                             self,
                             self._memos,
                             self._middleware,
-                            self._request,
                             step_lib.StepIDCounter(),
                             self._target_hashed_id,
                         ),
@@ -108,9 +114,9 @@ class ExecutionExperimental:
                         ctx=ctx,
                         step=step_lib.StepSync(
                             client,
+                            self._sync,
                             self._memos,
                             self._middleware,
-                            self._request,
                             step_lib.StepIDCounter(),
                             self._target_hashed_id,
                         ),
@@ -235,13 +241,19 @@ class ExecutionExperimental:
         self._staged_steps = []
 
     def _plan(self) -> None:
-        if (
+        # Skip plan if all of the following are true:
+        # - There's only one step
+        # - The step is a step.run
+        # - Immediate execution is not disabled
+        # The above scenario happens if we find a new step.run and there haven't
+        # been parallel steps
+        skip_plan = (
             len(self._pending_steps) == 1
+            and next(iter(self._pending_steps.values())).info.op
+            == server_lib.Opcode.STEP_RUN
             and self._request.ctx.disable_immediate_execution is False
-        ):
-            # Don't plan since there aren't parallel steps and the Server didn't
-            # disable immediate execution. We expect immediate execution to be
-            # disabled if we previously had parallel steps
+        )
+        if skip_plan:
             return
 
         plans = []
@@ -284,92 +296,3 @@ class ExecutionExperimental:
 
         for step in self._staged_steps:
             self._pending_steps.pop(step.info.id)
-
-
-class ExecutionV0Sync:
-    def __init__(
-        self,
-        memos: step_lib.StepMemos,
-        middleware: middleware_lib.MiddlewareManager,
-        request: server_lib.ServerRequest,
-    ) -> None:
-        self._condition = asyncio.Condition()
-        self._memos = memos
-        self._middleware = middleware
-        self._pending_report_count = 0
-        self._request = request
-
-    def run(
-        self,
-        client: client_lib.Inngest,
-        ctx: execution_lib.Context,
-        handler: typing.Union[
-            execution_lib.FunctionHandlerAsync,
-            execution_lib.FunctionHandlerSync,
-        ],
-        fn: function.Function,
-        target_hashed_id: typing.Optional[str],
-    ) -> execution_lib.CallResult:
-        # Give middleware the opportunity to change some of params passed to the
-        # user's handler.
-        middleware_err = self._middleware.transform_input_sync(
-            ctx, fn, self._memos
-        )
-        if isinstance(middleware_err, Exception):
-            return execution_lib.CallResult(middleware_err)
-
-        # No memoized data means we're calling the function for the first time.
-        if self._memos.size == 0:
-            err = self._middleware.before_execution_sync()
-            if isinstance(err, Exception):
-                return execution_lib.CallResult(err)
-
-        try:
-            if is_function_handler_sync(handler):
-                try:
-                    output: object = handler(
-                        ctx=ctx,
-                        step=step_lib.StepSync(
-                            client,
-                            self._memos,
-                            self._middleware,
-                            self._request,
-                            step_lib.StepIDCounter(),
-                            target_hashed_id,
-                        ),
-                    )
-                except Exception as user_err:
-                    transforms.remove_first_traceback_frame(user_err)
-                    raise execution_lib.UserError(user_err)
-            else:
-                return execution_lib.CallResult(
-                    errors.AsyncUnsupportedError(
-                        "encountered async function in non-async context"
-                    )
-                )
-
-            err = self._middleware.after_execution_sync()
-            if isinstance(err, Exception):
-                return execution_lib.CallResult(err)
-
-            return execution_lib.CallResult(output=output)
-        except step_lib.ResponseInterrupt as interrupt:
-            err = self._middleware.after_execution_sync()
-            if isinstance(err, Exception):
-                return execution_lib.CallResult(err)
-
-            return execution_lib.CallResult.from_responses(interrupt.responses)
-        except execution_lib.UserError as err:
-            return execution_lib.CallResult(err.err)
-        except step_lib.SkipInterrupt as err:
-            # This should only happen in a non-deterministic scenario, where
-            # step targeting is enabled and an unexpected step is encountered.
-            # We don't currently have a way to recover from this scenario.
-
-            return execution_lib.CallResult(
-                errors.StepUnexpectedError(
-                    f'found step "{err.step_id}" when targeting a different step'
-                )
-            )
-        except Exception as err:
-            return execution_lib.CallResult(err)
