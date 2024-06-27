@@ -202,6 +202,7 @@ class Inngest:
         concurrency: typing.Optional[list[server_lib.Concurrency]] = None,
         debounce: typing.Optional[server_lib.Debounce] = None,
         fn_id: str,
+        idempotency: typing.Optional[str] = None,
         middleware: typing.Optional[
             list[middleware_lib.UninitializedMiddleware]
         ] = None,
@@ -240,6 +241,7 @@ class Inngest:
             concurrency: Concurrency config.
             debounce: Debouncing config.
             fn_id: Function ID. Changing this ID will make Inngest think this is a new function.
+            idempotency: A key expression which is used to prevent duplicate events from triggering a function.
             middleware: Middleware to apply to this function.
             name: Human-readable function name. (Defaults to the function ID).
             on_failure: Function to call when this function fails.
@@ -267,6 +269,7 @@ class Inngest:
                     debounce=debounce,
                     experimental_execution=_experimental_execution,
                     fully_qualified_id=fully_qualified_fn_id,
+                    idempotency=idempotency,
                     local_id=fn_id,
                     name=name or fn_id,
                     on_failure=on_failure,
