@@ -241,7 +241,7 @@ class Inngest:
             concurrency: Concurrency config.
             debounce: Debouncing config.
             fn_id: Function ID. Changing this ID will make Inngest think this is a new function.
-            idempotency: A key expression which is used to prevent duplicate events from triggering a function.
+            idempotency: A key expression which is used to prevent duplicate events from triggering a function over 24 hours.
             middleware: Middleware to apply to this function.
             name: Human-readable function name. (Defaults to the function ID).
             on_failure: Function to call when this function fails.

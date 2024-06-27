@@ -42,7 +42,7 @@ def test_serialization() -> None:
             period=datetime.timedelta(seconds=60),
         ),
         id="foo",
-        idempotency="foo",
+        idempotency="event.data.foo",
         name="foo",
         priority=Priority(
             run="event.data.plan == 'enterprise' ? 180 : 0",
@@ -97,7 +97,7 @@ def test_serialization() -> None:
             "period": "1m",
         },
         "id": "foo",
-        "idempotency": "foo",
+        "idempotency": "event.data.foo",
         "name": "foo",
         "priority": {
             "run": "event.data.plan == 'enterprise' ? 180 : 0",
