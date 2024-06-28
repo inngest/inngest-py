@@ -30,14 +30,16 @@ class _Config:
 class FunctionOpts(types.BaseModel):
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
-    batch_events: typing.Optional[server_lib.Batch] = None
-    cancel: typing.Optional[list[server_lib.Cancel]] = None
-    concurrency: typing.Optional[list[server_lib.Concurrency]] = None
-    debounce: typing.Optional[server_lib.Debounce] = None
-    experimental_execution: bool = False
+    batch_events: typing.Optional[server_lib.Batch]
+    cancel: typing.Optional[list[server_lib.Cancel]]
+    concurrency: typing.Optional[list[server_lib.Concurrency]]
+    debounce: typing.Optional[server_lib.Debounce]
+    experimental_execution: bool
 
     # Unique within an environment
     fully_qualified_id: str
+
+    idempotency: typing.Optional[str]
 
     # Unique within an app
     local_id: str
@@ -47,11 +49,11 @@ class FunctionOpts(types.BaseModel):
         execution_lib.FunctionHandlerAsync,
         execution_lib.FunctionHandlerSync,
         None,
-    ] = None
-    priority: typing.Optional[server_lib.Priority] = None
-    rate_limit: typing.Optional[server_lib.RateLimit] = None
-    retries: typing.Optional[int] = None
-    throttle: typing.Optional[server_lib.Throttle] = None
+    ]
+    priority: typing.Optional[server_lib.Priority]
+    rate_limit: typing.Optional[server_lib.RateLimit]
+    retries: typing.Optional[int]
+    throttle: typing.Optional[server_lib.Throttle]
 
     def convert_validation_error(
         self,
@@ -269,6 +271,7 @@ class Function:
             concurrency=self._opts.concurrency,
             debounce=self._opts.debounce,
             id=fn_id,
+            idempotency=self._opts.idempotency,
             name=name,
             priority=self._opts.priority,
             rate_limit=self._opts.rate_limit,
@@ -306,6 +309,7 @@ class Function:
                 concurrency=None,
                 debounce=None,
                 id=self.on_failure_fn_id,
+                idempotency=None,
                 name=f"{name} (failure)",
                 priority=None,
                 rate_limit=None,

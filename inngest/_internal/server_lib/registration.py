@@ -86,6 +86,7 @@ class FunctionConfig(_BaseConfig):
     concurrency: typing.Optional[list[Concurrency]]
     debounce: typing.Optional[Debounce]
     id: str
+    idempotency: typing.Optional[str]
     name: typing.Optional[str]
     priority: typing.Optional[Priority]
     rate_limit: typing.Optional[RateLimit] = pydantic.Field(
