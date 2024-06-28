@@ -23,36 +23,22 @@ class EmptySentinel:
 empty_sentinel = EmptySentinel()
 
 
-# Type checking conditional is necessary because of some mutual exclusivity
-# between Mypy and Pydantic. Seems like recursive types are finicky right now,
-# but hopefully we can simplify this code as support improves
-if typing.TYPE_CHECKING:
-    # Mypy uses this statically. Pydantic can't use this at runtime since it'll
-    # error with "name 'JSON' is not defined"
-    JSON = typing.Union[
+# Ideally this would be recursive, but we can't do that for 2 reasons:
+# 1. TypedDict is compatible with Mapping[str, object], but not anything with a
+#   more restrictive value type (e.g. Mapping[str, "JSON"])
+# 2. Mypy errors with "possible cyclic definition"
+JSON = typing_extensions.TypeAliasType(
+    "JSON",
+    typing.Union[
         bool,
-        float,
         int,
+        float,
         str,
-        typing.Mapping[str, "JSON"],
-        typing.Sequence["JSON"],
+        typing.Mapping[str, object],
+        typing.Sequence[object],
         None,
-    ]
-else:
-    # Pydantic uses this at runtime. Mypy can't use this since it'll error with
-    # "possible cyclic definition"
-    JSON = typing_extensions.TypeAliasType(
-        "JSON",
-        typing.Union[
-            bool,
-            int,
-            float,
-            str,
-            dict[str, "JSON"],
-            list["JSON"],
-            None,
-        ],
-    )
+    ],
+)
 
 
 JSONT = typing.TypeVar("JSONT", bound=JSON)

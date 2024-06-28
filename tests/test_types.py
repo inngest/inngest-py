@@ -341,3 +341,63 @@ def parallel_iterator() -> None:
 
         output = step.parallel(steps)
         assert_type(output, tuple[bool, ...])
+
+
+def step_return_types() -> None:
+    """
+    Test that a sync function cannot use an async step type
+    """
+
+    class MyTypedDict(typing.TypedDict):
+        foo: str
+
+    @client.create_function(
+        fn_id="foo",
+        trigger=inngest.TriggerEvent(event="foo"),
+    )
+    async def fn(
+        ctx: inngest.Context,
+        step: inngest.Step,
+    ) -> None:
+        def fn_bool() -> bool:
+            return True
+
+        assert_type(await step.run("fn_bool", fn_bool), bool)
+
+        def fn_int() -> int:
+            return 1
+
+        assert_type(await step.run("fn_int", fn_int), int)
+
+        def fn_float() -> float:
+            return 1.0
+
+        assert_type(await step.run("fn_float", fn_float), float)
+
+        def fn_str() -> str:
+            return "foo"
+
+        assert_type(await step.run("fn_str", fn_str), str)
+
+        def fn_dict() -> dict[str, int]:
+            return {"foo": 1}
+
+        assert_type(await step.run("fn_dict", fn_dict), dict[str, int])
+
+        class MyTypedDict(typing.TypedDict):
+            foo: str
+
+        def fn_typed_dict() -> MyTypedDict:
+            return {"foo": "bar"}
+
+        assert_type(await step.run("fn_typed_dict", fn_typed_dict), MyTypedDict)
+
+        def fn_list() -> list[dict[str, int]]:
+            return [{"foo": 1}]
+
+        assert_type(await step.run("fn_list", fn_list), list[dict[str, int]])
+
+        def fn_none() -> None:
+            return None
+
+        assert_type(await step.run("fn_none", fn_none), None)
