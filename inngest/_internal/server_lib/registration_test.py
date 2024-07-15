@@ -22,6 +22,7 @@ def test_serialization() -> None:
         batch_events=Batch(
             max_size=10,
             timeout=datetime.timedelta(seconds=60),
+            key="foo",
         ),
         cancel=[
             Cancel(
@@ -77,6 +78,7 @@ def test_serialization() -> None:
         "batchEvents": {
             "maxSize": 10,
             "timeout": "1m",
+            "key": "foo",
         },
         "cancel": [
             {
