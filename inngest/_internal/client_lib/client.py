@@ -20,6 +20,7 @@ from inngest._internal import (
 )
 
 from . import models
+from .utils import get_api_origin, get_event_api_origin
 
 if typing.TYPE_CHECKING:
     from inngest._internal import execution_lib
@@ -119,23 +120,15 @@ class Inngest:
                 "Signing key is for a branch environment but no branch environment is specified. This may cause unexpected behavior"
             )
 
-        api_origin = api_base_url or os.getenv(const.EnvKey.API_BASE_URL.value)
-        if api_origin is None:
-            if self._mode == server_lib.ServerKind.DEV_SERVER:
-                api_origin = const.DEV_SERVER_ORIGIN
-            else:
-                api_origin = const.DEFAULT_API_ORIGIN
-        self._api_origin = api_origin
+        maybe_str = get_api_origin(api_base_url, self._mode)
+        if isinstance(maybe_str, Exception):
+            raise maybe_str
+        self._api_origin = maybe_str
 
-        event_origin = event_api_base_url or os.getenv(
-            const.EnvKey.EVENT_API_BASE_URL.value
-        )
-        if event_origin is None:
-            if self._mode == server_lib.ServerKind.DEV_SERVER:
-                event_origin = const.DEV_SERVER_ORIGIN
-            else:
-                event_origin = const.DEFAULT_EVENT_ORIGIN
-        self._event_api_origin = event_origin
+        maybe_str = get_event_api_origin(event_api_base_url, self._mode)
+        if isinstance(maybe_str, Exception):
+            raise maybe_str
+        self._event_api_origin = maybe_str
 
         self._http_client = net.ThreadAwareAsyncHTTPClient().initialize()
         self._http_client_sync = httpx.Client()
@@ -307,6 +300,8 @@ class Inngest:
             signing_key=self._signing_key,
             signing_key_fallback=self._signing_key_fallback,
         )
+        if isinstance(res, Exception):
+            return res
 
         if res.status_code >= 400:
             return Exception(f"HTTP error: {res.status_code} {res.text}")
@@ -334,6 +329,8 @@ class Inngest:
             signing_key=self._signing_key,
             signing_key_fallback=self._signing_key_fallback,
         )
+        if isinstance(res, Exception):
+            return res
 
         if res.status_code >= 400:
             return Exception(f"HTTP error: {res.status_code} {res.text}")
@@ -546,7 +543,7 @@ def _get_mode(
         logger.debug("Dev Server mode enabled by client argument")
         return server_lib.ServerKind.DEV_SERVER
 
-    if env_lib.is_true(const.EnvKey.DEV):
+    if env_lib.is_truthy(const.EnvKey.DEV):
         logger.debug(
             f"Dev Server mode enabled by {const.EnvKey.DEV.value} env var"
         )

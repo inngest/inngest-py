@@ -122,7 +122,7 @@ async def fetch_with_auth_fallback(
     *,
     signing_key: typing.Optional[str],
     signing_key_fallback: typing.Optional[str],
-) -> httpx.Response:
+) -> types.MaybeError[httpx.Response]:
     """
     Send an HTTP request with the given signing key. If the response is a 401 or
     403, then try again with the fallback signing key
@@ -133,28 +133,31 @@ async def fetch_with_auth_fallback(
             server_lib.HeaderKey.AUTHORIZATION.value
         ] = f"Bearer {transforms.hash_signing_key(signing_key)}"
 
-    res = await fetch_with_thready_safety(
-        client,
-        client_sync,
-        request,
-    )
-    if (
-        res.status_code
-        in (http.HTTPStatus.FORBIDDEN, http.HTTPStatus.UNAUTHORIZED)
-        and signing_key_fallback is not None
-    ):
-        # Try again with the signing key fallback
-        request.headers[
-            server_lib.HeaderKey.AUTHORIZATION.value
-        ] = f"Bearer {transforms.hash_signing_key(signing_key_fallback)}"
-
+    try:
         res = await fetch_with_thready_safety(
             client,
             client_sync,
             request,
         )
+        if (
+            res.status_code
+            in (http.HTTPStatus.FORBIDDEN, http.HTTPStatus.UNAUTHORIZED)
+            and signing_key_fallback is not None
+        ):
+            # Try again with the signing key fallback
+            request.headers[
+                server_lib.HeaderKey.AUTHORIZATION.value
+            ] = f"Bearer {transforms.hash_signing_key(signing_key_fallback)}"
 
-    return res
+            res = await fetch_with_thready_safety(
+                client,
+                client_sync,
+                request,
+            )
+
+        return res
+    except Exception as err:
+        return err
 
 
 def fetch_with_auth_fallback_sync(
@@ -163,10 +166,11 @@ def fetch_with_auth_fallback_sync(
     *,
     signing_key: typing.Optional[str],
     signing_key_fallback: typing.Optional[str],
-) -> httpx.Response:
+) -> types.MaybeError[httpx.Response]:
     """
     Send an HTTP request with the given signing key. If the response is a 401 or
-    403, then try again with the fallback signing key
+    403, then try again with the fallback signing key. Returns an error when
+    receiving a non-OK response
     """
 
     if signing_key is not None:
@@ -174,19 +178,21 @@ def fetch_with_auth_fallback_sync(
             server_lib.HeaderKey.AUTHORIZATION.value
         ] = f"Bearer {transforms.hash_signing_key(signing_key)}"
 
-    res = client.send(request)
-    if (
-        res.status_code
-        in (http.HTTPStatus.FORBIDDEN, http.HTTPStatus.UNAUTHORIZED)
-        and signing_key_fallback is not None
-    ):
-        # Try again with the signing key fallback
-        request.headers[
-            server_lib.HeaderKey.AUTHORIZATION.value
-        ] = f"Bearer {transforms.hash_signing_key(signing_key_fallback)}"
+    try:
         res = client.send(request)
-
-    return res
+        if (
+            res.status_code
+            in (http.HTTPStatus.FORBIDDEN, http.HTTPStatus.UNAUTHORIZED)
+            and signing_key_fallback is not None
+        ):
+            # Try again with the signing key fallback
+            request.headers[
+                server_lib.HeaderKey.AUTHORIZATION.value
+            ] = f"Bearer {transforms.hash_signing_key(signing_key_fallback)}"
+            res = client.send(request)
+        return res
+    except Exception as err:
+        return err
 
 
 def normalize_headers(
@@ -211,13 +217,18 @@ def normalize_headers(
     return new_headers
 
 
-def parse_url(url: str) -> str:
-    parsed = urllib.parse.urlparse(url)
+def parse_url(url: str) -> types.MaybeError[str]:
+    if url.startswith("http") is False:
+        url = f"https://{url}"
 
-    if parsed.scheme == "":
-        parsed._replace(scheme="https")
+    try:
+        parsed = urllib.parse.urlparse(url)
+        if parsed.netloc == "":
+            return Exception("invalid URL")
 
-    return parsed.geturl()
+        return parsed.geturl()
+    except Exception as err:
+        return err
 
 
 async def fetch_with_thready_safety(

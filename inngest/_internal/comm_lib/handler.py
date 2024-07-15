@@ -105,29 +105,13 @@ class CommHandler:
     def __init__(
         self,
         *,
-        api_base_url: typing.Optional[str] = None,
         client: client_lib.Inngest,
         framework: server_lib.Framework,
         functions: list[function.Function],
     ) -> None:
         self._client = client
-
         self._mode = client._mode
-
-        api_base_url = api_base_url or os.getenv(
-            const.EnvKey.API_BASE_URL.value
-        )
-        if api_base_url is None:
-            if self._mode == server_lib.ServerKind.DEV_SERVER:
-                api_base_url = const.DEV_SERVER_ORIGIN
-            else:
-                api_base_url = const.DEFAULT_API_ORIGIN
-
-        try:
-            self._api_origin = net.parse_url(api_base_url)
-        except Exception as err:
-            raise errors.URLInvalidError() from err
-
+        self._api_origin = client.api_origin
         self._fns = {fn.get_id(): fn for fn in functions}
         self._framework = framework
 
@@ -601,6 +585,8 @@ class CommHandler:
             signing_key=self._signing_key,
             signing_key_fallback=self._signing_key_fallback,
         )
+        if isinstance(res, Exception):
+            return res
 
         return self._parse_registration_response(res)
 
@@ -651,6 +637,8 @@ class CommHandler:
             signing_key=self._signing_key,
             signing_key_fallback=self._signing_key_fallback,
         )
+        if isinstance(res, Exception):
+            return res
 
         return self._parse_registration_response(res)
 

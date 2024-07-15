@@ -7,18 +7,47 @@ from inngest._internal import client_lib, const, errors, server_lib
 
 
 class Test(unittest.TestCase):
-    def test_dev_env_var(self) -> None:
+    def test_no_env_vars(self) -> None:
+        client = client_lib.Inngest(app_id="test")
+        assert client._mode is server_lib.ServerKind.CLOUD
+        assert client.api_origin == "https://api.inngest.com/"
+        assert client.event_api_origin == "https://inn.gs/"
+
+    def test_dev_env_var_true(self) -> None:
         """
-        No error is raised when the INNGEST_DEV environment variable is set.
-        This env var is a fallback for the is_production param.
+        If INNGEST_DEV a false string ("1" or "true"), the mode is "dev"
         """
 
         os.environ[const.EnvKey.DEV.value] = "1"
         self.addCleanup(lambda: os.environ.pop(const.EnvKey.DEV.value))
 
-        client_lib.Inngest(
-            app_id="test",
-        )
+        client = client_lib.Inngest(app_id="test")
+        assert client._mode is server_lib.ServerKind.DEV_SERVER
+
+    def test_dev_env_var_false(self) -> None:
+        """
+        If INNGEST_DEV a false string ("0" or "false"), the mode is "cloud"
+        """
+
+        os.environ[const.EnvKey.DEV.value] = "0"
+        self.addCleanup(lambda: os.environ.pop(const.EnvKey.DEV.value))
+
+        client = client_lib.Inngest(app_id="test")
+        assert client._mode is server_lib.ServerKind.CLOUD
+
+    def test_dev_env_var_url(self) -> None:
+        """
+        If INNGEST_DEV is a URL, the mode is "dev" and Inngest API URLs match
+        the its value
+        """
+
+        os.environ[const.EnvKey.DEV.value] = "http://example.com"
+        self.addCleanup(lambda: os.environ.pop(const.EnvKey.DEV.value))
+
+        client = client_lib.Inngest(app_id="test")
+        assert client._mode is server_lib.ServerKind.DEV_SERVER
+        assert client.api_origin == "http://example.com"
+        assert client.event_api_origin == "http://example.com"
 
     def test_env_env_var(self) -> None:
         """
@@ -108,7 +137,7 @@ class Test(unittest.TestCase):
             app_id="test",
             signing_key="foo",
         )
-        assert client.api_origin == "example.com"
+        assert client.api_origin == "https://example.com"
 
     def test_api_base_url_param(self) -> None:
         client = client_lib.Inngest(
@@ -116,7 +145,7 @@ class Test(unittest.TestCase):
             app_id="test",
             signing_key="foo",
         )
-        assert client.api_origin == "example.com"
+        assert client.api_origin == "https://example.com"
 
     def test_api_base_url_default_prod(self) -> None:
         client = client_lib.Inngest(
@@ -142,7 +171,7 @@ class Test(unittest.TestCase):
             app_id="test",
             signing_key="foo",
         )
-        assert client.event_api_origin == "example.com"
+        assert client.event_api_origin == "https://example.com"
 
     def test_event_api_base_url_param(self) -> None:
         client = client_lib.Inngest(
@@ -150,7 +179,7 @@ class Test(unittest.TestCase):
             event_api_base_url="example.com",
             signing_key="foo",
         )
-        assert client.event_api_origin == "example.com"
+        assert client.event_api_origin == "https://example.com"
 
     def test_eventapi_base_url_default_prod(self) -> None:
         client = client_lib.Inngest(
@@ -165,4 +194,19 @@ class Test(unittest.TestCase):
             is_production=False,
             signing_key="foo",
         )
+        assert client._mode is server_lib.ServerKind.DEV_SERVER
         assert client.event_api_origin == "http://127.0.0.1:8288/"
+
+    def test_base_url_env_var(self) -> None:
+        """
+        If INNGEST_BASE_URL is set, Inngest API URLs match the its value
+        """
+
+        os.environ[const.EnvKey.BASE_URL.value] = "example.com"
+        self.addCleanup(lambda: os.environ.pop(const.EnvKey.BASE_URL.value))
+        client = client_lib.Inngest(
+            app_id="test",
+            signing_key="foo",
+        )
+        assert client.api_origin == "https://example.com"
+        assert client.event_api_origin == "https://example.com"
