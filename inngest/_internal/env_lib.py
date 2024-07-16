@@ -26,6 +26,7 @@ def get_url(env_var: const.EnvKey) -> typing.Optional[str]:
     val = os.getenv(env_var.value)
     if val is None:
         return None
+    val = val.strip()
 
     parsed = net.parse_url(val)
     if isinstance(parsed, Exception):
@@ -38,8 +39,9 @@ def is_truthy(env_var: const.EnvKey) -> bool:
     val = os.getenv(env_var.value)
     if val is None:
         return False
+    val = val.strip()
 
-    if val.lower() in ("false", "0"):
+    if val.lower() in ("false", "0", ""):
         return False
 
     return True
