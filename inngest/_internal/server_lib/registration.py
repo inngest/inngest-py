@@ -21,6 +21,7 @@ class _BaseConfig(types.BaseModel):
 class Batch(_BaseConfig):
     max_size: int = pydantic.Field(..., serialization_alias="maxSize")
     timeout: typing.Union[int, datetime.timedelta, None] = None
+    key: typing.Optional[str] = None
 
     @pydantic.field_serializer("timeout")
     def serialize_timeout(
