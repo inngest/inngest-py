@@ -178,11 +178,19 @@ class SyncRequest(types.BaseModel):
 
 
 class AuthenticatedSyncResponse(types.BaseModel):
+    schema_version: typing.Literal["2024-07-16"] = "2024-07-16"
+
+    app_name: str = pydantic.Field(..., serialization_alias="appname")
     authenticated: typing.Literal[True] = True
-    functions: list[FunctionConfig]
-    v: typing.Literal["2024-07-16"] = "2024-07-16"
+    deploy_type: DeployType
+    framework: Framework
+    functions: list[FunctionConfig] = pydantic.Field(min_length=1)
+    sdk: str
+    url: str
+    v: str
 
 
 class UnauthenticatedSyncResponse(types.BaseModel):
+    schema_version: typing.Literal["2024-07-16"] = "2024-07-16"
+
     authenticated: typing.Literal[False] = False
-    v: typing.Literal["2024-07-16"] = "2024-07-16"

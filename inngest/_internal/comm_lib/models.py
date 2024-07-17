@@ -254,7 +254,7 @@ class ErrorData(types.BaseModel):
 
 
 class UnauthenticatedInspection(types.BaseModel):
-    schema_version: str = "2024-05-24"
+    schema_version: str = "2024-07-19"
 
     authentication_succeeded: typing.Optional[bool]
     function_count: int
@@ -278,3 +278,4 @@ class AuthenticatedInspection(UnauthenticatedInspection):
     serve_path: typing.Optional[str]
     signing_key_fallback_hash: typing.Optional[str]
     signing_key_hash: typing.Optional[str]
+    supports_in_band_sync: bool = True

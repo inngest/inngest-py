@@ -59,7 +59,7 @@ class AppSyncer:
         result: types.MaybeError[types.BaseModel]
         if self._request_server_kind is server_lib.ServerKind.CLOUD:
             result = self._run_in_band_flow()
-        elif self._request_server_kind is server_lib.ServerKind.DEV_SERVER:
+        elif self._client._mode is server_lib.ServerKind.DEV_SERVER:
             result = self._run_legacy_flow()
         else:
             result = self._run_upgrade_flow()
@@ -161,7 +161,13 @@ class AppSyncer:
             return fn_configs
 
         return server_lib.AuthenticatedSyncResponse(
+            app_name=self._client.app_id,
             functions=fn_configs,
+            deploy_type=server_lib.DeployType.PING,
+            framework=self._framework,
+            sdk=f"{const.LANGUAGE}:v{const.VERSION}",
+            url=app_url,
+            v="0.1",
         )
 
     def _run_upgrade_flow(
