@@ -1,3 +1,4 @@
+import typing
 import unittest
 
 import flask
@@ -6,7 +7,7 @@ import flask.testing
 
 import inngest
 import inngest.flask
-from inngest._internal import server_lib
+from inngest._internal import net, server_lib
 
 from . import base, cases
 
@@ -18,13 +19,23 @@ class TestRegistration(base.TestCase):
         self.app = flask.Flask(__name__)
         self.app_client = self.app.test_client()
 
-    def register(self, headers: dict[str, str]) -> base.RegistrationResponse:
+    def register(
+        self,
+        *,
+        body: typing.Optional[bytes] = None,
+        headers: typing.Optional[dict[str, str]] = None,
+    ) -> base.RegistrationResponse:
         res = self.app_client.put(
             "/api/inngest",
+            data=body,
             headers=headers,
         )
+
         return base.RegistrationResponse(
-            body=res.json,
+            body=res.data,
+            headers=net.normalize_headers(
+                {k: v for k, v in res.headers.items()}
+            ),
             status_code=res.status_code,
         )
 

@@ -69,7 +69,8 @@ def serve(
             self._write_comm_response(comm_res)
 
         def put(self) -> None:
-            comm_res = handler.register_sync(
+            comm_res = handler.register(
+                body=self.request.body,
                 headers=dict(self.request.headers.items()),
                 query_params=_parse_query_params(self.request.query_arguments),
                 request_url=self.request.full_url(),

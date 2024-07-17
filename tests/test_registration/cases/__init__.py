@@ -1,10 +1,20 @@
 from inngest._internal import server_lib
 
-from . import base, cloud_branch_env, server_kind_mismatch
+from . import (
+    base,
+    cloud_branch_env,
+    invalid_signature,
+    server_kind_mismatch,
+    signed,
+    unsigned,
+)
 
 _modules = (
     cloud_branch_env,
+    invalid_signature,
     server_kind_mismatch,
+    signed,
+    unsigned,
 )
 
 

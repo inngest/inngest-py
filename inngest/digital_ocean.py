@@ -126,7 +126,8 @@ def serve(
                 request_url = urllib.parse.urljoin(context.api_host, path)
 
                 return _to_response(
-                    handler.register_sync(
+                    handler.register(
+                        body=_to_body_bytes(http.body),
                         headers=http.headers,
                         query_params=urllib.parse.parse_qs(http.queryString),
                         request_url=request_url,

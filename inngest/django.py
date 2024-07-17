@@ -98,7 +98,8 @@ def _create_handler_sync(
         if request.method == "PUT":
             return _to_response(
                 client,
-                handler.register_sync(
+                handler.register(
+                    body=request.body,
                     headers=dict(request.headers.items()),
                     query_params=dict(request.GET.items()),
                     request_url=request.build_absolute_uri(),
@@ -142,7 +143,7 @@ def _create_handler_async(
             return _to_response(
                 client,
                 handler.inspect(
-                    body=json.loads(request.body),
+                    body=request.body,
                     headers=dict(request.headers.items()),
                     serve_origin=serve_origin,
                     serve_path=serve_path,
@@ -153,7 +154,7 @@ def _create_handler_async(
             return _to_response(
                 client,
                 await handler.call_function(
-                    body=json.loads(request.body),
+                    body=request.body,
                     headers=dict(request.headers.items()),
                     query_params=dict(request.GET.items()),
                     raw_request=request,
@@ -163,7 +164,8 @@ def _create_handler_async(
         if request.method == "PUT":
             return _to_response(
                 client,
-                await handler.register(
+                handler.register(
+                    body=request.body,
                     headers=dict(request.headers.items()),
                     query_params=dict(request.GET.items()),
                     request_url=request.build_absolute_uri(),

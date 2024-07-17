@@ -100,7 +100,8 @@ def _create_handler_async(
         if flask.request.method == "PUT":
             return _to_response(
                 client,
-                await handler.register(
+                handler.register(
+                    body=flask.request.data,
                     headers=dict(flask.request.headers.items()),
                     query_params=flask.request.args,
                     request_url=flask.request.url,
@@ -148,7 +149,8 @@ def _create_handler_sync(
         if flask.request.method == "PUT":
             return _to_response(
                 client,
-                handler.register_sync(
+                handler.register(
+                    body=flask.request.data,
                     headers=dict(flask.request.headers.items()),
                     query_params=flask.request.args,
                     request_url=flask.request.url,

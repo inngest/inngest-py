@@ -1,3 +1,5 @@
+import json
+import typing
 import unittest
 
 import fastapi
@@ -5,7 +7,7 @@ import fastapi.testclient
 
 import inngest
 import inngest.fast_api
-from inngest._internal import server_lib
+from inngest._internal import net, server_lib
 
 from . import base, cases
 
@@ -17,13 +19,27 @@ class TestRegistration(base.TestCase):
         self.app = fastapi.FastAPI()
         self.app_client = fastapi.testclient.TestClient(self.app)
 
-    def register(self, headers: dict[str, str]) -> base.RegistrationResponse:
+    def register(
+        self,
+        *,
+        body: typing.Optional[bytes] = None,
+        headers: typing.Optional[dict[str, str]] = None,
+    ) -> base.RegistrationResponse:
+        data = None
+        if isinstance(body, bytes):
+            data = json.loads(body.decode("utf-8"))
+
         res = self.app_client.put(
             "/api/inngest",
             headers=headers,
+            json=data,
         )
+
         return base.RegistrationResponse(
-            body=res.json(),
+            body=res.read(),
+            headers=net.normalize_headers(
+                {k: v for k, v in res.headers.items()}
+            ),
             status_code=res.status_code,
         )
 

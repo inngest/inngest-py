@@ -13,24 +13,30 @@ from .consts import (
 )
 from .event import Event
 from .execution_request import ServerRequest
+from .query_params import parse_query_params
 from .registration import (
+    AuthenticatedSyncResponse,
     Batch,
     Cancel,
     Concurrency,
     Debounce,
     FunctionConfig,
+    LegacySyncRequest,
     Priority,
     RateLimit,
     Retries,
     Runtime,
     Step,
-    SynchronizeRequest,
+    SyncRequest,
     Throttle,
     TriggerCron,
     TriggerEvent,
+    UnauthenticatedSyncResponse,
 )
 
 __all__ = [
+    "parse_query_params",
+    "AuthenticatedSyncResponse",
     "Batch",
     "Cancel",
     "Concurrency",
@@ -48,14 +54,16 @@ __all__ = [
     "QueryParamKey",
     "ROOT_STEP_ID",
     "RateLimit",
-    "SynchronizeRequest",
+    "LegacySyncRequest",
     "Retries",
     "Runtime",
     "ServerKind",
     "ServerRequest",
     "Step",
+    "SyncRequest",
     "Throttle",
     "TriggerCron",
     "TriggerEvent",
     "UNSPECIFIED_STEP_ID",
+    "UnauthenticatedSyncResponse",
 ]

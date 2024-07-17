@@ -15,11 +15,8 @@ _TEST_NAME = base.create_test_name(__file__)
 def create(framework: server_lib.Framework) -> base.Case:
     def run_test(self: base.TestCase) -> None:
         """
-        Test that the SDK correctly syncs itself with Cloud when using a branch
-        environment.
-
-        We need to use a mock Cloud since the Dev Server doesn't have a mode
-        that simulates Cloud.
+        Ensure the SDK responds with the function configs when the sync request
+        is signed
         """
 
         @dataclasses.dataclass
@@ -52,7 +49,6 @@ def create(framework: server_lib.Framework) -> base.Case:
         client = inngest.Inngest(
             api_base_url=f"http://localhost:{mock_cloud.port}",
             app_id=f"{framework.value}-{_TEST_NAME}",
-            env="my-env",
             signing_key=signing_key,
         )
 
@@ -69,7 +65,6 @@ def create(framework: server_lib.Framework) -> base.Case:
 
         self.serve(client, [fn])
 
-        # Validate response signature
         body = json.dumps(
             {"url": f"http://localhost:{mock_cloud.port}"}
         ).encode("utf-8")
@@ -86,12 +81,12 @@ def create(framework: server_lib.Framework) -> base.Case:
 
         assert res.status_code == 200
 
-        assert res.headers.get("X-Inngest-Env") == "my-env"
+        assert res.headers.get("X-Inngest-Env") is None
         assert res.headers.get("X-Inngest-Framework") == framework.value
         assert (
             res.headers.get("X-Inngest-SDK") == f"inngest-py:v{const.VERSION}"
         )
-
+        # # Validate response signature
         assert (
             net.validate_request(
                 body=res.body,
@@ -103,7 +98,7 @@ def create(framework: server_lib.Framework) -> base.Case:
             is None
         )
 
-        res_body: object = json.loads(res.body.decode("utf-8"))
+        res_body = json.loads(res.body.decode("utf-8"))
 
         # Ensure the SDK responded with the function configs
         assert isinstance(res_body, dict)

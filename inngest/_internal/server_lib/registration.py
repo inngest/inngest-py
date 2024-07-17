@@ -163,7 +163,7 @@ class TriggerEvent(_BaseConfig):
     expression: typing.Optional[str] = None
 
 
-class SynchronizeRequest(types.BaseModel):
+class LegacySyncRequest(types.BaseModel):
     app_name: str = pydantic.Field(..., serialization_alias="appname")
     deploy_type: DeployType
     framework: Framework
@@ -171,3 +171,18 @@ class SynchronizeRequest(types.BaseModel):
     sdk: str
     url: str
     v: str
+
+
+class SyncRequest(types.BaseModel):
+    url: str
+
+
+class AuthenticatedSyncResponse(types.BaseModel):
+    authenticated: typing.Literal[True] = True
+    functions: list[FunctionConfig]
+    v: typing.Literal["2024-07-16"] = "2024-07-16"
+
+
+class UnauthenticatedSyncResponse(types.BaseModel):
+    authenticated: typing.Literal[False] = False
+    v: typing.Literal["2024-07-16"] = "2024-07-16"

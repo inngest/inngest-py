@@ -71,7 +71,8 @@ def serve(
     ) -> fastapi.Response:
         return _to_response(
             client,
-            await handler.register(
+            handler.register(
+                body=await request.body(),
                 headers=dict(request.headers.items()),
                 query_params=dict(request.query_params.items()),
                 request_url=str(request.url),

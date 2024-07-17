@@ -4,7 +4,7 @@ import typing
 
 import inngest
 import inngest.fast_api
-from inngest._internal import const, net, server_lib
+from inngest._internal import net, server_lib
 from tests import http_proxy
 
 from . import base
@@ -15,11 +15,7 @@ _TEST_NAME = base.create_test_name(__file__)
 def create(framework: server_lib.Framework) -> base.Case:
     def run_test(self: base.TestCase) -> None:
         """
-        Test that the SDK correctly syncs itself with Cloud when using a branch
-        environment.
-
-        We need to use a mock Cloud since the Dev Server doesn't have a mode
-        that simulates Cloud.
+        Ensure the SDK errors when the sync request has an invalid signature
         """
 
         @dataclasses.dataclass
@@ -52,7 +48,6 @@ def create(framework: server_lib.Framework) -> base.Case:
         client = inngest.Inngest(
             api_base_url=f"http://localhost:{mock_cloud.port}",
             app_id=f"{framework.value}-{_TEST_NAME}",
-            env="my-env",
             signing_key=signing_key,
         )
 
@@ -69,7 +64,6 @@ def create(framework: server_lib.Framework) -> base.Case:
 
         self.serve(client, [fn])
 
-        # Validate response signature
         body = json.dumps(
             {"url": f"http://localhost:{mock_cloud.port}"}
         ).encode("utf-8")
@@ -79,38 +73,13 @@ def create(framework: server_lib.Framework) -> base.Case:
                 "X-Inngest-Server-Kind": "cloud",
                 "X-Inngest-Signature": net.sign(
                     body,
-                    signing_key,
+                    # Use a different signing key to create an invalid signature
+                    "signkey-prod-111111",
                 ),
             },
         )
 
-        assert res.status_code == 200
-
-        assert res.headers.get("X-Inngest-Env") == "my-env"
-        assert res.headers.get("X-Inngest-Framework") == framework.value
-        assert (
-            res.headers.get("X-Inngest-SDK") == f"inngest-py:v{const.VERSION}"
-        )
-
-        assert (
-            net.validate_request(
-                body=res.body,
-                headers=res.headers,
-                mode=server_lib.ServerKind.CLOUD,
-                signing_key=signing_key,
-                signing_key_fallback=None,
-            )
-            is None
-        )
-
-        res_body: object = json.loads(res.body.decode("utf-8"))
-
-        # Ensure the SDK responded with the function configs
-        assert isinstance(res_body, dict)
-        functions = res_body.get("functions")
-        assert isinstance(functions, list)
-        assert len(functions) == 1
-        assert res_body.get("v") == "2024-07-16"
+        assert res.status_code == 401
 
     return base.Case(
         name=_TEST_NAME,

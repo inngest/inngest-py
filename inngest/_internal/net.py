@@ -5,6 +5,7 @@ import hmac
 import http
 import os
 import threading
+import time
 import typing
 import urllib.parse
 
@@ -255,6 +256,19 @@ async def fetch_with_thready_safety(
         None,
         lambda: client_sync.send(request),
     )
+
+
+def sign(body: bytes, signing_key: str) -> str:
+    signing_key = transforms.remove_signing_key_prefix(signing_key)
+
+    mac = hmac.new(
+        signing_key.encode("utf-8"),
+        body,
+        hashlib.sha256,
+    )
+    unix_ms = round(time.time() * 1000)
+    mac.update(str(unix_ms).encode("utf-8"))
+    return f"s={mac.hexdigest()}&t={unix_ms}"
 
 
 def _validate_request(

@@ -10,6 +10,7 @@ import httpx
 import typing_extensions
 
 from inngest._internal import (
+    app_sync_lib,
     client_lib,
     const,
     errors,
@@ -142,7 +143,7 @@ class CommHandler:
         if isinstance(fn_configs, Exception):
             return fn_configs
 
-        body = server_lib.SynchronizeRequest(
+        body = server_lib.LegacySyncRequest(
             app_name=self._client.app_id,
             deploy_type=server_lib.DeployType.PING,
             framework=self._framework,
@@ -537,63 +538,11 @@ class CommHandler:
         comm_res.status_code = server_res.status_code
         return comm_res
 
-    @_prep_response
-    async def register(
-        self: CommHandler,
-        *,
-        headers: typing.Union[dict[str, str], dict[str, list[str]]],
-        query_params: typing.Union[dict[str, str], dict[str, list[str]]],
-        request_url: str,
-        serve_origin: typing.Optional[str],
-        serve_path: typing.Optional[str],
-    ) -> typing.Union[CommResponse, Exception]:
-        """Handle a registration call."""
-
-        headers = net.normalize_headers(headers)
-
-        app_url = net.create_serve_url(
-            request_url=request_url,
-            serve_origin=serve_origin,
-            serve_path=serve_path,
-        )
-
-        server_kind = transforms.get_server_kind(headers)
-        if isinstance(server_kind, Exception):
-            self._client.logger.error(server_kind)
-            server_kind = None
-
-        comm_res = self._validate_registration(server_kind)
-        if comm_res is not None:
-            return comm_res
-
-        params = parse_query_params(query_params)
-        if isinstance(params, Exception):
-            return params
-
-        req = self._build_register_request(
-            app_url=app_url,
-            server_kind=server_kind,
-            sync_id=params.sync_id,
-        )
-        if isinstance(req, Exception):
-            return req
-
-        res = await net.fetch_with_auth_fallback(
-            self._client._http_client,
-            self._client._http_client_sync,
-            req,
-            signing_key=self._signing_key,
-            signing_key_fallback=self._signing_key_fallback,
-        )
-        if isinstance(res, Exception):
-            return res
-
-        return self._parse_registration_response(res)
-
     @_prep_response_sync
-    def register_sync(
+    def register(
         self: CommHandler,
         *,
+        body: bytes,
         headers: typing.Union[dict[str, str], dict[str, list[str]]],
         query_params: typing.Union[dict[str, str], dict[str, list[str]]],
         request_url: str,
@@ -604,48 +553,58 @@ class CommHandler:
 
         headers = net.normalize_headers(headers)
 
-        app_url = net.create_serve_url(
-            request_url=request_url,
-            serve_origin=serve_origin,
-            serve_path=serve_path,
-        )
-
-        server_kind = transforms.get_server_kind(headers)
-        if isinstance(server_kind, Exception):
-            self._client.logger.error(server_kind)
-            server_kind = None
-
-        comm_res = self._validate_registration(server_kind)
+        comm_res = self._validate_server_kind(headers)
         if comm_res is not None:
             return comm_res
 
-        params = parse_query_params(query_params)
-        if isinstance(params, Exception):
-            return params
-
-        req = self._build_register_request(
-            app_url=app_url,
-            server_kind=server_kind,
-            sync_id=params.sync_id,
-        )
-        if isinstance(req, Exception):
-            return req
-
-        res = net.fetch_with_auth_fallback_sync(
-            self._client._http_client_sync,
-            req,
+        sync_res = app_sync_lib.AppSyncer(
+            body=body,
+            client=self._client,
+            fns=list(self._fns.values()),
+            framework=self._framework,
+            headers=headers,
+            query_params=query_params,
+            request_url=request_url,
+            serve_origin=serve_origin,
+            serve_path=serve_path,
             signing_key=self._signing_key,
             signing_key_fallback=self._signing_key_fallback,
-        )
-        if isinstance(res, Exception):
-            return res
+        ).run()
+        if isinstance(sync_res.result, Exception):
+            comm_res = CommResponse.from_error(
+                self._client.logger,
+                sync_res.result,
+            )
 
-        return self._parse_registration_response(res)
+            if isinstance(sync_res.result, errors.SigVerificationFailedError):
+                comm_res.status_code = http.HTTPStatus.UNAUTHORIZED
+        else:
+            body_dict = sync_res.result.to_dict()
+            if isinstance(body_dict, Exception):
+                return body_dict
 
-    def _validate_registration(
+            comm_res = CommResponse(
+                body=body_dict,
+            )
+
+        if sync_res.signing_key is not None:
+            err = comm_res.sign(sync_res.signing_key)
+            if isinstance(err, Exception):
+                return err
+
+        return comm_res
+
+    def _validate_server_kind(
         self,
-        server_kind: typing.Optional[server_lib.ServerKind],
+        headers: dict[str, str],
     ) -> typing.Optional[CommResponse]:
+        server_kind = transforms.get_server_kind(headers)
+        if isinstance(server_kind, Exception):
+            return CommResponse.from_error(
+                self._client.logger,
+                server_kind,
+            )
+
         if server_kind is not None and server_kind != self._mode:
             msg: str
             if server_kind == server_lib.ServerKind.DEV_SERVER:

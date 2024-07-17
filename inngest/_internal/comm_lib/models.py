@@ -165,6 +165,24 @@ class CommResponse:
 
         return d
 
+    def sign(self, signing_key: str) -> types.MaybeError[None]:
+        byt: bytes
+        if isinstance(self.body, bytes):
+            byt = self.body
+        else:
+            dumped = transforms.dump_json(self.body)
+            if isinstance(dumped, Exception):
+                return dumped
+
+            byt = dumped.encode("utf-8")
+
+        self.headers[server_lib.HeaderKey.SIGNATURE.value] = net.sign(
+            byt,
+            signing_key,
+        )
+
+        return None
+
 
 def _prep_call_result(
     call_res: execution_lib.CallResult,
