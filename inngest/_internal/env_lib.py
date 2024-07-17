@@ -1,7 +1,7 @@
 import os
 import typing
 
-from . import const
+from . import const, net
 
 
 def get_environment_name() -> typing.Optional[str]:
@@ -18,12 +18,30 @@ def get_environment_name() -> typing.Optional[str]:
     )
 
 
-def is_true(env_var: const.EnvKey) -> bool:
+def get_url(env_var: const.EnvKey) -> typing.Optional[str]:
+    """
+    Get a URL from an env var. Returns None if the env var is not set or if its value is not a valid URL
+    """
+
+    val = os.getenv(env_var.value)
+    if val is None:
+        return None
+    val = val.strip()
+
+    parsed = net.parse_url(val)
+    if isinstance(parsed, Exception):
+        return None
+
+    return parsed
+
+
+def is_truthy(env_var: const.EnvKey) -> bool:
     val = os.getenv(env_var.value)
     if val is None:
         return False
+    val = val.strip()
 
-    if val.lower() in ("true", "1"):
-        return True
+    if val.lower() in ("false", "0", ""):
+        return False
 
-    return False
+    return True

@@ -249,6 +249,7 @@ class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
             signing_key=_signing_key,
             signing_key_fallback=_signing_key_fallback,
         )
+        assert not isinstance(res, Exception)
         assert res.status_code == 200
         assert req_count == 1
         req_count = 0
@@ -259,6 +260,7 @@ class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
             signing_key=_signing_key,
             signing_key_fallback=_signing_key_fallback,
         )
+        assert not isinstance(res, Exception)
         assert res.status_code == 200
         assert req_count == 1
 
@@ -294,6 +296,7 @@ class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
             signing_key=_signing_key,
             signing_key_fallback=_signing_key_fallback,
         )
+        assert not isinstance(res, Exception)
         assert res.status_code == 200
         assert req_count == 2
         req_count = 0
@@ -304,6 +307,7 @@ class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
             signing_key=_signing_key,
             signing_key_fallback=_signing_key_fallback,
         )
+        assert not isinstance(res, Exception)
         assert res.status_code == 200
         assert req_count == 2
 
@@ -339,6 +343,7 @@ class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
             signing_key="signkey-prod-aaaaaa",
             signing_key_fallback="signkey-prod-bbbbbb",
         )
+        assert not isinstance(res, Exception)
         assert res.status_code == 401
         assert req_count == 2
         req_count = 0
@@ -349,6 +354,7 @@ class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
             signing_key="signkey-prod-aaaaaa",
             signing_key_fallback="signkey-prod-bbbbbb",
         )
+        assert not isinstance(res, Exception)
         assert res.status_code == 401
         assert req_count == 2
 
@@ -379,6 +385,7 @@ class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
             signing_key=None,
             signing_key_fallback=None,
         )
+        assert not isinstance(res, Exception)
         assert res.status_code == 200
         assert req_count == 1
         req_count = 0
@@ -389,6 +396,7 @@ class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
             signing_key=None,
             signing_key_fallback=None,
         )
+        assert not isinstance(res, Exception)
         assert res.status_code == 200
         assert req_count == 1
 

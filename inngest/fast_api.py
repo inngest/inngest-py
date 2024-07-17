@@ -32,7 +32,6 @@ def serve(
     """
 
     handler = comm_lib.CommHandler(
-        api_base_url=client.api_origin,
         client=client,
         framework=FRAMEWORK,
         functions=functions,

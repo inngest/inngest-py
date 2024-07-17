@@ -11,7 +11,12 @@ from .handler import CommHandler
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-client = inngest.Inngest(app_id="test", is_production=False, logger=logger)
+client = inngest.Inngest(
+    api_base_url="http://foo.bar",
+    app_id="test",
+    is_production=False,
+    logger=logger,
+)
 
 
 class Test_get_function_configs(unittest.TestCase):
@@ -52,7 +57,6 @@ class Test_get_function_configs(unittest.TestCase):
             return 1
 
         handler = CommHandler(
-            api_base_url="http://foo.bar",
             client=client,
             framework=server_lib.Framework.FLASK,
             functions=[fn],
@@ -67,7 +71,6 @@ class Test_get_function_configs(unittest.TestCase):
         functions: list[inngest.Function] = []
 
         handler = CommHandler(
-            api_base_url="http://foo.bar",
             client=client,
             framework=server_lib.Framework.FLASK,
             functions=functions,
