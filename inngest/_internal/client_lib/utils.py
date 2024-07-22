@@ -18,16 +18,16 @@ def get_api_origin(
 
     origin = (
         constructor_param
-        or env_lib.get_url(const.EnvKey.API_BASE_URL)
-        or env_lib.get_url(const.EnvKey.BASE_URL)
-        or env_lib.get_url(const.EnvKey.DEV)
+        or env_lib.get_url(const.EnvKey.API_BASE_URL, mode)
+        or env_lib.get_url(const.EnvKey.BASE_URL, mode)
+        or env_lib.get_url(const.EnvKey.DEV, mode)
     )
     if origin is None:
         if mode == server_lib.ServerKind.DEV_SERVER:
             origin = const.DEV_SERVER_ORIGIN
         else:
             origin = const.DEFAULT_API_ORIGIN
-    return net.parse_url(origin)
+    return net.parse_url(origin, mode)
 
 
 def get_event_api_origin(
@@ -45,13 +45,13 @@ def get_event_api_origin(
 
     origin = (
         constructor_param
-        or env_lib.get_url(const.EnvKey.EVENT_API_BASE_URL)
-        or env_lib.get_url(const.EnvKey.BASE_URL)
-        or env_lib.get_url(const.EnvKey.DEV)
+        or env_lib.get_url(const.EnvKey.EVENT_API_BASE_URL, mode)
+        or env_lib.get_url(const.EnvKey.BASE_URL, mode)
+        or env_lib.get_url(const.EnvKey.DEV, mode)
     )
     if origin is None:
         if mode == server_lib.ServerKind.DEV_SERVER:
             origin = const.DEV_SERVER_ORIGIN
         else:
             origin = const.DEFAULT_EVENT_API_ORIGIN
-    return net.parse_url(origin)
+    return net.parse_url(origin, mode)

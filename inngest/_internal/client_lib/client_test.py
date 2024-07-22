@@ -23,6 +23,8 @@ class Test(unittest.TestCase):
 
         client = client_lib.Inngest(app_id="test")
         assert client._mode is server_lib.ServerKind.DEV_SERVER
+        assert client.api_origin == "http://127.0.0.1:8288/"
+        assert client.event_api_origin == "http://127.0.0.1:8288/"
 
     def test_dev_env_var_false(self) -> None:
         """
