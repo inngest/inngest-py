@@ -401,6 +401,56 @@ class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
         assert req_count == 1
 
 
+class Test_parse_url(unittest.TestCase):
+    def test_no_scheme(self) -> None:
+        assert (
+            net.parse_url("foo.test", mode=server_lib.ServerKind.CLOUD)
+            == "https://foo.test"
+        )
+        assert (
+            net.parse_url("foo.test", mode=server_lib.ServerKind.DEV_SERVER)
+            == "http://foo.test"
+        )
+
+    def test_no_domain(self) -> None:
+        assert (
+            net.parse_url("http://foo:8080", mode=server_lib.ServerKind.CLOUD)
+            == "http://foo:8080"
+        )
+        assert isinstance(
+            net.parse_url("foo", mode=server_lib.ServerKind.CLOUD), Exception
+        )
+        assert isinstance(
+            net.parse_url("http://foo", mode=server_lib.ServerKind.CLOUD),
+            Exception,
+        )
+
+    def test_path(self) -> None:
+        assert (
+            net.parse_url(
+                "http://foo:8080/bar", mode=server_lib.ServerKind.CLOUD
+            )
+            == "http://foo:8080/bar"
+        )
+
+    def test_boolean_strings(self) -> None:
+        assert isinstance(
+            net.parse_url("true", mode=server_lib.ServerKind.CLOUD), Exception
+        )
+        assert isinstance(
+            net.parse_url("1", mode=server_lib.ServerKind.CLOUD), Exception
+        )
+        assert isinstance(
+            net.parse_url("false", mode=server_lib.ServerKind.CLOUD), Exception
+        )
+        assert isinstance(
+            net.parse_url("0", mode=server_lib.ServerKind.CLOUD), Exception
+        )
+        assert isinstance(
+            net.parse_url("", mode=server_lib.ServerKind.CLOUD), Exception
+        )
+
+
 def _sign(body: bytes, signing_key: str, unix_ms: int) -> str:
     signing_key = transforms.remove_signing_key_prefix(signing_key)
 

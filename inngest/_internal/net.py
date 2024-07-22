@@ -217,9 +217,15 @@ def normalize_headers(
     return new_headers
 
 
-def parse_url(url: str) -> types.MaybeError[str]:
+def parse_url(url: str, mode: server_lib.ServerKind) -> types.MaybeError[str]:
+    if "." not in url and ":" not in url.strip("http://").strip("https://"):
+        return Exception("invalid URL: no domain or port")
+
     if url.startswith("http") is False:
-        url = f"https://{url}"
+        if mode is server_lib.ServerKind.CLOUD:
+            url = f"https://{url}"
+        else:
+            url = f"http://{url}"
 
     try:
         parsed = urllib.parse.urlparse(url)

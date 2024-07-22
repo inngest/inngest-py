@@ -1,7 +1,7 @@
 import os
 import typing
 
-from . import const, net
+from . import const, net, server_lib
 
 
 def get_environment_name() -> typing.Optional[str]:
@@ -18,7 +18,10 @@ def get_environment_name() -> typing.Optional[str]:
     )
 
 
-def get_url(env_var: const.EnvKey) -> typing.Optional[str]:
+def get_url(
+    env_var: const.EnvKey,
+    mode: server_lib.ServerKind,
+) -> typing.Optional[str]:
     """
     Get a URL from an env var. Returns None if the env var is not set or if its value is not a valid URL
     """
@@ -28,7 +31,7 @@ def get_url(env_var: const.EnvKey) -> typing.Optional[str]:
         return None
     val = val.strip()
 
-    parsed = net.parse_url(val)
+    parsed = net.parse_url(val, mode)
     if isinstance(parsed, Exception):
         return None
 
