@@ -101,6 +101,7 @@ extend-ignore = [
     'D212',
     'D400',
     'D415',
+    'S112',
 
     # Can't use the "|" operator for unions until we drop support for Python 3.9
     'UP007',

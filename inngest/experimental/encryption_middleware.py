@@ -11,12 +11,33 @@ import json
 import typing
 
 import nacl.encoding
+import nacl.hash
 import nacl.secret
 import nacl.utils
 
 import inngest
 
-encryption_marker: typing.Final = "__ENCRYPTED__"
+# Marker to indicate that the data is encrypted
+_encryption_marker: typing.Final = "__ENCRYPTED__"
+
+# Marker to indicate which strategy was used to encrypt. This is useful for
+# knowing whether the official encryption middleware was used
+_strategy_marker: typing.Final = "__STRATEGY__"
+
+_strategy_identifier: typing.Final = "inngest/libsodium"
+
+# Automatically encrypt and decrypt this field in event data
+_encrypted_field: typing.Final = "encrypted"
+
+
+def _ensure_key_bytes(secret_key: typing.Union[bytes, str]) -> bytes:
+    if isinstance(secret_key, str):
+        return nacl.hash.generichash(
+            secret_key.encode("utf-8"),
+            digest_size=nacl.secret.SecretBox.KEY_SIZE,
+        )
+
+    return secret_key
 
 
 class EncryptionMiddleware(inngest.MiddlewareSync):
@@ -30,26 +51,47 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
         client: inngest.Inngest,
         raw_request: object,
         secret_key: typing.Union[bytes, str],
+        *,
+        fallback_decryption_keys: typing.Optional[
+            list[typing.Union[bytes, str]]
+        ] = None,
+        decrypt_only: bool = False,
     ) -> None:
         """
         Args:
         ----
             client: Inngest client.
             raw_request: Framework/platform specific request object.
-            secret_key: Fernet secret key used for encryption and decryption.
+            secret_key: Secret key used for encryption and decryption.
+            fallback_decryption_keys: Fallback secret keys used for decryption.
         """
 
         super().__init__(client, raw_request)
 
-        if isinstance(secret_key, str):
-            secret_key = bytes.fromhex(secret_key)
+        self._box = nacl.secret.SecretBox(
+            _ensure_key_bytes(secret_key),
+            encoder=nacl.encoding.HexEncoder,
+        )
 
-        self._box = nacl.secret.SecretBox(secret_key)
+        self._fallback_decryption_boxes = [
+            nacl.secret.SecretBox(
+                _ensure_key_bytes(fallback_key),
+                encoder=nacl.encoding.HexEncoder,
+            )
+            for fallback_key in (fallback_decryption_keys or [])
+        ]
+
+        self._decrypt_only = decrypt_only
 
     @classmethod
     def factory(
         cls,
         secret_key: typing.Union[bytes, str],
+        *,
+        fallback_decryption_keys: typing.Optional[
+            list[typing.Union[bytes, str]]
+        ] = None,
+        decrypt_only: bool = False,
     ) -> typing.Callable[[inngest.Inngest, object], EncryptionMiddleware]:
         """
         Create an encryption middleware factory that can be passed to an Inngest
@@ -64,12 +106,18 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
             client: inngest.Inngest,
             raw_request: object,
         ) -> EncryptionMiddleware:
-            return cls(client, raw_request, secret_key)
+            return cls(
+                client,
+                raw_request,
+                secret_key,
+                fallback_decryption_keys=fallback_decryption_keys,
+                decrypt_only=decrypt_only,
+            )
 
         return _factory
 
     def _encrypt(self, data: object) -> dict[str, typing.Union[bool, str]]:
-        if isinstance(data, dict) and data.get(encryption_marker) is True:
+        if isinstance(data, dict) and data.get(_encryption_marker) is True:
             # Already encrypted
             return data
 
@@ -79,7 +127,8 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
             encoder=nacl.encoding.Base64Encoder,
         )
         return {
-            encryption_marker: True,
+            _encryption_marker: True,
+            _strategy_marker: _strategy_identifier,
             "data": ciphertext.decode(),
         }
 
@@ -92,33 +141,55 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
         if not isinstance(encrypted, str):
             return data
 
-        byt = self._box.decrypt(
-            encrypted.encode(),
-            encoder=nacl.encoding.Base64Encoder,
-        )
-        return json.loads(byt.decode())  # type: ignore
+        for box in [self._box, *self._fallback_decryption_boxes]:
+            try:
+                byt = box.decrypt(
+                    encrypted.encode(),
+                    encoder=nacl.encoding.Base64Encoder,
+                )
+
+                return json.loads(byt.decode())  # type: ignore
+            except Exception:
+                continue
+
+        raise Exception("Failed to decrypt data")
 
     def _decrypt_event_data(
         self,
         data: typing.Mapping[str, inngest.JSON],
     ) -> typing.Mapping[str, inngest.JSON]:
-        is_everything_encrypted = _is_encrypted(data)
-        if is_everything_encrypted:
-            decrypted = self._decrypt(data)
-            if isinstance(decrypted, dict):
-                data = decrypted
-        else:
-            data = {k: self._decrypt(v) for k, v in data.items()}
+        encrypted = data.get(_encrypted_field)
+        if encrypted is None:
+            return data
 
-        return data
+        if not isinstance(encrypted, dict):
+            raise ValueError(
+                f"Expected event.data.encrypted to be a dict, got {type(encrypted)}"
+            )
+
+        if not _is_encrypted(encrypted):
+            return data
+
+        return {
+            **data,
+            _encrypted_field: self._decrypt(encrypted),
+        }
 
     def before_send_events(self, events: list[inngest.Event]) -> None:
         """
         Encrypt event data before sending it to the Inngest server.
         """
 
+        if self._decrypt_only:
+            return
+
         for event in events:
-            event.data = self._encrypt(event.data)
+            decrypted = event.data.get(_encrypted_field)
+            if decrypted is not None:
+                event.data = {
+                    **event.data,
+                    _encrypted_field: self._encrypt(event.data),
+                }
 
     def transform_input(
         self,
@@ -143,9 +214,21 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
         Encrypt data before sending it to the Inngest server.
         """
 
-        if result.output is not None:
+        if self._decrypt_only:
+            return
+
+        if result.has_output():
             result.output = self._encrypt(result.output)
 
 
 def _is_encrypted(value: object) -> bool:
-    return isinstance(value, dict) and value.get(encryption_marker) is True
+    if not isinstance(value, dict):
+        return False
+
+    if value.get(_encryption_marker) is not True:
+        return False
+
+    if value.get(_strategy_marker) != _strategy_identifier:
+        return False
+
+    return True

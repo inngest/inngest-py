@@ -3,7 +3,13 @@ from __future__ import annotations
 import dataclasses
 import typing
 
-from inngest._internal import execution_lib, function, server_lib, step_lib
+from inngest._internal import (
+    execution_lib,
+    function,
+    server_lib,
+    step_lib,
+    types,
+)
 
 if typing.TYPE_CHECKING:
     from inngest._internal import client_lib
@@ -197,6 +203,9 @@ class TransformOutputResult:
     # Mutations to these fields within middleware will be discarded after
     # running middleware
     step: typing.Optional[TransformOutputStepInfo]
+
+    def has_output(self) -> bool:
+        return self.output is not types.empty_sentinel
 
 
 @dataclasses.dataclass

@@ -1,7 +1,7 @@
 import json
-import typing
 
 import nacl.encoding
+import nacl.hash
 import nacl.secret
 import nacl.utils
 
@@ -12,33 +12,15 @@ from inngest.experimental.encryption_middleware import EncryptionMiddleware
 
 from . import base
 
-_secret_key = nacl.utils.random(nacl.secret.SecretBox.KEY_SIZE)
-_box = nacl.secret.SecretBox(_secret_key)
+_secret_key = "my-secret-key"
 
 
-def _encrypt(data: object) -> dict[str, typing.Union[bool, str]]:
-    """
-    Encrypt data the way middleware would.
-    """
-
-    byt = json.dumps(data).encode()
-    ciphertext = _box.encrypt(
-        byt,
-        encoder=nacl.encoding.Base64Encoder,
+enc = base.Encryptor(
+    nacl.hash.blake2b(
+        _secret_key.encode("utf-8"),
+        digest_size=nacl.secret.SecretBox.KEY_SIZE,
     )
-    return {
-        "__ENCRYPTED__": True,
-        "data": ciphertext.decode(),
-    }
-
-
-def _decrypt(data: bytes) -> object:
-    return json.loads(
-        _box.decrypt(
-            data,
-            encoder=nacl.encoding.Base64Encoder,
-        ).decode()
-    )
+)
 
 
 class _State(base.BaseState):
@@ -58,7 +40,9 @@ def create(
 
     @client.create_function(
         fn_id=fn_id,
-        middleware=[EncryptionMiddleware.factory(_secret_key)],
+        middleware=[
+            EncryptionMiddleware.factory(_secret_key, decrypt_only=True)
+        ],
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
@@ -86,7 +70,9 @@ def create(
 
     @client.create_function(
         fn_id=fn_id,
-        middleware=[EncryptionMiddleware.factory(_secret_key)],
+        middleware=[
+            EncryptionMiddleware.factory(_secret_key, decrypt_only=True)
+        ],
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
@@ -119,7 +105,7 @@ def create(
                 name=event_name,
                 data={
                     "a": 1,
-                    "b": _encrypt(2),
+                    "encrypted": enc.encrypt({"b": 2}),
                 },
             )
         )
@@ -133,11 +119,15 @@ def create(
         # Ensure that the function receives decrypted data
         assert state.event.data == {
             "a": 1,
-            "b": 2,
+            "encrypted": {
+                "b": 2,
+            },
         }
         assert state.events[0].data == {
             "a": 1,
-            "b": 2,
+            "encrypted": {
+                "b": 2,
+            },
         }
 
         # Ensure that step_1 output is encrypted and its value is correct
@@ -148,9 +138,7 @@ def create(
             )
         )
         assert isinstance(output, dict)
-        data = output.get("data")
-        assert isinstance(data, dict)
-        assert _decrypt(data["data"]) == "test string"
+        assert output.get("data") == "test string"
 
         # Ensure that step_2 output is encrypted and its value is correct
         output = json.loads(
@@ -160,14 +148,10 @@ def create(
             )
         )
         assert isinstance(output, dict)
-        data = output.get("data")
-        assert isinstance(data, dict)
-        assert _decrypt(data["data"]) == [{"a": {"b": 1}}]
+        assert output.get("data") == [{"a": {"b": 1}}]
 
         assert run.output is not None
-        run_output = json.loads(run.output)
-        assert isinstance(run_output, dict)
-        assert _decrypt(run_output["data"]) == "function output"
+        assert json.loads(run.output) == "function output"
 
     if is_sync:
         fn = fn_sync
