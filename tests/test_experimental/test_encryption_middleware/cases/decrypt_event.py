@@ -1,3 +1,7 @@
+"""
+Ensure events are decrypted
+"""
+
 import nacl.encoding
 import nacl.hash
 import nacl.secret
