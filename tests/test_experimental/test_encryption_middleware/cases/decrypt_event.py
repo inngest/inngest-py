@@ -1,9 +1,3 @@
-"""
-Ensure that the encryption middleware can decrypt data using a fallback
-decryption key. The primary key is intentionally wrong
-"""
-
-
 import nacl.encoding
 import nacl.hash
 import nacl.secret
@@ -44,12 +38,7 @@ def create(
 
     @client.create_function(
         fn_id=fn_id,
-        middleware=[
-            EncryptionMiddleware.factory(
-                "invalid-secret",
-                fallback_decryption_keys=[_secret_key],
-            )
-        ],
+        middleware=[EncryptionMiddleware.factory(_secret_key)],
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
@@ -63,12 +52,7 @@ def create(
 
     @client.create_function(
         fn_id=fn_id,
-        middleware=[
-            EncryptionMiddleware.factory(
-                "invalid-secret",
-                fallback_decryption_keys=[_secret_key],
-            )
-        ],
+        middleware=[EncryptionMiddleware.factory(_secret_key)],
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )

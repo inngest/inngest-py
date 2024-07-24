@@ -27,7 +27,7 @@ _strategy_marker: typing.Final = "__STRATEGY__"
 _strategy_identifier: typing.Final = "inngest/libsodium"
 
 # Automatically encrypt and decrypt this field in event data
-_encrypted_field: typing.Final = "encrypted"
+_default_event_encryption_field: typing.Final = "encrypted"
 
 
 def _ensure_key_bytes(secret_key: typing.Union[bytes, str]) -> bytes:
@@ -52,10 +52,11 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
         raw_request: object,
         secret_key: typing.Union[bytes, str],
         *,
+        decrypt_only: bool = False,
+        event_encryption_field: str = _default_event_encryption_field,
         fallback_decryption_keys: typing.Optional[
             list[typing.Union[bytes, str]]
         ] = None,
-        decrypt_only: bool = False,
     ) -> None:
         """
         Args:
@@ -63,6 +64,8 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
             client: Inngest client.
             raw_request: Framework/platform specific request object.
             secret_key: Secret key used for encryption and decryption.
+            decrypt_only: Only decrypt data (do not encrypt).
+            event_encryption_field: Automatically encrypt and decrypt this field in event data.
             fallback_decryption_keys: Fallback secret keys used for decryption.
         """
 
@@ -73,6 +76,9 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
             encoder=nacl.encoding.HexEncoder,
         )
 
+        self._decrypt_only = decrypt_only
+        self._event_encryption_field = event_encryption_field
+
         self._fallback_decryption_boxes = [
             nacl.secret.SecretBox(
                 _ensure_key_bytes(fallback_key),
@@ -81,17 +87,16 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
             for fallback_key in (fallback_decryption_keys or [])
         ]
 
-        self._decrypt_only = decrypt_only
-
     @classmethod
     def factory(
         cls,
         secret_key: typing.Union[bytes, str],
         *,
+        decrypt_only: bool = False,
+        event_encryption_field: str = _default_event_encryption_field,
         fallback_decryption_keys: typing.Optional[
             list[typing.Union[bytes, str]]
         ] = None,
-        decrypt_only: bool = False,
     ) -> typing.Callable[[inngest.Inngest, object], EncryptionMiddleware]:
         """
         Create an encryption middleware factory that can be passed to an Inngest
@@ -100,6 +105,9 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
         Args:
         ----
             secret_key: Fernet secret key used for encryption and decryption.
+            decrypt_only: Only decrypt data (do not encrypt).
+            event_encryption_field: Automatically encrypt and decrypt this field in event data.
+            fallback_decryption_keys: Fallback secret keys used for decryption.
         """
 
         def _factory(
@@ -110,8 +118,9 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
                 client,
                 raw_request,
                 secret_key,
-                fallback_decryption_keys=fallback_decryption_keys,
                 decrypt_only=decrypt_only,
+                event_encryption_field=event_encryption_field,
+                fallback_decryption_keys=fallback_decryption_keys,
             )
 
         return _factory
@@ -158,22 +167,26 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
         self,
         data: typing.Mapping[str, inngest.JSON],
     ) -> typing.Mapping[str, inngest.JSON]:
-        encrypted = data.get(_encrypted_field)
-        if encrypted is None:
-            return data
+        # Sort with expected encryption field first, since it's the most likely
+        # to be encrypted
+        keys = sorted(
+            data.keys(), key=lambda k: k != self._event_encryption_field
+        )
 
-        if not isinstance(encrypted, dict):
-            raise ValueError(
-                f"Expected event.data.encrypted to be a dict, got {type(encrypted)}"
-            )
+        # Iterate over all the keys, decrypting the first encrypted field found.
+        # It's possible that the event producer uses a different encryption
+        # field
+        for k in keys:
+            encrypted = data.get(k)
+            if not _is_encrypted(encrypted):
+                continue
 
-        if not _is_encrypted(encrypted):
-            return data
+            return {
+                **data,
+                k: self._decrypt(encrypted),
+            }
 
-        return {
-            **data,
-            _encrypted_field: self._decrypt(encrypted),
-        }
+        return data
 
     def before_send_events(self, events: list[inngest.Event]) -> None:
         """
@@ -184,11 +197,11 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
             return
 
         for event in events:
-            decrypted = event.data.get(_encrypted_field)
+            decrypted = event.data.get(self._event_encryption_field)
             if decrypted is not None:
                 event.data = {
                     **event.data,
-                    _encrypted_field: self._encrypt(event.data),
+                    self._event_encryption_field: self._encrypt(decrypted),
                 }
 
     def transform_input(

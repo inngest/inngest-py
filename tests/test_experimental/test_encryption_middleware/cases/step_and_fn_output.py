@@ -1,8 +1,6 @@
 """
-Ensure that the function receives decrypted event data but does not encrypt
-anything
+Ensure step and function output is encrypted and decrypted correctly
 """
-
 
 import json
 
@@ -46,9 +44,7 @@ def create(
 
     @client.create_function(
         fn_id=fn_id,
-        middleware=[
-            EncryptionMiddleware.factory(_secret_key, decrypt_only=True)
-        ],
+        middleware=[EncryptionMiddleware.factory(_secret_key)],
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
@@ -56,8 +52,6 @@ def create(
         ctx: inngest.Context,
         step: inngest.StepSync,
     ) -> str:
-        state.event = ctx.event
-        state.events = ctx.events
         state.run_id = ctx.run_id
 
         def _step_1() -> str:
@@ -76,9 +70,7 @@ def create(
 
     @client.create_function(
         fn_id=fn_id,
-        middleware=[
-            EncryptionMiddleware.factory(_secret_key, decrypt_only=True)
-        ],
+        middleware=[EncryptionMiddleware.factory(_secret_key)],
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
@@ -86,8 +78,6 @@ def create(
         ctx: inngest.Context,
         step: inngest.Step,
     ) -> str:
-        state.event = ctx.event
-        state.events = ctx.events
         state.run_id = ctx.run_id
 
         def _step_1() -> str:
@@ -105,36 +95,13 @@ def create(
         return "function output"
 
     async def run_test(self: base.TestClass) -> None:
-        # Send an event that contains an encrypted field
-        self.client.send_sync(
-            inngest.Event(
-                name=event_name,
-                data={
-                    "a": 1,
-                    "encrypted": enc.encrypt({"b": 2}),
-                },
-            )
-        )
+        self.client.send_sync(inngest.Event(name=event_name))
 
         run_id = state.wait_for_run_id()
         run = tests.helper.client.wait_for_run_status(
             run_id,
             tests.helper.RunStatus.COMPLETED,
         )
-
-        # Ensure that the function receives decrypted data
-        assert state.event.data == {
-            "a": 1,
-            "encrypted": {
-                "b": 2,
-            },
-        }
-        assert state.events[0].data == {
-            "a": 1,
-            "encrypted": {
-                "b": 2,
-            },
-        }
 
         # Ensure that step_1 output is encrypted and its value is correct
         output = json.loads(
@@ -144,7 +111,9 @@ def create(
             )
         )
         assert isinstance(output, dict)
-        assert output.get("data") == "test string"
+        data = output.get("data")
+        assert isinstance(data, dict)
+        assert enc.decrypt(data["data"]) == "test string"
 
         # Ensure that step_2 output is encrypted and its value is correct
         output = json.loads(
@@ -154,10 +123,14 @@ def create(
             )
         )
         assert isinstance(output, dict)
-        assert output.get("data") == [{"a": {"b": 1}}]
+        data = output.get("data")
+        assert isinstance(data, dict)
+        assert enc.decrypt(data["data"]) == [{"a": {"b": 1}}]
 
         assert run.output is not None
-        assert json.loads(run.output) == "function output"
+        run_output = json.loads(run.output)
+        assert isinstance(run_output, dict)
+        assert enc.decrypt(run_output["data"]) == "function output"
 
     if is_sync:
         fn = fn_sync

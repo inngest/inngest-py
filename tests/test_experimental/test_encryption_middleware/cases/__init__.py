@@ -1,12 +1,23 @@
 import inngest
 from inngest._internal import server_lib
 
-from . import base, decrypt_only, fallback_decryption_key, output_and_events
+from . import (
+    base,
+    decrypt_event,
+    decrypt_only,
+    decrypt_unexpected_encryption_field,
+    encrypt_overridden_encryption_field,
+    fallback_decryption_key,
+    step_and_fn_output,
+)
 
 _modules = (
+    decrypt_event,
     decrypt_only,
+    decrypt_unexpected_encryption_field,
+    encrypt_overridden_encryption_field,
     fallback_decryption_key,
-    output_and_events,
+    step_and_fn_output,
 )
 
 

@@ -1,6 +1,6 @@
 """
-Ensure that the encryption middleware can decrypt data using a fallback
-decryption key. The primary key is intentionally wrong
+Ensure that we encrypt the correct event.data field when the event encryption
+field is overridden
 """
 
 
@@ -13,6 +13,7 @@ import inngest
 import tests.helper
 from inngest._internal import server_lib
 from inngest.experimental.encryption_middleware import EncryptionMiddleware
+from tests import dev_server
 
 from . import base
 
@@ -44,12 +45,6 @@ def create(
 
     @client.create_function(
         fn_id=fn_id,
-        middleware=[
-            EncryptionMiddleware.factory(
-                "invalid-secret",
-                fallback_decryption_keys=[_secret_key],
-            )
-        ],
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
@@ -63,12 +58,6 @@ def create(
 
     @client.create_function(
         fn_id=fn_id,
-        middleware=[
-            EncryptionMiddleware.factory(
-                "invalid-secret",
-                fallback_decryption_keys=[_secret_key],
-            )
-        ],
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
@@ -81,13 +70,27 @@ def create(
         state.run_id = ctx.run_id
 
     async def run_test(self: base.TestClass) -> None:
+        # Create a new client because we don't want to use encryption middleware
+        # on the functions
+        client = inngest.Inngest(
+            app_id="foo",
+            event_api_base_url=dev_server.origin,
+            is_production=False,
+            middleware=[
+                EncryptionMiddleware.factory(
+                    _secret_key,
+                    event_encryption_field="overridden",
+                )
+            ],
+        )
+
         # Send an event that contains an encrypted field
-        self.client.send_sync(
+        client.send_sync(
             inngest.Event(
                 name=event_name,
                 data={
                     "a": 1,
-                    "encrypted": enc.encrypt({"b": 2}),
+                    "overridden": {"b": 2},
                 },
             )
         )
@@ -98,19 +101,21 @@ def create(
             tests.helper.RunStatus.COMPLETED,
         )
 
-        # Ensure that the function receives decrypted data
-        assert state.event.data == {
-            "a": 1,
-            "encrypted": {
-                "b": 2,
-            },
-        }
-        assert state.events[0].data == {
-            "a": 1,
-            "encrypted": {
-                "b": 2,
-            },
-        }
+        # Ensure that the function receives encrypted data in ctx.event
+        overridden = state.event.data.get("overridden")
+        assert isinstance(overridden, dict)
+        assert overridden["__ENCRYPTED__"] is True
+        encrypted = overridden.get("data")
+        assert isinstance(encrypted, str)
+        assert enc.decrypt(encrypted.encode()) == {"b": 2}
+
+        # Ensure that the function receives encrypted data in ctx.events
+        overridden = state.events[0].data.get("overridden")
+        assert isinstance(overridden, dict)
+        assert overridden["__ENCRYPTED__"] is True
+        encrypted = overridden.get("data")
+        assert isinstance(encrypted, str)
+        assert enc.decrypt(encrypted.encode()) == {"b": 2}
 
     if is_sync:
         fn = fn_sync
