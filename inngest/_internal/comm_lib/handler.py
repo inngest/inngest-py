@@ -126,6 +126,9 @@ class CommHandler:
 
         self._signing_key_fallback = client.signing_key_fallback
 
+    def add_function(self, fn: function.Function) -> None:
+        self._fns[fn.get_id()] = fn
+
     def _build_register_request(
         self,
         *,
