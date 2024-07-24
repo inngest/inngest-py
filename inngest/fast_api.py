@@ -17,7 +17,7 @@ def serve(
     *,
     serve_origin: typing.Optional[str] = None,
     serve_path: typing.Optional[str] = None,
-) -> C:
+) -> Callable:
     """
     Serve Inngest functions in a FastAPI app.
 
