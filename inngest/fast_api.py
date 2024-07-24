@@ -4,7 +4,7 @@ import json
 import typing
 
 import fastapi
-
+from typing import Callable
 from ._internal import client_lib, comm_lib, function, server_lib, transforms
 
 FRAMEWORK = server_lib.Framework.FAST_API
@@ -17,7 +17,7 @@ def serve(
     *,
     serve_origin: typing.Optional[str] = None,
     serve_path: typing.Optional[str] = None,
-) -> None:
+) -> C:
     """
     Serve Inngest functions in a FastAPI app.
 
@@ -79,7 +79,10 @@ def serve(
                 serve_path=serve_path,
             ),
         )
+    return attach_function_to_app(handler)
 
+def attach_function_to_app(handler) -> Callable:
+    return lambda fn: handler.add_function(fn)
 
 def _to_response(
     client: client_lib.Inngest,
