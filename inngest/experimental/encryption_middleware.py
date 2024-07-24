@@ -128,6 +128,9 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
     def _encrypt(self, data: object) -> dict[str, typing.Union[bool, str]]:
         if isinstance(data, dict) and data.get(_encryption_marker) is True:
             # Already encrypted
+            self.client.logger.warning(
+                "Skipping encryption since data is already encrypted"
+            )
             return data
 
         byt = json.dumps(data).encode()
