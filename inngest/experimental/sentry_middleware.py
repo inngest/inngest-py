@@ -36,10 +36,10 @@ class SentryMiddleware(inngest.MiddlewareSync):
 
         sentry_sdk.set_tag("inngest.app.id", client.app_id)
 
-    def before_response(self) -> None:
+    def before_response(self) -> None:  # noqa: D102
         sentry_sdk.flush()
 
-    def transform_input(
+    def transform_input(  # noqa: D102
         self,
         ctx: inngest.Context,
         function: inngest.Function,
@@ -52,6 +52,6 @@ class SentryMiddleware(inngest.MiddlewareSync):
         sentry_sdk.set_tag("inngest.function.name", function.name)
         sentry_sdk.set_tag("inngest.run.id", ctx.run_id)
 
-    def transform_output(self, output: inngest.TransformOutputResult) -> None:
+    def transform_output(self, output: inngest.TransformOutputResult) -> None:  # noqa: D102
         if output.error:
             sentry_sdk.capture_exception(output.error)
