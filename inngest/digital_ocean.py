@@ -58,14 +58,34 @@ def serve(
 
             query_params = urllib.parse.parse_qs(http.queryString)
 
+            # DigitalOcean does not give the full path to the function, so we'll
+            # build it by hardcoding the path prefix ("api/v1/web") and
+            # concatenating it with the function name. This should be identical
+            # to the path, but DigitalOcean may change this in the future (e.g.
+            # a new API version).
+            #
+            # You might be tempted to use event.http.path, but that's actually
+            # the relative path after the prefix + function name.
+            path = "/api/v1/web" + context.function_name
+
+            request_url = urllib.parse.urljoin(context.api_host, path)
+
+            comm_req = comm_lib.CommRequest(
+                body=_to_body_bytes(http.body),
+                headers=http.headers,
+                query_params=query_params,
+                raw_request={
+                    "context": context,
+                    "event": event,
+                },
+                request_url=request_url,
+                serve_origin=serve_origin,
+                serve_path=serve_path,
+            )
+
             if http.method == "GET":
                 return _to_response(
-                    handler.inspect(
-                        body=_to_body_bytes(http.body),
-                        headers=http.headers,
-                        serve_origin=serve_origin,
-                        serve_path=serve_path,
-                    ),
+                    handler.get_sync(comm_req),
                 )
 
             if http.method == "POST":
@@ -101,15 +121,7 @@ def serve(
                     raise call
 
                 return _to_response(
-                    handler.call_function_sync(
-                        body=_to_body_bytes(http.body),
-                        headers=http.headers,
-                        query_params=query_params,
-                        raw_request={
-                            "context": context,
-                            "event": event,
-                        },
-                    ),
+                    handler.post_sync(comm_req),
                 )
 
             if http.method == "PUT":
@@ -126,13 +138,7 @@ def serve(
                 request_url = urllib.parse.urljoin(context.api_host, path)
 
                 return _to_response(
-                    handler.register_sync(
-                        headers=http.headers,
-                        query_params=urllib.parse.parse_qs(http.queryString),
-                        request_url=request_url,
-                        serve_origin=serve_origin,
-                        serve_path=serve_path,
-                    ),
+                    handler.put_sync(comm_req),
                 )
 
             raise Exception(f"unsupported method: {http.method}")

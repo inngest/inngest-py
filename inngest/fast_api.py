@@ -43,11 +43,16 @@ def serve(
     ) -> fastapi.Response:
         return _to_response(
             client,
-            handler.inspect(
-                body=await request.body(),
-                headers=dict(request.headers.items()),
-                serve_origin=serve_origin,
-                serve_path=serve_path,
+            handler.get_sync(
+                comm_lib.CommRequest(
+                    body=await request.body(),
+                    headers=dict(request.headers.items()),
+                    query_params=dict(request.query_params.items()),
+                    raw_request=request,
+                    request_url=str(request.url),
+                    serve_origin=serve_origin,
+                    serve_path=serve_path,
+                )
             ),
         )
 
@@ -57,11 +62,16 @@ def serve(
     ) -> fastapi.Response:
         return _to_response(
             client,
-            await handler.call_function(
-                body=await request.body(),
-                headers=dict(request.headers.items()),
-                query_params=dict(request.query_params.items()),
-                raw_request=request,
+            await handler.post(
+                comm_lib.CommRequest(
+                    body=await request.body(),
+                    headers=dict(request.headers.items()),
+                    query_params=dict(request.query_params.items()),
+                    raw_request=request,
+                    request_url=str(request.url),
+                    serve_origin=serve_origin,
+                    serve_path=serve_path,
+                )
             ),
         )
 
@@ -71,12 +81,16 @@ def serve(
     ) -> fastapi.Response:
         return _to_response(
             client,
-            await handler.register(
-                headers=dict(request.headers.items()),
-                query_params=dict(request.query_params.items()),
-                request_url=str(request.url),
-                serve_origin=serve_origin,
-                serve_path=serve_path,
+            await handler.put(
+                comm_lib.CommRequest(
+                    body=await request.body(),
+                    headers=dict(request.headers.items()),
+                    query_params=dict(request.query_params.items()),
+                    raw_request=request,
+                    request_url=str(request.url),
+                    serve_origin=serve_origin,
+                    serve_path=serve_path,
+                )
             ),
         )
 
