@@ -105,6 +105,8 @@ class TestSignatureVerification(unittest.IsolatedAsyncioTestCase):
             functions=functions,
         )
 
+        # Create a request that mimics an execution request, but without a
+        # signature
         req = CommRequest(
             body=b"{}",
             headers={},
@@ -118,6 +120,7 @@ class TestSignatureVerification(unittest.IsolatedAsyncioTestCase):
             serve_path=None,
         )
 
+        # Test both POST handlers
         for res in [await handler.post(req), handler.post_sync(req)]:
             assert res.status_code == http.HTTPStatus.INTERNAL_SERVER_ERROR
             assert isinstance(res.body, dict)
@@ -139,6 +142,8 @@ class TestSignatureVerification(unittest.IsolatedAsyncioTestCase):
         body = b"{}"
         wrong_signing_key = "signkey-prod-111111"
 
+        # Create a request that mimics an execution request, but with an invalid
+        # signature
         req = CommRequest(
             body=body,
             headers={
@@ -157,6 +162,7 @@ class TestSignatureVerification(unittest.IsolatedAsyncioTestCase):
             serve_path=None,
         )
 
+        # Test both POST handlers
         for res in [await handler.post(req), handler.post_sync(req)]:
             assert res.status_code == http.HTTPStatus.INTERNAL_SERVER_ERROR
             assert isinstance(res.body, dict)
