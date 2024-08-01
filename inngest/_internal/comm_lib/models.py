@@ -181,12 +181,19 @@ class CommResponse:
 
         return d
 
-    def sign(self, signing_key: str) -> types.MaybeError[str]:
+    def sign(self, signing_key: str) -> types.MaybeError[None]:
         body_bytes = self.body_bytes()
         if isinstance(body_bytes, Exception):
             return body_bytes
 
-        return net.sign(body_bytes, signing_key)
+        self.headers = {
+            **self.headers,
+            server_lib.HeaderKey.SIGNATURE.value: net.sign(
+                body_bytes, signing_key
+            ),
+        }
+
+        return None
 
 
 def _prep_call_result(

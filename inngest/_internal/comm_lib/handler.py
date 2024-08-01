@@ -111,7 +111,7 @@ class CommHandler:
             timeout=30,
         )
 
-    @wrap_handler
+    @wrap_handler()
     async def post(
         self,
         req: CommRequest,
@@ -130,17 +130,6 @@ class CommHandler:
             self._client,
             req.raw_request,
         )
-
-        # Validate the request signature.
-        err = net.validate_request(
-            body=req.body,
-            headers=headers,
-            mode=self._client._mode,
-            signing_key=self._signing_key,
-            signing_key_fallback=self._signing_key_fallback,
-        )
-        if isinstance(err, Exception):
-            return err
 
         request = server_lib.ServerRequest.from_raw(req.body)
         if isinstance(request, Exception):
@@ -205,7 +194,7 @@ class CommHandler:
             server_kind,
         )
 
-    @wrap_handler_sync
+    @wrap_handler_sync()
     def post_sync(
         self,
         req: CommRequest,
@@ -332,7 +321,7 @@ class CommHandler:
             return errors.FunctionConfigInvalidError("no functions found")
         return configs
 
-    @wrap_handler_sync
+    @wrap_handler_sync(require_signature=False)
     def get_sync(
         self,
         req: CommRequest,
@@ -465,7 +454,7 @@ class CommHandler:
         comm_res.status_code = server_res.status_code
         return comm_res
 
-    @wrap_handler
+    @wrap_handler(require_signature=False)
     async def put(
         self: CommHandler,
         req: CommRequest,
@@ -514,7 +503,7 @@ class CommHandler:
 
         return self._parse_registration_response(res)
 
-    @wrap_handler_sync
+    @wrap_handler_sync(require_signature=False)
     def put_sync(
         self: CommHandler,
         req: CommRequest,
