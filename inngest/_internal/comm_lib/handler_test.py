@@ -11,19 +11,11 @@ from .handler import CommHandler
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
-dev_client = inngest.Inngest(
+client = inngest.Inngest(
     api_base_url="http://foo.bar",
     app_id="test",
     is_production=False,
     logger=logger,
-)
-
-prod_client = inngest.Inngest(
-    api_base_url="http://foo.bar",
-    app_id="test",
-    logger=logger,
-    signing_key="signkey-prod-000000",
 )
 
 
@@ -39,7 +31,7 @@ class Test_get_function_configs(unittest.TestCase):
         fully-specified config.
         """
 
-        @dev_client.create_function(
+        @client.create_function(
             batch_events=inngest.Batch(
                 max_size=2, timeout=datetime.timedelta(minutes=1)
             ),
@@ -65,7 +57,7 @@ class Test_get_function_configs(unittest.TestCase):
             return 1
 
         handler = CommHandler(
-            client=dev_client,
+            client=client,
             framework=server_lib.Framework.FLASK,
             functions=[fn],
         )
@@ -79,7 +71,7 @@ class Test_get_function_configs(unittest.TestCase):
         functions: list[inngest.Function] = []
 
         handler = CommHandler(
-            client=dev_client,
+            client=client,
             framework=server_lib.Framework.FLASK,
             functions=functions,
         )
