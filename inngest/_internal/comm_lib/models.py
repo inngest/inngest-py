@@ -115,6 +115,9 @@ class CommResponse:
                 "message": str(err),
                 "name": type(err).__name__,
             },
+            headers={
+                server_lib.HeaderKey.CONTENT_TYPE.value: "application/json",
+            },
             status_code=status.value,
         )
 

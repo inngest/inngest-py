@@ -107,9 +107,28 @@ class IntrospectionResponse(types.BaseModel):
     status_code: int
 
 
-class BaseTestIntrospection(unittest.TestCase):
-    framework: server_lib.Framework
+class BaseTest(unittest.TestCase):
     signing_key = "signkey-prod-123abc"
+
+    def create_functions(
+        self,
+        client: inngest.Inngest,
+    ) -> list[inngest.Function]:
+        @client.create_function(
+            fn_id="test",
+            trigger=inngest.TriggerEvent(event="test"),
+        )
+        def fn(
+            ctx: inngest.Context,
+            step: inngest.StepSync,
+        ) -> None:
+            pass
+
+        return [fn]
+
+
+class BaseTestIntrospection(BaseTest):
+    framework: server_lib.Framework
 
     def setUp(self) -> None:
         self.expected_unauthed_body = {
@@ -138,21 +157,6 @@ class BaseTestIntrospection(unittest.TestCase):
             "signing_key_fallback_hash": "a820760dee6119fcf76498ab8d94be2f8cf04e786add2a4569e427462a84dd47",
             "signing_key_hash": "94bab7f22b92278ccab46e15da43a9fb8b079c05fa099d4134c6c39bbcee49f6",
         }
-
-    def create_functions(
-        self, client: inngest.Inngest
-    ) -> list[inngest.Function]:
-        @client.create_function(
-            fn_id="test",
-            trigger=inngest.TriggerEvent(event="test"),
-        )
-        def fn(
-            ctx: inngest.Context,
-            step: inngest.StepSync,
-        ) -> None:
-            pass
-
-        return [fn]
 
     def create_signature(self) -> str:
         mac = hmac.new(
