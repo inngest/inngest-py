@@ -158,11 +158,12 @@ class BaseTestIntrospection(BaseTest):
             "signing_key_hash": "94bab7f22b92278ccab46e15da43a9fb8b079c05fa099d4134c6c39bbcee49f6",
         }
 
-    def create_signature(self) -> str:
+    def create_signature(self, signing_key: typing.Optional[str] = None) -> str:
+        if signing_key is None:
+            signing_key = self.signing_key
+
         mac = hmac.new(
-            transforms.remove_signing_key_prefix(self.signing_key).encode(
-                "utf-8"
-            ),
+            transforms.remove_signing_key_prefix(signing_key).encode("utf-8"),
             b"",
             hashlib.sha256,
         )
@@ -171,15 +172,21 @@ class BaseTestIntrospection(BaseTest):
         sig = mac.hexdigest()
         return f"s={sig}&t={unix_ms}"
 
-    def validate_signature(self, sig: str, body: bytes) -> None:
+    def validate_signature(
+        self,
+        sig: str,
+        body: bytes,
+        signing_key: typing.Optional[str] = None,
+    ) -> None:
+        if signing_key is None:
+            signing_key = self.signing_key
+
         parsed = urllib.parse.parse_qs(sig)
         timestamp = int(parsed["t"][0])
         signature = parsed["s"][0]
 
         mac = hmac.new(
-            transforms.remove_signing_key_prefix(self.signing_key).encode(
-                "utf-8"
-            ),
+            transforms.remove_signing_key_prefix(signing_key).encode("utf-8"),
             body,
             hashlib.sha256,
         )
@@ -190,10 +197,10 @@ class BaseTestIntrospection(BaseTest):
         if not hmac.compare_digest(signature, mac.hexdigest()):
             raise Exception("invalid signature")
 
-    def set_signing_key_fallback_env_var(self) -> None:
-        os.environ[
-            const.EnvKey.SIGNING_KEY_FALLBACK.value
-        ] = "signkey-prod-456def"
+    def set_signing_key_fallback_env_var(self) -> str:
+        signing_key = "signkey-prod-456def"
+        os.environ[const.EnvKey.SIGNING_KEY_FALLBACK.value] = signing_key
         self.addCleanup(
             lambda: os.environ.pop(const.EnvKey.SIGNING_KEY_FALLBACK.value)
         )
+        return signing_key
