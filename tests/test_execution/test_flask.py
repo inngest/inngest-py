@@ -30,7 +30,7 @@ class TestExecution(base.BaseTest):
             )
         )
         res = flask_client.post("/api/inngest?fnId=my-fn&stepId=step")
-        assert res.status_code == http.HTTPStatus.INTERNAL_SERVER_ERROR
+        assert res.status_code == http.HTTPStatus.UNAUTHORIZED
         assert res.json is not None
         assert res.json["code"] == "header_missing"
         assert res.headers.get(server_lib.HeaderKey.SIGNATURE.value) is None
@@ -53,7 +53,7 @@ class TestExecution(base.BaseTest):
                 ),
             },
         )
-        assert res.status_code == http.HTTPStatus.INTERNAL_SERVER_ERROR
+        assert res.status_code == http.HTTPStatus.UNAUTHORIZED
         assert res.json is not None
         assert res.json["code"] == "sig_verification_failed"
         assert res.headers.get(server_lib.HeaderKey.SIGNATURE.value) is None

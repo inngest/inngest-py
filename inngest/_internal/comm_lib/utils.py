@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import http
 import typing
 
 from inngest._internal import net, server_lib, types
@@ -74,7 +75,9 @@ def wrap_handler(
             )
             if isinstance(request_signing_key, Exception) and require_signature:
                 return CommResponse.from_error(
-                    self._client.logger, request_signing_key
+                    self._client.logger,
+                    request_signing_key,
+                    status=http.HTTPStatus.UNAUTHORIZED,
                 )
 
             res = await method(
@@ -141,7 +144,9 @@ def wrap_handler_sync(
             )
             if isinstance(request_signing_key, Exception) and require_signature:
                 return CommResponse.from_error(
-                    self._client.logger, request_signing_key
+                    self._client.logger,
+                    request_signing_key,
+                    status=http.HTTPStatus.UNAUTHORIZED,
                 )
 
             res = method(
