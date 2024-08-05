@@ -7,7 +7,6 @@ import typing
 import urllib.parse
 
 import httpx
-import typing_extensions
 
 from inngest._internal import (
     client_lib,
@@ -25,72 +24,11 @@ from inngest._internal import (
 
 from .models import (
     AuthenticatedInspection,
+    CommRequest,
     CommResponse,
     UnauthenticatedInspection,
 )
-from .utils import parse_query_params
-
-_ParamsT = typing_extensions.ParamSpec("_ParamsT")
-
-
-def _prep_response(
-    f: typing.Callable[
-        _ParamsT, typing.Awaitable[typing.Union[CommResponse, Exception]]
-    ],
-) -> typing.Callable[_ParamsT, typing.Awaitable[CommResponse]]:
-    async def inner(
-        *args: _ParamsT.args,
-        **kwargs: _ParamsT.kwargs,
-    ) -> CommResponse:
-        comm_handler = args[0]
-        if not isinstance(comm_handler, CommHandler):
-            raise ValueError("First argument must be a CommHandler instance.")
-
-        res = await f(*args, **kwargs)
-        if isinstance(res, Exception):
-            res = CommResponse.from_error(comm_handler._client.logger, res)
-
-        res.headers = {
-            **res.headers,
-            **net.create_headers(
-                env=comm_handler._client.env,
-                framework=comm_handler._framework,
-                server_kind=comm_handler._client._mode,
-            ),
-        }
-
-        return res
-
-    return inner
-
-
-def _prep_response_sync(
-    f: typing.Callable[_ParamsT, typing.Union[CommResponse, Exception]],
-) -> typing.Callable[_ParamsT, CommResponse]:
-    def inner(
-        *args: _ParamsT.args,
-        **kwargs: _ParamsT.kwargs,
-    ) -> CommResponse:
-        comm_handler = args[0]
-        if not isinstance(comm_handler, CommHandler):
-            raise ValueError("First argument must be a CommHandler instance.")
-
-        res = f(*args, **kwargs)
-        if isinstance(res, Exception):
-            res = CommResponse.from_error(comm_handler._client.logger, res)
-
-        res.headers = {
-            **res.headers,
-            **net.create_headers(
-                env=comm_handler._client.env,
-                framework=comm_handler._framework,
-                server_kind=comm_handler._client._mode,
-            ),
-        }
-
-        return res
-
-    return inner
+from .utils import parse_query_params, wrap_handler, wrap_handler_sync
 
 
 class CommHandler:
@@ -173,18 +111,15 @@ class CommHandler:
             timeout=30,
         )
 
-    @_prep_response
-    async def call_function(
+    @wrap_handler()
+    async def post(
         self,
-        *,
-        body: bytes,
-        headers: typing.Union[dict[str, str], dict[str, list[str]]],
-        query_params: typing.Union[dict[str, str], dict[str, list[str]]],
-        raw_request: object,
+        req: CommRequest,
+        request_signing_key: types.MaybeError[typing.Optional[str]],
     ) -> typing.Union[CommResponse, Exception]:
         """Handle a function call from the Executor."""
 
-        headers = net.normalize_headers(headers)
+        headers = net.normalize_headers(req.headers)
 
         server_kind = transforms.get_server_kind(headers)
         if isinstance(server_kind, Exception):
@@ -193,25 +128,14 @@ class CommHandler:
 
         middleware = middleware_lib.MiddlewareManager.from_client(
             self._client,
-            raw_request,
+            req.raw_request,
         )
 
-        # Validate the request signature.
-        err = net.validate_request(
-            body=body,
-            headers=headers,
-            mode=self._client._mode,
-            signing_key=self._signing_key,
-            signing_key_fallback=self._signing_key_fallback,
-        )
-        if isinstance(err, Exception):
-            return err
-
-        request = server_lib.ServerRequest.from_raw(body)
+        request = server_lib.ServerRequest.from_raw(req.body)
         if isinstance(request, Exception):
             return request
 
-        params = parse_query_params(query_params)
+        params = parse_query_params(req.query_params)
         if isinstance(params, Exception):
             return params
         if params.fn_id is None:
@@ -270,45 +194,36 @@ class CommHandler:
             server_kind,
         )
 
-    @_prep_response_sync
-    def call_function_sync(
+    @wrap_handler_sync()
+    def post_sync(
         self,
-        *,
-        body: bytes,
-        headers: typing.Union[dict[str, str], dict[str, list[str]]],
-        query_params: typing.Union[dict[str, str], dict[str, list[str]]],
-        raw_request: object,
+        req: CommRequest,
+        # *,
+        # body: bytes,
+        # headers: typing.Union[dict[str, str], dict[str, str]],
+        # query_params: typing.Union[dict[str, str], dict[str, list[str]]],
+        # raw_request: object,
+        request_signing_key: types.MaybeError[typing.Optional[str]],
+        # serve_origin: typing.Optional[str],
+        # serve_path: typing.Optional[str],
     ) -> typing.Union[CommResponse, Exception]:
         """Handle a function call from the Executor."""
 
-        headers = net.normalize_headers(headers)
-
-        server_kind = transforms.get_server_kind(headers)
+        server_kind = transforms.get_server_kind(req.headers)
         if isinstance(server_kind, Exception):
             self._client.logger.error(server_kind)
             server_kind = None
 
         middleware = middleware_lib.MiddlewareManager.from_client(
             self._client,
-            raw_request,
+            req.raw_request,
         )
 
-        # Validate the request signature.
-        err = net.validate_request(
-            body=body,
-            headers=headers,
-            mode=self._client._mode,
-            signing_key=self._signing_key,
-            signing_key_fallback=self._signing_key_fallback,
-        )
-        if isinstance(err, Exception):
-            return err
-
-        request = server_lib.ServerRequest.from_raw(body)
+        request = server_lib.ServerRequest.from_raw(req.body)
         if isinstance(request, Exception):
             return request
 
-        params = parse_query_params(query_params)
+        params = parse_query_params(req.query_params)
         if isinstance(params, Exception):
             return params
         if params.fn_id is None:
@@ -406,20 +321,15 @@ class CommHandler:
             return errors.FunctionConfigInvalidError("no functions found")
         return configs
 
-    @_prep_response_sync
-    def inspect(
+    @wrap_handler_sync(require_signature=False)
+    def get_sync(
         self,
-        *,
-        body: bytes,
-        headers: typing.Union[dict[str, str], dict[str, list[str]]],
-        serve_origin: typing.Optional[str],
-        serve_path: typing.Optional[str],
-    ) -> CommResponse:
+        req: CommRequest,
+        request_signing_key: types.MaybeError[typing.Optional[str]],
+    ) -> types.MaybeError[CommResponse]:
         """Handle Dev Server's auto-discovery."""
 
-        headers = net.normalize_headers(headers)
-
-        server_kind = transforms.get_server_kind(headers)
+        server_kind = transforms.get_server_kind(req.headers)
         if isinstance(server_kind, Exception):
             self._client.logger.error(server_kind)
             server_kind = None
@@ -431,16 +341,23 @@ class CommHandler:
                 body={},
                 status_code=403,
             )
+
+        res_body: typing.Union[
+            AuthenticatedInspection, UnauthenticatedInspection
+        ]
+
+        is_signed_and_valid = isinstance(request_signing_key, str)
         # Validate the request signature.
         err = net.validate_request(
-            body=body,
-            headers=headers,
+            body=req.body,
+            headers=req.headers,
             mode=self._client._mode,
             signing_key=self._signing_key,
             signing_key_fallback=self._signing_key_fallback,
         )
-        if self._client._mode != server_lib.ServerKind.CLOUD or isinstance(
-            err, Exception
+        if (
+            self._client._mode != server_lib.ServerKind.CLOUD
+            or is_signed_and_valid is False
         ):
             authentication_succeeded = None
             if isinstance(err, Exception):
@@ -454,7 +371,7 @@ class CommHandler:
                 has_signing_key_fallback=self._signing_key_fallback is not None,
                 mode=self._mode,
             )
-        else:
+        elif is_signed_and_valid is True:
             event_key_hash = (
                 transforms.hash_event_key(self._client.event_key)
                 if self._client.event_key
@@ -486,14 +403,14 @@ class CommHandler:
                 has_signing_key=self._signing_key is not None,
                 has_signing_key_fallback=self._signing_key_fallback is not None,
                 mode=self._mode,
-                serve_origin=serve_origin,
-                serve_path=serve_path,
+                serve_origin=req.serve_origin,
+                serve_path=req.serve_path,
                 signing_key_fallback_hash=signing_key_fallback_hash,
                 signing_key_hash=signing_key_hash,
             )
 
         body_json = res_body.to_dict()
-        if isinstance(body, Exception):
+        if isinstance(req.body, Exception):
             body_json = {
                 "error": "failed to serialize inspection data",
             }
@@ -537,24 +454,20 @@ class CommHandler:
         comm_res.status_code = server_res.status_code
         return comm_res
 
-    @_prep_response
-    async def register(
+    @wrap_handler(require_signature=False)
+    async def put(
         self: CommHandler,
-        *,
-        headers: typing.Union[dict[str, str], dict[str, list[str]]],
-        query_params: typing.Union[dict[str, str], dict[str, list[str]]],
-        request_url: str,
-        serve_origin: typing.Optional[str],
-        serve_path: typing.Optional[str],
+        req: CommRequest,
+        request_signing_key: types.MaybeError[typing.Optional[str]],
     ) -> typing.Union[CommResponse, Exception]:
         """Handle a registration call."""
 
-        headers = net.normalize_headers(headers)
+        headers = net.normalize_headers(req.headers)
 
         app_url = net.create_serve_url(
-            request_url=request_url,
-            serve_origin=serve_origin,
-            serve_path=serve_path,
+            request_url=req.request_url,
+            serve_origin=req.serve_origin,
+            serve_path=req.serve_path,
         )
 
         server_kind = transforms.get_server_kind(headers)
@@ -566,22 +479,22 @@ class CommHandler:
         if comm_res is not None:
             return comm_res
 
-        params = parse_query_params(query_params)
+        params = parse_query_params(req.query_params)
         if isinstance(params, Exception):
             return params
 
-        req = self._build_register_request(
+        outgoing_req = self._build_register_request(
             app_url=app_url,
             server_kind=server_kind,
             sync_id=params.sync_id,
         )
-        if isinstance(req, Exception):
-            return req
+        if isinstance(outgoing_req, Exception):
+            return outgoing_req
 
         res = await net.fetch_with_auth_fallback(
             self._client._http_client,
             self._client._http_client_sync,
-            req,
+            outgoing_req,
             signing_key=self._signing_key,
             signing_key_fallback=self._signing_key_fallback,
         )
@@ -590,27 +503,21 @@ class CommHandler:
 
         return self._parse_registration_response(res)
 
-    @_prep_response_sync
-    def register_sync(
+    @wrap_handler_sync(require_signature=False)
+    def put_sync(
         self: CommHandler,
-        *,
-        headers: typing.Union[dict[str, str], dict[str, list[str]]],
-        query_params: typing.Union[dict[str, str], dict[str, list[str]]],
-        request_url: str,
-        serve_origin: typing.Optional[str],
-        serve_path: typing.Optional[str],
+        req: CommRequest,
+        request_signing_key: types.MaybeError[typing.Optional[str]],
     ) -> typing.Union[CommResponse, Exception]:
         """Handle a registration call."""
 
-        headers = net.normalize_headers(headers)
-
         app_url = net.create_serve_url(
-            request_url=request_url,
-            serve_origin=serve_origin,
-            serve_path=serve_path,
+            request_url=req.request_url,
+            serve_origin=req.serve_origin,
+            serve_path=req.serve_path,
         )
 
-        server_kind = transforms.get_server_kind(headers)
+        server_kind = transforms.get_server_kind(req.headers)
         if isinstance(server_kind, Exception):
             self._client.logger.error(server_kind)
             server_kind = None
@@ -619,21 +526,21 @@ class CommHandler:
         if comm_res is not None:
             return comm_res
 
-        params = parse_query_params(query_params)
+        params = parse_query_params(req.query_params)
         if isinstance(params, Exception):
             return params
 
-        req = self._build_register_request(
+        outgoing_req = self._build_register_request(
             app_url=app_url,
             server_kind=server_kind,
             sync_id=params.sync_id,
         )
-        if isinstance(req, Exception):
-            return req
+        if isinstance(outgoing_req, Exception):
+            return outgoing_req
 
         res = net.fetch_with_auth_fallback_sync(
             self._client._http_client_sync,
-            req,
+            outgoing_req,
             signing_key=self._signing_key,
             signing_key_fallback=self._signing_key_fallback,
         )

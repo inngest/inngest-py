@@ -107,9 +107,28 @@ class IntrospectionResponse(types.BaseModel):
     status_code: int
 
 
-class BaseTestIntrospection(unittest.TestCase):
-    framework: server_lib.Framework
+class BaseTest(unittest.TestCase):
     signing_key = "signkey-prod-123abc"
+
+    def create_functions(
+        self,
+        client: inngest.Inngest,
+    ) -> list[inngest.Function]:
+        @client.create_function(
+            fn_id="test",
+            trigger=inngest.TriggerEvent(event="test"),
+        )
+        def fn(
+            ctx: inngest.Context,
+            step: inngest.StepSync,
+        ) -> None:
+            pass
+
+        return [fn]
+
+
+class BaseTestIntrospection(BaseTest):
+    framework: server_lib.Framework
 
     def setUp(self) -> None:
         self.expected_unauthed_body = {
@@ -139,26 +158,12 @@ class BaseTestIntrospection(unittest.TestCase):
             "signing_key_hash": "94bab7f22b92278ccab46e15da43a9fb8b079c05fa099d4134c6c39bbcee49f6",
         }
 
-    def create_functions(
-        self, client: inngest.Inngest
-    ) -> list[inngest.Function]:
-        @client.create_function(
-            fn_id="test",
-            trigger=inngest.TriggerEvent(event="test"),
-        )
-        def fn(
-            ctx: inngest.Context,
-            step: inngest.StepSync,
-        ) -> None:
-            pass
+    def create_signature(self, signing_key: typing.Optional[str] = None) -> str:
+        if signing_key is None:
+            signing_key = self.signing_key
 
-        return [fn]
-
-    def create_signature(self) -> str:
         mac = hmac.new(
-            transforms.remove_signing_key_prefix(self.signing_key).encode(
-                "utf-8"
-            ),
+            transforms.remove_signing_key_prefix(signing_key).encode("utf-8"),
             b"",
             hashlib.sha256,
         )
@@ -167,10 +172,35 @@ class BaseTestIntrospection(unittest.TestCase):
         sig = mac.hexdigest()
         return f"s={sig}&t={unix_ms}"
 
-    def set_signing_key_fallback_env_var(self) -> None:
-        os.environ[
-            const.EnvKey.SIGNING_KEY_FALLBACK.value
-        ] = "signkey-prod-456def"
+    def validate_signature(
+        self,
+        sig: str,
+        body: bytes,
+        signing_key: typing.Optional[str] = None,
+    ) -> None:
+        if signing_key is None:
+            signing_key = self.signing_key
+
+        parsed = urllib.parse.parse_qs(sig)
+        timestamp = int(parsed["t"][0])
+        signature = parsed["s"][0]
+
+        mac = hmac.new(
+            transforms.remove_signing_key_prefix(signing_key).encode("utf-8"),
+            body,
+            hashlib.sha256,
+        )
+
+        if timestamp:
+            mac.update(str(timestamp).encode("utf-8"))
+
+        if not hmac.compare_digest(signature, mac.hexdigest()):
+            raise Exception("invalid signature")
+
+    def set_signing_key_fallback_env_var(self) -> str:
+        signing_key = "signkey-prod-456def"
+        os.environ[const.EnvKey.SIGNING_KEY_FALLBACK.value] = signing_key
         self.addCleanup(
             lambda: os.environ.pop(const.EnvKey.SIGNING_KEY_FALLBACK.value)
         )
+        return signing_key

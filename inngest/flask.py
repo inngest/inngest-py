@@ -75,38 +75,32 @@ def _create_handler_async(
 ) -> None:
     @app.route("/api/inngest", methods=["GET", "POST", "PUT"])
     async def inngest_api() -> typing.Union[flask.Response, str]:
+        comm_req = comm_lib.CommRequest(
+            body=flask.request.data,
+            headers=dict(flask.request.headers.items()),
+            query_params=flask.request.args,
+            raw_request=flask.request,
+            request_url=flask.request.url,
+            serve_origin=serve_origin,
+            serve_path=serve_path,
+        )
+
         if flask.request.method == "GET":
             return _to_response(
                 client,
-                handler.inspect(
-                    body=flask.request.data,
-                    headers=dict(flask.request.headers.items()),
-                    serve_origin=serve_origin,
-                    serve_path=serve_path,
-                ),
+                handler.get_sync(comm_req),
             )
 
         if flask.request.method == "POST":
             return _to_response(
                 client,
-                await handler.call_function(
-                    body=flask.request.data,
-                    headers=dict(flask.request.headers.items()),
-                    query_params=flask.request.args,
-                    raw_request=flask.request,
-                ),
+                await handler.post(comm_req),
             )
 
         if flask.request.method == "PUT":
             return _to_response(
                 client,
-                await handler.register(
-                    headers=dict(flask.request.headers.items()),
-                    query_params=flask.request.args,
-                    request_url=flask.request.url,
-                    serve_origin=serve_origin,
-                    serve_path=serve_path,
-                ),
+                await handler.put(comm_req),
             )
 
         # Should be unreachable
@@ -123,38 +117,32 @@ def _create_handler_sync(
 ) -> None:
     @app.route("/api/inngest", methods=["GET", "POST", "PUT"])
     def inngest_api() -> typing.Union[flask.Response, str]:
+        comm_req = comm_lib.CommRequest(
+            body=flask.request.data,
+            headers=dict(flask.request.headers.items()),
+            query_params=flask.request.args,
+            raw_request=flask.request,
+            request_url=flask.request.url,
+            serve_origin=serve_origin,
+            serve_path=serve_path,
+        )
+
         if flask.request.method == "GET":
             return _to_response(
                 client,
-                handler.inspect(
-                    body=flask.request.data,
-                    headers=dict(flask.request.headers.items()),
-                    serve_origin=serve_origin,
-                    serve_path=serve_path,
-                ),
+                handler.get_sync(comm_req),
             )
 
         if flask.request.method == "POST":
             return _to_response(
                 client,
-                handler.call_function_sync(
-                    body=flask.request.data,
-                    headers=dict(flask.request.headers.items()),
-                    query_params=flask.request.args,
-                    raw_request=flask.request,
-                ),
+                handler.post_sync(comm_req),
             )
 
         if flask.request.method == "PUT":
             return _to_response(
                 client,
-                handler.register_sync(
-                    headers=dict(flask.request.headers.items()),
-                    query_params=flask.request.args,
-                    request_url=flask.request.url,
-                    serve_origin=serve_origin,
-                    serve_path=serve_path,
-                ),
+                handler.put_sync(comm_req),
             )
 
         # Should be unreachable

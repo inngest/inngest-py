@@ -14,6 +14,16 @@ from inngest._internal import (
 )
 
 
+class CommRequest(types.BaseModel):
+    body: bytes
+    headers: typing.Union[dict[str, str], dict[str, str]]
+    query_params: typing.Union[dict[str, str], dict[str, list[str]]]
+    raw_request: object
+    request_url: str
+    serve_origin: typing.Optional[str]
+    serve_path: typing.Optional[str]
+
+
 class CommResponse:
     def __init__(
         self,
@@ -105,6 +115,9 @@ class CommResponse:
                 "message": str(err),
                 "name": type(err).__name__,
             },
+            headers={
+                server_lib.HeaderKey.CONTENT_TYPE.value: "application/json",
+            },
             status_code=status.value,
         )
 
@@ -122,6 +135,12 @@ class CommResponse:
             },
             status_code=status.value,
         )
+
+    def body_bytes(self) -> types.MaybeError[bytes]:
+        dumped = transforms.dump_json(self.body)
+        if isinstance(dumped, Exception):
+            return dumped
+        return dumped.encode("utf-8")
 
     def prep_call_result(
         self,
@@ -164,6 +183,20 @@ class CommResponse:
             return d.get("error") or d.get("data")
 
         return d
+
+    def sign(self, signing_key: str) -> types.MaybeError[None]:
+        body_bytes = self.body_bytes()
+        if isinstance(body_bytes, Exception):
+            return body_bytes
+
+        self.headers = {
+            **self.headers,
+            server_lib.HeaderKey.SIGNATURE.value: net.sign(
+                body_bytes, signing_key
+            ),
+        }
+
+        return None
 
 
 def _prep_call_result(

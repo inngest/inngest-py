@@ -73,38 +73,32 @@ def _create_handler_sync(
     def inngest_api(
         request: django.http.HttpRequest,
     ) -> django.http.HttpResponse:
+        comm_req = comm_lib.CommRequest(
+            body=request.body,
+            headers=dict(request.headers.items()),
+            query_params=dict(request.GET.items()),
+            raw_request=request,
+            request_url=request.build_absolute_uri(),
+            serve_origin=serve_origin,
+            serve_path=serve_path,
+        )
+
         if request.method == "GET":
             return _to_response(
                 client,
-                handler.inspect(
-                    body=request.body,
-                    headers=dict(request.headers.items()),
-                    serve_origin=serve_origin,
-                    serve_path=serve_path,
-                ),
+                handler.get_sync(comm_req),
             )
 
         if request.method == "POST":
             return _to_response(
                 client,
-                handler.call_function_sync(
-                    body=request.body,
-                    headers=dict(request.headers.items()),
-                    query_params=dict(request.GET.items()),
-                    raw_request=request,
-                ),
+                handler.post_sync(comm_req),
             )
 
         if request.method == "PUT":
             return _to_response(
                 client,
-                handler.register_sync(
-                    headers=dict(request.headers.items()),
-                    query_params=dict(request.GET.items()),
-                    request_url=request.build_absolute_uri(),
-                    serve_origin=serve_origin,
-                    serve_path=serve_path,
-                ),
+                handler.put_sync(comm_req),
             )
 
         return django.http.JsonResponse(
@@ -138,38 +132,32 @@ def _create_handler_async(
     async def inngest_api(
         request: django.http.HttpRequest,
     ) -> django.http.HttpResponse:
+        comm_req = comm_lib.CommRequest(
+            body=request.body,
+            headers=dict(request.headers.items()),
+            query_params=dict(request.GET.items()),
+            raw_request=request,
+            request_url=request.build_absolute_uri(),
+            serve_origin=serve_origin,
+            serve_path=serve_path,
+        )
+
         if request.method == "GET":
             return _to_response(
                 client,
-                handler.inspect(
-                    body=json.loads(request.body),
-                    headers=dict(request.headers.items()),
-                    serve_origin=serve_origin,
-                    serve_path=serve_path,
-                ),
+                handler.get_sync(comm_req),
             )
 
         if request.method == "POST":
             return _to_response(
                 client,
-                await handler.call_function(
-                    body=json.loads(request.body),
-                    headers=dict(request.headers.items()),
-                    query_params=dict(request.GET.items()),
-                    raw_request=request,
-                ),
+                await handler.post(comm_req),
             )
 
         if request.method == "PUT":
             return _to_response(
                 client,
-                await handler.register(
-                    headers=dict(request.headers.items()),
-                    query_params=dict(request.GET.items()),
-                    request_url=request.build_absolute_uri(),
-                    serve_origin=serve_origin,
-                    serve_path=serve_path,
-                ),
+                await handler.put(comm_req),
             )
 
         return django.http.JsonResponse(

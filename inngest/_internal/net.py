@@ -5,6 +5,7 @@ import hmac
 import http
 import os
 import threading
+import time
 import typing
 import urllib.parse
 
@@ -263,13 +264,25 @@ async def fetch_with_thready_safety(
     )
 
 
+def sign(body: bytes, signing_key: str) -> str:
+    mac = hmac.new(
+        transforms.remove_signing_key_prefix(signing_key).encode("utf-8"),
+        body,
+        hashlib.sha256,
+    )
+    unix_ms = round(time.time() * 1000)
+    mac.update(str(unix_ms).encode("utf-8"))
+    sig = mac.hexdigest()
+    return f"s={sig}&t={unix_ms}"
+
+
 def _validate_request(
     *,
     body: bytes,
     headers: dict[str, str],
     mode: server_lib.ServerKind,
     signing_key: typing.Optional[str],
-) -> types.MaybeError[None]:
+) -> types.MaybeError[typing.Optional[str]]:
     if mode == server_lib.ServerKind.DEV_SERVER:
         return None
 
@@ -309,7 +322,7 @@ def _validate_request(
     if not hmac.compare_digest(signature, mac.hexdigest()):
         return errors.SigVerificationFailedError()
 
-    return None
+    return signing_key
 
 
 def validate_request(
@@ -319,7 +332,7 @@ def validate_request(
     mode: server_lib.ServerKind,
     signing_key: typing.Optional[str],
     signing_key_fallback: typing.Optional[str],
-) -> types.MaybeError[None]:
+) -> types.MaybeError[typing.Optional[str]]:
     """
     Validate the request signature. Falls back to the fallback signing key if
     signature validation fails with the primary signing key.
@@ -339,7 +352,7 @@ def validate_request(
         mode=mode,
         signing_key=signing_key,
     )
-    if err is not None and signing_key_fallback is not None:
+    if isinstance(err, Exception) and signing_key_fallback is not None:
         # If the signature validation failed but there's a "fallback"
         # signing key, attempt to validate the signature with the fallback
         # key

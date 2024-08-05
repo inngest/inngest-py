@@ -102,10 +102,6 @@ class Inngest:
             const.EnvKey.SIGNING_KEY.value
         )
 
-        self._signing_key_fallback = signing_key or os.getenv(
-            const.EnvKey.SIGNING_KEY_FALLBACK.value
-        )
-
         self._signing_key_fallback = os.getenv(
             const.EnvKey.SIGNING_KEY_FALLBACK.value
         )

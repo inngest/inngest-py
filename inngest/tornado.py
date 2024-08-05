@@ -49,32 +49,52 @@ def serve(
             return None
 
         def get(self) -> None:
-            comm_res = handler.inspect(
-                body=self.request.body,
-                headers=dict(self.request.headers.items()),
-                serve_origin=serve_origin,
-                serve_path=serve_path,
+            comm_res = handler.get_sync(
+                comm_lib.CommRequest(
+                    body=self.request.body,
+                    headers=dict(self.request.headers.items()),
+                    query_params=_parse_query_params(
+                        self.request.query_arguments
+                    ),
+                    raw_request=self.request,
+                    request_url=self.request.full_url(),
+                    serve_origin=serve_origin,
+                    serve_path=serve_path,
+                )
             )
 
             self._write_comm_response(comm_res)
 
         def post(self) -> None:
-            comm_res = handler.call_function_sync(
-                body=self.request.body,
-                headers=dict(self.request.headers.items()),
-                query_params=_parse_query_params(self.request.query_arguments),
-                raw_request=self.request,
+            comm_res = handler.post_sync(
+                comm_lib.CommRequest(
+                    body=self.request.body,
+                    headers=dict(self.request.headers.items()),
+                    query_params=_parse_query_params(
+                        self.request.query_arguments
+                    ),
+                    raw_request=self.request,
+                    request_url=self.request.full_url(),
+                    serve_origin=serve_origin,
+                    serve_path=serve_path,
+                )
             )
 
             self._write_comm_response(comm_res)
 
         def put(self) -> None:
-            comm_res = handler.register_sync(
-                headers=dict(self.request.headers.items()),
-                query_params=_parse_query_params(self.request.query_arguments),
-                request_url=self.request.full_url(),
-                serve_origin=serve_origin,
-                serve_path=serve_path,
+            comm_res = handler.put_sync(
+                comm_lib.CommRequest(
+                    body=self.request.body,
+                    headers=dict(self.request.headers.items()),
+                    query_params=_parse_query_params(
+                        self.request.query_arguments
+                    ),
+                    raw_request=self.request,
+                    request_url=self.request.full_url(),
+                    serve_origin=serve_origin,
+                    serve_path=serve_path,
+                )
             )
 
             self._write_comm_response(comm_res)
