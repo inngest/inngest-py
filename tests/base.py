@@ -10,7 +10,7 @@ import urllib.parse
 import httpx
 
 import inngest
-from inngest._internal import const, server_lib, transforms, types
+from inngest._internal import const, server_lib, transforms
 
 from . import http_proxy, net
 
@@ -102,11 +102,6 @@ def tear_down(case: _FrameworkTestCase) -> None:
     case.proxy.stop()
 
 
-class IntrospectionResponse(types.BaseModel):
-    body: object
-    status_code: int
-
-
 class BaseTest(unittest.TestCase):
     signing_key = "signkey-prod-123abc"
 
@@ -126,37 +121,13 @@ class BaseTest(unittest.TestCase):
 
         return [fn]
 
-
-class BaseTestIntrospection(BaseTest):
-    framework: server_lib.Framework
-
-    def setUp(self) -> None:
-        self.expected_unauthed_body = {
-            "authentication_succeeded": None,
-            "function_count": 1,
-            "has_event_key": True,
-            "has_signing_key": True,
-            "has_signing_key_fallback": False,
-            "mode": "cloud",
-            "schema_version": "2024-05-24",
-        }
-
-        self.expected_authed_body = {
-            **self.expected_unauthed_body,
-            "api_origin": "https://api.inngest.com/",
-            "app_id": "my-app",
-            "authentication_succeeded": True,
-            "env": None,
-            "event_api_origin": "https://inn.gs/",
-            "event_key_hash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
-            "framework": self.framework.value,
-            "sdk_language": const.LANGUAGE,
-            "sdk_version": const.VERSION,
-            "serve_origin": None,
-            "serve_path": None,
-            "signing_key_fallback_hash": "a820760dee6119fcf76498ab8d94be2f8cf04e786add2a4569e427462a84dd47",
-            "signing_key_hash": "94bab7f22b92278ccab46e15da43a9fb8b079c05fa099d4134c6c39bbcee49f6",
-        }
+    def set_signing_key_fallback_env_var(self) -> str:
+        signing_key = "signkey-prod-456def"
+        os.environ[const.EnvKey.SIGNING_KEY_FALLBACK.value] = signing_key
+        self.addCleanup(
+            lambda: os.environ.pop(const.EnvKey.SIGNING_KEY_FALLBACK.value)
+        )
+        return signing_key
 
     def create_signature(self, signing_key: typing.Optional[str] = None) -> str:
         if signing_key is None:
@@ -197,10 +168,37 @@ class BaseTestIntrospection(BaseTest):
         if not hmac.compare_digest(signature, mac.hexdigest()):
             raise Exception("invalid signature")
 
-    def set_signing_key_fallback_env_var(self) -> str:
-        signing_key = "signkey-prod-456def"
-        os.environ[const.EnvKey.SIGNING_KEY_FALLBACK.value] = signing_key
-        self.addCleanup(
-            lambda: os.environ.pop(const.EnvKey.SIGNING_KEY_FALLBACK.value)
-        )
-        return signing_key
+
+class BaseTestIntrospection(BaseTest):
+    framework: server_lib.Framework
+
+    def setUp(self) -> None:
+        self.expected_unauthed_body = {
+            "authentication_succeeded": None,
+            "function_count": 1,
+            "has_event_key": True,
+            "has_signing_key": True,
+            "has_signing_key_fallback": False,
+            "mode": "cloud",
+            "schema_version": "2024-05-24",
+        }
+
+        self.expected_authed_body = {
+            **self.expected_unauthed_body,
+            "api_origin": "https://api.inngest.com/",
+            "app_id": "my-app",
+            "authentication_succeeded": True,
+            "capabilities": {
+                "trust_probe": "v1",
+            },
+            "env": None,
+            "event_api_origin": "https://inn.gs/",
+            "event_key_hash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+            "framework": self.framework.value,
+            "sdk_language": const.LANGUAGE,
+            "sdk_version": const.VERSION,
+            "serve_origin": None,
+            "serve_path": None,
+            "signing_key_fallback_hash": "a820760dee6119fcf76498ab8d94be2f8cf04e786add2a4569e427462a84dd47",
+            "signing_key_hash": "94bab7f22b92278ccab46e15da43a9fb8b079c05fa099d4134c6c39bbcee49f6",
+        }
