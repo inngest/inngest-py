@@ -13,6 +13,7 @@ from .consts import (
 )
 from .event import Event
 from .execution_request import ServerRequest
+from .inspection import AuthenticatedInspection, UnauthenticatedInspection
 from .registration import (
     Batch,
     Cancel,
@@ -31,6 +32,7 @@ from .registration import (
 )
 
 __all__ = [
+    "AuthenticatedInspection",
     "Batch",
     "Cancel",
     "Concurrency",
@@ -57,5 +59,6 @@ __all__ = [
     "Throttle",
     "TriggerCron",
     "TriggerEvent",
+    "UnauthenticatedInspection",
     "UNSPECIFIED_STEP_ID",
 ]
