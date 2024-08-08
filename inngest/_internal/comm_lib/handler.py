@@ -22,12 +22,7 @@ from inngest._internal import (
     types,
 )
 
-from .models import (
-    AuthenticatedInspection,
-    CommRequest,
-    CommResponse,
-    UnauthenticatedInspection,
-)
+from .models import CommRequest, CommResponse
 from .utils import parse_query_params, wrap_handler, wrap_handler_sync
 
 
@@ -117,11 +112,14 @@ class CommHandler:
         req: CommRequest,
         request_signing_key: types.MaybeError[typing.Optional[str]],
     ) -> typing.Union[CommResponse, Exception]:
-        """Handle a function call from the Executor."""
+        params = parse_query_params(req.query_params)
+        if isinstance(params, Exception):
+            return params
 
-        headers = net.normalize_headers(req.headers)
+        if params.probe is server_lib.Probe.TRUST:
+            return CommResponse()
 
-        server_kind = transforms.get_server_kind(headers)
+        server_kind = transforms.get_server_kind(req.headers)
         if isinstance(server_kind, Exception):
             self._client.logger.error(server_kind)
             server_kind = None
@@ -135,9 +133,6 @@ class CommHandler:
         if isinstance(request, Exception):
             return request
 
-        params = parse_query_params(req.query_params)
-        if isinstance(params, Exception):
-            return params
         if params.fn_id is None:
             return errors.QueryParamMissingError(
                 server_lib.QueryParamKey.FUNCTION_ID.value
@@ -198,16 +193,14 @@ class CommHandler:
     def post_sync(
         self,
         req: CommRequest,
-        # *,
-        # body: bytes,
-        # headers: typing.Union[dict[str, str], dict[str, str]],
-        # query_params: typing.Union[dict[str, str], dict[str, list[str]]],
-        # raw_request: object,
         request_signing_key: types.MaybeError[typing.Optional[str]],
-        # serve_origin: typing.Optional[str],
-        # serve_path: typing.Optional[str],
     ) -> typing.Union[CommResponse, Exception]:
-        """Handle a function call from the Executor."""
+        params = parse_query_params(req.query_params)
+        if isinstance(params, Exception):
+            return params
+
+        if params.probe is server_lib.Probe.TRUST:
+            return CommResponse()
 
         server_kind = transforms.get_server_kind(req.headers)
         if isinstance(server_kind, Exception):
@@ -223,9 +216,6 @@ class CommHandler:
         if isinstance(request, Exception):
             return request
 
-        params = parse_query_params(req.query_params)
-        if isinstance(params, Exception):
-            return params
         if params.fn_id is None:
             return errors.QueryParamMissingError(
                 server_lib.QueryParamKey.FUNCTION_ID.value
@@ -343,7 +333,8 @@ class CommHandler:
             )
 
         res_body: typing.Union[
-            AuthenticatedInspection, UnauthenticatedInspection
+            server_lib.AuthenticatedInspection,
+            server_lib.UnauthenticatedInspection,
         ]
 
         is_signed_and_valid = isinstance(request_signing_key, str)
@@ -363,7 +354,7 @@ class CommHandler:
             if isinstance(err, Exception):
                 authentication_succeeded = False
 
-            res_body = UnauthenticatedInspection(
+            res_body = server_lib.UnauthenticatedInspection(
                 authentication_succeeded=authentication_succeeded,
                 function_count=len(self._fns),
                 has_event_key=self._client.event_key is not None,
@@ -390,7 +381,7 @@ class CommHandler:
                 else None
             )
 
-            res_body = AuthenticatedInspection(
+            res_body = server_lib.AuthenticatedInspection(
                 api_origin=self._client.api_origin,
                 app_id=self._client.app_id,
                 authentication_succeeded=True,
@@ -462,15 +453,13 @@ class CommHandler:
     ) -> typing.Union[CommResponse, Exception]:
         """Handle a registration call."""
 
-        headers = net.normalize_headers(req.headers)
-
         app_url = net.create_serve_url(
             request_url=req.request_url,
             serve_origin=req.serve_origin,
             serve_path=req.serve_path,
         )
 
-        server_kind = transforms.get_server_kind(headers)
+        server_kind = transforms.get_server_kind(req.headers)
         if isinstance(server_kind, Exception):
             self._client.logger.error(server_kind)
             server_kind = None

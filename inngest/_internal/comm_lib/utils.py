@@ -13,6 +13,7 @@ if typing.TYPE_CHECKING:
 
 class _QueryParams(types.BaseModel):
     fn_id: typing.Optional[str]
+    probe: typing.Optional[server_lib.Probe]
     step_id: typing.Optional[str]
     sync_id: typing.Optional[str]
 
@@ -27,12 +28,21 @@ def parse_query_params(
         else:
             normalized[k] = v
 
+    probe: typing.Optional[server_lib.Probe] = None
+    probe_str = normalized.get(server_lib.QueryParamKey.PROBE.value)
+    if probe_str:
+        try:
+            probe = server_lib.Probe(probe_str)
+        except ValueError:
+            return Exception(f"unsupported probe: {probe_str}")
+
     step_id = normalized.get(server_lib.QueryParamKey.STEP_ID.value)
     if step_id == server_lib.UNSPECIFIED_STEP_ID:
         step_id = None
 
     return _QueryParams(
         fn_id=normalized.get(server_lib.QueryParamKey.FUNCTION_ID.value),
+        probe=probe,
         step_id=step_id,
         sync_id=normalized.get(server_lib.QueryParamKey.SYNC_ID.value),
     )

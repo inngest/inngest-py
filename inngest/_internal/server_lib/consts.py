@@ -74,8 +74,13 @@ class Opcode(enum.Enum):
 
 class QueryParamKey(enum.Enum):
     FUNCTION_ID = "fnId"
+    PROBE = "probe"
     STEP_ID = "stepId"
     SYNC_ID = "deployId"
+
+
+class Probe(enum.Enum):
+    TRUST = "trust"
 
 
 class ServerKind(enum.Enum):
