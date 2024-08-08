@@ -32,7 +32,7 @@ class CommResponse:
         status_code: int = http.HTTPStatus.OK.value,
     ) -> None:
         self.headers = headers or {}
-        self.body = body
+        self.body = body or {}
         self.status_code = status_code
 
     @classmethod
