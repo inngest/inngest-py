@@ -270,10 +270,12 @@ def sign(body: bytes, signing_key: str) -> str:
         body,
         hashlib.sha256,
     )
-    unix_ms = round(time.time() * 1000)
+    unix_ms = round(time.time())
     mac.update(str(unix_ms).encode("utf-8"))
     sig = mac.hexdigest()
-    return f"s={sig}&t={unix_ms}"
+
+    # Order matters since Inngest Cloud compares strings
+    return f"t={unix_ms}&s={sig}"
 
 
 def _validate_request(

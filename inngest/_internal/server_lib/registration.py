@@ -8,6 +8,7 @@ import pydantic
 from inngest._internal import errors, transforms, types
 
 from .consts import DeployType, Framework
+from .inspection import Capabilities
 
 
 class _BaseConfig(types.BaseModel):
@@ -165,6 +166,7 @@ class TriggerEvent(_BaseConfig):
 
 class SynchronizeRequest(types.BaseModel):
     app_name: str = pydantic.Field(..., serialization_alias="appname")
+    capabilities: Capabilities = Capabilities()
     deploy_type: DeployType
     framework: Framework
     functions: list[FunctionConfig] = pydantic.Field(min_length=1)
