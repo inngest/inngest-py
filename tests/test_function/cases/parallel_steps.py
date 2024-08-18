@@ -56,7 +56,7 @@ def create(
             state.step_1b_counter += 1
             return 2
 
-        state.parallel_output = step.parallel(
+        state.parallel_output = ctx.group.parallel_sync(
             (
                 lambda: step.invoke("invoke", function=fn_child_sync),
                 lambda: step.run("1a", _step_1a),
@@ -113,7 +113,7 @@ def create(
             state.step_1b_counter += 1
             return 2
 
-        state.parallel_output = await step.parallel(
+        state.parallel_output = await ctx.group.parallel(
             (
                 lambda: step.invoke("invoke", function=fn_child_async),
                 lambda: step.run("1a", _step_1a),

@@ -64,6 +64,7 @@ class Context:
     attempt: int
     event: server_lib.Event
     events: list[server_lib.Event]
+    group: step_lib.Group
     logger: types.Logger
     run_id: str
 

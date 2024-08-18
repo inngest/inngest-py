@@ -9,6 +9,7 @@ from inngest._internal import errors, server_lib, transforms, types
 from inngest._internal.client_lib import models as client_models
 
 from . import base
+from .group import in_parallel
 
 # Avoid circular import at runtime
 if typing.TYPE_CHECKING:
@@ -221,7 +222,7 @@ class StepSync(base.StepBase):
 
         with self._execution.report_step(
             step_info,
-            self._inside_parallel,
+            in_parallel.get(),
         ) as step:
             if step.skip:
                 raise base.SkipInterrupt(parsed_step_id.user_facing)
