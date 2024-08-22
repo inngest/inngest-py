@@ -39,6 +39,9 @@ def dump_json(obj: object) -> types.MaybeError[str]:
 
 
 def canonicalize(value: bytes) -> types.MaybeError[bytes]:
+    if len(value) == 0:
+        return value
+
     try:
         loaded = json.loads(value)
         value_jcs = jcs.canonicalize(loaded)
