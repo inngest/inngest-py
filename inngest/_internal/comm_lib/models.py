@@ -188,11 +188,13 @@ class CommResponse:
         if isinstance(body_bytes, Exception):
             return body_bytes
 
+        sig = net.sign(body_bytes, signing_key)
+        if isinstance(sig, Exception):
+            return sig
+
         self.headers = {
             **self.headers,
-            server_lib.HeaderKey.SIGNATURE.value: net.sign(
-                body_bytes, signing_key
-            ),
+            server_lib.HeaderKey.SIGNATURE.value: sig,
         }
 
         return None

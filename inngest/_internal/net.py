@@ -264,10 +264,14 @@ async def fetch_with_thready_safety(
     )
 
 
-def sign(body: bytes, signing_key: str) -> str:
+def sign(body: bytes, signing_key: str) -> types.MaybeError[str]:
+    canonicalized = transforms.canonicalize(body)
+    if isinstance(canonicalized, Exception):
+        return canonicalized
+
     mac = hmac.new(
         transforms.remove_signing_key_prefix(signing_key).encode("utf-8"),
-        body,
+        canonicalized,
         hashlib.sha256,
     )
     unix_ms = round(time.time())
