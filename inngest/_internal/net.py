@@ -264,10 +264,14 @@ async def fetch_with_thready_safety(
     )
 
 
-def sign(body: bytes, signing_key: str) -> str:
+def sign(body: bytes, signing_key: str) -> types.MaybeError[str]:
+    canonicalized = transforms.canonicalize(body)
+    if isinstance(canonicalized, Exception):
+        return canonicalized
+
     mac = hmac.new(
         transforms.remove_signing_key_prefix(signing_key).encode("utf-8"),
-        body,
+        canonicalized,
         hashlib.sha256,
     )
     unix_ms = round(time.time())
@@ -348,12 +352,12 @@ def validate_request(
         signing_key_fallback: Fallback signing key.
     """
 
-    # Decode escape sequences since decode("utf-8") doesn't handle them. For
-    # example, utf-8 won't decode "\u0026" to "&"
-    body = body.decode("unicode_escape").encode("utf-8")
+    canonicalized = transforms.canonicalize(body)
+    if isinstance(canonicalized, Exception):
+        return canonicalized
 
     err = _validate_request(
-        body=body,
+        body=canonicalized,
         headers=headers,
         mode=mode,
         signing_key=signing_key,
@@ -363,7 +367,7 @@ def validate_request(
         # signing key, attempt to validate the signature with the fallback
         # key
         err = _validate_request(
-            body=body,
+            body=canonicalized,
             headers=headers,
             mode=mode,
             signing_key=signing_key_fallback,

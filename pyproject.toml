@@ -1,6 +1,6 @@
 [project]
 name = "inngest"
-version = "0.4.10"
+version = "0.4.11"
 description = "Python SDK for Inngest"
 readme = "README.md"
 classifiers = [
@@ -16,7 +16,12 @@ classifiers = [
 ]
 requires-python = ">=3.9"
 
-dependencies = ["httpx>=0.24.0", "pydantic>=2.1.1", "typing-extensions>=4.8.0"]
+dependencies = [
+    "httpx>=0.24.0",
+    "jcs>=0.2.1",
+    "pydantic>=2.1.1",
+    "typing-extensions>=4.8.0",
+]
 
 [project.optional-dependencies]
 extra = [
@@ -109,6 +114,10 @@ extend-ignore = [
 
 line-length = 80
 mccabe = { max-complexity = 21 }
+
+[[tool.mypy.overrides]]
+module = "jcs"
+ignore_missing_imports = true
 
 [tool.ruff.extend-per-file-ignores]
 "examples/**/*.py" = ['D', 'T20']
