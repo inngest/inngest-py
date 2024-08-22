@@ -115,6 +115,10 @@ extend-ignore = [
 line-length = 80
 mccabe = { max-complexity = 21 }
 
+[[tool.mypy.overrides]]
+module = "jcs"
+ignore_missing_imports = true
+
 [tool.ruff.extend-per-file-ignores]
 "examples/**/*.py" = ['D', 'T20']
 "inngest/**/*_test.py" = ['C901', 'D', 'N', 'S', 'T20']
