@@ -6,6 +6,8 @@ import re
 import traceback
 import typing
 
+import jcs
+
 from inngest._internal import errors, server_lib, types
 
 
@@ -34,6 +36,17 @@ def dump_json(obj: object) -> types.MaybeError[str]:
         return json.dumps(obj)
     except Exception as err:
         return errors.OutputUnserializableError(str(err))
+
+
+def canonicalize(value: bytes) -> types.MaybeError[bytes]:
+    try:
+        loaded = json.loads(value)
+        value_jcs = jcs.canonicalize(loaded)
+        if not isinstance(value_jcs, bytes):
+            return Exception("failed to canonicalize")
+        return value_jcs
+    except Exception as err:
+        return Exception("failed to canonicalize: " + str(err))
 
 
 def remove_signing_key_prefix(key: str) -> str:

@@ -120,14 +120,14 @@ class Test_RequestSignature(unittest.TestCase):
 
     def test_escape_sequences(self) -> None:
         unix_ms = round(time.time() * 1000)
-        sig = _sign(b"a & b", _signing_key, unix_ms)
+        sig = _sign(b'{"msg":"a & b"}', _signing_key, unix_ms)
         headers = {
             server_lib.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
         }
 
         assert not isinstance(
             net.validate_request(
-                body=b"a \\u0026 b",
+                body=b'{"msg":"a \\u0026 b"}',
                 headers=headers,
                 mode=server_lib.ServerKind.CLOUD,
                 signing_key=_signing_key,

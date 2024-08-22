@@ -348,12 +348,12 @@ def validate_request(
         signing_key_fallback: Fallback signing key.
     """
 
-    # Decode escape sequences since decode("utf-8") doesn't handle them. For
-    # example, utf-8 won't decode "\u0026" to "&"
-    body = body.decode("unicode_escape").encode("utf-8")
+    canonicalized = transforms.canonicalize(body)
+    if isinstance(canonicalized, Exception):
+        return canonicalized
 
     err = _validate_request(
-        body=body,
+        body=canonicalized,
         headers=headers,
         mode=mode,
         signing_key=signing_key,
@@ -363,7 +363,7 @@ def validate_request(
         # signing key, attempt to validate the signature with the fallback
         # key
         err = _validate_request(
-            body=body,
+            body=canonicalized,
             headers=headers,
             mode=mode,
             signing_key=signing_key_fallback,
