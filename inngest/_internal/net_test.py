@@ -108,16 +108,20 @@ class Test_RequestSignature(unittest.TestCase):
             server_lib.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
         }
 
-        assert not isinstance(
-            net.validate_request(
-                body=body,
-                headers=headers,
-                mode=server_lib.ServerKind.CLOUD,
-                signing_key=_signing_key,
-                signing_key_fallback=None,
-            ),
-            Exception,
-        )
+        for mode in (
+            server_lib.ServerKind.CLOUD,
+            server_lib.ServerKind.DEV_SERVER,
+        ):
+            assert not isinstance(
+                net.validate_request(
+                    body=body,
+                    headers=headers,
+                    mode=mode,
+                    signing_key=_signing_key,
+                    signing_key_fallback=None,
+                ),
+                Exception,
+            )
 
     def test_escape_sequences(self) -> None:
         unix_ms = round(time.time() * 1000)
@@ -127,16 +131,71 @@ class Test_RequestSignature(unittest.TestCase):
             server_lib.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
         }
 
-        assert not isinstance(
+        for mode in (
+            server_lib.ServerKind.CLOUD,
+            server_lib.ServerKind.DEV_SERVER,
+        ):
+            assert not isinstance(
+                net.validate_request(
+                    body=b'{"msg":"a \\u0026 b"}',
+                    headers=headers,
+                    mode=mode,
+                    signing_key=_signing_key,
+                    signing_key_fallback=None,
+                ),
+                Exception,
+            )
+
+    def test_missing_header(self) -> None:
+        body = json.dumps({"msg": "hi"}).encode("utf-8")
+
+        err = net.validate_request(
+            body=body,
+            headers={},
+            mode=server_lib.ServerKind.CLOUD,
+            signing_key=_signing_key,
+            signing_key_fallback=None,
+        )
+        assert isinstance(err, errors.HeaderMissingError)
+        assert (
+            str(err)
+            == "cannot validate signature without a X-Inngest-Signature header"
+        )
+
+        # Dev mode doesn't require a signature header
+        assert (
             net.validate_request(
-                body=b'{"msg":"a \\u0026 b"}',
-                headers=headers,
-                mode=server_lib.ServerKind.CLOUD,
+                body=body,
+                headers={},
+                mode=server_lib.ServerKind.DEV_SERVER,
                 signing_key=_signing_key,
                 signing_key_fallback=None,
-            ),
-            Exception,
+            )
+            is None
         )
+
+    def test_missing_signing_key(self) -> None:
+        body = json.dumps({"msg": "hi"}).encode("utf-8")
+        unix_ms = round(time.time() * 1000)
+        sig = _sign(body, _signing_key, unix_ms)
+        assert not isinstance(sig, Exception)
+        headers = {
+            server_lib.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
+        }
+
+        for mode in (
+            server_lib.ServerKind.CLOUD,
+            server_lib.ServerKind.DEV_SERVER,
+        ):
+            err = net.validate_request(
+                body=body,
+                headers=headers,
+                mode=mode,
+                signing_key=None,
+                signing_key_fallback=None,
+            )
+            assert isinstance(err, errors.SigningKeyMissingError)
+            assert str(err) == "cannot validate signature without a signing key"
 
     def test_body_tamper(self) -> None:
         """
@@ -153,14 +212,18 @@ class Test_RequestSignature(unittest.TestCase):
 
         body = json.dumps({"msg": "you've been hacked"}).encode("utf-8")
 
-        validation = net.validate_request(
-            body=body,
-            headers=headers,
-            mode=server_lib.ServerKind.CLOUD,
-            signing_key=_signing_key,
-            signing_key_fallback=None,
-        )
-        assert isinstance(validation, errors.SigVerificationFailedError)
+        for mode in (
+            server_lib.ServerKind.CLOUD,
+            server_lib.ServerKind.DEV_SERVER,
+        ):
+            err = net.validate_request(
+                body=body,
+                headers=headers,
+                mode=mode,
+                signing_key=_signing_key,
+                signing_key_fallback=None,
+            )
+            assert isinstance(err, errors.SigVerificationFailedError)
 
     def test_rotation(self) -> None:
         """
@@ -176,16 +239,18 @@ class Test_RequestSignature(unittest.TestCase):
             server_lib.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
         }
 
-        assert not isinstance(
-            net.validate_request(
+        for mode in (
+            server_lib.ServerKind.CLOUD,
+            server_lib.ServerKind.DEV_SERVER,
+        ):
+            key = net.validate_request(
                 body=body,
                 headers=headers,
-                mode=server_lib.ServerKind.CLOUD,
+                mode=mode,
                 signing_key=_signing_key,
                 signing_key_fallback=_signing_key_fallback,
-            ),
-            Exception,
-        )
+            )
+            assert key == _signing_key_fallback
 
     def test_fails_for_both_signing_keys(self) -> None:
         """
@@ -199,17 +264,20 @@ class Test_RequestSignature(unittest.TestCase):
         headers = {
             server_lib.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
         }
-
-        assert isinstance(
-            net.validate_request(
-                body=body,
-                headers=headers,
-                mode=server_lib.ServerKind.CLOUD,
-                signing_key=_signing_key,
-                signing_key_fallback=_signing_key_fallback,
-            ),
-            Exception,
-        )
+        for mode in (
+            server_lib.ServerKind.CLOUD,
+            server_lib.ServerKind.DEV_SERVER,
+        ):
+            assert isinstance(
+                net.validate_request(
+                    body=body,
+                    headers=headers,
+                    mode=mode,
+                    signing_key=_signing_key,
+                    signing_key_fallback=_signing_key_fallback,
+                ),
+                errors.SigVerificationFailedError,
+            )
 
 
 class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
