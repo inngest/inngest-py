@@ -63,7 +63,7 @@ def test_serialization() -> None:
         ),
         throttle=Throttle(
             key="foo",
-            count=1,
+            limit=1,
             period=datetime.timedelta(seconds=60),
         ),
         triggers=[
@@ -122,7 +122,8 @@ def test_serialization() -> None:
         },
         "throttle": {
             "key": "foo",
-            "count": 1,
+            "limit": 1,
+            "burst": 1,
             "period": "1m",
         },
         "triggers": [

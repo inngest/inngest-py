@@ -141,7 +141,7 @@ class Throttle(_BaseConfig):
     key: typing.Optional[str] = None
     limit: int
     period: typing.Union[int, datetime.timedelta]
-    burst: typing.Optional[int] = None
+    burst: typing.Optional[int] = 1
 
     @pydantic.field_serializer("period")
     def serialize_period(

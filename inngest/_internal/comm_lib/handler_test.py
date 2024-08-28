@@ -46,7 +46,7 @@ class Test_get_function_configs(unittest.TestCase):
             name="Function",
             retries=1,
             throttle=inngest.Throttle(
-                count=2, period=datetime.timedelta(minutes=1)
+                limit=2, period=datetime.timedelta(minutes=1)
             ),
             trigger=inngest.TriggerEvent(event="app/fn"),
         )
