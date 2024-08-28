@@ -139,7 +139,7 @@ class Step(_BaseConfig):
 
 class Throttle(_BaseConfig):
     key: typing.Optional[str] = None
-    count: int
+    limit: int
     period: typing.Union[int, datetime.timedelta]
 
     @pydantic.field_serializer("period")
