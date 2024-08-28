@@ -10,4 +10,4 @@ def test_version_matches_pyproject() -> None:
         pyproject: dict[str, object] = toml.load(f)
         project = pyproject.get("project")
         assert isinstance(project, dict)
-        assert const.VERSION == project.get("version")
+        assert const.VERSION == project.get("version"), "If this is local development, run `make install`"
