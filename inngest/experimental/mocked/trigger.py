@@ -6,6 +6,7 @@ import unittest.mock
 
 import inngest
 from inngest._internal import (
+    async_lib,
     execution_lib,
     middleware_lib,
     server_lib,
@@ -43,6 +44,7 @@ def trigger(
     if step_stubs is None:
         step_stubs = {}
 
+    stack: list[str] = []
     steps: dict[str, object] = {}
     planned = set[str]()
 
@@ -57,9 +59,7 @@ def trigger(
                 attempt=0,
                 disable_immediate_execution=True,
                 run_id="abc123",
-                stack=server_lib.ServerRequestCtxStack(
-                    stack=[],
-                ),
+                stack=server_lib.ServerRequestCtxStack(stack=stack),
             ),
             event=event[0],
             events=event,
@@ -71,21 +71,42 @@ def trigger(
             {},
         )
 
-        res = fn.call_sync(
-            client,
-            execution_lib.Context(
-                attempt=request.ctx.attempt,
-                event=event[0],
-                events=event,
-                logger=logger,
-                run_id=request.ctx.run_id,
-            ),
-            fn.id,
-            middleware,
-            request,
-            step_lib.StepMemos.from_raw(steps),
-            step_id,
+        ctx = execution_lib.Context(
+            attempt=request.ctx.attempt,
+            event=event[0],
+            events=event,
+            logger=logger,
+            run_id=request.ctx.run_id,
         )
+
+        memos = step_lib.StepMemos.from_raw(steps)
+
+        if fn.is_handler_async:
+            loop = async_lib.get_event_loop()
+            if loop is None:
+                raise Exception("No event loop available")
+
+            res = loop.run_until_complete(
+                fn.call(
+                    client,
+                    ctx,
+                    fn.id,
+                    middleware,
+                    request,
+                    memos,
+                    step_id,
+                )
+            )
+        else:
+            res = fn.call_sync(
+                client,
+                ctx,
+                fn.id,
+                middleware,
+                request,
+                memos,
+                step_id,
+            )
 
         if res.error:
             return _Result(
@@ -106,14 +127,17 @@ def trigger(
                         stub = None
 
                     steps[step.step.id] = stub
+                    stack.append(step.step.id)
                     continue
 
                 if step.step.op is server_lib.Opcode.PLANNED:
                     planned.add(step.step.id)
                 elif step.step.op is server_lib.Opcode.SLEEP:
                     steps[step.step.id] = None
+                    stack.append(step.step.id)
                 elif step.step.op is server_lib.Opcode.STEP_RUN:
                     steps[step.step.id] = step.output
+                    stack.append(step.step.id)
                 else:
                     raise UnstubbedStepError(step.step.display_name)
 

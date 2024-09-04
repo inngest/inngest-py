@@ -14,7 +14,29 @@ from .trigger import trigger
 client = Inngest(app_id="test")
 
 
-class TestTrigger(unittest.TestCase):
+class TestTriggerAsync(unittest.TestCase):
+    def test_parallel(self) -> None:
+        @client.create_function(
+            fn_id="test",
+            trigger=inngest.TriggerEvent(event="test"),
+        )
+        async def fn(
+            ctx: inngest.Context,
+            step: inngest.Step,
+        ) -> tuple[str, ...]:
+            return await step.parallel(
+                (
+                    lambda: step.run("a", lambda: "a"),
+                    lambda: step.run("b", lambda: "b"),
+                )
+            )
+
+        res = trigger(fn, inngest.Event(name="test"), client)
+        assert res.status is Status.COMPLETED
+        assert res.output == ("a", "b")
+
+
+class TestTriggerSync(unittest.TestCase):
     def test_no_steps(self) -> None:
         @client.create_function(
             fn_id="test",
@@ -117,6 +139,26 @@ class TestTrigger(unittest.TestCase):
         )
         assert res.status is Status.COMPLETED
         assert res.output == "hi"
+
+    def test_parallel(self) -> None:
+        @client.create_function(
+            fn_id="test",
+            trigger=inngest.TriggerEvent(event="test"),
+        )
+        def fn(
+            ctx: inngest.Context,
+            step: inngest.StepSync,
+        ) -> tuple[str, ...]:
+            return step.parallel(
+                (
+                    lambda: step.run("a", lambda: "a"),
+                    lambda: step.run("b", lambda: "b"),
+                )
+            )
+
+        res = trigger(fn, inngest.Event(name="test"), client)
+        assert res.status is Status.COMPLETED
+        assert res.output == ("a", "b")
 
     def test_sleep(self) -> None:
         @client.create_function(
