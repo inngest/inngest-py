@@ -14,7 +14,7 @@ from .trigger import trigger
 client = Inngest(app_id="test")
 
 
-class TestServe(unittest.TestCase):
+class TestTrigger(unittest.TestCase):
     def test_no_steps(self) -> None:
         @client.create_function(
             fn_id="test",
