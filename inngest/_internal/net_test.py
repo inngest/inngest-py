@@ -9,7 +9,7 @@ import unittest.mock
 
 import httpx
 
-from inngest._internal import const, errors, net, server_lib, transforms
+from inngest._internal import const, errors, net, server_lib, transforms, types
 
 _signing_key = "signkey-prod-000000"
 _signing_key_fallback = "signkey-prod-111111"
@@ -103,6 +103,7 @@ class Test_RequestSignature(unittest.TestCase):
         body = json.dumps({"msg": "hi"}).encode("utf-8")
         unix_ms = round(time.time() * 1000)
         sig = _sign(body, _signing_key, unix_ms)
+        assert not isinstance(sig, Exception)
         headers = {
             server_lib.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
         }
@@ -110,6 +111,25 @@ class Test_RequestSignature(unittest.TestCase):
         assert not isinstance(
             net.validate_request(
                 body=body,
+                headers=headers,
+                mode=server_lib.ServerKind.CLOUD,
+                signing_key=_signing_key,
+                signing_key_fallback=None,
+            ),
+            Exception,
+        )
+
+    def test_escape_sequences(self) -> None:
+        unix_ms = round(time.time() * 1000)
+        sig = _sign(b'{"msg":"a & b"}', _signing_key, unix_ms)
+        assert not isinstance(sig, Exception)
+        headers = {
+            server_lib.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
+        }
+
+        assert not isinstance(
+            net.validate_request(
+                body=b'{"msg":"a \\u0026 b"}',
                 headers=headers,
                 mode=server_lib.ServerKind.CLOUD,
                 signing_key=_signing_key,
@@ -126,6 +146,7 @@ class Test_RequestSignature(unittest.TestCase):
         body = json.dumps({"msg": "bar"}).encode("utf-8")
         unix_ms = round(time.time() * 1000)
         sig = _sign(body, _signing_key, unix_ms)
+        assert not isinstance(sig, Exception)
         headers = {
             server_lib.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
         }
@@ -150,6 +171,7 @@ class Test_RequestSignature(unittest.TestCase):
         body = json.dumps({"msg": "hi"}).encode("utf-8")
         unix_ms = round(time.time() * 1000)
         sig = _sign(body, _signing_key_fallback, unix_ms)
+        assert not isinstance(sig, Exception)
         headers = {
             server_lib.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
         }
@@ -173,6 +195,7 @@ class Test_RequestSignature(unittest.TestCase):
         body = json.dumps({"msg": "hi"}).encode("utf-8")
         unix_ms = round(time.time() * 1000)
         sig = _sign(body, "something-else", unix_ms)
+        assert not isinstance(sig, Exception)
         headers = {
             server_lib.HeaderKey.SIGNATURE.value: f"s={sig}&t={unix_ms}",
         }
@@ -451,12 +474,16 @@ class Test_parse_url(unittest.TestCase):
         )
 
 
-def _sign(body: bytes, signing_key: str, unix_ms: int) -> str:
+def _sign(body: bytes, signing_key: str, unix_ms: int) -> types.MaybeError[str]:
+    canonicalized = transforms.canonicalize(body)
+    if isinstance(canonicalized, Exception):
+        return canonicalized
+
     signing_key = transforms.remove_signing_key_prefix(signing_key)
 
     mac = hmac.new(
         signing_key.encode("utf-8"),
-        body,
+        canonicalized,
         hashlib.sha256,
     )
     mac.update(str(unix_ms).encode("utf-8"))

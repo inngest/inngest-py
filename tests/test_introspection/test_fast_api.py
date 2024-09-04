@@ -89,6 +89,7 @@ class TestIntrospection(base.BaseTestIntrospection):
             **self.expected_authed_body,
             "has_signing_key_fallback": True,
         }
+        print(res.text)
         self.validate_signature(
             res.headers[server_lib.HeaderKey.SIGNATURE.value],
             res.text.encode("utf-8"),

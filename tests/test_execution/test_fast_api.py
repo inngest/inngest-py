@@ -42,13 +42,14 @@ class TestExecution(base.BaseTest):
             )
         )
         wrong_signing_key = "signkey-prod-111111"
+
+        sig = net.sign(b"{}", wrong_signing_key)
+        assert not isinstance(sig, Exception)
+
         res = fast_api_client.post(
             "/api/inngest?fnId=my-fn&stepId=step",
             headers={
-                server_lib.HeaderKey.SIGNATURE.value: net.sign(
-                    b"{}",
-                    wrong_signing_key,
-                ),
+                server_lib.HeaderKey.SIGNATURE.value: sig,
             },
         )
         assert res.status_code == http.HTTPStatus.UNAUTHORIZED

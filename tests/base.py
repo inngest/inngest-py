@@ -149,6 +149,9 @@ class BaseTest(unittest.TestCase):
         body: bytes,
         signing_key: typing.Optional[str] = None,
     ) -> None:
+        canonicalized = transforms.canonicalize(body)
+        assert not isinstance(canonicalized, Exception)
+
         if signing_key is None:
             signing_key = self.signing_key
 
@@ -158,7 +161,7 @@ class BaseTest(unittest.TestCase):
 
         mac = hmac.new(
             transforms.remove_signing_key_prefix(signing_key).encode("utf-8"),
-            body,
+            canonicalized,
             hashlib.sha256,
         )
 
