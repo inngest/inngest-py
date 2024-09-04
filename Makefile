@@ -19,7 +19,7 @@ install: check-venv
 	@pip install -e '.[extra]' -c constraints.txt
 
 itest: check-venv
-	@pytest -n 4 -v tests
+	@export DEV_SERVER_VERBOSE=1 && pytest -n 4 -v tests
 
 pre-commit: format-check lint type-check utest
 
