@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import typing
 import unittest.mock
@@ -84,7 +85,7 @@ def trigger(
         if fn.is_handler_async:
             loop = async_lib.get_event_loop()
             if loop is None:
-                raise Exception("No event loop available")
+                loop = asyncio.new_event_loop()
 
             res = loop.run_until_complete(
                 fn.call(
