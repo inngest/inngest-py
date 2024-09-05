@@ -1,3 +1,4 @@
+import typing
 import unittest
 
 import flask
@@ -18,13 +19,23 @@ class TestRegistration(base.TestCase):
         self.app = flask.Flask(__name__)
         self.app_client = self.app.test_client()
 
-    def register(self, headers: dict[str, str]) -> base.RegistrationResponse:
+    def put(
+        self,
+        *,
+        body: typing.Union[dict[str, object], bytes],
+        headers: typing.Optional[dict[str, str]] = None,
+    ) -> base.RegistrationResponse:
+        if headers is None:
+            headers = {}
+
         res = self.app_client.put(
             "/api/inngest",
+            data=body,
             headers=headers,
         )
         return base.RegistrationResponse(
-            body=res.json,
+            body=res.data,
+            headers={k.lower(): v for k, v in res.headers.items()},
             status_code=res.status_code,
         )
 

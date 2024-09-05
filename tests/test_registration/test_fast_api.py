@@ -1,3 +1,5 @@
+import json
+import typing
 import unittest
 
 import fastapi
@@ -17,13 +19,26 @@ class TestRegistration(base.TestCase):
         self.app = fastapi.FastAPI()
         self.app_client = fastapi.testclient.TestClient(self.app)
 
-    def register(self, headers: dict[str, str]) -> base.RegistrationResponse:
+    def put(
+        self,
+        *,
+        body: typing.Union[dict[str, object], bytes],
+        headers: typing.Optional[dict[str, str]] = None,
+    ) -> base.RegistrationResponse:
+        if isinstance(body, bytes):
+            body = json.loads(body)
+
+        if headers is None:
+            headers = {}
+
         res = self.app_client.put(
             "/api/inngest",
+            json=body,
             headers=headers,
         )
         return base.RegistrationResponse(
-            body=res.json(),
+            body=res.content,
+            headers=dict(res.headers),
             status_code=res.status_code,
         )
 

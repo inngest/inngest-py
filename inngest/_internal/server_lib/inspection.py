@@ -6,6 +6,7 @@ from .consts import ServerKind
 
 
 class Capabilities(types.BaseModel):
+    in_band_sync: str = "v1"
     trust_probe: str = "v1"
 
 

@@ -192,6 +192,7 @@ class BaseTestIntrospection(BaseTest):
             "app_id": "my-app",
             "authentication_succeeded": True,
             "capabilities": {
+                "in_band_sync": "v1",
                 "trust_probe": "v1",
             },
             "env": None,

@@ -298,7 +298,12 @@ def _validate_request(
 
     timestamp = None
     signature = None
-    sig_header = headers.get(server_lib.HeaderKey.SIGNATURE.value)
+
+    sig_header: typing.Optional[str] = None
+    for k, v in headers.items():
+        if k.lower() == server_lib.HeaderKey.SIGNATURE.value.lower():
+            sig_header = v
+            break
     if sig_header is None:
         return errors.HeaderMissingError(
             f"cannot validate signature in production mode without a {server_lib.HeaderKey.SIGNATURE.value} header"

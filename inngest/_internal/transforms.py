@@ -32,10 +32,20 @@ def hash_step_id(step_id: str) -> str:
 
 
 def dump_json(obj: object) -> types.MaybeError[str]:
+    """
+    Dump to a canonical JSON string.
+    """
+
     try:
-        return json.dumps(obj)
+        dumped = json.dumps(obj)
     except Exception as err:
         return errors.OutputUnserializableError(str(err))
+
+    canonicalized = canonicalize(dumped.encode("utf-8"))
+    if isinstance(canonicalized, Exception):
+        return canonicalized
+
+    return canonicalized.decode("utf-8")
 
 
 def canonicalize(value: bytes) -> types.MaybeError[bytes]:

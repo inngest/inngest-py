@@ -2,6 +2,7 @@ import enum
 import importlib.metadata
 import typing
 
+AUTHOR: typing.Final = "inngest"
 DEFAULT_API_ORIGIN: typing.Final = "https://api.inngest.com/"
 DEFAULT_EVENT_API_ORIGIN: typing.Final = "https://inn.gs/"
 DEV_SERVER_ORIGIN: typing.Final = "http://127.0.0.1:8288/"

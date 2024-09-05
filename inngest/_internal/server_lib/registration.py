@@ -5,10 +5,14 @@ import typing
 
 import pydantic
 
-from inngest._internal import errors, transforms, types
+from inngest._internal import const, errors, transforms, types
 
 from .consts import DeployType, Framework
-from .inspection import Capabilities
+from .inspection import (
+    AuthenticatedInspection,
+    Capabilities,
+    UnauthenticatedInspection,
+)
 
 
 class _BaseConfig(types.BaseModel):
@@ -174,3 +178,20 @@ class SynchronizeRequest(types.BaseModel):
     sdk: str
     url: str
     v: str
+
+
+class InBandSynchronizeRequest(types.BaseModel):
+    url: str
+
+
+class InBandSynchronizeResponse(types.BaseModel):
+    app_id: str
+    env: typing.Optional[str]
+    framework: Framework
+    functions: list[FunctionConfig]
+    inspection: typing.Union[AuthenticatedInspection, UnauthenticatedInspection]
+    platform: typing.Optional[str]
+    sdk_author: str = const.AUTHOR
+    sdk_language: str = const.LANGUAGE
+    sdk_version: str = const.VERSION
+    url: str

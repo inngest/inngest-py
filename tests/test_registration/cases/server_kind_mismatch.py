@@ -1,3 +1,5 @@
+import json
+
 import inngest
 import inngest.fast_api
 from inngest._internal import server_lib
@@ -36,11 +38,12 @@ def create(framework: server_lib.Framework) -> base.Case:
         headers = {
             server_lib.HeaderKey.SERVER_KIND.value.lower(): server_lib.ServerKind.DEV_SERVER.value,
         }
-        res = self.register(headers)
+        res = self.put(body={}, headers=headers)
         assert res.status_code == 400
-        assert isinstance(res.body, dict)
+        res_body = json.loads(res.body)
+        assert isinstance(res_body, dict)
         assert (
-            res.body["code"] == server_lib.ErrorCode.SERVER_KIND_MISMATCH.value
+            res_body["code"] == server_lib.ErrorCode.SERVER_KIND_MISMATCH.value
         )
 
     return base.Case(
