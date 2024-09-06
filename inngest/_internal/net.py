@@ -158,7 +158,9 @@ async def fetch_with_auth_fallback(
 
         return res
     except Exception as err:
-        return err
+        new_err = Exception(f"Failed request to {request.url}: {err}")
+        new_err.__cause__ = err
+        return new_err
 
 
 def fetch_with_auth_fallback_sync(
@@ -193,7 +195,9 @@ def fetch_with_auth_fallback_sync(
             res = client.send(request)
         return res
     except Exception as err:
-        return err
+        new_err = Exception(f"Failed request to {request.url}: {err}")
+        new_err.__cause__ = err
+        return new_err
 
 
 def normalize_headers(
