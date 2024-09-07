@@ -293,16 +293,16 @@ def _validate_request(
     mode: server_lib.ServerKind,
     signing_key: typing.Optional[str],
 ) -> types.MaybeError[typing.Optional[str]]:
-    if mode == server_lib.ServerKind.DEV_SERVER:
-        return None
-
     timestamp = None
     signature = None
     sig_header = headers.get(server_lib.HeaderKey.SIGNATURE.value)
     if sig_header is None:
-        return errors.HeaderMissingError(
-            f"cannot validate signature in production mode without a {server_lib.HeaderKey.SIGNATURE.value} header"
-        )
+        if mode == server_lib.ServerKind.DEV_SERVER:
+            return None
+        else:
+            return errors.HeaderMissingError(
+                f"cannot validate signature without a {server_lib.HeaderKey.SIGNATURE.value} header"
+            )
     else:
         parsed = urllib.parse.parse_qs(sig_header)
         if "t" in parsed:
@@ -312,7 +312,7 @@ def _validate_request(
 
     if signing_key is None:
         return errors.SigningKeyMissingError(
-            "cannot validate signature in production mode without a signing key"
+            "cannot validate signature without a signing key"
         )
 
     if signature is None:
