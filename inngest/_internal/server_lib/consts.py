@@ -44,19 +44,19 @@ class Framework(enum.Enum):
 
 
 class HeaderKey(enum.Enum):
-    AUTHORIZATION = "Authorization"
-    CONTENT_TYPE = "Content-Type"
-    ENV = "X-Inngest-Env"
-    EXPECTED_SERVER_KIND = "X-Inngest-Expected-Server-Kind"
-    FRAMEWORK = "X-Inngest-Framework"
-    NO_RETRY = "X-Inngest-No-Retry"
-    REQUEST_VERSION = "X-Inngest-Req-Version"
-    RETRY_AFTER = "Retry-After"
-    SDK = "X-Inngest-SDK"
-    SERVER_KIND = "X-Inngest-Server-Kind"
-    SERVER_TIMING = "Server-Timing"
-    SIGNATURE = "X-Inngest-Signature"
-    USER_AGENT = "User-Agent"
+    AUTHORIZATION = "authorization"
+    CONTENT_TYPE = "content-type"
+    ENV = "x-inngest-env"
+    EXPECTED_SERVER_KIND = "x-inngest-expected-server-kind"
+    FRAMEWORK = "x-inngest-framework"
+    NO_RETRY = "x-inngest-no-retry"
+    REQUEST_VERSION = "x-inngest-req-version"
+    RETRY_AFTER = "retry-after"
+    SDK = "x-inngest-sdk"
+    SERVER_KIND = "x-inngest-server-kind"
+    SERVER_TIMING = "server-timing"
+    SIGNATURE = "x-inngest-signature"
+    USER_AGENT = "user-agent"
 
 
 class InternalEvents(enum.Enum):
