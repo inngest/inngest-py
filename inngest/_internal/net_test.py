@@ -251,7 +251,7 @@ class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
             nonlocal req_count
             req_count += 1
 
-            actual_token = request.headers.get("Authorization")
+            actual_token = request.headers.get("authorization")
             if actual_token is None:
                 return httpx.Response(401, content=b"", request=request)
             expected_token = (
@@ -298,7 +298,7 @@ class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
             nonlocal req_count
             req_count += 1
 
-            actual_token = request.headers.get("Authorization")
+            actual_token = request.headers.get("authorization")
             if actual_token is None:
                 return httpx.Response(401, content=b"", request=request)
             expected_token = (
@@ -345,7 +345,7 @@ class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
             nonlocal req_count
             req_count += 1
 
-            actual_token = request.headers.get("Authorization")
+            actual_token = request.headers.get("authorization")
             if actual_token is None:
                 return httpx.Response(401, content=b"", request=request)
             expected_token = (
@@ -393,7 +393,7 @@ class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
             nonlocal req_count
             req_count += 1
 
-            actual_token = request.headers.get("Authorization")
+            actual_token = request.headers.get("authorization")
             if actual_token is not None:
                 return httpx.Response(500, content=b"", request=request)
 

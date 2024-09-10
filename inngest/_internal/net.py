@@ -210,9 +210,7 @@ def normalize_headers(
     new_headers = {}
 
     for k, v in headers.items():
-        for header_key in server_lib.HeaderKey:
-            if k.lower() == header_key.value.lower():
-                k = header_key.value
+        k = k.lower()
 
         if isinstance(v, list):
             new_headers[k] = v[0]
