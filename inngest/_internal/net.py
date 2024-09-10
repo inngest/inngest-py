@@ -210,9 +210,7 @@ def normalize_headers(
     new_headers = {}
 
     for k, v in headers.items():
-        for header_key in server_lib.HeaderKey:
-            if k.lower() == header_key.value.lower():
-                k = header_key.value
+        k = k.lower()
 
         if isinstance(v, list):
             new_headers[k] = v[0]
@@ -299,11 +297,7 @@ def _validate_request(
     timestamp = None
     signature = None
 
-    sig_header: typing.Optional[str] = None
-    for k, v in headers.items():
-        if k.lower() == server_lib.HeaderKey.SIGNATURE.value.lower():
-            sig_header = v
-            break
+    sig_header = headers.get(server_lib.HeaderKey.SIGNATURE.value)
     if sig_header is None:
         return errors.HeaderMissingError(
             f"cannot validate signature in production mode without a {server_lib.HeaderKey.SIGNATURE.value} header"

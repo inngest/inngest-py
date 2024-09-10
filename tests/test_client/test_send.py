@@ -56,8 +56,8 @@ class TestSend(unittest.IsolatedAsyncioTestCase):
         )
 
         await client.send(inngest.Event(name="foo"))
-        assert state.headers.get("X-Inngest-Env") == ["my-env"]
-        assert state.headers.get("X-Inngest-SDK") == [
+        assert state.headers.get("x-inngest-env") == ["my-env"]
+        assert state.headers.get("x-inngest-sdk") == [
             f"inngest-py:v{const.VERSION}"
         ]
         assert event_key in state.path
@@ -67,8 +67,8 @@ class TestSend(unittest.IsolatedAsyncioTestCase):
         state.path = ""
 
         client.send_sync(inngest.Event(name="foo"))
-        assert state.headers.get("X-Inngest-Env") == ["my-env"]
-        assert state.headers.get("X-Inngest-SDK") == [
+        assert state.headers.get("x-inngest-env") == ["my-env"]
+        assert state.headers.get("x-inngest-sdk") == [
             f"inngest-py:v{const.VERSION}"
         ]
         assert event_key in state.path

@@ -36,7 +36,7 @@ def create(framework: server_lib.Framework) -> base.Case:
         self.serve(client, [fn])
 
         headers = {
-            server_lib.HeaderKey.SERVER_KIND.value.lower(): server_lib.ServerKind.DEV_SERVER.value,
+            server_lib.HeaderKey.SERVER_KIND.value: server_lib.ServerKind.DEV_SERVER.value,
         }
         res = self.put(body={}, headers=headers)
         assert res.status_code == 400

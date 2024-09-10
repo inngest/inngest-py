@@ -35,7 +35,7 @@ class TestRegistration(base.TestCase):
         )
         return base.RegistrationResponse(
             body=res.data,
-            headers={k.lower(): v for k, v in res.headers.items()},
+            headers=dict(res.headers.items()),
             status_code=res.status_code,
         )
 
