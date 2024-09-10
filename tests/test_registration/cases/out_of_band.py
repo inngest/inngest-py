@@ -68,10 +68,10 @@ def create(framework: server_lib.Framework) -> base.Case:
         self.serve(client, [fn])
         res = self.put(body={})
         assert res.status_code == 200
-        assert state.headers.get("Authorization") is not None
-        assert state.headers.get("X-Inngest-Env") == ["my-env"]
-        assert state.headers.get("X-Inngest-Framework") == [framework.value]
-        assert state.headers.get("X-Inngest-SDK") == [
+        assert state.headers.get("authorization") is not None
+        assert state.headers.get("x-inngest-env") == ["my-env"]
+        assert state.headers.get("x-inngest-framework") == [framework.value]
+        assert state.headers.get("x-inngest-sdk") == [
             f"inngest-py:v{const.VERSION}"
         ]
 
