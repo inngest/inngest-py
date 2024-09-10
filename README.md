@@ -89,7 +89,7 @@ app.run(port=8000)
 [Each function is automatically backed by its own queue](https://www.inngest.com/docs/learn/how-functions-are-executed).  Functions can contain steps, which act as code
 level transactions.  Each step retries on failure, and runs once on success.  Function state is automatically managed.
 
-Let's run the function.  Send the following event in the [local development server (Dev Server_ UI](https://www.inngest.com/docs/local-development) and the `fetch_person` function will run:
+Let's run the function.  Send the following event in the [local development server (Dev Server UI)](https://www.inngest.com/docs/local-development) and the `fetch_person` function will run:
 
 ```json
 {
