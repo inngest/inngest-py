@@ -11,6 +11,7 @@ VERSION: typing.Final = importlib.metadata.version("inngest")
 
 
 class EnvKey(enum.Enum):
+    ALLOW_IN_BAND_SYNC = "INNGEST_ALLOW_IN_BAND_SYNC"
     API_BASE_URL = "INNGEST_API_BASE_URL"
 
     # Sets both API and EVENT base URLs. API_BASE_URL and EVENT_API_BASE_URL

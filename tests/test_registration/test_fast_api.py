@@ -1,4 +1,5 @@
 import json
+import os
 import typing
 import unittest
 
@@ -7,7 +8,7 @@ import fastapi.testclient
 
 import inngest
 import inngest.fast_api
-from inngest._internal import server_lib
+from inngest._internal import const, server_lib
 
 from . import base, cases
 
@@ -16,8 +17,19 @@ _framework = server_lib.Framework.FAST_API
 
 class TestRegistration(base.TestCase):
     def setUp(self) -> None:
+        super().setUp()
+
+        # TODO: Delete this when we default to allowing in-band sync
+        os.environ[const.EnvKey.ALLOW_IN_BAND_SYNC.value] = "1"
+
         self.app = fastapi.FastAPI()
         self.app_client = fastapi.testclient.TestClient(self.app)
+
+    def tearDown(self) -> None:
+        super().tearDown()
+
+        # TODO: Delete this when we default to allowing in-band sync
+        os.environ.pop(const.EnvKey.ALLOW_IN_BAND_SYNC.value, None)
 
     def put(
         self,

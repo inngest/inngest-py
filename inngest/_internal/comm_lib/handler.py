@@ -11,6 +11,7 @@ import httpx
 from inngest._internal import (
     client_lib,
     const,
+    env_lib,
     errors,
     execution_lib,
     function,
@@ -42,6 +43,11 @@ class CommHandler:
         framework: server_lib.Framework,
         functions: list[function.Function],
     ) -> None:
+        self._allow_in_band_sync = env_lib.is_truthy(
+            const.EnvKey.ALLOW_IN_BAND_SYNC,
+            # TODO: Default to true once in-band syncing is stable
+            default=False,
+        )
         self._client = client
         self._mode = client._mode
         self._api_origin = client.api_origin
@@ -362,6 +368,7 @@ class CommHandler:
         if (
             req.headers.get(server_lib.HeaderKey.SYNC_KIND.value)
             == server_lib.SyncKind.IN_BAND.value
+            and self._allow_in_band_sync
         ):
             err: typing.Optional[Exception] = None
             if isinstance(request_signing_key, Exception):
@@ -391,6 +398,7 @@ class CommHandler:
         if (
             req.headers.get(server_lib.HeaderKey.SYNC_KIND.value)
             == server_lib.SyncKind.IN_BAND.value
+            and self._allow_in_band_sync
         ):
             err: typing.Optional[Exception] = None
             if isinstance(request_signing_key, Exception):

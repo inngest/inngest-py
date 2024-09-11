@@ -38,10 +38,10 @@ def get_url(
     return parsed
 
 
-def is_truthy(env_var: const.EnvKey) -> bool:
+def is_truthy(env_var: const.EnvKey, default: bool = False) -> bool:
     val = os.getenv(env_var.value)
     if val is None:
-        return False
+        return default
     val = val.strip()
 
     if val.lower() in ("false", "0", ""):
