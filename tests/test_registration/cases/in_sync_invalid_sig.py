@@ -2,7 +2,8 @@ import json
 
 import inngest
 import inngest.fast_api
-from inngest._internal import net, server_lib
+from inngest._internal import server_lib
+from tests import net
 
 from . import base
 
@@ -42,15 +43,13 @@ def create(framework: server_lib.Framework) -> base.Case:
         ).encode("utf-8")
 
         wrong_signing_key = "signkey-prod-111111"
-        req_sig = net.sign(req_body, wrong_signing_key)
-        if isinstance(req_sig, Exception):
-            raise req_sig
-
         self.serve(client, [fn])
         res = self.put(
             body=req_body,
             headers={
-                server_lib.HeaderKey.SIGNATURE.value: req_sig,
+                server_lib.HeaderKey.SIGNATURE.value: net.sign_request(
+                    req_body, wrong_signing_key
+                ),
                 server_lib.HeaderKey.SYNC_KIND.value: server_lib.SyncKind.IN_BAND.value,
             },
         )

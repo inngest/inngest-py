@@ -266,14 +266,10 @@ async def fetch_with_thready_safety(
     )
 
 
-def sign(body: bytes, signing_key: str) -> types.MaybeError[str]:
-    canonicalized = transforms.canonicalize(body)
-    if isinstance(canonicalized, Exception):
-        return canonicalized
-
+def sign_response(body: bytes, signing_key: str) -> types.MaybeError[str]:
     mac = hmac.new(
         transforms.remove_signing_key_prefix(signing_key).encode("utf-8"),
-        canonicalized,
+        body,
         hashlib.sha256,
     )
     unix_ms = round(time.time())
@@ -296,7 +292,6 @@ def _validate_request(
 
     timestamp = None
     signature = None
-
     sig_header = headers.get(server_lib.HeaderKey.SIGNATURE.value)
     if sig_header is None:
         return errors.HeaderMissingError(
