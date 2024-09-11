@@ -188,7 +188,7 @@ class CommResponse:
         if isinstance(body_bytes, Exception):
             return body_bytes
 
-        sig = net.sign_response(body_bytes, signing_key)
+        sig = net.sign(body_bytes, signing_key)
         if isinstance(sig, Exception):
             return sig
 

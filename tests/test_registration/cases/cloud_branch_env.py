@@ -2,8 +2,7 @@ import json
 
 import inngest
 import inngest.fast_api
-from inngest._internal import server_lib
-from tests import net
+from inngest._internal import net, server_lib
 
 from . import base
 
@@ -36,20 +35,22 @@ def create(framework: server_lib.Framework) -> base.Case:
         ) -> None:
             pass
 
+        self.serve(client, [fn])
+
         req_body = json.dumps(
             server_lib.InBandSynchronizeRequest(
                 url="http://test.local"
             ).to_dict()
         ).encode("utf-8")
 
-        self.serve(client, [fn])
+        req_sig = net.sign(req_body, signing_key)
+        if isinstance(req_sig, Exception):
+            raise req_sig
+
         res = self.put(
             body=req_body,
             headers={
-                server_lib.HeaderKey.SIGNATURE.value: net.sign_request(
-                    req_body,
-                    signing_key,
-                ),
+                server_lib.HeaderKey.SIGNATURE.value: req_sig,
                 server_lib.HeaderKey.SYNC_KIND.value: server_lib.SyncKind.IN_BAND.value,
             },
         )
@@ -58,10 +59,15 @@ def create(framework: server_lib.Framework) -> base.Case:
         assert res.headers["x-inngest-expected-server-kind"] == "cloud"
         assert res.headers["x-inngest-sync-kind"] == "in_band"
 
-        net.validate_response(
-            body=res.body,
-            headers=res.headers,
-            signing_key=signing_key,
+        assert isinstance(
+            net.validate_sig(
+                body=res.body,
+                headers=res.headers,
+                mode=server_lib.ServerKind.CLOUD,
+                signing_key=signing_key,
+                signing_key_fallback=None,
+            ),
+            str,
         )
 
     return base.Case(

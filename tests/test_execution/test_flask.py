@@ -7,8 +7,8 @@ import flask.testing
 
 import inngest
 import inngest.flask
-from inngest._internal import server_lib
-from tests import base, net
+from inngest._internal import net, server_lib
+from tests import base
 
 
 class TestExecution(base.BaseTest):
@@ -44,13 +44,14 @@ class TestExecution(base.BaseTest):
             )
         )
         wrong_signing_key = "signkey-prod-111111"
+        req_sig = net.sign(b"{}", wrong_signing_key)
+        if isinstance(req_sig, Exception):
+            raise req_sig
+
         res = flask_client.post(
             "/api/inngest?fnId=my-fn&stepId=step",
             headers={
-                server_lib.HeaderKey.SIGNATURE.value: net.sign_request(
-                    b"{}",
-                    wrong_signing_key,
-                ),
+                server_lib.HeaderKey.SIGNATURE.value: req_sig,
             },
         )
         assert res.status_code == http.HTTPStatus.UNAUTHORIZED

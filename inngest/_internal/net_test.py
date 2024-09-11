@@ -109,7 +109,7 @@ class Test_RequestSignature(unittest.TestCase):
         }
 
         assert not isinstance(
-            net.validate_request(
+            net.validate_sig(
                 body=body,
                 headers=headers,
                 mode=server_lib.ServerKind.CLOUD,
@@ -128,7 +128,7 @@ class Test_RequestSignature(unittest.TestCase):
         }
 
         assert not isinstance(
-            net.validate_request(
+            net.validate_sig(
                 body=b'{"msg":"a \\u0026 b"}',
                 headers=headers,
                 mode=server_lib.ServerKind.CLOUD,
@@ -153,7 +153,7 @@ class Test_RequestSignature(unittest.TestCase):
 
         body = json.dumps({"msg": "you've been hacked"}).encode("utf-8")
 
-        validation = net.validate_request(
+        validation = net.validate_sig(
             body=body,
             headers=headers,
             mode=server_lib.ServerKind.CLOUD,
@@ -177,7 +177,7 @@ class Test_RequestSignature(unittest.TestCase):
         }
 
         assert not isinstance(
-            net.validate_request(
+            net.validate_sig(
                 body=body,
                 headers=headers,
                 mode=server_lib.ServerKind.CLOUD,
@@ -201,7 +201,7 @@ class Test_RequestSignature(unittest.TestCase):
         }
 
         assert isinstance(
-            net.validate_request(
+            net.validate_sig(
                 body=body,
                 headers=headers,
                 mode=server_lib.ServerKind.CLOUD,
