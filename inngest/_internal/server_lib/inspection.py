@@ -13,7 +13,7 @@ class Capabilities(types.BaseModel):
 class UnauthenticatedInspection(types.BaseModel):
     schema_version: str = "2024-05-24"
 
-    authentication_succeeded: typing.Optional[bool]
+    authentication_succeeded: typing.Optional[typing.Literal[False]]
     function_count: int
     has_event_key: bool
     has_signing_key: bool
@@ -21,15 +21,22 @@ class UnauthenticatedInspection(types.BaseModel):
     mode: ServerKind
 
 
-class AuthenticatedInspection(UnauthenticatedInspection):
+class AuthenticatedInspection(types.BaseModel):
+    schema_version: str = "2024-05-24"
+
     api_origin: str
     app_id: str
-    authentication_succeeded: bool = True
+    authentication_succeeded: typing.Literal[True] = True
     capabilities: Capabilities = Capabilities()
     env: typing.Optional[str]
     event_api_origin: str
     event_key_hash: typing.Optional[str]
     framework: str
+    function_count: int
+    has_event_key: bool
+    has_signing_key: bool
+    has_signing_key_fallback: bool
+    mode: ServerKind
     sdk_language: str = const.LANGUAGE
     sdk_version: str = const.VERSION
     serve_origin: typing.Optional[str]

@@ -471,7 +471,7 @@ def _build_inspection_response(
             signing_key_hash=signing_key_hash,
         )
 
-    authentication_succeeded = None
+    authentication_succeeded: typing.Optional[typing.Literal[False]] = None
     if isinstance(request_signing_key, Exception):
         authentication_succeeded = False
 
@@ -518,6 +518,9 @@ class _Syncer:
         )
         if isinstance(inspection, Exception):
             return inspection
+        if isinstance(inspection, server_lib.UnauthenticatedInspection):
+            # Unreachable
+            return Exception("request must be signed for in-band sync")
 
         res_body = server_lib.InBandSynchronizeResponse(
             app_id=handler._client.app_id,
