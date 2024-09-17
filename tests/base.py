@@ -1,6 +1,4 @@
 import datetime
-import hashlib
-import hmac
 import os
 import time
 import typing
@@ -10,7 +8,7 @@ import urllib.parse
 import httpx
 
 import inngest
-from inngest._internal import const, server_lib, transforms
+from inngest._internal import const, server_lib
 
 from . import http_proxy, net
 
@@ -129,48 +127,6 @@ class BaseTest(unittest.TestCase):
         )
         return signing_key
 
-    def create_signature(self, signing_key: typing.Optional[str] = None) -> str:
-        if signing_key is None:
-            signing_key = self.signing_key
-
-        mac = hmac.new(
-            transforms.remove_signing_key_prefix(signing_key).encode("utf-8"),
-            b"",
-            hashlib.sha256,
-        )
-        unix_ms = round(time.time() * 1000)
-        mac.update(str(unix_ms).encode("utf-8"))
-        sig = mac.hexdigest()
-        return f"s={sig}&t={unix_ms}"
-
-    def validate_signature(
-        self,
-        sig: str,
-        body: bytes,
-        signing_key: typing.Optional[str] = None,
-    ) -> None:
-        canonicalized = transforms.canonicalize(body)
-        assert not isinstance(canonicalized, Exception)
-
-        if signing_key is None:
-            signing_key = self.signing_key
-
-        parsed = urllib.parse.parse_qs(sig)
-        timestamp = int(parsed["t"][0])
-        signature = parsed["s"][0]
-
-        mac = hmac.new(
-            transforms.remove_signing_key_prefix(signing_key).encode("utf-8"),
-            canonicalized,
-            hashlib.sha256,
-        )
-
-        if timestamp:
-            mac.update(str(timestamp).encode("utf-8"))
-
-        if not hmac.compare_digest(signature, mac.hexdigest()):
-            raise Exception("invalid signature")
-
 
 class BaseTestIntrospection(BaseTest):
     framework: server_lib.Framework
@@ -192,6 +148,7 @@ class BaseTestIntrospection(BaseTest):
             "app_id": "my-app",
             "authentication_succeeded": True,
             "capabilities": {
+                "in_band_sync": "v1",
                 "trust_probe": "v1",
             },
             "env": None,

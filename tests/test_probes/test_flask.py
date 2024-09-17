@@ -6,7 +6,7 @@ import flask.testing
 
 import inngest
 import inngest.flask
-from inngest._internal import server_lib
+from inngest._internal import net, server_lib
 from tests import base
 
 
@@ -28,17 +28,31 @@ class TestTrustProbe(base.BaseTest):
                 signing_key=self.signing_key,
             )
         )
+
+        req_sig = net.sign(b"", self.signing_key)
+        if isinstance(req_sig, Exception):
+            raise req_sig
+
         res = flask_client.post(
             "/api/inngest?probe=trust",
             headers={
-                server_lib.HeaderKey.SIGNATURE.value: self.create_signature(),
+                server_lib.HeaderKey.SIGNATURE.value: req_sig,
             },
         )
         assert res.status_code == 200
 
         sig_header = res.headers.get(server_lib.HeaderKey.SIGNATURE.value)
         assert sig_header is not None
-        self.validate_signature(sig_header, res.get_data())
+        assert isinstance(
+            net.validate_sig(
+                body=res.get_data(),
+                headers=res.headers,
+                mode=server_lib.ServerKind.CLOUD,
+                signing_key=self.signing_key,
+                signing_key_fallback=None,
+            ),
+            str,
+        )
 
     def test_unsigned(self) -> None:
         flask_client = self._serve(
@@ -73,12 +87,15 @@ class TestTrustProbe(base.BaseTest):
                 signing_key=self.signing_key,
             )
         )
+
+        req_sig = net.sign(b"", "wrong")
+        if isinstance(req_sig, Exception):
+            raise req_sig
+
         res = flask_client.post(
             "/api/inngest?probe=trust",
             headers={
-                server_lib.HeaderKey.SIGNATURE.value: self.create_signature(
-                    signing_key="wrong"
-                ),
+                server_lib.HeaderKey.SIGNATURE.value: req_sig,
             },
         )
         assert res.status_code == 401

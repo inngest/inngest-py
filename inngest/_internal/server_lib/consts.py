@@ -56,6 +56,7 @@ class HeaderKey(enum.Enum):
     SERVER_KIND = "x-inngest-server-kind"
     SERVER_TIMING = "server-timing"
     SIGNATURE = "x-inngest-signature"
+    SYNC_KIND = "x-inngest-sync-kind"
     USER_AGENT = "user-agent"
 
 
@@ -86,6 +87,11 @@ class Probe(enum.Enum):
 class ServerKind(enum.Enum):
     CLOUD = "cloud"
     DEV_SERVER = "dev"
+
+
+class SyncKind(enum.Enum):
+    IN_BAND = "in_band"
+    OUT_OF_BAND = "out_of_band"
 
 
 # If the Server sends this step ID then it isn't targeting a specific step

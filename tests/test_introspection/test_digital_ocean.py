@@ -6,7 +6,7 @@ import flask.testing
 import inngest
 import inngest.digital_ocean
 import inngest.fast_api
-from inngest._internal import server_lib
+from inngest._internal import net, server_lib
 from inngest.experimental import digital_ocean_simulator
 from tests import base
 
@@ -51,10 +51,14 @@ class TestIntrospection(base.BaseTestIntrospection):
             )
         )
 
+        req_sig = net.sign(b"", self.signing_key)
+        if isinstance(req_sig, Exception):
+            raise req_sig
+
         res = app_client.get(
             digital_ocean_simulator.FULL_PATH,
             headers={
-                server_lib.HeaderKey.SIGNATURE.value: self.create_signature(),
+                server_lib.HeaderKey.SIGNATURE.value: req_sig,
             },
         )
         assert res.status_code == 200
@@ -62,9 +66,15 @@ class TestIntrospection(base.BaseTestIntrospection):
             **self.expected_authed_body,
             "has_signing_key_fallback": True,
         }
-        self.validate_signature(
-            res.headers[server_lib.HeaderKey.SIGNATURE.value],
-            res.get_data(),
+        assert isinstance(
+            net.validate_sig(
+                body=res.get_data(),
+                headers=res.headers,
+                mode=server_lib.ServerKind.CLOUD,
+                signing_key=self.signing_key,
+                signing_key_fallback=None,
+            ),
+            str,
         )
 
     def test_dev_mode_with_no_signature(self) -> None:

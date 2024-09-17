@@ -1,5 +1,3 @@
-import hashlib
-import hmac
 import random
 import socket
 import time
@@ -8,17 +6,6 @@ import typing
 HOST: typing.Final = "0.0.0.0"
 
 _used_ports: set[int] = set()
-
-
-def create_signature(body: bytes, signing_key: str, unix_ms: int) -> str:
-    mac = hmac.new(
-        signing_key.encode("utf-8"),
-        body,
-        hashlib.sha256,
-    )
-    mac.update(str(unix_ms).encode("utf-8"))
-    sig = mac.hexdigest()
-    return f"s={sig}&t={unix_ms}"
 
 
 def get_available_port() -> int:
