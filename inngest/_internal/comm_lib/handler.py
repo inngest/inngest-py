@@ -43,10 +43,9 @@ class CommHandler:
         framework: server_lib.Framework,
         functions: list[function.Function],
     ) -> None:
-        self._allow_in_band_sync = env_lib.is_truthy(
+        # TODO: Default to true once in-band syncing is stable
+        self._allow_in_band_sync = env_lib.is_true(
             const.EnvKey.ALLOW_IN_BAND_SYNC,
-            # TODO: Default to true once in-band syncing is stable
-            default=False,
         )
         self._client = client
         self._mode = client._mode
