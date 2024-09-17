@@ -59,7 +59,6 @@ class ExecutionV0:
     async def report_step(
         self,
         step_info: step_lib.StepInfo,
-        inside_parallel: bool,
     ) -> ReportedStep:
         step_signal = asyncio.Future[ReportedStep]()
 
@@ -87,7 +86,7 @@ class ExecutionV0:
         self._handle_skip(step_info)
 
         is_targeting_enabled = self._target_hashed_id is not None
-        if inside_parallel and not is_targeting_enabled:
+        if step_lib.in_parallel.get() and not is_targeting_enabled:
             if step_info.op == server_lib.Opcode.STEP_RUN:
                 step_info.op = server_lib.Opcode.PLANNED
 
@@ -244,7 +243,6 @@ class ExecutionV0Sync:
     def report_step(
         self,
         step_info: step_lib.StepInfo,
-        inside_parallel: bool,
     ) -> ReportedStepSync:
         step = ReportedStepSync(step_info)
 
@@ -269,7 +267,7 @@ class ExecutionV0Sync:
         self._handle_skip(step_info)
 
         is_targeting_enabled = self._target_hashed_id is not None
-        if inside_parallel and not is_targeting_enabled:
+        if step_lib.in_parallel.get() and not is_targeting_enabled:
             if step_info.op == server_lib.Opcode.STEP_RUN:
                 step_info.op = server_lib.Opcode.PLANNED
 

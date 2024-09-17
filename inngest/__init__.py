@@ -22,7 +22,7 @@ from ._internal.server_lib import (
     TriggerCron,
     TriggerEvent,
 )
-from ._internal.step_lib import Step, StepMemos, StepSync
+from ._internal.step_lib import Group, Step, StepMemos, StepSync
 from ._internal.types import JSON
 
 __all__ = [
@@ -33,6 +33,7 @@ __all__ = [
     "Debounce",
     "Event",
     "Function",
+    "Group",
     "Inngest",
     "JSON",
     "Middleware",

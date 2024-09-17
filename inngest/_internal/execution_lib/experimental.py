@@ -50,7 +50,6 @@ class ExecutionExperimental:
     async def report_step(
         self,
         step_info: step_lib.StepInfo,
-        inside_parallel: bool,
     ) -> execution_lib.ReportedStep:
         step_signal = asyncio.Future[execution_lib.ReportedStep]()
         self._pending_steps[step_info.id] = execution_lib.ReportedStep(
