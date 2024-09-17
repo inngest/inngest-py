@@ -158,7 +158,9 @@ async def fetch_with_auth_fallback(
 
         return res
     except Exception as err:
-        return err
+        new_err = Exception(f"Failed request to {request.url}: {err}")
+        new_err.__cause__ = err
+        return new_err
 
 
 def fetch_with_auth_fallback_sync(
@@ -193,7 +195,9 @@ def fetch_with_auth_fallback_sync(
             res = client.send(request)
         return res
     except Exception as err:
-        return err
+        new_err = Exception(f"Failed request to {request.url}: {err}")
+        new_err.__cause__ = err
+        return new_err
 
 
 def normalize_headers(
@@ -206,9 +210,7 @@ def normalize_headers(
     new_headers = {}
 
     for k, v in headers.items():
-        for header_key in server_lib.HeaderKey:
-            if k.lower() == header_key.value.lower():
-                k = header_key.value
+        k = k.lower()
 
         if isinstance(v, list):
             new_headers[k] = v[0]
@@ -264,17 +266,23 @@ async def fetch_with_thready_safety(
     )
 
 
-def sign(body: bytes, signing_key: str) -> types.MaybeError[str]:
+def sign(
+    body: bytes,
+    signing_key: str,
+    unix_ms: typing.Optional[int] = None,
+) -> types.MaybeError[str]:
+    if unix_ms is None:
+        unix_ms = round(time.time())
+
     canonicalized = transforms.canonicalize(body)
     if isinstance(canonicalized, Exception):
-        return canonicalized
+        raise canonicalized
 
     mac = hmac.new(
         transforms.remove_signing_key_prefix(signing_key).encode("utf-8"),
         canonicalized,
         hashlib.sha256,
     )
-    unix_ms = round(time.time())
     mac.update(str(unix_ms).encode("utf-8"))
     sig = mac.hexdigest()
 
@@ -282,7 +290,7 @@ def sign(body: bytes, signing_key: str) -> types.MaybeError[str]:
     return f"t={unix_ms}&s={sig}"
 
 
-def _validate_request(
+def _validate_sig(
     *,
     body: bytes,
     headers: dict[str, str],
@@ -291,6 +299,10 @@ def _validate_request(
 ) -> types.MaybeError[typing.Optional[str]]:
     if mode == server_lib.ServerKind.DEV_SERVER:
         return None
+
+    canonicalized = transforms.canonicalize(body)
+    if isinstance(canonicalized, Exception):
+        raise canonicalized
 
     timestamp = None
     signature = None
@@ -318,7 +330,7 @@ def _validate_request(
 
     mac = hmac.new(
         transforms.remove_signing_key_prefix(signing_key).encode("utf-8"),
-        body,
+        canonicalized,
         hashlib.sha256,
     )
 
@@ -331,7 +343,7 @@ def _validate_request(
     return signing_key
 
 
-def validate_request(
+def validate_sig(
     *,
     body: bytes,
     headers: dict[str, str],
@@ -356,7 +368,7 @@ def validate_request(
     if isinstance(canonicalized, Exception):
         return canonicalized
 
-    err = _validate_request(
+    err = _validate_sig(
         body=canonicalized,
         headers=headers,
         mode=mode,
@@ -366,7 +378,7 @@ def validate_request(
         # If the signature validation failed but there's a "fallback"
         # signing key, attempt to validate the signature with the fallback
         # key
-        err = _validate_request(
+        err = _validate_sig(
             body=canonicalized,
             headers=headers,
             mode=mode,

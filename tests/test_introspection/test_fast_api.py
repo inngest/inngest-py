@@ -5,7 +5,7 @@ import fastapi.testclient
 
 import inngest
 import inngest.fast_api
-from inngest._internal import server_lib
+from inngest._internal import net, server_lib
 from tests import base
 
 
@@ -47,10 +47,15 @@ class TestIntrospection(base.BaseTestIntrospection):
                 signing_key=self.signing_key,
             )
         )
+
+        req_sig = net.sign(b"", self.signing_key)
+        if isinstance(req_sig, Exception):
+            raise req_sig
+
         res = fast_api_client.get(
             "/api/inngest",
             headers={
-                server_lib.HeaderKey.SIGNATURE.value: self.create_signature(),
+                server_lib.HeaderKey.SIGNATURE.value: req_sig,
             },
         )
         assert res.status_code == 200
@@ -58,9 +63,15 @@ class TestIntrospection(base.BaseTestIntrospection):
             **self.expected_authed_body,
             "has_signing_key_fallback": True,
         }
-        self.validate_signature(
-            res.headers[server_lib.HeaderKey.SIGNATURE.value],
-            res.text.encode("utf-8"),
+        assert isinstance(
+            net.validate_sig(
+                body=res.content,
+                headers=dict(res.headers),
+                mode=server_lib.ServerKind.CLOUD,
+                signing_key=self.signing_key,
+                signing_key_fallback=None,
+            ),
+            str,
         )
 
     def test_cloud_mode_with_signature_fallback(self) -> None:
@@ -76,12 +87,15 @@ class TestIntrospection(base.BaseTestIntrospection):
                 signing_key=self.signing_key,
             )
         )
+
+        req_sig = net.sign(b"", signing_key_fallback)
+        if isinstance(req_sig, Exception):
+            raise req_sig
+
         res = fast_api_client.get(
             "/api/inngest",
             headers={
-                server_lib.HeaderKey.SIGNATURE.value: self.create_signature(
-                    signing_key_fallback
-                ),
+                server_lib.HeaderKey.SIGNATURE.value: req_sig,
             },
         )
         assert res.status_code == 200
@@ -89,11 +103,16 @@ class TestIntrospection(base.BaseTestIntrospection):
             **self.expected_authed_body,
             "has_signing_key_fallback": True,
         }
-        print(res.text)
-        self.validate_signature(
-            res.headers[server_lib.HeaderKey.SIGNATURE.value],
-            res.text.encode("utf-8"),
-            signing_key_fallback,
+
+        assert isinstance(
+            net.validate_sig(
+                body=res.content,
+                headers=dict(res.headers),
+                mode=server_lib.ServerKind.CLOUD,
+                signing_key=signing_key_fallback,
+                signing_key_fallback=None,
+            ),
+            str,
         )
 
     def test_dev_mode_with_no_signature(self) -> None:

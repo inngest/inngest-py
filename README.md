@@ -5,7 +5,7 @@
   <br/>
   <p>
     Serverless event-driven queues, background jobs, and scheduled jobs for Python.<br />
-    Works with any framework and platform.
+    Add durable functions and workflows to any framework and platform.
   </p>
   Read the <a href="https://www.inngest.com/docs?ref=github-inngest-js-readme">documentation</a> and get started in minutes.
   <br/>
@@ -22,6 +22,9 @@
 <hr />
 
 # Inngest Python SDK
+
+Inngest's SDK adds durable functions to Python in a few lines of code.  Using this SDK, you can write
+background jobs as step functions without new queueing infrastructure such as celery.
 
 We currently support the following frameworks (but adding a new framework is easy!):
 
@@ -47,7 +50,7 @@ Python 3.9 is the minimum version we support.
 
 ### Basic (no steps)
 
-This is a minimal example of an Inngest function. It's missing some of our features but it's a good starting point.
+This is a minimal example of an Inngest function:
 
 ```py
 import flask
@@ -83,7 +86,10 @@ inngest.flask.serve(
 app.run(port=8000)
 ```
 
-Send the following event in the Dev Server UI and the `fetch_person` function will run:
+[Each function is automatically backed by its own queue](https://www.inngest.com/docs/learn/how-functions-are-executed).  Functions can contain steps, which act as code
+level transactions.  Each step retries on failure, and runs once on success.  Function state is automatically managed.
+
+Let's run the function.  Send the following event in the [local development server (Dev Server UI)](https://www.inngest.com/docs/local-development) and the `fetch_person` function will run:
 
 ```json
 {

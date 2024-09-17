@@ -11,6 +11,7 @@ from .consts import (
     Probe,
     QueryParamKey,
     ServerKind,
+    SyncKind,
 )
 from .event import Event
 from .execution_request import ServerRequest
@@ -21,6 +22,8 @@ from .registration import (
     Concurrency,
     Debounce,
     FunctionConfig,
+    InBandSynchronizeRequest,
+    InBandSynchronizeResponse,
     Priority,
     RateLimit,
     Retries,
@@ -44,6 +47,8 @@ __all__ = [
     "Framework",
     "FunctionConfig",
     "HeaderKey",
+    "InBandSynchronizeRequest",
+    "InBandSynchronizeResponse",
     "InternalEvents",
     "Opcode",
     "PREFERRED_EXECUTION_VERSION",
@@ -58,6 +63,7 @@ __all__ = [
     "ServerKind",
     "ServerRequest",
     "Step",
+    "SyncKind",
     "Throttle",
     "TriggerCron",
     "TriggerEvent",

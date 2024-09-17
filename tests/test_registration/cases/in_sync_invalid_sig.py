@@ -43,7 +43,8 @@ def create(framework: server_lib.Framework) -> base.Case:
             ).to_dict()
         ).encode("utf-8")
 
-        req_sig = net.sign(req_body, signing_key)
+        wrong_signing_key = "signkey-prod-111111"
+        req_sig = net.sign(req_body, wrong_signing_key)
         if isinstance(req_sig, Exception):
             raise req_sig
 
@@ -54,21 +55,10 @@ def create(framework: server_lib.Framework) -> base.Case:
                 server_lib.HeaderKey.SYNC_KIND.value: server_lib.SyncKind.IN_BAND.value,
             },
         )
-        assert res.status_code == 200
+        assert res.status_code == 401
         assert res.headers["x-inngest-env"] == "my-env"
         assert res.headers["x-inngest-expected-server-kind"] == "cloud"
-        assert res.headers["x-inngest-sync-kind"] == "in_band"
-
-        assert isinstance(
-            net.validate_sig(
-                body=res.body,
-                headers=res.headers,
-                mode=server_lib.ServerKind.CLOUD,
-                signing_key=signing_key,
-                signing_key_fallback=None,
-            ),
-            str,
-        )
+        assert "x-inngest-sync-kind" not in res.headers
 
     return base.Case(
         name=_TEST_NAME,

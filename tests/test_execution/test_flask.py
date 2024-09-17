@@ -44,14 +44,14 @@ class TestExecution(base.BaseTest):
             )
         )
         wrong_signing_key = "signkey-prod-111111"
-
-        sig = net.sign(b"{}", wrong_signing_key)
-        assert not isinstance(sig, Exception)
+        req_sig = net.sign(b"{}", wrong_signing_key)
+        if isinstance(req_sig, Exception):
+            raise req_sig
 
         res = flask_client.post(
             "/api/inngest?fnId=my-fn&stepId=step",
             headers={
-                server_lib.HeaderKey.SIGNATURE.value: sig,
+                server_lib.HeaderKey.SIGNATURE.value: req_sig,
             },
         )
         assert res.status_code == http.HTTPStatus.UNAUTHORIZED

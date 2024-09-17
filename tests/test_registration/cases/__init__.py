@@ -1,9 +1,19 @@
 from inngest._internal import server_lib
 
-from . import base, cloud_branch_env, server_kind_mismatch
+from . import (
+    base,
+    cloud_branch_env,
+    in_sync_invalid_sig,
+    in_sync_missing_sig,
+    out_of_band,
+    server_kind_mismatch,
+)
 
 _modules = (
     cloud_branch_env,
+    in_sync_invalid_sig,
+    in_sync_missing_sig,
+    out_of_band,
     server_kind_mismatch,
 )
 

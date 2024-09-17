@@ -2,6 +2,7 @@ import enum
 import importlib.metadata
 import typing
 
+AUTHOR: typing.Final = "inngest"
 DEFAULT_API_ORIGIN: typing.Final = "https://api.inngest.com/"
 DEFAULT_EVENT_API_ORIGIN: typing.Final = "https://inn.gs/"
 DEV_SERVER_ORIGIN: typing.Final = "http://127.0.0.1:8288/"
@@ -10,6 +11,7 @@ VERSION: typing.Final = importlib.metadata.version("inngest")
 
 
 class EnvKey(enum.Enum):
+    ALLOW_IN_BAND_SYNC = "INNGEST_ALLOW_IN_BAND_SYNC"
     API_BASE_URL = "INNGEST_API_BASE_URL"
 
     # Sets both API and EVENT base URLs. API_BASE_URL and EVENT_API_BASE_URL
