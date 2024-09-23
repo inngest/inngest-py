@@ -158,7 +158,7 @@ class BaseTestIntrospection(BaseTest):
             "sdk_language": const.LANGUAGE,
             "sdk_version": const.VERSION,
             "serve_origin": None,
-            "serve_path": "/api/inngest",
+            "serve_path": None,
             "signing_key_fallback_hash": "a820760dee6119fcf76498ab8d94be2f8cf04e786add2a4569e427462a84dd47",
             "signing_key_hash": "94bab7f22b92278ccab46e15da43a9fb8b079c05fa099d4134c6c39bbcee49f6",
         }

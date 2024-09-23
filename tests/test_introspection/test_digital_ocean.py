@@ -65,7 +65,6 @@ class TestIntrospection(base.BaseTestIntrospection):
         assert res.json == {
             **self.expected_authed_body,
             "has_signing_key_fallback": True,
-            "serve_path": None,
         }
         assert isinstance(
             net.validate_sig(
