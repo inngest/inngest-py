@@ -21,7 +21,6 @@ class BaseExecution(typing.Protocol):
     async def report_step(
         self,
         step_info: step_lib.StepInfo,
-        inside_parallel: bool,
     ) -> ReportedStep:
         ...
 
@@ -44,7 +43,6 @@ class BaseExecutionSync(typing.Protocol):
     def report_step(
         self,
         step_info: step_lib.StepInfo,
-        inside_parallel: bool,
     ) -> ReportedStepSync:
         ...
 

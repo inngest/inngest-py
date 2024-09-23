@@ -64,7 +64,7 @@ def create(
         if state.request_counter == 1:
             steps += (lambda: step.run("1c", lambda: None),)
 
-        step.parallel(steps)
+        ctx.group.parallel_sync(steps)
         step.run("after", lambda: None)
 
     @client.create_function(
@@ -99,7 +99,7 @@ def create(
         if state.request_counter == 1:
             steps += (lambda: step.run("1c", lambda: None),)
 
-        await step.parallel(steps)
+        await ctx.group.parallel(steps)
         await step.run("after", lambda: None)
 
     async def run_test(self: base.TestClass) -> None:

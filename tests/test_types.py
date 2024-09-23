@@ -242,7 +242,7 @@ def parallel() -> None:
         ctx: inngest.Context,
         step: inngest.Step,
     ) -> None:
-        output = await step.parallel(
+        output = await ctx.group.parallel(
             (
                 functools.partial(step.run, "step-1", fn_1_async),
                 functools.partial(
@@ -266,7 +266,7 @@ def parallel() -> None:
         ctx: inngest.Context,
         step: inngest.StepSync,
     ) -> None:
-        output = step.parallel(
+        output = ctx.group.parallel_sync(
             (
                 functools.partial(step.run, "step-1", fn_1_sync),
                 functools.partial(
@@ -315,7 +315,7 @@ def parallel_iterator() -> None:
             for item in items
         )
 
-        output = await step.parallel(steps)
+        output = await ctx.group.parallel(steps)
         assert_type(output, tuple[bool, ...])
 
     @client.create_function(
@@ -339,7 +339,7 @@ def parallel_iterator() -> None:
             for item in items
         )
 
-        output = step.parallel(steps)
+        output = ctx.group.parallel_sync(steps)
         assert_type(output, tuple[bool, ...])
 
 
