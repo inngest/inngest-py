@@ -15,7 +15,7 @@ def get_serve_origin(code_value: typing.Optional[str]) -> typing.Optional[str]:
     return None
 
 
-def get_serve_path(code_value: typing.Optional[str]) -> str:
+def get_serve_path(code_value: typing.Optional[str]) -> typing.Optional[str]:
     if code_value is not None:
         return code_value
 
@@ -23,4 +23,4 @@ def get_serve_path(code_value: typing.Optional[str]) -> str:
     if env_var_value:
         return env_var_value
 
-    return const.DEFAULT_SERVE_PATH
+    return None

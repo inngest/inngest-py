@@ -9,6 +9,7 @@ from inngest._internal import (
     client_lib,
     comm_lib,
     config_lib,
+    const,
     function,
     server_lib,
 )
@@ -36,8 +37,6 @@ def serve(
         serve_origin: Origin to serve the functions from.
         serve_path: Path to serve the functions from.
     """
-
-    serve_path = config_lib.get_serve_path(serve_path)
 
     handler = comm_lib.CommHandler(
         client=client,
@@ -73,9 +72,12 @@ def _create_handler_async(
     handler: comm_lib.CommHandler,
     *,
     serve_origin: typing.Optional[str],
-    serve_path: str,
+    serve_path: typing.Optional[str],
 ) -> None:
-    @app.route(serve_path, methods=["GET", "POST", "PUT"])
+    @app.route(
+        config_lib.get_serve_path(serve_path) or const.DEFAULT_SERVE_PATH,
+        methods=["GET", "POST", "PUT"],
+    )
     async def inngest_api() -> typing.Union[flask.Response, str]:
         comm_req = comm_lib.CommRequest(
             body=_get_body_bytes(),
@@ -115,9 +117,12 @@ def _create_handler_sync(
     handler: comm_lib.CommHandler,
     *,
     serve_origin: typing.Optional[str],
-    serve_path: str,
+    serve_path: typing.Optional[str],
 ) -> None:
-    @app.route(serve_path, methods=["GET", "POST", "PUT"])
+    @app.route(
+        config_lib.get_serve_path(serve_path) or const.DEFAULT_SERVE_PATH,
+        methods=["GET", "POST", "PUT"],
+    )
     def inngest_api() -> typing.Union[flask.Response, str]:
         comm_req = comm_lib.CommRequest(
             body=_get_body_bytes(),
