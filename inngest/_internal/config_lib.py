@@ -1,7 +1,7 @@
 import os
 import typing
 
-import inngest._internal.const as const
+from inngest._internal import const
 
 
 def get_serve_origin(code_value: typing.Optional[str]) -> typing.Optional[str]:
