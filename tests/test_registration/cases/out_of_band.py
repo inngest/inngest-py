@@ -75,6 +75,8 @@ def create(framework: server_lib.Framework) -> base.Case:
             f"inngest-py:v{const.VERSION}"
         ]
 
+        assert json.loads(res.body.decode("utf-8")) == {}
+
     return base.Case(
         name=_TEST_NAME,
         run_test=run_test,

@@ -40,11 +40,11 @@ def create(framework: server_lib.Framework) -> base.Case:
         }
         res = self.put(body={}, headers=headers)
         assert res.status_code == 400
-        res_body = json.loads(res.body)
-        assert isinstance(res_body, dict)
-        assert (
-            res_body["code"] == server_lib.ErrorCode.SERVER_KIND_MISMATCH.value
-        )
+
+        assert json.loads(res.body.decode("utf-8")) == {
+            "code": "server_kind_mismatch",
+            "message": "Sync rejected since it's from a Dev Server but expected Cloud",
+        }
 
     return base.Case(
         name=_TEST_NAME,

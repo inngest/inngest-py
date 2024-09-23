@@ -70,6 +70,65 @@ def create(framework: server_lib.Framework) -> base.Case:
             str,
         )
 
+        assert json.loads(res.body.decode("utf-8")) == {
+            "app_id": "flask-cloud_branch_env",
+            "env": "my-env",
+            "framework": "flask",
+            "functions": [
+                {
+                    "batchEvents": None,
+                    "cancel": None,
+                    "concurrency": None,
+                    "debounce": None,
+                    "id": "flask-cloud_branch_env-foo",
+                    "idempotency": None,
+                    "name": "foo",
+                    "priority": None,
+                    "rateLimit": None,
+                    "steps": {
+                        "step": {
+                            "id": "step",
+                            "name": "step",
+                            "retries": {"attempts": 0},
+                            "runtime": {
+                                "type": "http",
+                                "url": "http://test.local?fnId=flask-cloud_branch_env-foo&stepId=step",
+                            },
+                        }
+                    },
+                    "throttle": None,
+                    "triggers": [{"event": "app/foo", "expression": None}],
+                }
+            ],
+            "inspection": {
+                "schema_version": "2024-05-24",
+                "api_origin": "https://api.inngest.com/",
+                "app_id": "flask-cloud_branch_env",
+                "authentication_succeeded": True,
+                "capabilities": {"in_band_sync": "v1", "trust_probe": "v1"},
+                "env": "my-env",
+                "event_api_origin": "https://inn.gs/",
+                "event_key_hash": None,
+                "framework": "flask",
+                "function_count": 1,
+                "has_event_key": False,
+                "has_signing_key": True,
+                "has_signing_key_fallback": False,
+                "mode": "cloud",
+                "sdk_language": "py",
+                "sdk_version": "0.4.13a1",
+                "serve_origin": None,
+                "serve_path": None,
+                "signing_key_fallback_hash": None,
+                "signing_key_hash": "709e80c88487a2411e1ee4dfb9f22a861492d20c4765150c0c794abd70f8147c",
+            },
+            "platform": None,
+            "sdk_author": "inngest",
+            "sdk_language": "py",
+            "sdk_version": "0.4.13a1",
+            "url": "http://test.local",
+        }
+
     return base.Case(
         name=_TEST_NAME,
         run_test=run_test,
