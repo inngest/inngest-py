@@ -2,7 +2,7 @@ import json
 
 import inngest
 import inngest.fast_api
-from inngest._internal import net, server_lib
+from inngest._internal import const, net, server_lib
 
 from . import base
 
@@ -116,7 +116,7 @@ def create(framework: server_lib.Framework) -> base.Case:
                 "has_signing_key_fallback": False,
                 "mode": "cloud",
                 "sdk_language": "py",
-                "sdk_version": "0.4.13a1",
+                "sdk_version": const.VERSION,
                 "serve_origin": None,
                 "serve_path": None,
                 "signing_key_fallback_hash": None,
@@ -125,7 +125,7 @@ def create(framework: server_lib.Framework) -> base.Case:
             "platform": None,
             "sdk_author": "inngest",
             "sdk_language": "py",
-            "sdk_version": "0.4.13a1",
+            "sdk_version": const.VERSION,
             "url": "http://test.local",
         }
 
