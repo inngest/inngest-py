@@ -11,7 +11,14 @@ import django.http
 import django.urls
 import django.views.decorators.csrf
 
-from ._internal import client_lib, comm_lib, function, server_lib, transforms
+from ._internal import (
+    client_lib,
+    comm_lib,
+    config_lib,
+    function,
+    server_lib,
+    transforms,
+)
 
 FRAMEWORK = server_lib.Framework.DJANGO
 
@@ -35,6 +42,8 @@ def serve(
         serve_origin: Origin to serve Inngest from.
         serve_path: Path to serve Inngest from.
     """
+
+    serve_path = config_lib.get_serve_path(serve_path)
 
     handler = comm_lib.CommHandler(
         client=client,
@@ -68,7 +77,7 @@ def _create_handler_sync(
     handler: comm_lib.CommHandler,
     *,
     serve_origin: typing.Optional[str],
-    serve_path: typing.Optional[str],
+    serve_path: str,
 ) -> django.urls.URLPattern:
     def inngest_api(
         request: django.http.HttpRequest,
@@ -107,7 +116,7 @@ def _create_handler_sync(
         )
 
     return django.urls.path(
-        "api/inngest",
+        serve_path,
         django.views.decorators.csrf.csrf_exempt(inngest_api),
     )
 
@@ -117,7 +126,7 @@ def _create_handler_async(
     handler: comm_lib.CommHandler,
     *,
     serve_origin: typing.Optional[str],
-    serve_path: typing.Optional[str],
+    serve_path: str,
 ) -> django.urls.URLPattern:
     major_version = transforms.get_major_version(django.get_version())
     if isinstance(major_version, Exception):
@@ -166,7 +175,7 @@ def _create_handler_async(
         )
 
     return django.urls.path(
-        "api/inngest",
+        serve_path,
         django.views.decorators.csrf.csrf_exempt(inngest_api),
     )
 

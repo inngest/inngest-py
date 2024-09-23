@@ -1,3 +1,4 @@
+import typing
 import unittest
 
 import flask
@@ -13,12 +14,18 @@ from tests import base
 class TestIntrospection(base.BaseTestIntrospection):
     framework = server_lib.Framework.FLASK
 
-    def _serve(self, client: inngest.Inngest) -> flask.testing.FlaskClient:
+    def _serve(
+        self,
+        client: inngest.Inngest,
+        *,
+        serve_path: typing.Optional[str] = None,
+    ) -> flask.testing.FlaskClient:
         app = flask.Flask(__name__)
         inngest.flask.serve(
             app,
             client,
             self.create_functions(client),
+            serve_path=serve_path,
         )
         return app.test_client()
 
@@ -127,6 +134,24 @@ class TestIntrospection(base.BaseTestIntrospection):
             )
         )
         res = flask_client.get("/api/inngest")
+        assert res.status_code == 200
+        assert res.json == {
+            **self.expected_unauthed_body,
+            "mode": "dev",
+        }
+        assert res.headers.get(server_lib.HeaderKey.SIGNATURE.value) is None
+
+    def test_serve_path(self) -> None:
+        flask_client = self._serve(
+            inngest.Inngest(
+                app_id="my-app",
+                event_key="test",
+                is_production=False,
+                signing_key=self.signing_key,
+            ),
+            serve_path="/custom/path",
+        )
+        res = flask_client.get("/custom/path")
         assert res.status_code == 200
         assert res.json == {
             **self.expected_unauthed_body,
