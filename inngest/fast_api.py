@@ -8,6 +8,7 @@ import fastapi
 from ._internal import client_lib, comm_lib, function, server_lib, transforms
 
 FRAMEWORK = server_lib.Framework.FAST_API
+DEFAULT_SERVE_PATH = "/api/inngest" # should also check environment
 
 
 def serve(
@@ -37,7 +38,10 @@ def serve(
         functions=functions,
     )
 
-    @app.get("/api/inngest")
+    if serve_path is None:
+        serve_path = DEFAULT_SERVE_PATH
+
+    @app.get(serve_path)
     async def get_api_inngest(
         request: fastapi.Request,
     ) -> fastapi.Response:
@@ -56,7 +60,7 @@ def serve(
             ),
         )
 
-    @app.post("/api/inngest")
+    @app.post(serve_path)
     async def post_inngest_api(
         request: fastapi.Request,
     ) -> fastapi.Response:
@@ -75,7 +79,7 @@ def serve(
             ),
         )
 
-    @app.put("/api/inngest")
+    @app.put(serve_path)
     async def put_inngest_api(
         request: fastapi.Request,
     ) -> fastapi.Response:
