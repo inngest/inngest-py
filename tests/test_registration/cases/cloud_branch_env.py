@@ -71,16 +71,16 @@ def create(framework: server_lib.Framework) -> base.Case:
         )
 
         assert json.loads(res.body.decode("utf-8")) == {
-            "app_id": "flask-cloud_branch_env",
+            "app_id": client.app_id,
             "env": "my-env",
-            "framework": "flask",
+            "framework": framework.value,
             "functions": [
                 {
                     "batchEvents": None,
                     "cancel": None,
                     "concurrency": None,
                     "debounce": None,
-                    "id": "flask-cloud_branch_env-foo",
+                    "id": fn.id,
                     "idempotency": None,
                     "name": "foo",
                     "priority": None,
@@ -92,7 +92,7 @@ def create(framework: server_lib.Framework) -> base.Case:
                             "retries": {"attempts": 0},
                             "runtime": {
                                 "type": "http",
-                                "url": "http://test.local?fnId=flask-cloud_branch_env-foo&stepId=step",
+                                "url": f"http://test.local?fnId={fn.id}&stepId=step",
                             },
                         }
                     },
@@ -103,13 +103,13 @@ def create(framework: server_lib.Framework) -> base.Case:
             "inspection": {
                 "schema_version": "2024-05-24",
                 "api_origin": "https://api.inngest.com/",
-                "app_id": "flask-cloud_branch_env",
+                "app_id": client.app_id,
                 "authentication_succeeded": True,
                 "capabilities": {"in_band_sync": "v1", "trust_probe": "v1"},
                 "env": "my-env",
                 "event_api_origin": "https://inn.gs/",
                 "event_key_hash": None,
-                "framework": "flask",
+                "framework": framework.value,
                 "function_count": 1,
                 "has_event_key": False,
                 "has_signing_key": True,
