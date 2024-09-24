@@ -2,7 +2,7 @@ import json
 
 import inngest
 import inngest.fast_api
-from inngest._internal import net, server_lib
+from inngest._internal import server_lib
 
 from . import base
 
@@ -35,23 +35,16 @@ def create(framework: server_lib.Framework) -> base.Case:
         ) -> None:
             pass
 
-        self.serve(client, [fn])
-
         req_body = json.dumps(
             server_lib.InBandSynchronizeRequest(
                 url="http://test.local"
             ).to_dict()
         ).encode("utf-8")
 
-        wrong_signing_key = "signkey-prod-111111"
-        req_sig = net.sign(req_body, wrong_signing_key)
-        if isinstance(req_sig, Exception):
-            raise req_sig
-
+        self.serve(client, [fn])
         res = self.put(
             body=req_body,
             headers={
-                server_lib.HeaderKey.SIGNATURE.value: req_sig,
                 server_lib.HeaderKey.SYNC_KIND.value: server_lib.SyncKind.IN_BAND.value,
             },
         )
@@ -59,6 +52,12 @@ def create(framework: server_lib.Framework) -> base.Case:
         assert res.headers["x-inngest-env"] == "my-env"
         assert res.headers["x-inngest-expected-server-kind"] == "cloud"
         assert "x-inngest-sync-kind" not in res.headers
+
+        assert json.loads(res.body.decode("utf-8")) == {
+            "code": "header_missing",
+            "message": "cannot validate signature in production mode without a x-inngest-signature header",
+            "name": "HeaderMissingError",
+        }
 
     return base.Case(
         name=_TEST_NAME,
