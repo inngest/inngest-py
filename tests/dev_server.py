@@ -1,11 +1,14 @@
 import os
 import signal
 import subprocess
+import sys
 import threading
 import time
 import typing
 
 import httpx
+
+from inngest._internal import transforms
 
 from . import net
 
@@ -24,6 +27,8 @@ else:
 
 
 origin: typing.Final = f"http://{net.HOST}:{PORT}"
+event_key: typing.Final = "VouXNGcCBtu2ZKjX3VgErAQlpAFSfpjPOV9m_qqTIZaTNSraIQv144QboQbq9F9Vg8dnULcPl1HXu0Quwi_Yuh"
+signing_key: typing.Final = "signkey-prod-3dc05ca0a463ecd5530c9ecc0872f6da31286a5031c3477845791cba941cde77"
 
 
 class _DevServer:
@@ -44,13 +49,20 @@ class _DevServer:
     def start(self) -> None:
         if not self._enabled:
             return
-        print("Starting Dev Server")
+        print("Starting Inngest Server")
 
-        stderr: typing.Optional[int] = subprocess.DEVNULL
-        stdout: typing.Optional[int] = subprocess.DEVNULL
+        # Delete this when Inngest Lite adds a "disable persistence" option
+        res = subprocess.run(["rm", "-rf", ".inngest"], check=True)
+        if res.returncode != 0:
+            print(
+                f"Failed to delete .inngest directory: {res.stderr.decode('utf-8')}"
+            )
+
+        stderr: typing.Union[int, typing.TextIO] = subprocess.PIPE
+        stdout: typing.Union[int, typing.TextIO] = subprocess.PIPE
         if self._verbose:
-            stderr = None
-            stdout = None
+            stderr = sys.stderr
+            stdout = sys.stdout
 
         def _run() -> None:
             self._process = subprocess.Popen(
@@ -58,11 +70,13 @@ class _DevServer:
                     "npx",
                     "--yes",
                     "inngest-cli@latest",
-                    "dev",
-                    "--no-discovery",
-                    "--no-poll",
+                    "start",
+                    "--event-key",
+                    event_key,
                     "--port",
                     f"{PORT}",
+                    "--signing-key",
+                    transforms.remove_signing_key_prefix(signing_key),
                 ],
                 stderr=stderr,
                 stdout=stdout,
@@ -71,11 +85,33 @@ class _DevServer:
         self._thread = threading.Thread(target=_run)
         self._thread.start()
 
-        print("Waiting for Dev Server to start")
+        print("Waiting for Inngest Server to start")
         start_time = time.time()
         while True:
-            if time.time() - start_time > 30:
-                raise Exception("timeout waiting for dev server to start")
+            if time.time() - start_time > 2:
+                print("verbose", self._verbose)
+                print("process", self._process)
+                if self._process is not None:
+                    print("stderr", self._process.stderr)
+                    print("stdout", self._process.stdout)
+
+                if (
+                    self._verbose is False
+                    and self._process is not None
+                    and self._process.stderr is not None
+                    and self._process.stdout is not None
+                ):
+                    # Print stderr since we failed. No need to print if we're in
+                    # verbose mode because it already printed when the command
+                    # ran
+                    print("stderr")
+                    for line in self._process.stderr.readlines():
+                        print(line.decode("utf-8").rstrip("\n"))
+                    print("stdout")
+                    for line in self._process.stdout.readlines():
+                        print(line.decode("utf-8").rstrip("\n"))
+
+                raise Exception("timeout waiting for Inngest Server to start")
 
             try:
                 httpx.get(f"http://127.0.0.1:{self.port}")
@@ -86,7 +122,7 @@ class _DevServer:
     def stop(self) -> None:
         if not self._enabled:
             return
-        print("Stopping Dev Server")
+        print("Stopping Inngest Server")
 
         if self._process is None:
             raise Exception("missing process")

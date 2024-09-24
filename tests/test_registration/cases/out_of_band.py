@@ -2,10 +2,12 @@ import dataclasses
 import json
 import typing
 
+import httpx
+
 import inngest
 import inngest.fast_api
 from inngest._internal import const, server_lib
-from tests import http_proxy
+from tests import dev_server, http_proxy
 
 from . import base
 
@@ -39,16 +41,26 @@ def create(framework: server_lib.Framework) -> base.Case:
             method: str,
             path: str,
         ) -> http_proxy.Response:
+            # Need a proxy so that we can assert that the request to the Dev
+            # Server is correct
+
             for k, v in headers.items():
                 state.headers[k] = v
 
             if body is not None:
                 state.body = body
 
+            res = httpx.request(
+                method,
+                f"{dev_server.origin}{path}",
+                content=body,
+                headers={k: v[0] for k, v in headers.items()},
+            )
+
             return http_proxy.Response(
-                body=json.dumps({}).encode("utf-8"),
-                headers={},
-                status_code=200,
+                body=res.content,
+                headers=dict(res.headers),
+                status_code=res.status_code,
             )
 
         mock_cloud = http_proxy.Proxy(on_request).start()
@@ -58,7 +70,7 @@ def create(framework: server_lib.Framework) -> base.Case:
             api_base_url=f"http://localhost:{mock_cloud.port}",
             app_id=f"{framework.value}-{_TEST_NAME}",
             env="my-env",
-            signing_key="signkey-prod-0486c9",
+            signing_key=dev_server.signing_key,
         )
 
         @client.create_function(
@@ -75,7 +87,7 @@ def create(framework: server_lib.Framework) -> base.Case:
         self.serve(client, [fn])
         res = self.put(body={})
         assert res.status_code == 200
-        assert json.loads(res.body.decode("utf-8")) == {}
+        assert json.loads(res.body.decode("utf-8")) == {"ok": True}
 
         assert state.headers.get("authorization") is not None
         assert state.headers.get("x-inngest-env") == ["my-env"]
