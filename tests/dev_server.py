@@ -51,7 +51,9 @@ class _DevServer:
         print("Starting Dev Server")
 
         # Delete this when Inngest Lite adds a "disable persistence" option
-        print(subprocess.run(["rm", "-rf", ".inngest"], check=True))
+        res = subprocess.run(["rm", "-rf", ".inngest"], check=True)
+        if res.returncode != 0:
+            print(f"Failed to delete .inngest directory: {res.stderr}")
 
         stderr: typing.Optional[int] = subprocess.DEVNULL
         stdout: typing.Optional[int] = subprocess.DEVNULL

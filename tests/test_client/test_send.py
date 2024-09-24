@@ -82,8 +82,9 @@ class TestSend(unittest.IsolatedAsyncioTestCase):
         method_name = self._testMethodName
         client = inngest.Inngest(
             app_id=f"{class_name}-{method_name}",
-            event_api_base_url=f"http://localhost:{dev_server.PORT}",
-            is_production=False,
+            event_api_base_url=dev_server.origin,
+            event_key=dev_server.event_key,
+            signing_key=dev_server.signing_key,
         )
 
         sends = []
@@ -112,9 +113,9 @@ class TestSend(unittest.IsolatedAsyncioTestCase):
 
         client = inngest.Inngest(
             app_id="my-app",
-            event_key="event-key-123abc",
-            event_api_base_url=f"http://localhost:{dev_server.PORT}",
-            is_production=False,
+            event_api_base_url=dev_server.origin,
+            event_key=dev_server.event_key,
+            signing_key=dev_server.signing_key,
         )
 
         with self.assertRaises(errors.SendEventsError) as ctx:

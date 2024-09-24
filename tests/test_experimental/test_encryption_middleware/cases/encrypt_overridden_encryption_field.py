@@ -75,13 +75,14 @@ def create(
         client = inngest.Inngest(
             app_id="foo",
             event_api_base_url=dev_server.origin,
-            is_production=False,
+            event_key=dev_server.event_key,
             middleware=[
                 EncryptionMiddleware.factory(
                     _secret_key,
                     event_encryption_field="overridden",
                 )
             ],
+            signing_key=dev_server.signing_key,
         )
 
         # Send an event that contains an encrypted field

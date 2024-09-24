@@ -154,8 +154,9 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
             api_base_url=dev_server.origin,
             app_id="client-middleware-fast-api",
             event_api_base_url=dev_server.origin,
-            is_production=False,
+            event_key=dev_server.event_key,
             middleware=[Middleware],
+            signing_key=dev_server.signing_key,
         )
 
         @client.create_function(
@@ -255,8 +256,9 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
             api_base_url=dev_server.origin,
             app_id="client-middleware-flask",
             event_api_base_url=dev_server.origin,
-            is_production=False,
+            event_key=dev_server.event_key,
             middleware=[Middleware],
+            signing_key=dev_server.signing_key,
         )
 
         @client.create_function(
