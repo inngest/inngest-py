@@ -8,6 +8,8 @@ import tornado.web
 from inngest._internal import (
     client_lib,
     comm_lib,
+    config_lib,
+    const,
     function,
     server_lib,
     transforms,
@@ -36,6 +38,7 @@ def serve(
         serve_origin: Origin to serve the functions from.
         serve_path: Path to serve the functions from.
     """
+
     handler = comm_lib.CommHandler(
         client=client,
         framework=FRAMEWORK,
@@ -115,7 +118,16 @@ def serve(
 
             self.set_status(comm_res.status_code)
 
-    app.add_handlers(r".*", [("/api/inngest", InngestHandler)])
+    app.add_handlers(
+        r".*",
+        [
+            (
+                config_lib.get_serve_path(serve_path)
+                or const.DEFAULT_SERVE_PATH,
+                InngestHandler,
+            )
+        ],
+    )
 
 
 def _parse_query_params(raw: dict[str, list[bytes]]) -> dict[str, str]:

@@ -47,7 +47,7 @@ class Test_create_serve_url(unittest.TestCase):
             serve_origin="https://bar.test",
             serve_path=None,
         )
-        expected = "https://bar-env.test/api/inngest"
+        expected = "https://bar.test/api/inngest"
         assert actual == expected
 
     def test_serve_origin_missing_scheme(self) -> None:
@@ -85,7 +85,7 @@ class Test_create_serve_url(unittest.TestCase):
             serve_origin=None,
             serve_path="/custom/path",
         )
-        expected = "https://foo.test/env/path"
+        expected = "https://foo.test/custom/path"
         assert actual == expected
 
     def test_serve_origin_and_path(self) -> None:

@@ -11,7 +11,15 @@ import django.http
 import django.urls
 import django.views.decorators.csrf
 
-from ._internal import client_lib, comm_lib, function, server_lib, transforms
+from ._internal import (
+    client_lib,
+    comm_lib,
+    config_lib,
+    const,
+    function,
+    server_lib,
+    transforms,
+)
 
 FRAMEWORK = server_lib.Framework.DJANGO
 
@@ -107,7 +115,9 @@ def _create_handler_sync(
         )
 
     return django.urls.path(
-        "api/inngest",
+        _trim_leading_slash(
+            config_lib.get_serve_path(serve_path) or const.DEFAULT_SERVE_PATH
+        ),
         django.views.decorators.csrf.csrf_exempt(inngest_api),
     )
 
@@ -166,7 +176,9 @@ def _create_handler_async(
         )
 
     return django.urls.path(
-        "api/inngest",
+        _trim_leading_slash(
+            config_lib.get_serve_path(serve_path) or const.DEFAULT_SERVE_PATH
+        ),
         django.views.decorators.csrf.csrf_exempt(inngest_api),
     )
 
@@ -185,3 +197,7 @@ def _to_response(
         headers=comm_res.headers,
         status=comm_res.status_code,
     )
+
+
+def _trim_leading_slash(value: str) -> str:
+    return value.lstrip("/")

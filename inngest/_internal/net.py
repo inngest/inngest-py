@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import hmac
 import http
-import os
 import threading
 import time
 import typing
@@ -13,6 +12,7 @@ import httpx
 
 from inngest._internal import (
     async_lib,
+    config_lib,
     const,
     errors,
     server_lib,
@@ -90,8 +90,8 @@ def create_serve_url(
     """
 
     # User can also specify these via env vars. The env vars take precedence.
-    serve_origin = os.getenv(const.EnvKey.SERVE_ORIGIN.value, serve_origin)
-    serve_path = os.getenv(const.EnvKey.SERVE_PATH.value, serve_path)
+    serve_origin = config_lib.get_serve_origin(serve_origin)
+    serve_path = config_lib.get_serve_path(serve_path)
 
     parsed_url = urllib.parse.urlparse(request_url)
     new_scheme = parsed_url.scheme

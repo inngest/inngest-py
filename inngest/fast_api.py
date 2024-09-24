@@ -5,7 +5,15 @@ import typing
 
 import fastapi
 
-from ._internal import client_lib, comm_lib, function, server_lib, transforms
+from ._internal import (
+    client_lib,
+    comm_lib,
+    config_lib,
+    const,
+    function,
+    server_lib,
+    transforms,
+)
 
 FRAMEWORK = server_lib.Framework.FAST_API
 
@@ -37,7 +45,7 @@ def serve(
         functions=functions,
     )
 
-    @app.get("/api/inngest")
+    @app.get(config_lib.get_serve_path(serve_path) or const.DEFAULT_SERVE_PATH)
     async def get_api_inngest(
         request: fastapi.Request,
     ) -> fastapi.Response:
@@ -56,7 +64,7 @@ def serve(
             ),
         )
 
-    @app.post("/api/inngest")
+    @app.post(config_lib.get_serve_path(serve_path) or const.DEFAULT_SERVE_PATH)
     async def post_inngest_api(
         request: fastapi.Request,
     ) -> fastapi.Response:
@@ -75,7 +83,7 @@ def serve(
             ),
         )
 
-    @app.put("/api/inngest")
+    @app.put(config_lib.get_serve_path(serve_path) or const.DEFAULT_SERVE_PATH)
     async def put_inngest_api(
         request: fastapi.Request,
     ) -> fastapi.Response:
