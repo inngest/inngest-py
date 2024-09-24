@@ -21,7 +21,8 @@ _client = inngest.Inngest(
     api_base_url=dev_server.origin,
     app_id=_app_id,
     event_api_base_url=dev_server.origin,
-    is_production=False,
+    event_key=dev_server.event_key,
+    signing_key=dev_server.signing_key,
 )
 
 _cases = cases.create_sync_cases(_client, _framework)

@@ -638,6 +638,7 @@ class _Syncer:
                 errors.RegistrationFailedError(msg.strip()),
             )
             comm_res.status_code = res.status_code
+            return comm_res
 
         return CommResponse(
             body=server_res_body,

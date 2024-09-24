@@ -7,6 +7,8 @@ import typing
 
 import httpx
 
+from inngest._internal import transforms
+
 from . import net
 
 _DEFAULT_DEV_SERVER_PORT = 8288
@@ -24,6 +26,8 @@ else:
 
 
 origin: typing.Final = f"http://{net.HOST}:{PORT}"
+event_key: typing.Final = "VouXNGcCBtu2ZKjX3VgErAQlpAFSfpjPOV9m_qqTIZaTNSraIQv144QboQbq9F9Vg8dnULcPl1HXu0Quwi_Yuh"
+signing_key: typing.Final = "signkey-prod-3dc05ca0a463ecd5530c9ecc0872f6da31286a5031c3477845791cba941cde77"
 
 
 class _DevServer:
@@ -46,6 +50,9 @@ class _DevServer:
             return
         print("Starting Dev Server")
 
+        # Delete this when Inngest Lite adds a "disable persistence" option
+        subprocess.run(["rm", "-rf", ".inngest"], check=True)
+
         stderr: typing.Optional[int] = subprocess.DEVNULL
         stdout: typing.Optional[int] = subprocess.DEVNULL
         if self._verbose:
@@ -58,11 +65,13 @@ class _DevServer:
                     "npx",
                     "--yes",
                     "inngest-cli@latest",
-                    "dev",
-                    "--no-discovery",
-                    "--no-poll",
+                    "start",
+                    "--event-key",
+                    event_key,
                     "--port",
                     f"{PORT}",
+                    "--signing-key",
+                    transforms.remove_signing_key_prefix(signing_key),
                 ],
                 stderr=stderr,
                 stdout=stdout,

@@ -3,6 +3,7 @@
 
 # Build and tools
 *.egg-info/
+.inngest/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
