@@ -35,6 +35,9 @@ jobs:
 
   itest:
     runs-on: "ubuntu-latest"
+    timeout-minutes: 4
+    env:
+      DEV_SERVER_VERBOSE: "1"
     strategy:
       matrix:
         python-version: ["3.9", "3.12"]
