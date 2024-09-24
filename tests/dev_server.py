@@ -88,16 +88,27 @@ class _DevServer:
         print("Waiting for Inngest Server to start")
         start_time = time.time()
         while True:
-            if time.time() - start_time > 30:
+            if time.time() - start_time > 2:
+                print("verbose", self._verbose)
+                print("process", self._process)
+                if self._process is not None:
+                    print("stderr", self._process.stderr)
+                    print("stdout", self._process.stdout)
+
                 if (
                     self._verbose is False
                     and self._process is not None
                     and self._process.stderr is not None
+                    and self._process.stdout is not None
                 ):
                     # Print stderr since we failed. No need to print if we're in
                     # verbose mode because it already printed when the command
                     # ran
+                    print("stderr")
                     for line in self._process.stderr.readlines():
+                        print(line.decode("utf-8").rstrip("\n"))
+                    print("stdout")
+                    for line in self._process.stdout.readlines():
                         print(line.decode("utf-8").rstrip("\n"))
 
                 raise Exception("timeout waiting for Inngest Server to start")
