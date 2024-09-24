@@ -13,7 +13,7 @@ class Error(Exception):
     Base error for all our custom errors
     """
 
-    code: server_lib.ErrorCode
+    code: server_lib.ErrorCode = server_lib.ErrorCode.UNKNOWN
     include_stack: bool = True
     is_retriable: bool = True
 
@@ -170,6 +170,8 @@ class RetryAfterError(Error):
 
 
 class SendEventsError(Error):
+    code = server_lib.ErrorCode.SEND_EVENT_FAILED
+
     def __init__(self, message: str, ids: list[str]) -> None:
         """
         Args:

@@ -18,6 +18,7 @@ class ErrorCode(enum.Enum):
     QUERY_PARAM_MISSING = "query_param_missing"
     REGISTRATION_FAILED = "registration_failed"
     RETRY_AFTER_ERROR = "retry_after_error"
+    SEND_EVENT_FAILED = "send_event_failed"
     SERVER_KIND_MISMATCH = "server_kind_mismatch"
     SIGNING_KEY_UNSPECIFIED = "signing_key_unspecified"
     SIG_VERIFICATION_FAILED = "sig_verification_failed"

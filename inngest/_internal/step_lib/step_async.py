@@ -308,6 +308,12 @@ class Step(base.StepBase):
                     ids=err.ids,
                 )
                 raise err
+            except Exception as err:
+                result = client_models.SendEventsResult(
+                    error=str(err),
+                    ids=[],
+                )
+                raise err
             finally:
                 middleware_err = await self._middleware.after_send_events(
                     result
