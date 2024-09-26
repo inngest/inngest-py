@@ -362,7 +362,8 @@ class CommHandler:
     ) -> typing.Union[CommResponse, Exception]:
         """Handle a PUT request."""
 
-        syncer = _Syncer()
+        self._client.logger.info("Syncing app")
+        syncer = _Syncer(logger=self._client.logger)
 
         if (
             req.headers.get(server_lib.HeaderKey.SYNC_KIND.value)
@@ -392,7 +393,8 @@ class CommHandler:
     ) -> typing.Union[CommResponse, Exception]:
         """Handle a PUT request."""
 
-        syncer = _Syncer()
+        self._client.logger.info("Syncing app")
+        syncer = _Syncer(logger=self._client.logger)
 
         if (
             req.headers.get(server_lib.HeaderKey.SYNC_KIND.value)
@@ -485,6 +487,9 @@ def _build_inspection_response(
 
 
 class _Syncer:
+    def __init__(self, logger: types.Logger) -> None:
+        self._logger = logger
+
     def in_band(
         self,
         handler: CommHandler,
@@ -532,6 +537,8 @@ class _Syncer:
         ).to_dict()
         if isinstance(res_body, Exception):
             return res_body
+
+        self._logger.debug("Responding to in-band sync")
 
         return CommResponse(
             body=res_body,
@@ -657,6 +664,8 @@ class _Syncer:
         if isinstance(prep, CommResponse):
             return prep
 
+        self._logger.debug(f"Sending out-of-band sync request to {prep.url}")
+
         res = await net.fetch_with_auth_fallback(
             handler._client._http_client,
             handler._client._http_client_sync,
@@ -679,6 +688,8 @@ class _Syncer:
             return prep
         if isinstance(prep, CommResponse):
             return prep
+
+        self._logger.debug(f"Sending out-of-band sync request to {prep.url}")
 
         res = net.fetch_with_auth_fallback_sync(
             handler._client._http_client_sync,

@@ -44,7 +44,6 @@ class DigitalOceanSimulator:
 def _create_app(main: _Main) -> flask.Flask:
     app = flask.Flask(__name__)
 
-    @app.route(FULL_PATH, methods=["GET", "POST", "PUT"])
     def handler() -> flask.Response:
         event: dict[str, object] = {
             "http": {
@@ -83,5 +82,13 @@ def _create_app(main: _Main) -> flask.Flask:
             response=body,
             status=status_code,
         )
+
+    @app.route("/", methods=["GET", "POST", "PUT"])
+    def root_handler() -> flask.Response:
+        return handler()
+
+    @app.route(FULL_PATH, methods=["GET", "POST", "PUT"])
+    def full_path_handler() -> flask.Response:
+        return handler()
 
     return app
