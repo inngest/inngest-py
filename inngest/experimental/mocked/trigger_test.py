@@ -245,3 +245,87 @@ class TestTriggerSync(unittest.TestCase):
 
         with pytest.raises(UnstubbedStepError):
             trigger(fn, inngest.Event(name="test"), client)
+
+    def test_retry_step(self) -> None:
+        counter = 0
+
+        @client.create_function(
+            fn_id="test",
+            trigger=inngest.TriggerEvent(event="test"),
+        )
+        def fn(
+            ctx: inngest.Context,
+            step: inngest.StepSync,
+        ) -> str:
+            def a() -> str:
+                nonlocal counter
+                counter += 1
+                if counter < 2:
+                    raise Exception("oh no")
+                return "hi"
+
+            return step.run("a", a)
+
+        res = trigger(fn, inngest.Event(name="test"), client)
+        assert res.status is Status.COMPLETED
+        assert res.output == "hi"
+
+    def test_fail_step(self) -> None:
+        @client.create_function(
+            fn_id="test",
+            retries=0,
+            trigger=inngest.TriggerEvent(event="test"),
+        )
+        def fn(
+            ctx: inngest.Context,
+            step: inngest.StepSync,
+        ) -> None:
+            def a() -> None:
+                raise Exception("oh no")
+
+            step.run("a", a)
+
+        res = trigger(fn, inngest.Event(name="test"), client)
+        assert res.status is Status.FAILED
+        assert res.output is None
+        assert isinstance(res.error, Exception)
+        assert str(res.error) == "oh no"
+
+    def test_retry_fn(self) -> None:
+        counter = 0
+
+        @client.create_function(
+            fn_id="test",
+            trigger=inngest.TriggerEvent(event="test"),
+        )
+        def fn(
+            ctx: inngest.Context,
+            step: inngest.StepSync,
+        ) -> str:
+            nonlocal counter
+            counter += 1
+            if counter < 2:
+                raise Exception("oh no")
+            return "hi"
+
+        res = trigger(fn, inngest.Event(name="test"), client)
+        assert res.status is Status.COMPLETED
+        assert res.output == "hi"
+
+    def test_fail_fn(self) -> None:
+        @client.create_function(
+            fn_id="test",
+            retries=0,
+            trigger=inngest.TriggerEvent(event="test"),
+        )
+        def fn(
+            ctx: inngest.Context,
+            step: inngest.StepSync,
+        ) -> None:
+            raise Exception("oh no")
+
+        res = trigger(fn, inngest.Event(name="test"), client)
+        assert res.status is Status.FAILED
+        assert res.output is None
+        assert isinstance(res.error, Exception)
+        assert str(res.error) == "oh no"

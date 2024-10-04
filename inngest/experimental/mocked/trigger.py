@@ -48,6 +48,11 @@ def trigger(
     stack: list[str] = []
     steps: dict[str, object] = {}
     planned = set[str]()
+    attempt = 0
+
+    max_attempt = 4
+    if fn._opts.retries is not None:
+        max_attempt = fn._opts.retries
 
     while True:
         step_id: typing.Optional[str] = None
@@ -57,9 +62,9 @@ def trigger(
         logger = unittest.mock.Mock()
         request = server_lib.ServerRequest(
             ctx=server_lib.ServerRequestCtx(
-                attempt=0,
+                attempt=attempt,
                 disable_immediate_execution=True,
-                run_id="abc123",
+                run_id="test",
                 stack=server_lib.ServerRequestCtxStack(stack=stack),
             ),
             event=event[0],
@@ -110,16 +115,31 @@ def trigger(
             )
 
         if res.error:
-            return _Result(
-                error=res.error,
-                output=None,
-                status=Status.FAILED,
-            )
+            if attempt >= max_attempt:
+                return _Result(
+                    error=res.error,
+                    output=None,
+                    status=Status.FAILED,
+                )
+
+            attempt += 1
+            continue
 
         if res.multi:
             for step in res.multi:
                 if not step.step:
                     # Unreachable
+                    continue
+
+                if step.error:
+                    if attempt >= max_attempt:
+                        return _Result(
+                            error=step.error,
+                            output=None,
+                            status=Status.FAILED,
+                        )
+
+                    attempt += 1
                     continue
 
                 if step.step.display_name in step_stubs:
