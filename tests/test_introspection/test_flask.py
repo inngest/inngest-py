@@ -1,3 +1,4 @@
+import typing
 import unittest
 
 import flask
@@ -6,19 +7,25 @@ import flask.testing
 
 import inngest
 import inngest.flask
-from inngest._internal import server_lib
+from inngest._internal import net, server_lib
 from tests import base
 
 
 class TestIntrospection(base.BaseTestIntrospection):
     framework = server_lib.Framework.FLASK
 
-    def _serve(self, client: inngest.Inngest) -> flask.testing.FlaskClient:
+    def _serve(
+        self,
+        client: inngest.Inngest,
+        *,
+        serve_path: typing.Optional[str] = None,
+    ) -> flask.testing.FlaskClient:
         app = flask.Flask(__name__)
         inngest.flask.serve(
             app,
             client,
             self.create_functions(client),
+            serve_path=serve_path,
         )
         return app.test_client()
 
@@ -48,20 +55,33 @@ class TestIntrospection(base.BaseTestIntrospection):
                 signing_key=self.signing_key,
             )
         )
+
+        req_sig = net.sign(b"", self.signing_key)
+        if isinstance(req_sig, Exception):
+            raise req_sig
+
         res = flask_client.get(
             "/api/inngest",
             headers={
-                server_lib.HeaderKey.SIGNATURE.value: self.create_signature(),
+                server_lib.HeaderKey.SIGNATURE.value: req_sig,
             },
         )
+
         assert res.status_code == 200
         assert res.json == {
             **self.expected_authed_body,
             "has_signing_key_fallback": True,
         }
-        self.validate_signature(
-            res.headers[server_lib.HeaderKey.SIGNATURE.value],
-            res.get_data(),
+
+        assert isinstance(
+            net.validate_sig(
+                body=res.get_data(),
+                headers=res.headers,
+                mode=server_lib.ServerKind.CLOUD,
+                signing_key=self.signing_key,
+                signing_key_fallback=None,
+            ),
+            str,
         )
 
     def test_cloud_mode_with_signature_fallback(self) -> None:
@@ -77,12 +97,15 @@ class TestIntrospection(base.BaseTestIntrospection):
                 signing_key=self.signing_key,
             )
         )
+
+        req_sig = net.sign(b"", signing_key_fallback)
+        if isinstance(req_sig, Exception):
+            raise req_sig
+
         res = flask_client.get(
             "/api/inngest",
             headers={
-                server_lib.HeaderKey.SIGNATURE.value: self.create_signature(
-                    signing_key_fallback
-                ),
+                server_lib.HeaderKey.SIGNATURE.value: req_sig,
             },
         )
         assert res.status_code == 200
@@ -90,10 +113,15 @@ class TestIntrospection(base.BaseTestIntrospection):
             **self.expected_authed_body,
             "has_signing_key_fallback": True,
         }
-        self.validate_signature(
-            res.headers[server_lib.HeaderKey.SIGNATURE.value],
-            res.get_data(),
-            signing_key_fallback,
+        assert isinstance(
+            net.validate_sig(
+                body=res.get_data(),
+                headers=res.headers,
+                mode=server_lib.ServerKind.CLOUD,
+                signing_key=signing_key_fallback,
+                signing_key_fallback=None,
+            ),
+            str,
         )
 
     def test_dev_mode_with_no_signature(self) -> None:
@@ -106,6 +134,24 @@ class TestIntrospection(base.BaseTestIntrospection):
             )
         )
         res = flask_client.get("/api/inngest")
+        assert res.status_code == 200
+        assert res.json == {
+            **self.expected_unauthed_body,
+            "mode": "dev",
+        }
+        assert res.headers.get(server_lib.HeaderKey.SIGNATURE.value) is None
+
+    def test_serve_path(self) -> None:
+        flask_client = self._serve(
+            inngest.Inngest(
+                app_id="my-app",
+                event_key="test",
+                is_production=False,
+                signing_key=self.signing_key,
+            ),
+            serve_path="/custom/path",
+        )
+        res = flask_client.get("/custom/path")
         assert res.status_code == 200
         assert res.json == {
             **self.expected_unauthed_body,

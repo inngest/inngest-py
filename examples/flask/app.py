@@ -1,15 +1,13 @@
-import flask
-from src.inngest import inngest_client
+from src.flask import app
+from src.inngest.client import inngest_client
+from src.inngest.functions import hello
 
 import inngest.flask
-from examples import functions
-
-app = flask.Flask(__name__)
-
 
 inngest.flask.serve(
     app,
     inngest_client,
-    functions.create_sync_functions(inngest_client),
+    [hello],
 )
+
 app.run(port=8000)

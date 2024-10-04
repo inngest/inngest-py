@@ -1,3 +1,5 @@
+import json
+
 import inngest
 import inngest.fast_api
 from inngest._internal import server_lib
@@ -34,14 +36,15 @@ def create(framework: server_lib.Framework) -> base.Case:
         self.serve(client, [fn])
 
         headers = {
-            server_lib.HeaderKey.SERVER_KIND.value.lower(): server_lib.ServerKind.DEV_SERVER.value,
+            server_lib.HeaderKey.SERVER_KIND.value: server_lib.ServerKind.DEV_SERVER.value,
         }
-        res = self.register(headers)
+        res = self.put(body={}, headers=headers)
         assert res.status_code == 400
-        assert isinstance(res.body, dict)
-        assert (
-            res.body["code"] == server_lib.ErrorCode.SERVER_KIND_MISMATCH.value
-        )
+
+        assert json.loads(res.body.decode("utf-8")) == {
+            "code": "server_kind_mismatch",
+            "message": "Sync rejected since it's from a Dev Server but expected Cloud",
+        }
 
     return base.Case(
         name=_TEST_NAME,

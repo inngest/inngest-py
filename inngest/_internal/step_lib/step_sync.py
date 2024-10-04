@@ -293,6 +293,12 @@ class StepSync(base.StepBase):
                     ids=err.ids,
                 )
                 raise err
+            except Exception as err:
+                result = client_models.SendEventsResult(
+                    error=str(err),
+                    ids=[],
+                )
+                raise err
             finally:
                 middleware_err = self._middleware.after_send_events_sync(result)
                 if isinstance(middleware_err, Exception):

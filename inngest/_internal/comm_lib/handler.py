@@ -11,6 +11,7 @@ import httpx
 from inngest._internal import (
     client_lib,
     const,
+    env_lib,
     errors,
     execution_lib,
     function,
@@ -42,6 +43,10 @@ class CommHandler:
         framework: server_lib.Framework,
         functions: list[function.Function],
     ) -> None:
+        # TODO: Default to true once in-band syncing is stable
+        self._allow_in_band_sync = env_lib.is_true(
+            const.EnvKey.ALLOW_IN_BAND_SYNC,
+        )
         self._client = client
         self._mode = client._mode
         self._api_origin = client.api_origin
@@ -332,118 +337,22 @@ class CommHandler:
                 status_code=403,
             )
 
-        res_body: typing.Union[
-            server_lib.AuthenticatedInspection,
-            server_lib.UnauthenticatedInspection,
-        ]
-
-        is_signed_and_valid = isinstance(request_signing_key, str)
-        # Validate the request signature.
-        err = net.validate_request(
-            body=req.body,
-            headers=req.headers,
-            mode=self._client._mode,
-            signing_key=self._signing_key,
-            signing_key_fallback=self._signing_key_fallback,
+        inspection = _build_inspection_response(
+            self,
+            req,
+            request_signing_key,
         )
-        if (
-            self._client._mode != server_lib.ServerKind.CLOUD
-            or is_signed_and_valid is False
-        ):
-            authentication_succeeded = None
-            if isinstance(err, Exception):
-                authentication_succeeded = False
+        if isinstance(inspection, Exception):
+            return inspection
 
-            res_body = server_lib.UnauthenticatedInspection(
-                authentication_succeeded=authentication_succeeded,
-                function_count=len(self._fns),
-                has_event_key=self._client.event_key is not None,
-                has_signing_key=self._signing_key is not None,
-                has_signing_key_fallback=self._signing_key_fallback is not None,
-                mode=self._mode,
-            )
-        elif is_signed_and_valid is True:
-            event_key_hash = (
-                transforms.hash_event_key(self._client.event_key)
-                if self._client.event_key
-                else None
-            )
-
-            signing_key_hash = (
-                transforms.hash_signing_key(self._signing_key)
-                if self._signing_key
-                else None
-            )
-
-            signing_key_fallback_hash = (
-                transforms.hash_signing_key(self._signing_key_fallback)
-                if self._signing_key_fallback
-                else None
-            )
-
-            res_body = server_lib.AuthenticatedInspection(
-                api_origin=self._client.api_origin,
-                app_id=self._client.app_id,
-                authentication_succeeded=True,
-                env=self._client.env,
-                event_api_origin=self._client.event_api_origin,
-                event_key_hash=event_key_hash,
-                framework=self._framework.value,
-                function_count=len(self._fns),
-                has_event_key=self._client.event_key is not None,
-                has_signing_key=self._signing_key is not None,
-                has_signing_key_fallback=self._signing_key_fallback is not None,
-                mode=self._mode,
-                serve_origin=req.serve_origin,
-                serve_path=req.serve_path,
-                signing_key_fallback_hash=signing_key_fallback_hash,
-                signing_key_hash=signing_key_hash,
-            )
-
-        body_json = res_body.to_dict()
-        if isinstance(req.body, Exception):
-            body_json = {
-                "error": "failed to serialize inspection data",
-            }
+        res_body = inspection.to_dict()
+        if isinstance(res_body, Exception):
+            return res_body
 
         return CommResponse(
-            body=body_json,
+            body=res_body,
             status_code=200,
         )
-
-    def _parse_registration_response(
-        self,
-        server_res: httpx.Response,
-    ) -> CommResponse:
-        try:
-            server_res_body = server_res.json()
-        except Exception:
-            return CommResponse.from_error(
-                self._client.logger,
-                errors.RegistrationFailedError("response is not valid JSON"),
-            )
-
-        if not isinstance(server_res_body, dict):
-            return CommResponse.from_error(
-                self._client.logger,
-                errors.RegistrationFailedError("response is not an object"),
-            )
-
-        if server_res.status_code < 400:
-            return CommResponse(
-                body=server_res_body,
-                status_code=http.HTTPStatus.OK,
-            )
-
-        msg = server_res_body.get("error")
-        if not isinstance(msg, str):
-            msg = "registration failed"
-        comm_res = CommResponse.from_error(
-            self._client.logger,
-            errors.RegistrationFailedError(msg.strip()),
-        )
-        comm_res.status_code = server_res.status_code
-        return comm_res
 
     @wrap_handler(require_signature=False)
     async def put(
@@ -451,46 +360,30 @@ class CommHandler:
         req: CommRequest,
         request_signing_key: types.MaybeError[typing.Optional[str]],
     ) -> typing.Union[CommResponse, Exception]:
-        """Handle a registration call."""
+        """Handle a PUT request."""
 
-        app_url = net.create_serve_url(
-            request_url=req.request_url,
-            serve_origin=req.serve_origin,
-            serve_path=req.serve_path,
-        )
+        self._client.logger.info("Syncing app")
+        syncer = _Syncer(logger=self._client.logger)
 
-        server_kind = transforms.get_server_kind(req.headers)
-        if isinstance(server_kind, Exception):
-            self._client.logger.error(server_kind)
-            server_kind = None
+        if (
+            req.headers.get(server_lib.HeaderKey.SYNC_KIND.value)
+            == server_lib.SyncKind.IN_BAND.value
+            and self._allow_in_band_sync
+        ):
+            err: typing.Optional[Exception] = None
+            if isinstance(request_signing_key, Exception):
+                err = request_signing_key
+            elif request_signing_key is None:
+                err = Exception("request must be signed for in-band sync")
+            if err is not None:
+                return CommResponse.from_error(
+                    self._client.logger,
+                    err,
+                    status=http.HTTPStatus.UNAUTHORIZED,
+                )
+            return syncer.in_band(self, req, request_signing_key)
 
-        comm_res = self._validate_registration(server_kind)
-        if comm_res is not None:
-            return comm_res
-
-        params = parse_query_params(req.query_params)
-        if isinstance(params, Exception):
-            return params
-
-        outgoing_req = self._build_register_request(
-            app_url=app_url,
-            server_kind=server_kind,
-            sync_id=params.sync_id,
-        )
-        if isinstance(outgoing_req, Exception):
-            return outgoing_req
-
-        res = await net.fetch_with_auth_fallback(
-            self._client._http_client,
-            self._client._http_client_sync,
-            outgoing_req,
-            signing_key=self._signing_key,
-            signing_key_fallback=self._signing_key_fallback,
-        )
-        if isinstance(res, Exception):
-            return res
-
-        return self._parse_registration_response(res)
+        return await syncer.out_of_band(self, req)
 
     @wrap_handler_sync(require_signature=False)
     def put_sync(
@@ -498,8 +391,167 @@ class CommHandler:
         req: CommRequest,
         request_signing_key: types.MaybeError[typing.Optional[str]],
     ) -> typing.Union[CommResponse, Exception]:
-        """Handle a registration call."""
+        """Handle a PUT request."""
 
+        self._client.logger.info("Syncing app")
+        syncer = _Syncer(logger=self._client.logger)
+
+        if (
+            req.headers.get(server_lib.HeaderKey.SYNC_KIND.value)
+            == server_lib.SyncKind.IN_BAND.value
+            and self._allow_in_band_sync
+        ):
+            err: typing.Optional[Exception] = None
+            if isinstance(request_signing_key, Exception):
+                err = request_signing_key
+            elif request_signing_key is None:
+                err = Exception("request must be signed for in-band sync")
+            if err is not None:
+                return CommResponse.from_error(
+                    self._client.logger,
+                    err,
+                    status=http.HTTPStatus.UNAUTHORIZED,
+                )
+
+            return syncer.in_band(self, req, request_signing_key)
+
+        return syncer.out_of_band_sync(self, req)
+
+
+def _build_inspection_response(
+    handler: CommHandler,
+    req: CommRequest,
+    request_signing_key: types.MaybeError[typing.Optional[str]],
+) -> types.MaybeError[
+    typing.Union[
+        server_lib.AuthenticatedInspection,
+        server_lib.UnauthenticatedInspection,
+    ]
+]:
+    server_kind = transforms.get_server_kind(req.headers)
+    if isinstance(server_kind, Exception):
+        handler._client.logger.error(server_kind)
+        server_kind = None
+
+    is_signed = isinstance(request_signing_key, str)
+    if is_signed:
+        event_key_hash = (
+            transforms.hash_event_key(handler._client.event_key)
+            if handler._client.event_key
+            else None
+        )
+
+        signing_key_hash = (
+            transforms.hash_signing_key(handler._signing_key)
+            if handler._signing_key
+            else None
+        )
+
+        signing_key_fallback_hash = (
+            transforms.hash_signing_key(handler._signing_key_fallback)
+            if handler._signing_key_fallback
+            else None
+        )
+
+        return server_lib.AuthenticatedInspection(
+            api_origin=handler._client.api_origin,
+            app_id=handler._client.app_id,
+            authentication_succeeded=True,
+            env=handler._client.env,
+            event_api_origin=handler._client.event_api_origin,
+            event_key_hash=event_key_hash,
+            framework=handler._framework.value,
+            function_count=len(handler._fns),
+            has_event_key=handler._client.event_key is not None,
+            has_signing_key=handler._signing_key is not None,
+            has_signing_key_fallback=handler._signing_key_fallback is not None,
+            mode=handler._mode,
+            serve_origin=req.serve_origin,
+            serve_path=req.serve_path,
+            signing_key_fallback_hash=signing_key_fallback_hash,
+            signing_key_hash=signing_key_hash,
+        )
+
+    authentication_succeeded: typing.Optional[typing.Literal[False]] = None
+    if isinstance(request_signing_key, Exception):
+        authentication_succeeded = False
+
+    return server_lib.UnauthenticatedInspection(
+        authentication_succeeded=authentication_succeeded,
+        function_count=len(handler._fns),
+        has_event_key=handler._client.event_key is not None,
+        has_signing_key=handler._signing_key is not None,
+        has_signing_key_fallback=handler._signing_key_fallback is not None,
+        mode=handler._mode,
+    )
+
+
+class _Syncer:
+    def __init__(self, logger: types.Logger) -> None:
+        self._logger = logger
+
+    def in_band(
+        self,
+        handler: CommHandler,
+        req: CommRequest,
+        request_signing_key: types.MaybeError[typing.Optional[str]],
+    ) -> types.MaybeError[CommResponse]:
+        if not isinstance(request_signing_key, str):
+            # This should be checked earlier, but we'll also check it here since
+            # it's critical
+            return Exception("request must be signed for in-band sync")
+
+        req_body = server_lib.InBandSynchronizeRequest.from_raw(req.body)
+        if isinstance(req_body, Exception):
+            return req_body
+
+        app_url = net.create_serve_url(
+            request_url=req_body.url,
+            serve_origin=req.serve_origin,
+            serve_path=req.serve_path,
+        )
+
+        fn_configs = handler.get_function_configs(app_url)
+        if isinstance(fn_configs, Exception):
+            return fn_configs
+
+        inspection = _build_inspection_response(
+            handler,
+            req,
+            request_signing_key,
+        )
+        if isinstance(inspection, Exception):
+            return inspection
+        if isinstance(inspection, server_lib.UnauthenticatedInspection):
+            # Unreachable
+            return Exception("request must be signed for in-band sync")
+
+        res_body = server_lib.InBandSynchronizeResponse(
+            app_id=handler._client.app_id,
+            env=handler._client.env,
+            framework=handler._framework,
+            functions=fn_configs,
+            inspection=inspection,
+            platform=None,
+            url=app_url,
+        ).to_dict()
+        if isinstance(res_body, Exception):
+            return res_body
+
+        self._logger.debug("Responding to in-band sync")
+
+        return CommResponse(
+            body=res_body,
+            headers={
+                server_lib.HeaderKey.SYNC_KIND.value: server_lib.SyncKind.IN_BAND.value,
+            },
+        )
+
+    def _create_out_of_band_request(
+        self,
+        handler: CommHandler,
+        req: CommRequest,
+    ) -> types.MaybeError[typing.Union[CommResponse, httpx.Request]]:
         app_url = net.create_serve_url(
             request_url=req.request_url,
             serve_origin=req.serve_origin,
@@ -508,52 +560,144 @@ class CommHandler:
 
         server_kind = transforms.get_server_kind(req.headers)
         if isinstance(server_kind, Exception):
-            self._client.logger.error(server_kind)
+            handler._client.logger.error(server_kind)
             server_kind = None
 
-        comm_res = self._validate_registration(server_kind)
-        if comm_res is not None:
-            return comm_res
-
-        params = parse_query_params(req.query_params)
-        if isinstance(params, Exception):
-            return params
-
-        outgoing_req = self._build_register_request(
-            app_url=app_url,
-            server_kind=server_kind,
-            sync_id=params.sync_id,
-        )
-        if isinstance(outgoing_req, Exception):
-            return outgoing_req
-
-        res = net.fetch_with_auth_fallback_sync(
-            self._client._http_client_sync,
-            outgoing_req,
-            signing_key=self._signing_key,
-            signing_key_fallback=self._signing_key_fallback,
-        )
-        if isinstance(res, Exception):
-            return res
-
-        return self._parse_registration_response(res)
-
-    def _validate_registration(
-        self,
-        server_kind: typing.Optional[server_lib.ServerKind],
-    ) -> typing.Optional[CommResponse]:
-        if server_kind is not None and server_kind != self._mode:
+        if server_kind is not None and server_kind != handler._mode:
             msg: str
             if server_kind == server_lib.ServerKind.DEV_SERVER:
                 msg = "Sync rejected since it's from a Dev Server but expected Cloud"
             else:
                 msg = "Sync rejected since it's from Cloud but expected Dev Server"
 
-            self._client.logger.error(msg)
+            handler._client.logger.error(msg)
             return CommResponse.from_error_code(
                 server_lib.ErrorCode.SERVER_KIND_MISMATCH,
                 msg,
                 http.HTTPStatus.BAD_REQUEST,
             )
 
-        return None
+        params = parse_query_params(req.query_params)
+        if isinstance(params, Exception):
+            return params
+
+        registration_url = urllib.parse.urljoin(
+            handler._api_origin,
+            "/fn/register",
+        )
+
+        fn_configs = handler.get_function_configs(app_url)
+        if isinstance(fn_configs, Exception):
+            return fn_configs
+
+        body = server_lib.SynchronizeRequest(
+            app_name=handler._client.app_id,
+            deploy_type=server_lib.DeployType.PING,
+            framework=handler._framework,
+            functions=fn_configs,
+            sdk=f"{const.LANGUAGE}:v{const.VERSION}",
+            url=app_url,
+            v="0.1",
+        ).to_dict()
+        if isinstance(body, Exception):
+            return body
+
+        headers = net.create_headers(
+            env=handler._client.env,
+            framework=handler._framework,
+            server_kind=server_kind,
+        )
+
+        outgoing_params = {}
+        if params.sync_id is not None:
+            outgoing_params[
+                server_lib.QueryParamKey.SYNC_ID.value
+            ] = params.sync_id
+
+        return handler._client._http_client_sync.build_request(
+            "POST",
+            registration_url,
+            headers=headers,
+            json=transforms.deep_strip_none(body),
+            params=outgoing_params,
+            timeout=30,
+        )
+
+    def _parse_out_of_band_response(
+        self,
+        handler: CommHandler,
+        res: httpx.Response,
+    ) -> types.MaybeError[CommResponse]:
+        try:
+            server_res_body = res.json()
+        except Exception:
+            return errors.RegistrationFailedError("response is not valid JSON")
+
+        if not isinstance(server_res_body, dict):
+            return errors.RegistrationFailedError("response is not an object")
+
+        if res.status_code >= 400:
+            msg = server_res_body.get("error")
+            if not isinstance(msg, str):
+                msg = "registration failed"
+            comm_res = CommResponse.from_error(
+                handler._client.logger,
+                errors.RegistrationFailedError(msg.strip()),
+            )
+            comm_res.status_code = res.status_code
+
+        return CommResponse(
+            body=server_res_body,
+            headers={
+                server_lib.HeaderKey.SYNC_KIND.value: server_lib.SyncKind.OUT_OF_BAND.value,
+            },
+        )
+
+    async def out_of_band(
+        self,
+        handler: CommHandler,
+        req: CommRequest,
+    ) -> types.MaybeError[CommResponse]:
+        prep = self._create_out_of_band_request(handler, req)
+        if isinstance(prep, Exception):
+            return prep
+        if isinstance(prep, CommResponse):
+            return prep
+
+        self._logger.debug(f"Sending out-of-band sync request to {prep.url}")
+
+        res = await net.fetch_with_auth_fallback(
+            handler._client._http_client,
+            handler._client._http_client_sync,
+            prep,
+            signing_key=handler._signing_key,
+            signing_key_fallback=handler._signing_key_fallback,
+        )
+        if isinstance(res, Exception):
+            return res
+
+        return self._parse_out_of_band_response(handler, res)
+
+    def out_of_band_sync(
+        self,
+        handler: CommHandler,
+        req: CommRequest,
+    ) -> types.MaybeError[CommResponse]:
+        prep = self._create_out_of_band_request(handler, req)
+        if isinstance(prep, Exception):
+            return prep
+        if isinstance(prep, CommResponse):
+            return prep
+
+        self._logger.debug(f"Sending out-of-band sync request to {prep.url}")
+
+        res = net.fetch_with_auth_fallback_sync(
+            handler._client._http_client_sync,
+            prep,
+            signing_key=handler._signing_key,
+            signing_key_fallback=handler._signing_key_fallback,
+        )
+        if isinstance(res, Exception):
+            return res
+
+        return self._parse_out_of_band_response(handler, res)

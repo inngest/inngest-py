@@ -10,8 +10,10 @@ on:
     paths:
       - ".github/**"
       - "Makefile"
+      - "constraints.txt"
       - "examples/**"
       - "inngest/**"
+      - "pyproject.toml"
       - "tests/**"
 
 jobs:

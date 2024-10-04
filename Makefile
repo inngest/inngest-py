@@ -16,7 +16,7 @@ format-check: check-venv
 	@ruff format .
 
 install: check-venv
-	@pip install '.[extra]' -c constraints.txt
+	@pip install -e '.[extra]' -c constraints.txt
 
 itest: check-venv
 	@pytest -n 4 -v tests

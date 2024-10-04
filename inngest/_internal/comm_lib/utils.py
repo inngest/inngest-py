@@ -76,7 +76,7 @@ def wrap_handler(
         ) -> CommResponse:
             req.headers = net.normalize_headers(req.headers)
 
-            request_signing_key = net.validate_request(
+            request_signing_key = net.validate_sig(
                 body=req.body,
                 headers=req.headers,
                 mode=self._client._mode,
@@ -145,7 +145,7 @@ def wrap_handler_sync(
         ) -> CommResponse:
             req.headers = net.normalize_headers(req.headers)
 
-            request_signing_key = net.validate_request(
+            request_signing_key = net.validate_sig(
                 body=req.body,
                 headers=req.headers,
                 mode=self._client._mode,

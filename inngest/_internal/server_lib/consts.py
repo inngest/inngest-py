@@ -18,6 +18,7 @@ class ErrorCode(enum.Enum):
     QUERY_PARAM_MISSING = "query_param_missing"
     REGISTRATION_FAILED = "registration_failed"
     RETRY_AFTER_ERROR = "retry_after_error"
+    SEND_EVENT_FAILED = "send_event_failed"
     SERVER_KIND_MISMATCH = "server_kind_mismatch"
     SIGNING_KEY_UNSPECIFIED = "signing_key_unspecified"
     SIG_VERIFICATION_FAILED = "sig_verification_failed"
@@ -44,19 +45,20 @@ class Framework(enum.Enum):
 
 
 class HeaderKey(enum.Enum):
-    AUTHORIZATION = "Authorization"
-    CONTENT_TYPE = "Content-Type"
-    ENV = "X-Inngest-Env"
-    EXPECTED_SERVER_KIND = "X-Inngest-Expected-Server-Kind"
-    FRAMEWORK = "X-Inngest-Framework"
-    NO_RETRY = "X-Inngest-No-Retry"
-    REQUEST_VERSION = "X-Inngest-Req-Version"
-    RETRY_AFTER = "Retry-After"
-    SDK = "X-Inngest-SDK"
-    SERVER_KIND = "X-Inngest-Server-Kind"
-    SERVER_TIMING = "Server-Timing"
-    SIGNATURE = "X-Inngest-Signature"
-    USER_AGENT = "User-Agent"
+    AUTHORIZATION = "authorization"
+    CONTENT_TYPE = "content-type"
+    ENV = "x-inngest-env"
+    EXPECTED_SERVER_KIND = "x-inngest-expected-server-kind"
+    FRAMEWORK = "x-inngest-framework"
+    NO_RETRY = "x-inngest-no-retry"
+    REQUEST_VERSION = "x-inngest-req-version"
+    RETRY_AFTER = "retry-after"
+    SDK = "x-inngest-sdk"
+    SERVER_KIND = "x-inngest-server-kind"
+    SERVER_TIMING = "server-timing"
+    SIGNATURE = "x-inngest-signature"
+    SYNC_KIND = "x-inngest-sync-kind"
+    USER_AGENT = "user-agent"
 
 
 class InternalEvents(enum.Enum):
@@ -86,6 +88,11 @@ class Probe(enum.Enum):
 class ServerKind(enum.Enum):
     CLOUD = "cloud"
     DEV_SERVER = "dev"
+
+
+class SyncKind(enum.Enum):
+    IN_BAND = "in_band"
+    OUT_OF_BAND = "out_of_band"
 
 
 # If the Server sends this step ID then it isn't targeting a specific step

@@ -47,7 +47,7 @@ class Test_create_serve_url(unittest.TestCase):
             serve_origin="https://bar.test",
             serve_path=None,
         )
-        expected = "https://bar-env.test/api/inngest"
+        expected = "https://bar.test/api/inngest"
         assert actual == expected
 
     def test_serve_origin_missing_scheme(self) -> None:
@@ -85,7 +85,7 @@ class Test_create_serve_url(unittest.TestCase):
             serve_origin=None,
             serve_path="/custom/path",
         )
-        expected = "https://foo.test/env/path"
+        expected = "https://foo.test/custom/path"
         assert actual == expected
 
     def test_serve_origin_and_path(self) -> None:
@@ -109,7 +109,7 @@ class Test_RequestSignature(unittest.TestCase):
         }
 
         assert not isinstance(
-            net.validate_request(
+            net.validate_sig(
                 body=body,
                 headers=headers,
                 mode=server_lib.ServerKind.CLOUD,
@@ -128,7 +128,7 @@ class Test_RequestSignature(unittest.TestCase):
         }
 
         assert not isinstance(
-            net.validate_request(
+            net.validate_sig(
                 body=b'{"msg":"a \\u0026 b"}',
                 headers=headers,
                 mode=server_lib.ServerKind.CLOUD,
@@ -153,7 +153,7 @@ class Test_RequestSignature(unittest.TestCase):
 
         body = json.dumps({"msg": "you've been hacked"}).encode("utf-8")
 
-        validation = net.validate_request(
+        validation = net.validate_sig(
             body=body,
             headers=headers,
             mode=server_lib.ServerKind.CLOUD,
@@ -177,7 +177,7 @@ class Test_RequestSignature(unittest.TestCase):
         }
 
         assert not isinstance(
-            net.validate_request(
+            net.validate_sig(
                 body=body,
                 headers=headers,
                 mode=server_lib.ServerKind.CLOUD,
@@ -201,7 +201,7 @@ class Test_RequestSignature(unittest.TestCase):
         }
 
         assert isinstance(
-            net.validate_request(
+            net.validate_sig(
                 body=body,
                 headers=headers,
                 mode=server_lib.ServerKind.CLOUD,
@@ -251,7 +251,7 @@ class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
             nonlocal req_count
             req_count += 1
 
-            actual_token = request.headers.get("Authorization")
+            actual_token = request.headers.get("authorization")
             if actual_token is None:
                 return httpx.Response(401, content=b"", request=request)
             expected_token = (
@@ -298,7 +298,7 @@ class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
             nonlocal req_count
             req_count += 1
 
-            actual_token = request.headers.get("Authorization")
+            actual_token = request.headers.get("authorization")
             if actual_token is None:
                 return httpx.Response(401, content=b"", request=request)
             expected_token = (
@@ -345,7 +345,7 @@ class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
             nonlocal req_count
             req_count += 1
 
-            actual_token = request.headers.get("Authorization")
+            actual_token = request.headers.get("authorization")
             if actual_token is None:
                 return httpx.Response(401, content=b"", request=request)
             expected_token = (
@@ -393,7 +393,7 @@ class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
             nonlocal req_count
             req_count += 1
 
-            actual_token = request.headers.get("Authorization")
+            actual_token = request.headers.get("authorization")
             if actual_token is not None:
                 return httpx.Response(500, content=b"", request=request)
 

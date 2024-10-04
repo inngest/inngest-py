@@ -8,9 +8,10 @@ import flask
 from inngest._internal import (
     client_lib,
     comm_lib,
+    config_lib,
+    const,
     function,
     server_lib,
-    transforms,
 )
 
 FRAMEWORK = server_lib.Framework.FLASK
@@ -73,10 +74,13 @@ def _create_handler_async(
     serve_origin: typing.Optional[str],
     serve_path: typing.Optional[str],
 ) -> None:
-    @app.route("/api/inngest", methods=["GET", "POST", "PUT"])
+    @app.route(
+        config_lib.get_serve_path(serve_path) or const.DEFAULT_SERVE_PATH,
+        methods=["GET", "POST", "PUT"],
+    )
     async def inngest_api() -> typing.Union[flask.Response, str]:
         comm_req = comm_lib.CommRequest(
-            body=flask.request.data,
+            body=_get_body_bytes(),
             headers=dict(flask.request.headers.items()),
             query_params=flask.request.args,
             raw_request=flask.request,
@@ -115,10 +119,13 @@ def _create_handler_sync(
     serve_origin: typing.Optional[str],
     serve_path: typing.Optional[str],
 ) -> None:
-    @app.route("/api/inngest", methods=["GET", "POST", "PUT"])
+    @app.route(
+        config_lib.get_serve_path(serve_path) or const.DEFAULT_SERVE_PATH,
+        methods=["GET", "POST", "PUT"],
+    )
     def inngest_api() -> typing.Union[flask.Response, str]:
         comm_req = comm_lib.CommRequest(
-            body=flask.request.data,
+            body=_get_body_bytes(),
             headers=dict(flask.request.headers.items()),
             query_params=flask.request.args,
             raw_request=flask.request,
@@ -149,17 +156,22 @@ def _create_handler_sync(
         return ""
 
 
+def _get_body_bytes() -> bytes:
+    flask.request.get_data(as_text=True)
+    return flask.request.data
+
+
 def _to_response(
     client: client_lib.Inngest,
     comm_res: comm_lib.CommResponse,
 ) -> flask.Response:
-    body = transforms.dump_json(comm_res.body)
+    body = comm_res.body_bytes()
     if isinstance(body, Exception):
         comm_res = comm_lib.CommResponse.from_error(client.logger, body)
-        body = json.dumps(comm_res.body)
+        body = json.dumps(comm_res.body).encode("utf-8")
 
     return flask.Response(
         headers=comm_res.headers,
-        response=body.encode("utf-8"),
+        response=body,
         status=comm_res.status_code,
     )

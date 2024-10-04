@@ -3,10 +3,10 @@ import asyncio
 import tornado
 import tornado.autoreload
 import tornado.web
-from src.inngest import inngest_client
+from src.inngest.client import inngest_client
+from src.inngest.functions import hello
 
 import inngest.tornado
-from examples import functions
 
 
 async def main() -> None:
@@ -14,7 +14,7 @@ async def main() -> None:
     inngest.tornado.serve(
         app,
         inngest_client,
-        functions.create_sync_functions(inngest_client),
+        [hello],
     )
 
     app.listen(8000)
