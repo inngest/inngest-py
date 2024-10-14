@@ -14,7 +14,11 @@ from .consts import (
     SyncKind,
 )
 from .event import Event
-from .execution_request import ServerRequest
+from .execution_request import (
+    ServerRequest,
+    ServerRequestCtx,
+    ServerRequestCtxStack,
+)
 from .inspection import AuthenticatedInspection, UnauthenticatedInspection
 from .registration import (
     Batch,
@@ -62,6 +66,8 @@ __all__ = [
     "Runtime",
     "ServerKind",
     "ServerRequest",
+    "ServerRequestCtx",
+    "ServerRequestCtxStack",
     "Step",
     "SyncKind",
     "Throttle",
