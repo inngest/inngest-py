@@ -62,7 +62,7 @@ class _DevServer:
                 [
                     "npx",
                     "--yes",
-                    "inngest-cli@1.0.4",
+                    "inngest-cli@latest",
                     "dev",
                     "--no-discovery",
                     "--no-poll",
