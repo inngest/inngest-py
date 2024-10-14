@@ -5,12 +5,12 @@ import unittest
 import pytest
 
 import inngest
-from inngest.experimental.mocked import Inngest, Status, Timeout, trigger
+from inngest.experimental import mocked
 
 from .errors import UnstubbedStepError
 
 client = inngest.Inngest(app_id="my-app")
-client_mock = Inngest(app_id="test")
+client_mock = mocked.Inngest(app_id="test")
 
 
 class TestTriggerAsync(unittest.TestCase):
@@ -30,8 +30,8 @@ class TestTriggerAsync(unittest.TestCase):
                 )
             )
 
-        res = trigger(fn, inngest.Event(name="test"), client_mock)
-        assert res.status is Status.COMPLETED
+        res = mocked.trigger(fn, inngest.Event(name="test"), client_mock)
+        assert res.status is mocked.Status.COMPLETED
         assert res.output == ("a", "b")
 
 
@@ -47,8 +47,8 @@ class TestTriggerSync(unittest.TestCase):
         ) -> str:
             return "hi"
 
-        res = trigger(fn, inngest.Event(name="test"), client_mock)
-        assert res.status is Status.COMPLETED
+        res = mocked.trigger(fn, inngest.Event(name="test"), client_mock)
+        assert res.status is mocked.Status.COMPLETED
         assert res.output == "hi"
 
     def test_two_steps(self) -> None:
@@ -64,8 +64,8 @@ class TestTriggerSync(unittest.TestCase):
             step.run("b", lambda: None)
             return "hi"
 
-        res = trigger(fn, inngest.Event(name="test"), client_mock)
-        assert res.status is Status.COMPLETED
+        res = mocked.trigger(fn, inngest.Event(name="test"), client_mock)
+        assert res.status is mocked.Status.COMPLETED
         assert res.output == "hi"
 
     def test_client_send(self) -> None:
@@ -90,8 +90,8 @@ class TestTriggerSync(unittest.TestCase):
                 ]
             )
 
-        res = trigger(fn, inngest.Event(name="test"), client_mock)
-        assert res.status is Status.FAILED
+        res = mocked.trigger(fn, inngest.Event(name="test"), client_mock)
+        assert res.status is mocked.Status.FAILED
 
     def test_send_event(self) -> None:
         @client.create_function(
@@ -110,8 +110,8 @@ class TestTriggerSync(unittest.TestCase):
                 ],
             )
 
-        res = trigger(fn, inngest.Event(name="test"), client_mock)
-        assert res.status is Status.COMPLETED
+        res = mocked.trigger(fn, inngest.Event(name="test"), client_mock)
+        assert res.status is mocked.Status.COMPLETED
         assert res.output == [
             "00000000000000000000000000",
             "00000000000000000000000000",
@@ -132,13 +132,13 @@ class TestTriggerSync(unittest.TestCase):
                 function_id="bar",
             )
 
-        res = trigger(
+        res = mocked.trigger(
             fn,
             inngest.Event(name="test"),
             client_mock,
             step_stubs={"a": "hi"},
         )
-        assert res.status is Status.COMPLETED
+        assert res.status is mocked.Status.COMPLETED
         assert res.output == "hi"
 
     def test_parallel(self) -> None:
@@ -157,8 +157,8 @@ class TestTriggerSync(unittest.TestCase):
                 )
             )
 
-        res = trigger(fn, inngest.Event(name="test"), client_mock)
-        assert res.status is Status.COMPLETED
+        res = mocked.trigger(fn, inngest.Event(name="test"), client_mock)
+        assert res.status is mocked.Status.COMPLETED
         assert res.output == ("a", "b")
 
     def test_sleep(self) -> None:
@@ -173,8 +173,8 @@ class TestTriggerSync(unittest.TestCase):
             step.sleep("a", datetime.timedelta(seconds=1))
             return "hi"
 
-        res = trigger(fn, inngest.Event(name="test"), client_mock)
-        assert res.status is Status.COMPLETED
+        res = mocked.trigger(fn, inngest.Event(name="test"), client_mock)
+        assert res.status is mocked.Status.COMPLETED
         assert res.output == "hi"
 
     def test_wait_for_event(self) -> None:
@@ -194,7 +194,7 @@ class TestTriggerSync(unittest.TestCase):
             assert event is not None
             return event.data
 
-        res = trigger(
+        res = mocked.trigger(
             fn,
             inngest.Event(name="test"),
             client_mock,
@@ -202,7 +202,7 @@ class TestTriggerSync(unittest.TestCase):
                 "a": inngest.Event(data={"foo": 1}, name="other-event")
             },
         )
-        assert res.status is Status.COMPLETED
+        assert res.status is mocked.Status.COMPLETED
         assert res.output == {"foo": 1}
 
     def test_wait_for_event_timeout(self) -> None:
@@ -221,13 +221,13 @@ class TestTriggerSync(unittest.TestCase):
             )
             assert event is None
 
-        res = trigger(
+        res = mocked.trigger(
             fn,
             inngest.Event(name="test"),
             client_mock,
-            step_stubs={"a": Timeout},
+            step_stubs={"a": mocked.Timeout},
         )
-        assert res.status is Status.COMPLETED
+        assert res.status is mocked.Status.COMPLETED
 
     def test_wait_for_event_not_stubbed(self) -> None:
         @client.create_function(
@@ -245,7 +245,7 @@ class TestTriggerSync(unittest.TestCase):
             )
 
         with pytest.raises(UnstubbedStepError):
-            trigger(fn, inngest.Event(name="test"), client_mock)
+            mocked.trigger(fn, inngest.Event(name="test"), client_mock)
 
     def test_retry_step(self) -> None:
         counter = 0
@@ -267,8 +267,8 @@ class TestTriggerSync(unittest.TestCase):
 
             return step.run("a", a)
 
-        res = trigger(fn, inngest.Event(name="test"), client_mock)
-        assert res.status is Status.COMPLETED
+        res = mocked.trigger(fn, inngest.Event(name="test"), client_mock)
+        assert res.status is mocked.Status.COMPLETED
         assert res.output == "hi"
 
     def test_fail_step(self) -> None:
@@ -286,8 +286,8 @@ class TestTriggerSync(unittest.TestCase):
 
             step.run("a", a)
 
-        res = trigger(fn, inngest.Event(name="test"), client_mock)
-        assert res.status is Status.FAILED
+        res = mocked.trigger(fn, inngest.Event(name="test"), client_mock)
+        assert res.status is mocked.Status.FAILED
         assert res.output is None
         assert isinstance(res.error, Exception)
         assert str(res.error) == "oh no"
@@ -309,8 +309,8 @@ class TestTriggerSync(unittest.TestCase):
                 raise Exception("oh no")
             return "hi"
 
-        res = trigger(fn, inngest.Event(name="test"), client_mock)
-        assert res.status is Status.COMPLETED
+        res = mocked.trigger(fn, inngest.Event(name="test"), client_mock)
+        assert res.status is mocked.Status.COMPLETED
         assert res.output == "hi"
 
     def test_fail_fn(self) -> None:
@@ -325,8 +325,8 @@ class TestTriggerSync(unittest.TestCase):
         ) -> None:
             raise Exception("oh no")
 
-        res = trigger(fn, inngest.Event(name="test"), client_mock)
-        assert res.status is Status.FAILED
+        res = mocked.trigger(fn, inngest.Event(name="test"), client_mock)
+        assert res.status is mocked.Status.FAILED
         assert res.output is None
         assert isinstance(res.error, Exception)
         assert str(res.error) == "oh no"
