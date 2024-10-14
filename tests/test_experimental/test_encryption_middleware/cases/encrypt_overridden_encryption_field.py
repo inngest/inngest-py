@@ -12,8 +12,8 @@ import nacl.utils
 import inngest
 import tests.helper
 from inngest._internal import server_lib
+from inngest.experimental import dev_server
 from inngest.experimental.encryption_middleware import EncryptionMiddleware
-from tests import dev_server
 
 from . import base
 
@@ -74,7 +74,7 @@ def create(
         # on the functions
         client = inngest.Inngest(
             app_id="foo",
-            event_api_base_url=dev_server.origin,
+            event_api_base_url=dev_server.server.origin,
             is_production=False,
             middleware=[
                 EncryptionMiddleware.factory(
