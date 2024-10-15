@@ -1,14 +1,13 @@
 # ruff: noqa: S603, S607, T201
 
 import os
-import signal
 import subprocess
-import sys
 import threading
 import time
 import typing
 
 import httpx
+import psutil
 
 
 class _Server:
@@ -97,11 +96,6 @@ class _Server:
         if self._process is None:
             raise Exception("missing process")
 
-        # self._ready_event.set()
-        # self._process.terminate()
-        # self._process.wait()
-        # self._process = None
-
         self._process.terminate()
 
         # Try to gracefully stop but kill it if that fails.
@@ -112,8 +106,24 @@ class _Server:
             self._process.wait(timeout=5)
 
         self._output_thread.join()
+        self._kill_child_processes()
 
         print("Dev Server: stopped")
+
+    def _kill_child_processes(self) -> None:
+        if self._process is None:
+            raise Exception("missing process")
+
+        try:
+            parent = psutil.Process(self._process.pid)
+            children = parent.children(recursive=True)
+            for child in children:
+                child.terminate()
+            _, alive = psutil.wait_procs(children, timeout=5)
+            for p in alive:
+                p.kill()
+        except psutil.NoSuchProcess:
+            pass
 
 
 server = _Server()
