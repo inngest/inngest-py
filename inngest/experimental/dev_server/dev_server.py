@@ -7,7 +7,6 @@ import time
 import typing
 
 import httpx
-import psutil
 
 
 class _Server:
@@ -17,7 +16,7 @@ class _Server:
 
     def __init__(self) -> None:
         self._enabled = os.getenv("DEV_SERVER_ENABLED") != "0"
-        self._output_thread: typing.Optional[threading.Thread] = None
+        # self._output_thread: typing.Optional[threading.Thread] = None
 
         port: int
         dev_server_port_env_var = os.getenv("DEV_SERVER_PORT")
@@ -51,15 +50,15 @@ class _Server:
                 f"{self.port}",
             ],
             bufsize=1,
-            stderr=subprocess.STDOUT,
-            stdout=subprocess.PIPE,
+            # stderr=subprocess.STDOUT,
+            # stdout=subprocess.PIPE,
             text=True,
             universal_newlines=True,
         )
 
         self._ready_event.clear()
-        self._output_thread = threading.Thread(target=self._print_output)
-        self._output_thread.start()
+        # self._output_thread = threading.Thread(target=self._print_output)
+        # self._output_thread.start()
         self._wait_for_server()
 
     def _print_output(self) -> None:
@@ -91,8 +90,8 @@ class _Server:
 
         print("Dev Server: stopping")
 
-        if self._output_thread is None:
-            raise Exception("missing output thread")
+        # if self._output_thread is None:
+        # raise Exception("missing output thread")
         if self._process is None:
             raise Exception("missing process")
 
@@ -105,25 +104,9 @@ class _Server:
             self._process.kill()
             self._process.wait(timeout=5)
 
-        self._output_thread.join()
-        self._kill_child_processes()
+        # self._output_thread.join()
 
         print("Dev Server: stopped")
-
-    def _kill_child_processes(self) -> None:
-        if self._process is None:
-            raise Exception("missing process")
-
-        try:
-            parent = psutil.Process(self._process.pid)
-            children = parent.children(recursive=True)
-            for child in children:
-                child.terminate()
-            _, alive = psutil.wait_procs(children, timeout=5)
-            for p in alive:
-                p.kill()
-        except psutil.NoSuchProcess:
-            pass
 
 
 server = _Server()
