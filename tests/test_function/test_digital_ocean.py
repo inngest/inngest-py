@@ -8,8 +8,8 @@ import inngest
 import inngest.digital_ocean
 import inngest.fast_api
 from inngest._internal import server_lib
-from inngest.experimental import digital_ocean_simulator
-from tests import base, dev_server, http_proxy
+from inngest.experimental import dev_server, digital_ocean_simulator
+from tests import base, http_proxy
 from tests.test_function.cases.base import Case
 
 from . import cases
@@ -18,9 +18,9 @@ _framework = server_lib.Framework.DIGITAL_OCEAN
 _app_id = f"{_framework.value}-functions"
 
 _client = inngest.Inngest(
-    api_base_url=dev_server.origin,
+    api_base_url=dev_server.server.origin,
     app_id=_app_id,
-    event_api_base_url=dev_server.origin,
+    event_api_base_url=dev_server.server.origin,
     is_production=False,
 )
 

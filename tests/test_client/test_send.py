@@ -7,7 +7,8 @@ import unittest
 import inngest
 import inngest.flask
 from inngest._internal import const, errors
-from tests import dev_server, http_proxy
+from inngest.experimental import dev_server
+from tests import http_proxy
 
 
 class TestSend(unittest.IsolatedAsyncioTestCase):
@@ -82,7 +83,7 @@ class TestSend(unittest.IsolatedAsyncioTestCase):
         method_name = self._testMethodName
         client = inngest.Inngest(
             app_id=f"{class_name}-{method_name}",
-            event_api_base_url=f"http://localhost:{dev_server.PORT}",
+            event_api_base_url=dev_server.server.origin,
             is_production=False,
         )
 
@@ -113,7 +114,7 @@ class TestSend(unittest.IsolatedAsyncioTestCase):
         client = inngest.Inngest(
             app_id="my-app",
             event_key="event-key-123abc",
-            event_api_base_url=f"http://localhost:{dev_server.PORT}",
+            event_api_base_url=dev_server.server.origin,
             is_production=False,
         )
 

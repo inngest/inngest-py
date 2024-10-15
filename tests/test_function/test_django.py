@@ -13,7 +13,8 @@ import django.test
 import inngest
 import inngest.django
 from inngest._internal import server_lib
-from tests import base, dev_server, http_proxy
+from inngest.experimental import dev_server
+from tests import base, http_proxy
 
 from . import cases
 
@@ -22,9 +23,9 @@ _app_id = f"{_framework.value}-functions"
 
 
 _client = inngest.Inngest(
-    api_base_url=dev_server.origin,
+    api_base_url=dev_server.server.origin,
     app_id=_app_id,
-    event_api_base_url=dev_server.origin,
+    event_api_base_url=dev_server.server.origin,
     is_production=False,
 )
 

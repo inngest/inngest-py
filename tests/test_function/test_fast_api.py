@@ -8,7 +8,8 @@ import uvicorn
 import inngest
 import inngest.fast_api
 from inngest._internal import server_lib
-from tests import base, dev_server, net
+from inngest.experimental import dev_server
+from tests import base, net
 
 from . import cases
 
@@ -16,9 +17,9 @@ _framework = server_lib.Framework.FAST_API
 _app_id = f"{_framework.value}-functions"
 
 _client = inngest.Inngest(
-    api_base_url=dev_server.origin,
+    api_base_url=dev_server.server.origin,
     app_id=_app_id,
-    event_api_base_url=dev_server.origin,
+    event_api_base_url=dev_server.server.origin,
     is_production=False,
 )
 

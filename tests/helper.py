@@ -7,8 +7,9 @@ import typing
 import pydantic
 
 from inngest._internal import types
+from inngest.experimental import dev_server
 
-from . import dev_server, gql
+from . import gql
 
 
 class RunStatus(enum.Enum):
@@ -29,7 +30,7 @@ ended_statuses = set(
 
 class _Client:
     def __init__(self) -> None:
-        self._gql = gql.Client(f"http://localhost:{dev_server.PORT}/v0/gql")
+        self._gql = gql.Client(f"{dev_server.server.origin}/v0/gql")
 
     def _get_history(
         self,

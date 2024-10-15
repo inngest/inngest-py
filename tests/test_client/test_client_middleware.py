@@ -19,7 +19,8 @@ import inngest
 import inngest.fast_api
 import inngest.flask
 import tests.helper
-from tests import base, dev_server, http_proxy
+from inngest.experimental import dev_server
+from tests import base, http_proxy
 
 
 class State(base.BaseState):
@@ -151,9 +152,9 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
                     result.output = "transformed output"
 
         client = inngest.Inngest(
-            api_base_url=dev_server.origin,
+            api_base_url=dev_server.server.origin,
             app_id="client-middleware-fast-api",
-            event_api_base_url=dev_server.origin,
+            event_api_base_url=dev_server.server.origin,
             is_production=False,
             middleware=[Middleware],
         )
@@ -252,9 +253,9 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
                     result.output = "transformed output"
 
         client = inngest.Inngest(
-            api_base_url=dev_server.origin,
+            api_base_url=dev_server.server.origin,
             app_id="client-middleware-flask",
-            event_api_base_url=dev_server.origin,
+            event_api_base_url=dev_server.server.origin,
             is_production=False,
             middleware=[Middleware],
         )
