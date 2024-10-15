@@ -1,7 +1,9 @@
 # ruff: noqa: S603, S607, T201
 
 import os
+import signal
 import subprocess
+import sys
 import threading
 import time
 import typing
@@ -91,15 +93,25 @@ class _Server:
         print("Dev Server: stopping")
 
         if self._output_thread is None:
-            raise Exception("Inngest CLI is not running.")
+            raise Exception("missing output thread")
         if self._process is None:
-            raise Exception("Inngest CLI is not running.")
+            raise Exception("missing process")
 
-        self._ready_event.set()
+        # self._ready_event.set()
+        # self._process.terminate()
+        # self._process.wait()
+        # self._process = None
+
         self._process.terminate()
-        self._process.wait()
+
+        # Try to gracefully stop but kill it if that fails.
+        try:
+            self._process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            self._process.kill()
+            self._process.wait(timeout=5)
+
         self._output_thread.join()
-        self._process = None
 
         print("Dev Server: stopped")
 
