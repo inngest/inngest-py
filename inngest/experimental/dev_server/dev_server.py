@@ -52,6 +52,8 @@ class _Server:
             bufsize=1,
             # stderr=subprocess.STDOUT,
             # stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
             text=True,
             universal_newlines=True,
         )
