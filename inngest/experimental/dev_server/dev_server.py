@@ -16,8 +16,8 @@ from .utils import HOST, get_available_port
 _DEFAULT_DEV_SERVER_PORT = 8288
 
 
-class _DevServer:
-    _process: typing.Optional[subprocess.Popen[bytes]] = None
+class _Server:
+    _process: typing.Optional[subprocess.Popen[str]] = None
     _stop_printing: threading.Event
     _thread: typing.Optional[threading.Thread] = None
 
@@ -41,21 +41,21 @@ class _DevServer:
 
         self._stop_printing = threading.Event()
 
-    def _print_output(self, out_queue: queue.Queue[bytes]) -> None:
-        while not self._stop_printing.is_set():
+    def _print_output(self, out_queue: queue.Queue[str]) -> None:
+        while self._stop_printing.is_set() is False:
             try:
                 line = out_queue.get(timeout=0.1)
-                sys.stdout.write(line.decode("utf-8"))
+                sys.stdout.write(line)
                 sys.stdout.flush()
             except queue.Empty:
                 continue
 
     def start(self) -> None:
-        if not self._enabled:
+        if self._enabled is False:
             return
         print("Inngest Server: starting")
 
-        out_queue = queue.Queue[bytes]()
+        out_queue = queue.Queue[str]()
 
         def _run() -> None:
             process = subprocess.Popen(
@@ -69,23 +69,30 @@ class _DevServer:
                     "--port",
                     f"{self.port}",
                 ],
+                bufsize=1,
                 stderr=subprocess.PIPE,
                 stdout=subprocess.PIPE,
+                text=True,
+                universal_newlines=True,
             )
 
             self._process = process
 
             if process.stderr:
                 for line in iter(process.stderr.readline, ""):
-                    out_queue.put(line)
-                    if self._stop_printing.is_set():
-                        break
+                    # IMPORTANT: Don't break this loop. If you do then the
+                    # buffer may fill and the process will hang
+
+                    if self._stop_printing.is_set() is False:
+                        out_queue.put(line)
 
             if process.stdout:
                 for line in iter(process.stdout.readline, ""):
-                    out_queue.put(line)
-                    if self._stop_printing.is_set():
-                        break
+                    # IMPORTANT: Don't break this loop. If you do then the
+                    # buffer may fill and the process will hang
+
+                    if self._stop_printing.is_set() is False:
+                        out_queue.put(line)
 
         self._thread = threading.Thread(target=_run)
         self._thread.start()
@@ -110,7 +117,7 @@ class _DevServer:
 
         # Stop printing stdout and stderr
         self._stop_printing.set()
-        self._print_thread.join()
+        self._print_thread.join(timeout=1)
 
         print("Inngest Server: started")
 
@@ -132,4 +139,4 @@ class _DevServer:
             self._process.wait(timeout=5)
 
 
-server = _DevServer()
+server = _Server()
