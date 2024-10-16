@@ -12,8 +12,12 @@ _TEST_NAME = base.create_test_name(__file__)
 def create(framework: server_lib.Framework) -> base.Case:
     def run_test(self: base.TestCase) -> None:
         """
-        Test that the SDK correctly syncs itself with Cloud when using a branch
-        environment.
+        Given:
+            SDK mode:       cloud
+            Sync kind:      in_band
+            Request sig:    missing
+
+        Respond with 401.
         """
 
         signing_key = "signkey-prod-000000"
@@ -35,13 +39,14 @@ def create(framework: server_lib.Framework) -> base.Case:
         ) -> None:
             pass
 
+        self.serve(client, [fn], allow_in_band_sync=True)
+
         req_body = json.dumps(
             server_lib.InBandSynchronizeRequest(
                 url="http://test.local"
             ).to_dict()
         ).encode("utf-8")
 
-        self.serve(client, [fn])
         res = self.put(
             body=req_body,
             headers={

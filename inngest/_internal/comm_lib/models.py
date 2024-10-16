@@ -14,6 +14,7 @@ from inngest._internal import (
 
 
 class CommRequest(types.BaseModel):
+    allow_in_band_sync: typing.Optional[bool]
     body: bytes
     headers: typing.Union[dict[str, str], dict[str, str]]
     query_params: typing.Union[dict[str, str], dict[str, list[str]]]

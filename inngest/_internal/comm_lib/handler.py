@@ -43,10 +43,6 @@ class CommHandler:
         framework: server_lib.Framework,
         functions: list[function.Function],
     ) -> None:
-        # TODO: Default to true once in-band syncing is stable
-        self._allow_in_band_sync = env_lib.is_true(
-            const.EnvKey.ALLOW_IN_BAND_SYNC,
-        )
         self._client = client
         self._mode = client._mode
         self._api_origin = client.api_origin
@@ -363,24 +359,21 @@ class CommHandler:
         """Handle a PUT request."""
 
         self._client.logger.info("Syncing app")
+
+        allow_in_band_sync = req.allow_in_band_sync
+        if req.allow_in_band_sync is None:
+            # TODO: Default to true once in-band syncing is stable
+            allow_in_band_sync = env_lib.is_true(
+                const.EnvKey.ALLOW_IN_BAND_SYNC,
+            )
+
         syncer = _Syncer(logger=self._client.logger)
 
         if (
             req.headers.get(server_lib.HeaderKey.SYNC_KIND.value)
             == server_lib.SyncKind.IN_BAND.value
-            and self._allow_in_band_sync
+            and allow_in_band_sync is True
         ):
-            err: typing.Optional[Exception] = None
-            if isinstance(request_signing_key, Exception):
-                err = request_signing_key
-            elif request_signing_key is None:
-                err = Exception("request must be signed for in-band sync")
-            if err is not None:
-                return CommResponse.from_error(
-                    self._client.logger,
-                    err,
-                    status=http.HTTPStatus.UNAUTHORIZED,
-                )
             return syncer.in_band(self, req, request_signing_key)
 
         return await syncer.out_of_band(self, req)
@@ -394,25 +387,21 @@ class CommHandler:
         """Handle a PUT request."""
 
         self._client.logger.info("Syncing app")
+
+        allow_in_band_sync = req.allow_in_band_sync
+        if req.allow_in_band_sync is None:
+            # TODO: Default to true once in-band syncing is stable
+            allow_in_band_sync = env_lib.is_true(
+                const.EnvKey.ALLOW_IN_BAND_SYNC,
+            )
+
         syncer = _Syncer(logger=self._client.logger)
 
         if (
             req.headers.get(server_lib.HeaderKey.SYNC_KIND.value)
             == server_lib.SyncKind.IN_BAND.value
-            and self._allow_in_band_sync
+            and allow_in_band_sync is True
         ):
-            err: typing.Optional[Exception] = None
-            if isinstance(request_signing_key, Exception):
-                err = request_signing_key
-            elif request_signing_key is None:
-                err = Exception("request must be signed for in-band sync")
-            if err is not None:
-                return CommResponse.from_error(
-                    self._client.logger,
-                    err,
-                    status=http.HTTPStatus.UNAUTHORIZED,
-                )
-
             return syncer.in_band(self, req, request_signing_key)
 
         return syncer.out_of_band_sync(self, req)
@@ -496,10 +485,19 @@ class _Syncer:
         req: CommRequest,
         request_signing_key: types.MaybeError[typing.Optional[str]],
     ) -> types.MaybeError[CommResponse]:
-        if not isinstance(request_signing_key, str):
-            # This should be checked earlier, but we'll also check it here since
-            # it's critical
-            return Exception("request must be signed for in-band sync")
+        if handler._signing_key is not None:
+            if isinstance(request_signing_key, Exception):
+                return CommResponse.from_error(
+                    self._logger,
+                    request_signing_key,
+                    status=http.HTTPStatus.UNAUTHORIZED,
+                )
+            if request_signing_key is None:
+                return CommResponse.from_error(
+                    self._logger,
+                    Exception("request must be signed for in-band sync"),
+                    status=http.HTTPStatus.UNAUTHORIZED,
+                )
 
         req_body = server_lib.InBandSynchronizeRequest.from_raw(req.body)
         if isinstance(req_body, Exception):
@@ -522,9 +520,6 @@ class _Syncer:
         )
         if isinstance(inspection, Exception):
             return inspection
-        if isinstance(inspection, server_lib.UnauthenticatedInspection):
-            # Unreachable
-            return Exception("request must be signed for in-band sync")
 
         res_body = server_lib.InBandSynchronizeResponse(
             app_id=handler._client.app_id,

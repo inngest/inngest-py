@@ -8,7 +8,11 @@ import pydantic
 from inngest._internal import const, errors, transforms, types
 
 from .consts import DeployType, Framework
-from .inspection import AuthenticatedInspection, Capabilities
+from .inspection import (
+    AuthenticatedInspection,
+    Capabilities,
+    UnauthenticatedInspection,
+)
 
 
 class _BaseConfig(types.BaseModel):
@@ -185,7 +189,7 @@ class InBandSynchronizeResponse(types.BaseModel):
     env: typing.Optional[str]
     framework: Framework
     functions: list[FunctionConfig]
-    inspection: AuthenticatedInspection
+    inspection: typing.Union[AuthenticatedInspection, UnauthenticatedInspection]
     platform: typing.Optional[str]
     sdk_author: str = const.AUTHOR
     sdk_language: str = const.LANGUAGE

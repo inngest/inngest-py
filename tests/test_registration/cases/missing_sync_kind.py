@@ -15,12 +15,7 @@ _TEST_NAME = base.create_test_name(__file__)
 def create(framework: server_lib.Framework) -> base.Case:
     def run_test(self: base.TestCase) -> None:
         """
-        Given:
-            SDK mode:       cloud
-            Sync kind:      out_of_band
-            Request sig:    valid
-
-        Perform out-of-band sync.
+        Perform an out-of-band sync if the request doesn't specify a sync kind.
         """
 
         signing_key = "signkey-prod-000000"
@@ -76,12 +71,7 @@ def create(framework: server_lib.Framework) -> base.Case:
             pass
 
         self.serve(client, [fn], allow_in_band_sync=True)
-        res = self.put(
-            body={},
-            headers={
-                server_lib.HeaderKey.SYNC_KIND.value: server_lib.SyncKind.OUT_OF_BAND.value,
-            },
-        )
+        res = self.put(body={})
         assert res.status_code == 200
         assert json.loads(res.body.decode("utf-8")) == {}
 

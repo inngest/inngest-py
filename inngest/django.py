@@ -28,6 +28,7 @@ def serve(
     client: client_lib.Inngest,
     functions: list[function.Function],
     *,
+    allow_in_band_sync: typing.Optional[bool] = None,
     serve_origin: typing.Optional[str] = None,
     serve_path: typing.Optional[str] = None,
 ) -> django.urls.URLPattern:
@@ -39,7 +40,7 @@ def serve(
         client: Inngest client.
         functions: List of functions to serve.
 
-        async_mode: [DEPRECATED] Whether to serve functions asynchronously.
+        allow_in_band_sync: Whether to allow in-band syncing.
         serve_origin: Origin to serve Inngest from.
         serve_path: Path to serve Inngest from.
     """
@@ -59,6 +60,7 @@ def serve(
         return _create_handler_async(
             client,
             handler,
+            allow_in_band_sync=allow_in_band_sync,
             serve_origin=serve_origin,
             serve_path=serve_path,
         )
@@ -66,6 +68,7 @@ def serve(
         return _create_handler_sync(
             client,
             handler,
+            allow_in_band_sync=allow_in_band_sync,
             serve_origin=serve_origin,
             serve_path=serve_path,
         )
@@ -75,6 +78,7 @@ def _create_handler_sync(
     client: client_lib.Inngest,
     handler: comm_lib.CommHandler,
     *,
+    allow_in_band_sync: typing.Optional[bool],
     serve_origin: typing.Optional[str],
     serve_path: typing.Optional[str],
 ) -> django.urls.URLPattern:
@@ -82,6 +86,7 @@ def _create_handler_sync(
         request: django.http.HttpRequest,
     ) -> django.http.HttpResponse:
         comm_req = comm_lib.CommRequest(
+            allow_in_band_sync=allow_in_band_sync,
             body=request.body,
             headers=dict(request.headers.items()),
             query_params=dict(request.GET.items()),
@@ -126,6 +131,7 @@ def _create_handler_async(
     client: client_lib.Inngest,
     handler: comm_lib.CommHandler,
     *,
+    allow_in_band_sync: typing.Optional[bool],
     serve_origin: typing.Optional[str],
     serve_path: typing.Optional[str],
 ) -> django.urls.URLPattern:
@@ -143,6 +149,7 @@ def _create_handler_async(
         request: django.http.HttpRequest,
     ) -> django.http.HttpResponse:
         comm_req = comm_lib.CommRequest(
+            allow_in_band_sync=allow_in_band_sync,
             body=request.body,
             headers=dict(request.headers.items()),
             query_params=dict(request.GET.items()),
