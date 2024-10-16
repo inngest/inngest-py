@@ -22,6 +22,7 @@ def serve(
     client: client_lib.Inngest,
     functions: list[function.Function],
     *,
+    allow_in_band_sync: typing.Optional[bool] = None,
     serve_origin: typing.Optional[str] = None,
     serve_path: typing.Optional[str] = None,
 ) -> None:
@@ -34,6 +35,7 @@ def serve(
         client: Inngest client.
         functions: List of functions to serve.
 
+        allow_in_band_sync: Whether to allow in-band syncing.
         serve_origin: Origin to serve the functions from.
         serve_path: Path to serve the functions from.
     """
@@ -53,6 +55,7 @@ def serve(
             app,
             client,
             handler,
+            allow_in_band_sync=allow_in_band_sync,
             serve_origin=serve_origin,
             serve_path=serve_path,
         )
@@ -61,6 +64,7 @@ def serve(
             app,
             client,
             handler,
+            allow_in_band_sync=allow_in_band_sync,
             serve_origin=serve_origin,
             serve_path=serve_path,
         )
@@ -71,6 +75,7 @@ def _create_handler_async(
     client: client_lib.Inngest,
     handler: comm_lib.CommHandler,
     *,
+    allow_in_band_sync: typing.Optional[bool],
     serve_origin: typing.Optional[str],
     serve_path: typing.Optional[str],
 ) -> None:
@@ -80,6 +85,7 @@ def _create_handler_async(
     )
     async def inngest_api() -> typing.Union[flask.Response, str]:
         comm_req = comm_lib.CommRequest(
+            allow_in_band_sync=allow_in_band_sync,
             body=_get_body_bytes(),
             headers=dict(flask.request.headers.items()),
             query_params=flask.request.args,
@@ -116,6 +122,7 @@ def _create_handler_sync(
     client: client_lib.Inngest,
     handler: comm_lib.CommHandler,
     *,
+    allow_in_band_sync: typing.Optional[bool],
     serve_origin: typing.Optional[str],
     serve_path: typing.Optional[str],
 ) -> None:
@@ -125,6 +132,7 @@ def _create_handler_sync(
     )
     def inngest_api() -> typing.Union[flask.Response, str]:
         comm_req = comm_lib.CommRequest(
+            allow_in_band_sync=allow_in_band_sync,
             body=_get_body_bytes(),
             headers=dict(flask.request.headers.items()),
             query_params=flask.request.args,

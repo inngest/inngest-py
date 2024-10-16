@@ -28,5 +28,6 @@ class TestCase(unittest.TestCase):
         self,
         client: inngest.Inngest,
         fns: list[inngest.Function],
+        allow_in_band_sync: typing.Optional[bool] = None,
     ) -> None:
         raise NotImplementedError()

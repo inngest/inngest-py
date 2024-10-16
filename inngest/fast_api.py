@@ -23,6 +23,7 @@ def serve(
     client: client_lib.Inngest,
     functions: list[function.Function],
     *,
+    allow_in_band_sync: typing.Optional[bool] = None,
     serve_origin: typing.Optional[str] = None,
     serve_path: typing.Optional[str] = None,
 ) -> None:
@@ -35,6 +36,7 @@ def serve(
         client: Inngest client.
         functions: List of functions to serve.
 
+        allow_in_band_sync: Whether to allow in-band syncing.
         serve_origin: Origin to serve the functions from.
         serve_path: Path to serve the functions from.
     """
@@ -53,6 +55,7 @@ def serve(
             client,
             handler.get_sync(
                 comm_lib.CommRequest(
+                    allow_in_band_sync=allow_in_band_sync,
                     body=await request.body(),
                     headers=dict(request.headers.items()),
                     query_params=dict(request.query_params.items()),
@@ -72,6 +75,7 @@ def serve(
             client,
             await handler.post(
                 comm_lib.CommRequest(
+                    allow_in_band_sync=allow_in_band_sync,
                     body=await request.body(),
                     headers=dict(request.headers.items()),
                     query_params=dict(request.query_params.items()),
@@ -91,6 +95,7 @@ def serve(
             client,
             await handler.put(
                 comm_lib.CommRequest(
+                    allow_in_band_sync=allow_in_band_sync,
                     body=await request.body(),
                     headers=dict(request.headers.items()),
                     query_params=dict(request.query_params.items()),
