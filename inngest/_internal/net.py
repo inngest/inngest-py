@@ -266,11 +266,16 @@ async def fetch_with_thready_safety(
     )
 
 
-def sign(
+def sign_request(
     body: bytes,
     signing_key: str,
     unix_ms: typing.Optional[int] = None,
 ) -> types.MaybeError[str]:
+    """
+    Sign an HTTP request in the same way an Inngest server would. This is only
+    needed for tests that mimic Inngest server behavior.
+    """
+
     if unix_ms is None:
         unix_ms = round(time.time())
 
@@ -290,6 +295,30 @@ def sign(
     return f"t={unix_ms}&s={sig}"
 
 
+def sign_response(
+    body: bytes,
+    signing_key: str,
+    unix_ms: typing.Optional[int] = None,
+) -> types.MaybeError[str]:
+    """
+    Sign an HTTP response.
+    """
+
+    if unix_ms is None:
+        unix_ms = round(time.time())
+
+    mac = hmac.new(
+        transforms.remove_signing_key_prefix(signing_key).encode("utf-8"),
+        body,
+        hashlib.sha256,
+    )
+    mac.update(str(unix_ms).encode("utf-8"))
+    sig = mac.hexdigest()
+
+    # Order matters since Inngest Cloud compares strings
+    return f"t={unix_ms}&s={sig}"
+
+
 def _validate_sig(
     *,
     body: bytes,
@@ -299,10 +328,6 @@ def _validate_sig(
 ) -> types.MaybeError[typing.Optional[str]]:
     if mode == server_lib.ServerKind.DEV_SERVER:
         return None
-
-    canonicalized = transforms.canonicalize(body)
-    if isinstance(canonicalized, Exception):
-        raise canonicalized
 
     timestamp = None
     signature = None
@@ -330,7 +355,7 @@ def _validate_sig(
 
     mac = hmac.new(
         transforms.remove_signing_key_prefix(signing_key).encode("utf-8"),
-        canonicalized,
+        body,
         hashlib.sha256,
     )
 
@@ -343,7 +368,7 @@ def _validate_sig(
     return signing_key
 
 
-def validate_sig(
+def validate_request_sig(
     *,
     body: bytes,
     headers: dict[str, str],
@@ -386,3 +411,30 @@ def validate_sig(
         )
 
     return err
+
+
+def validate_response_sig(
+    *,
+    body: bytes,
+    headers: dict[str, str],
+    mode: server_lib.ServerKind,
+    signing_key: str,
+) -> types.MaybeError[typing.Optional[str]]:
+    """
+    Validate an HTTP response signature in the same way an Inngest server would.
+    This is only needed for tests that mimic Inngest server behavior.
+
+    Args:
+    ----
+        body: Request body.
+        headers: Request headers.
+        mode: Server mode.
+        signing_key: Primary signing key.
+    """
+
+    return _validate_sig(
+        body=body,
+        headers=headers,
+        mode=mode,
+        signing_key=signing_key,
+    )

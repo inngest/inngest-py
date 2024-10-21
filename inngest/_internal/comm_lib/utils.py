@@ -76,7 +76,7 @@ def wrap_handler(
         ) -> CommResponse:
             req.headers = net.normalize_headers(req.headers)
 
-            request_signing_key = net.validate_sig(
+            request_signing_key = net.validate_request_sig(
                 body=req.body,
                 headers=req.headers,
                 mode=self._client._mode,
@@ -145,7 +145,7 @@ def wrap_handler_sync(
         ) -> CommResponse:
             req.headers = net.normalize_headers(req.headers)
 
-            request_signing_key = net.validate_sig(
+            request_signing_key = net.validate_request_sig(
                 body=req.body,
                 headers=req.headers,
                 mode=self._client._mode,
@@ -177,6 +177,7 @@ def wrap_handler_sync(
             }
 
             if isinstance(request_signing_key, str):
+                print(request_signing_key)
                 err = res.sign(request_signing_key)
                 if err is not None:
                     self._client.logger.error(err)

@@ -56,7 +56,7 @@ class TestIntrospection(base.BaseTestIntrospection):
             )
         )
 
-        req_sig = net.sign(b"", self.signing_key)
+        req_sig = net.sign_request(b"", self.signing_key)
         if isinstance(req_sig, Exception):
             raise req_sig
 
@@ -74,12 +74,11 @@ class TestIntrospection(base.BaseTestIntrospection):
         }
 
         assert isinstance(
-            net.validate_sig(
+            net.validate_response_sig(
                 body=res.get_data(),
                 headers=res.headers,
                 mode=server_lib.ServerKind.CLOUD,
                 signing_key=self.signing_key,
-                signing_key_fallback=None,
             ),
             str,
         )
@@ -98,7 +97,7 @@ class TestIntrospection(base.BaseTestIntrospection):
             )
         )
 
-        req_sig = net.sign(b"", signing_key_fallback)
+        req_sig = net.sign_request(b"", signing_key_fallback)
         if isinstance(req_sig, Exception):
             raise req_sig
 
@@ -114,12 +113,11 @@ class TestIntrospection(base.BaseTestIntrospection):
             "has_signing_key_fallback": True,
         }
         assert isinstance(
-            net.validate_sig(
+            net.validate_response_sig(
                 body=res.get_data(),
                 headers=res.headers,
                 mode=server_lib.ServerKind.CLOUD,
                 signing_key=signing_key_fallback,
-                signing_key_fallback=None,
             ),
             str,
         )

@@ -43,7 +43,7 @@ def create(framework: server_lib.Framework) -> base.Case:
             ).to_dict()
         ).encode("utf-8")
 
-        req_sig = net.sign(req_body, signing_key)
+        req_sig = net.sign_request(req_body, signing_key)
         if isinstance(req_sig, Exception):
             raise req_sig
 
@@ -60,12 +60,11 @@ def create(framework: server_lib.Framework) -> base.Case:
         assert res.headers["x-inngest-sync-kind"] == "in_band"
 
         assert isinstance(
-            net.validate_sig(
+            net.validate_response_sig(
                 body=res.body,
                 headers=res.headers,
                 mode=server_lib.ServerKind.CLOUD,
                 signing_key=signing_key,
-                signing_key_fallback=None,
             ),
             str,
         )

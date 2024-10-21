@@ -28,7 +28,7 @@ class TestIntrospection(base.BaseTest):
             )
         )
 
-        req_sig = net.sign(b"", self.signing_key)
+        req_sig = net.sign_request(b"", self.signing_key)
         if isinstance(req_sig, Exception):
             raise req_sig
 
@@ -43,12 +43,11 @@ class TestIntrospection(base.BaseTest):
         sig_header = res.headers.get(server_lib.HeaderKey.SIGNATURE.value)
         assert sig_header is not None
         assert isinstance(
-            net.validate_sig(
+            net.validate_response_sig(
                 body=res.content,
                 headers=dict(res.headers),
                 mode=server_lib.ServerKind.CLOUD,
                 signing_key=self.signing_key,
-                signing_key_fallback=None,
             ),
             str,
         )
@@ -87,7 +86,7 @@ class TestIntrospection(base.BaseTest):
             )
         )
 
-        req_sig = net.sign(b"", "wrong")
+        req_sig = net.sign_request(b"", "wrong")
         if isinstance(req_sig, Exception):
             raise req_sig
 
