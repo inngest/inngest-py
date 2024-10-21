@@ -177,7 +177,6 @@ def wrap_handler_sync(
             }
 
             if isinstance(request_signing_key, str):
-                print(request_signing_key)
                 err = res.sign(request_signing_key)
                 if err is not None:
                     self._client.logger.error(err)
