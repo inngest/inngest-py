@@ -44,7 +44,7 @@ def create(framework: server_lib.Framework) -> base.Case:
         ).encode("utf-8")
 
         wrong_signing_key = "signkey-prod-111111"
-        req_sig = net.sign(req_body, wrong_signing_key)
+        req_sig = net.sign_request(req_body, wrong_signing_key)
         if isinstance(req_sig, Exception):
             raise req_sig
 

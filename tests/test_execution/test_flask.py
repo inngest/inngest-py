@@ -44,7 +44,7 @@ class TestExecution(base.BaseTest):
             )
         )
         wrong_signing_key = "signkey-prod-111111"
-        req_sig = net.sign(b"{}", wrong_signing_key)
+        req_sig = net.sign_request(b"{}", wrong_signing_key)
         if isinstance(req_sig, Exception):
             raise req_sig
 
