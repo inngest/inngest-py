@@ -1,9 +1,12 @@
 import inngest
 from inngest._internal import server_lib
 
-from . import base, step_output
+from . import base, step_failed, step_output
 
-_modules = (step_output,)
+_modules = (
+    step_failed,
+    step_output,
+)
 
 
 def create_async_cases(

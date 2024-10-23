@@ -42,19 +42,16 @@ def create(
     ) -> str:
         state.run_id = ctx.run_id
 
-        def _step_1() -> str:
-            return "test string"
+        def _step() -> str:
+            raise Exception("oh no")
 
-        step_1_output = step.run("step_1", _step_1)
-        assert step_1_output == "test string"
+        try:
+            step.run("step_1", _step)
+        except Exception as e:
+            print("hi", str(e))
+            return str(e)
 
-        def _step_2() -> list[inngest.JSON]:
-            return [{"a": {"b": 1}}]
-
-        step_2_output = step.run("step_2", _step_2)
-        assert step_2_output == [{"a": {"b": 1}}]
-
-        return "function output"
+        return "unreachable"
 
     @client.create_function(
         fn_id=fn_id,
@@ -70,19 +67,17 @@ def create(
     ) -> str:
         state.run_id = ctx.run_id
 
-        def _step_1() -> str:
-            return "test string"
+        state.run_id = ctx.run_id
 
-        step_1_output = await step.run("step_1", _step_1)
-        assert step_1_output == "test string"
+        def _step() -> str:
+            raise Exception("oh no")
 
-        def _step_2() -> list[inngest.JSON]:
-            return [{"a": {"b": 1}}]
+        try:
+            await step.run("step_1", _step)
+        except Exception as e:
+            return str(e)
 
-        step_2_output = await step.run("step_2", _step_2)
-        assert step_2_output == [{"a": {"b": 1}}]
-
-        return "function output"
+        return "unreachable"
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
@@ -101,22 +96,16 @@ def create(
             )
         )
         assert isinstance(output, dict)
-        data = output.get("data")
-        assert isinstance(data, dict)
+        assert output.get("data") is None
+        error = output.get("error")
+        assert isinstance(error, dict)
 
-        # Ensure that step_2 output is encrypted and its value is correct
-        output = json.loads(
-            tests.helper.client.get_step_output(
-                run_id=run_id,
-                step_id="step_2",
-            )
-        )
-        assert isinstance(output, dict)
-        data = output.get("data")
-        assert isinstance(data, dict)
+        # Ensure that the error data was not remotely stored.
+        assert driver._marker not in error
+        assert error.get("message") == "oh no"
 
         assert run.output is not None
-        assert json.loads(run.output) == "function output"
+        assert json.loads(run.output) == "oh no"
 
     if is_sync:
         fn = fn_sync

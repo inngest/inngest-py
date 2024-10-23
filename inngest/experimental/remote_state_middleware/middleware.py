@@ -1,10 +1,3 @@
-"""
-Remote state middleware for Inngest.
-
-NOT STABLE! This is an experimental feature and may change in the future. If
-you'd like to use it, we recommend copying this file into your source code.
-"""
-
 from __future__ import annotations
 
 import typing
@@ -17,31 +10,30 @@ class StateDriver(typing.Protocol):
     Protocol for the state driver.
     """
 
-    def read(self, key: str) -> object:
+    def load_steps(self, steps: inngest.StepMemos) -> None:
         """
         Retrieve the value associated with the key.
 
         Args:
         ----
-            key: Key returned from `create`.
+            steps: Steps whose output may need to be loaded from the remote store.
         """
 
         ...
 
-    def write(self, value: object) -> str:
+    def save_step(
+        self,
+        value: object,
+    ) -> dict[str, object]:
         """
         Store the value and return a key to retrieve it later.
 
         Args:
         ----
-            value: Value to store.
+            value: Output for an ended step.
         """
 
         ...
-
-
-# Marker to indicate that the data is stored remotely.
-_marker: typing.Final = "__REMOTE_STATE__"
 
 
 class RemoteStateMiddleware(inngest.MiddlewareSync):
@@ -105,36 +97,17 @@ class RemoteStateMiddleware(inngest.MiddlewareSync):
         Inject remote state.
         """
 
-        for step in steps.values():
-            if not _is_external(step.data):
-                continue
-
-            if not isinstance(step.data, dict):
-                continue
-
-            key = step.data.get("key")
-            if key is None:
-                continue
-
-            step.data = self._driver.read(key)
+        self._driver.load_steps(steps)
 
     def transform_output(self, result: inngest.TransformOutputResult) -> None:
         """
         Store step output externally and replace with a marker and key.
         """
 
-        if result.has_output() and result.step is not None:
-            result.output = {
-                _marker: True,
-                "key": self._driver.write(result.output),
-            }
+        if result.step is None:
+            return None
 
+        if result.has_output() is False:
+            return None
 
-def _is_external(value: object) -> bool:
-    if not isinstance(value, dict):
-        return False
-
-    if value.get(_marker) is not True:
-        return False
-
-    return True
+        result.output = self._driver.save_step(result.output)
