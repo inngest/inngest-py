@@ -9,8 +9,8 @@ import string
 import inngest
 import tests.helper
 from inngest._internal import server_lib
-from inngest.experimental.external_state_middleware import (
-    ExternalStateMiddleware,
+from inngest.experimental.remote_state_middleware import (
+    RemoteStateMiddleware,
     StateDriver,
 )
 
@@ -52,7 +52,7 @@ def create(
 
     @client.create_function(
         fn_id=fn_id,
-        middleware=[ExternalStateMiddleware.factory(driver)],
+        middleware=[RemoteStateMiddleware.factory(driver)],
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
@@ -78,7 +78,7 @@ def create(
 
     @client.create_function(
         fn_id=fn_id,
-        middleware=[ExternalStateMiddleware.factory(driver)],
+        middleware=[RemoteStateMiddleware.factory(driver)],
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )

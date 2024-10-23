@@ -1,5 +1,5 @@
 """
-External state middleware for Inngest.
+Remote state middleware for Inngest.
 
 NOT STABLE! This is an experimental feature and may change in the future. If
 you'd like to use it, we recommend copying this file into your source code.
@@ -40,13 +40,15 @@ class StateDriver(typing.Protocol):
         ...
 
 
-# Marker to indicate that the data is stored externally.
-_marker: typing.Final = "__EXTERNAL_STATE__"
+# Marker to indicate that the data is stored remotely.
+_marker: typing.Final = "__REMOTE_STATE__"
 
 
-class ExternalStateMiddleware(inngest.MiddlewareSync):
+class RemoteStateMiddleware(inngest.MiddlewareSync):
     """
-    Middleware that reads/writes step output in an external store.
+    Middleware that reads/writes step output in a custom store (e.g. AWS S3).
+    This can drastically reduce bandwidth to/from the Inngest server, since step
+    output is stored within your infrastructure rather than Inngest's.
     """
 
     def __init__(
@@ -71,10 +73,10 @@ class ExternalStateMiddleware(inngest.MiddlewareSync):
     def factory(
         cls,
         driver: StateDriver,
-    ) -> typing.Callable[[inngest.Inngest, object], ExternalStateMiddleware]:
+    ) -> typing.Callable[[inngest.Inngest, object], RemoteStateMiddleware]:
         """
-        Create an external state middleware that can be passed to an Inngest
-        client or function.
+        Create a remote state middleware that can be passed to an Inngest client
+        or function.
 
         Args:
         ----
@@ -84,7 +86,7 @@ class ExternalStateMiddleware(inngest.MiddlewareSync):
         def _factory(
             client: inngest.Inngest,
             raw_request: object,
-        ) -> ExternalStateMiddleware:
+        ) -> RemoteStateMiddleware:
             return cls(
                 client,
                 raw_request,
@@ -100,7 +102,7 @@ class ExternalStateMiddleware(inngest.MiddlewareSync):
         steps: inngest.StepMemos,
     ) -> None:
         """
-        Inject external state.
+        Inject remote state.
         """
 
         for step in steps.values():
