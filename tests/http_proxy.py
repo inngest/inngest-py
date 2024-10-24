@@ -51,8 +51,13 @@ class Proxy:
                     self.wfile.write(res.body)
 
             def do_DELETE(self) -> None:
+                body = None
+                content_length = self.headers.get("Content-Length")
+                if content_length is not None:
+                    body = self.rfile.read(int(content_length))
+
                 res = on_request(
-                    body=self.rfile.read(int(self.headers["Content-Length"])),
+                    body=body,
                     headers=self._get_headers(),
                     method="DELETE",
                     path=self.path,
@@ -69,8 +74,13 @@ class Proxy:
                 self._set_response(res)
 
             def do_PATCH(self) -> None:
+                body = None
+                content_length = self.headers.get("Content-Length")
+                if content_length is not None:
+                    body = self.rfile.read(int(content_length))
+
                 res = on_request(
-                    body=self.rfile.read(int(self.headers["Content-Length"])),
+                    body=body,
                     headers=self._get_headers(),
                     method="PATCH",
                     path=self.path,
@@ -78,8 +88,13 @@ class Proxy:
                 self._set_response(res)
 
             def do_POST(self) -> None:
+                body = None
+                content_length = self.headers.get("Content-Length")
+                if content_length is not None:
+                    body = self.rfile.read(int(content_length))
+
                 res = on_request(
-                    body=self.rfile.read(int(self.headers["Content-Length"])),
+                    body=body,
                     headers=self._get_headers(),
                     method="POST",
                     path=self.path,
@@ -87,8 +102,13 @@ class Proxy:
                 self._set_response(res)
 
             def do_PUT(self) -> None:
+                body = None
+                content_length = self.headers.get("Content-Length")
+                if content_length is not None:
+                    body = self.rfile.read(int(content_length))
+
                 res = on_request(
-                    body=self.rfile.read(int(self.headers["Content-Length"])),
+                    body=body,
                     headers=self._get_headers(),
                     method="PUT",
                     path=self.path,

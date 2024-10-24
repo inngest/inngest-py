@@ -28,10 +28,13 @@ dependencies = [
 extra = [
     "Django==4.2",
     "Flask==2.3.0",
+    "boto3-stubs[s3]==1.35.46 ",
+    "boto3==1.35.47",
     "build==1.0.3",
     "cryptography==42.0.5",
     "django-types==0.19.1",
     "fastapi==0.100.0",
+    "moto[s3,server]==5.0.18",
     "mypy==1.10.0",
     "pynacl==1.5.0",
     "pytest==7.4.2",
