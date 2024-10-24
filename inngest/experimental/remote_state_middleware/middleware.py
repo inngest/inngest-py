@@ -3,6 +3,7 @@ from __future__ import annotations
 import typing
 
 import inngest
+from inngest._internal import server_lib
 
 
 class StateDriver(typing.Protocol):
@@ -110,6 +111,9 @@ class RemoteStateMiddleware(inngest.MiddlewareSync):
         """
 
         if result.step is None:
+            return None
+
+        if result.step.op is not server_lib.Opcode.STEP_RUN:
             return None
 
         if result.has_output() is False:

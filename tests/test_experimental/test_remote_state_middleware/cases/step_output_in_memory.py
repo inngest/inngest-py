@@ -2,6 +2,7 @@
 Ensure step and function output is encrypted and decrypted correctly
 """
 
+import datetime
 import json
 
 import inngest
@@ -54,6 +55,14 @@ def create(
         step_2_output = step.run("step_2", _step_2)
         assert step_2_output == [{"a": {"b": 1}}]
 
+        step.sleep("zzz", datetime.timedelta(seconds=1))
+
+        step.wait_for_event(
+            "wait",
+            event="never",
+            timeout=datetime.timedelta(seconds=1),
+        )
+
         return "function output"
 
     @client.create_function(
@@ -81,6 +90,14 @@ def create(
 
         step_2_output = await step.run("step_2", _step_2)
         assert step_2_output == [{"a": {"b": 1}}]
+
+        await step.sleep("zzz", datetime.timedelta(seconds=1))
+
+        await step.wait_for_event(
+            "wait",
+            event="never",
+            timeout=datetime.timedelta(seconds=1),
+        )
 
         return "function output"
 
