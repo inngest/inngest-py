@@ -2,7 +2,7 @@
 name = "inngest"
 version = "0.4.16"
 authors = [{ name = "Inngest Inc.", email = "hello@inngest.com" }]
-description = "Python SDK for Inngest"
+description = "Python SDK for Inngest!"
 readme = "README.md"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
