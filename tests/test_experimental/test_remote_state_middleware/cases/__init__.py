@@ -1,11 +1,12 @@
 import inngest
 from inngest._internal import server_lib
 
-from . import base, step_failed, step_output
+from . import base, step_failed, step_output_in_memory, step_output_s3
 
 _modules = (
     step_failed,
-    step_output,
+    step_output_in_memory,
+    step_output_s3,
 )
 
 

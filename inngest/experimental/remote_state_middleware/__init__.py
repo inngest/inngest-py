@@ -10,9 +10,11 @@ you'd like to use it, we recommend copying this file into your source code.
 
 from .in_memory_driver import InMemoryDriver
 from .middleware import RemoteStateMiddleware, StateDriver
+from .s3_driver import S3Driver
 
 __all__ = [
     "InMemoryDriver",
     "RemoteStateMiddleware",
+    "S3Driver",
     "StateDriver",
 ]

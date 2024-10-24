@@ -1,7 +1,9 @@
+import json
 import secrets
 import string
 import typing
 
+import boto3
 import pydantic
 
 import inngest
@@ -10,13 +12,13 @@ from .middleware import StateDriver
 
 
 class _StatePlaceholder(pydantic.BaseModel):
+    bucket: str
     key: str
 
 
-class InMemoryDriver(StateDriver):
+class S3Driver(StateDriver):
     """
-    In-memory driver for remote state middleware. This probably doesn't have any
-    use besides being a reference.
+    S3 driver for remote state middleware.
     """
 
     # Marker to indicate that the data is stored remotely.
@@ -26,10 +28,21 @@ class InMemoryDriver(StateDriver):
     # whether the official S3 driver was used.
     _strategy_marker: typing.Final = "__STRATEGY__"
 
-    _strategy_identifier: typing.Final = "inngest/memory"
+    _strategy_identifier: typing.Final = "inngest/s3"
 
-    def __init__(self) -> None:  # noqa: D107
-        self._data: dict[str, object] = {}
+    def __init__(  # noqa: D107
+        self,
+        *,
+        bucket: str,
+        endpoint_url: typing.Optional[str] = None,
+        region_name: str,
+    ) -> None:
+        self._bucket = bucket
+        self._client = boto3.client(
+            "s3",
+            endpoint_url=endpoint_url,
+            region_name=region_name,
+        )
 
     def _create_key(self) -> str:
         chars = string.ascii_letters + string.digits
@@ -52,7 +65,14 @@ class InMemoryDriver(StateDriver):
 
             placeholder = _StatePlaceholder.model_validate(step.data)
 
-            step.data = self._data[placeholder.key]
+            step.data = json.loads(
+                self._client.get_object(
+                    Bucket=placeholder.bucket,
+                    Key=placeholder.key,
+                )["Body"]
+                .read()
+                .decode()
+            )
 
     def save_step(
         self,
@@ -63,13 +83,18 @@ class InMemoryDriver(StateDriver):
         Save a step's output to the remote store and return a placeholder.
         """
 
-        key = self._create_key()
-        self._data[key] = value
+        key = f"inngest/remote_state/{run_id}/{self._create_key()}"
+        self._client.create_bucket(Bucket=self._bucket)
+        self._client.put_object(
+            Body=json.dumps(value),
+            Bucket=self._bucket,
+            Key=key,
+        )
 
         placeholder: dict[str, object] = {
             self._marker: True,
             self._strategy_marker: self._strategy_identifier,
-            **_StatePlaceholder(key=key).model_dump(),
+            **_StatePlaceholder(bucket=self._bucket, key=key).model_dump(),
         }
 
         return placeholder

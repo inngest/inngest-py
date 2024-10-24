@@ -23,6 +23,7 @@ class StateDriver(typing.Protocol):
 
     def save_step(
         self,
+        run_id: str,
         value: object,
     ) -> dict[str, object]:
         """
@@ -30,6 +31,7 @@ class StateDriver(typing.Protocol):
 
         Args:
         ----
+            run_id: Run ID.
             value: Output for an ended step.
         """
 
@@ -42,6 +44,8 @@ class RemoteStateMiddleware(inngest.MiddlewareSync):
     This can drastically reduce bandwidth to/from the Inngest server, since step
     output is stored within your infrastructure rather than Inngest's.
     """
+
+    _run_id: typing.Optional[str] = None
 
     def __init__(
         self,
@@ -98,6 +102,7 @@ class RemoteStateMiddleware(inngest.MiddlewareSync):
         """
 
         self._driver.load_steps(steps)
+        self._run_id = ctx.run_id
 
     def transform_output(self, result: inngest.TransformOutputResult) -> None:
         """
@@ -110,4 +115,11 @@ class RemoteStateMiddleware(inngest.MiddlewareSync):
         if result.has_output() is False:
             return None
 
-        result.output = self._driver.save_step(result.output)
+        if self._run_id is None:
+            # Unreachable
+            raise Exception("missing run ID")
+
+        result.output = self._driver.save_step(
+            self._run_id,
+            result.output,
+        )
