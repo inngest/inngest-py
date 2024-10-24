@@ -5,7 +5,7 @@ where you want, rather than in Inngest's infrastructure. This is useful for:
 - Avoiding step output size limits.
 
 NOT STABLE! This is an experimental feature and may change in the future. If
-you'd like to use it, we recommend copying this file into your source code.
+you'd like to use it, we recommend copying this package into your source code.
 """
 
 from .in_memory_driver import InMemoryDriver

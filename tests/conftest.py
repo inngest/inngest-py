@@ -10,4 +10,5 @@ def pytest_configure(config: pytest.Config) -> None:
 
 
 def pytest_unconfigure(config: pytest.Config) -> None:
+    print("pytest_unconfigure")
     dev_server.server.stop()

@@ -22,7 +22,6 @@ class _State(base.BaseState):
     events: list[inngest.Event]
 
 
-@moto.mock_aws
 def create(
     client: inngest.Inngest,
     framework: server_lib.Framework,
@@ -33,19 +32,25 @@ def create(
     fn_id = base.create_fn_id(test_name)
     state = _State()
 
-    aws_server = moto.server.ThreadedMotoServer(port=net.get_available_port())
-    aws_server.start()
-    aws_host, aws_port = aws_server.get_host_and_port()
+    aws_port = net.get_available_port()
+    aws_url = f"http://localhost:{aws_port}"
+    aws_access_key_id = "test"
+    aws_secret_access_key = "test"
+    aws_region = "us-east-1"
+    s3_bucket = "inngest"
 
-    conn = boto3.resource("s3", region_name="us-east-1")
-    conn.create_bucket(Bucket="inngest")
-    driver = remote_state_middleware.S3Driver(
-        bucket="inngest",
-        endpoint_url=f"http://{aws_host}:{aws_port}",
-        region_name="us-east-1",
+    s3_client = boto3.client(
+        "s3",
+        endpoint_url=aws_url,
+        region_name=aws_region,
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
     )
 
-    driver.save_step("run_id", "value")
+    driver = remote_state_middleware.S3Driver(
+        bucket=s3_bucket,
+        client=s3_client,
+    )
 
     @client.create_function(
         fn_id=fn_id,
@@ -104,15 +109,18 @@ def create(
         return "function output"
 
     async def run_test(self: base.TestClass) -> None:
-        self.client.send_sync(inngest.Event(name=event_name))
+        aws_server = moto.server.ThreadedMotoServer(port=aws_port)
+        aws_server.start()
 
+        s3_client.create_bucket(Bucket=s3_bucket)
+
+        self.client.send_sync(inngest.Event(name=event_name))
         run_id = state.wait_for_run_id()
         run = tests.helper.client.wait_for_run_status(
             run_id,
             tests.helper.RunStatus.COMPLETED,
         )
 
-        # Ensure that step_1 output is encrypted and its value is correct
         output = json.loads(
             tests.helper.client.get_step_output(
                 run_id=run_id,

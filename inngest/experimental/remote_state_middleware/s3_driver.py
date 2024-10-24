@@ -1,17 +1,27 @@
+from __future__ import annotations
+
 import json
 import secrets
 import string
 import typing
 
-import boto3
 import pydantic
+import typing_extensions
 
 import inngest
 
 from .middleware import StateDriver
 
+if typing.TYPE_CHECKING:
+    from mypy_boto3_s3 import S3Client
 
-class _StatePlaceholder(pydantic.BaseModel):
+
+class _StateSurrogate(pydantic.BaseModel):
+    """
+    Replaces step output sent back to Inngest. Its data is sufficient to
+    retrieve the actual state.
+    """
+
     bucket: str
     key: str
 
@@ -30,45 +40,55 @@ class S3Driver(StateDriver):
 
     _strategy_identifier: typing.Final = "inngest/s3"
 
-    def __init__(  # noqa: D107
+    def __init__(
         self,
         *,
         bucket: str,
-        endpoint_url: typing.Optional[str] = None,
-        region_name: str,
+        client: S3Client,
     ) -> None:
+        """
+        Args:
+        ----
+            bucket: Bucket name to store remote state.
+            client: Boto3 S3 client.
+        """
+
         self._bucket = bucket
-        self._client = boto3.client(
-            "s3",
-            endpoint_url=endpoint_url,
-            region_name=region_name,
-        )
+        self._client = client
 
     def _create_key(self) -> str:
         chars = string.ascii_letters + string.digits
         return "".join(secrets.choice(chars) for _ in range(32))
 
+    def _is_remote(
+        self, data: object
+    ) -> typing_extensions.TypeGuard[dict[str, object]]:
+        return (
+            isinstance(data, dict)
+            and self._marker in data
+            and self._strategy_marker in data
+            and data[self._strategy_marker] == self._strategy_identifier
+        )
+
     def load_steps(self, steps: inngest.StepMemos) -> None:
         """
         Hydrate steps with remote state if necessary.
+
+        Args:
+        ----
+            steps: Steps that may need hydration.
         """
 
         for step in steps.values():
-            if not isinstance(step.data, dict):
-                continue
-            if self._marker not in step.data:
-                continue
-            if self._strategy_marker not in step.data:
-                continue
-            if step.data[self._strategy_marker] != self._strategy_identifier:
+            if not self._is_remote(step.data):
                 continue
 
-            placeholder = _StatePlaceholder.model_validate(step.data)
+            surrogate = _StateSurrogate.model_validate(step.data)
 
             step.data = json.loads(
                 self._client.get_object(
-                    Bucket=placeholder.bucket,
-                    Key=placeholder.key,
+                    Bucket=surrogate.bucket,
+                    Key=surrogate.key,
                 )["Body"]
                 .read()
                 .decode()
@@ -81,20 +101,24 @@ class S3Driver(StateDriver):
     ) -> dict[str, object]:
         """
         Save a step's output to the remote store and return a placeholder.
+
+        Args:
+        ----
+            run_id: Run ID.
+            value: Step output.
         """
 
         key = f"inngest/remote_state/{run_id}/{self._create_key()}"
-        self._client.create_bucket(Bucket=self._bucket)
         self._client.put_object(
             Body=json.dumps(value),
             Bucket=self._bucket,
             Key=key,
         )
 
-        placeholder: dict[str, object] = {
+        surrogate = {
             self._marker: True,
             self._strategy_marker: self._strategy_identifier,
-            **_StatePlaceholder(bucket=self._bucket, key=key).model_dump(),
+            **_StateSurrogate(bucket=self._bucket, key=key).model_dump(),
         }
 
-        return placeholder
+        return surrogate

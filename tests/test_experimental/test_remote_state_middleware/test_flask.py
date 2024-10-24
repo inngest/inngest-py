@@ -14,7 +14,7 @@ from tests import base, http_proxy
 from . import cases
 
 _framework = server_lib.Framework.FLASK
-_app_id = f"{_framework.value}-functions"
+_app_id = f"{_framework.value}-remote-state-middleware"
 
 _client = inngest.Inngest(
     api_base_url=dev_server.server.origin,
@@ -32,7 +32,7 @@ for case in _cases:
         _fns.append(case.fn)
 
 
-class TestFunctions(unittest.IsolatedAsyncioTestCase):
+class TestRemoteStateMiddleware(unittest.IsolatedAsyncioTestCase):
     app: flask.testing.FlaskClient
     client: inngest.Inngest
     dev_server_port: int
@@ -78,7 +78,7 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
 
 for case in _cases:
     test_name = f"test_{case.name}"
-    setattr(TestFunctions, test_name, case.run_test)
+    setattr(TestRemoteStateMiddleware, test_name, case.run_test)
 
 
 if __name__ == "__main__":
