@@ -76,7 +76,7 @@ class TestIntrospection(base.BaseTestIntrospection):
         assert isinstance(
             net.validate_response_sig(
                 body=res.get_data(),
-                headers=res.headers,
+                headers={k: v for k, v in res.headers},
                 mode=server_lib.ServerKind.CLOUD,
                 signing_key=self.signing_key,
             ),
@@ -115,7 +115,7 @@ class TestIntrospection(base.BaseTestIntrospection):
         assert isinstance(
             net.validate_response_sig(
                 body=res.get_data(),
-                headers=res.headers,
+                headers={k: v for k, v in res.headers},
                 mode=server_lib.ServerKind.CLOUD,
                 signing_key=signing_key_fallback,
             ),
