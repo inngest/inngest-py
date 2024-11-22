@@ -362,7 +362,7 @@ class CommHandler:
     ) -> typing.Union[CommResponse, Exception]:
         """Handle a PUT request."""
 
-        self._client.logger.info("Syncing app")
+        self._client.logger.debug("Syncing app")
         syncer = _Syncer(logger=self._client.logger)
 
         if (
@@ -393,7 +393,7 @@ class CommHandler:
     ) -> typing.Union[CommResponse, Exception]:
         """Handle a PUT request."""
 
-        self._client.logger.info("Syncing app")
+        self._client.logger.debug("Syncing app")
         syncer = _Syncer(logger=self._client.logger)
 
         if (

@@ -47,6 +47,11 @@ extra = [
     "types-toml==0.10.8.7",
     "types-tornado==5.1.1",
     "uvicorn==0.23.2",
+
+    # Werkzeug v3.1 deleted something that breaks our minimum Flask version
+    # (v2.3.0). So for now, only allow Werkzeug versions below v3.1. See this PR
+    # for the deleted thing: https://github.com/pallets/werkzeug/pull/2967
+    "werkzeug<3.1",
 ]
 
 [project.urls]
