@@ -46,7 +46,7 @@ class TestTrustProbe(base.BaseTest):
         assert isinstance(
             net.validate_response_sig(
                 body=res.get_data(),
-                headers={k: v for k, v in res.headers},
+                headers=res.headers,
                 mode=server_lib.ServerKind.CLOUD,
                 signing_key=self.signing_key,
             ),
