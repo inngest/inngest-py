@@ -1,13 +1,8 @@
 {
   "[python]": {
-    "editor.codeActionsOnSave": {
-      "source.organizeImports": "explicit"
-    },
     "editor.defaultFormatter": "charliermarsh.ruff"
   },
-  "editor.formatOnSave": true,
-  "isort.args": ["--profile", "black"],
-  "isort.check": true,
+  "editor.formatOnSave": false,
   "mypy-type-checker.importStrategy": "fromEnvironment",
   "mypy-type-checker.preferDaemon": true,
   "python.analysis.typeCheckingMode": "basic",

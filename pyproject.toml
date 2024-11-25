@@ -58,13 +58,6 @@ extra = [
 "Homepage" = "https://github.com/inngest/inngest-py"
 "Bug Tracker" = "https://github.com/inngest/inngest-py/issues"
 
-[tool.black]
-line-length = 80
-
-[tool.isort]
-line_length = 80
-profile = "black"
-
 [tool.mypy]
 enable_error_code = ["possibly-undefined", "redundant-expr", "truthy-bool"]
 incremental = false
