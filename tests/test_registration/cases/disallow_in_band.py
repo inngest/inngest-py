@@ -1,10 +1,11 @@
 import dataclasses
 import json
+import os
 import typing
 
 import inngest
 import inngest.fast_api
-from inngest._internal import const, server_lib
+from inngest._internal import const, net, server_lib
 from tests import http_proxy
 
 from . import base
@@ -15,12 +16,15 @@ _TEST_NAME = base.create_test_name(__file__)
 def create(framework: server_lib.Framework) -> base.Case:
     def run_test(self: base.TestCase) -> None:
         """
-        Test that the SDK correctly syncs itself with Cloud when using a branch
-        environment.
-
-        We need to use a mock Cloud since the Dev Server doesn't have a mode
-        that simulates Cloud.
+        Out-of-band sync when in-band sync is disallowed. Sync kind header is
+        ignored.
         """
+
+        # Disallow in-band sync.
+        os.environ["INNGEST_ALLOW_IN_BAND_SYNC"] = "0"
+        self.addCleanup(os.environ.pop, "INNGEST_ALLOW_IN_BAND_SYNC")
+
+        signing_key = "signkey-prod-000000"
 
         @dataclasses.dataclass
         class State:
@@ -58,7 +62,7 @@ def create(framework: server_lib.Framework) -> base.Case:
             api_base_url=f"http://localhost:{mock_cloud.port}",
             app_id=f"{framework.value}-{_TEST_NAME}",
             env="my-env",
-            signing_key="signkey-prod-0486c9",
+            signing_key=signing_key,
         )
 
         @client.create_function(
@@ -73,7 +77,24 @@ def create(framework: server_lib.Framework) -> base.Case:
             pass
 
         self.serve(client, [fn])
-        res = self.put(body={})
+
+        req_body = json.dumps(
+            server_lib.InBandSynchronizeRequest(
+                url="http://test.local"
+            ).to_dict()
+        ).encode("utf-8")
+
+        req_sig = net.sign_request(req_body, signing_key)
+        if isinstance(req_sig, Exception):
+            raise req_sig
+
+        res = self.put(
+            body=req_body,
+            headers={
+                server_lib.HeaderKey.SIGNATURE.value: req_sig,
+                server_lib.HeaderKey.SYNC_KIND.value: server_lib.SyncKind.IN_BAND.value,
+            },
+        )
         assert res.status_code == 200
         assert json.loads(res.body.decode("utf-8")) == {}
 

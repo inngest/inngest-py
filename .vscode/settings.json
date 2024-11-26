@@ -2,7 +2,7 @@
   "[python]": {
     "editor.defaultFormatter": "charliermarsh.ruff"
   },
-  "editor.formatOnSave": false,
+  "editor.formatOnSave": true,
   "mypy-type-checker.importStrategy": "fromEnvironment",
   "mypy-type-checker.preferDaemon": true,
   "python.analysis.typeCheckingMode": "basic",
