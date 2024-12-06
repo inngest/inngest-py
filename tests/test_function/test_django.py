@@ -40,8 +40,10 @@ for case in _cases:
 
 django.conf.settings.configure(
     ALLOWED_HOSTS=["*"],
-    # We send up to 4 MB
-    DATA_UPLOAD_MAX_MEMORY_SIZE=1024 * 1024 * 5,
+    # We send up to 5 MB
+    # TODO: Change this back to 5 MB after we release a Dev Server version with
+    # the max request size fix (https://github.com/inngest/inngest/pull/2009).
+    DATA_UPLOAD_MAX_MEMORY_SIZE=1024 * 1024 * 8,
     DEBUG=True,
     ROOT_URLCONF=__name__,
     SECRET_KEY="fake",
