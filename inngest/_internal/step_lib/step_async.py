@@ -40,9 +40,9 @@ class Step(base.StepBase):
         step_id: str,
         *,
         function: function.Function,
-        data: typing.Optional[types.JSON] = None,
+        data: typing.Optional[typing.Mapping[str, object]] = None,
         timeout: typing.Union[int, datetime.timedelta, None] = None,
-        user: typing.Optional[types.JSON] = None,
+        user: typing.Optional[typing.Mapping[str, object]] = None,
         v: typing.Optional[str] = None,
     ) -> object:
         """
@@ -79,9 +79,9 @@ class Step(base.StepBase):
         *,
         app_id: typing.Optional[str] = None,
         function_id: str,
-        data: typing.Optional[types.JSON] = None,
+        data: typing.Optional[typing.Mapping[str, object]] = None,
         timeout: typing.Union[int, datetime.timedelta, None] = None,
-        user: typing.Optional[types.JSON] = None,
+        user: typing.Optional[typing.Mapping[str, object]] = None,
         v: typing.Optional[str] = None,
     ) -> object:
         """
@@ -105,6 +105,9 @@ class Step(base.StepBase):
             user: Will become `event.user` in the invoked function. Must be JSON serializable.
             v: Will become `event.v` in the invoked function.
         """
+
+        if app_id is None:
+            app_id = self._client.app_id
 
         parsed_step_id = self._parse_step_id(step_id)
 
