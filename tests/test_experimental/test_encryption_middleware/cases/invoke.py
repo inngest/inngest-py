@@ -49,8 +49,10 @@ def create(
     def child_fn_sync(
         ctx: inngest.Context,
         step: inngest.StepSync,
-    ) -> str:
-        return f"Hello, {ctx.event.data['name']}!"
+    ) -> dict[str, str]:
+        return {
+            "msg": f"Hello, {ctx.event.data['name']}!",
+        }
 
     @client.create_function(
         fn_id=fn_id,
@@ -69,8 +71,8 @@ def create(
             function=child_fn_sync,
             data={"name": "Alice"},
         )
-        assert isinstance(result, str)
-        assert result == "Hello, Alice!"
+        assert isinstance(result, dict)
+        assert result["msg"] == "Hello, Alice!"
 
     @client.create_function(
         fn_id=f"{fn_id}/child",
@@ -81,8 +83,10 @@ def create(
     async def child_fn_async(
         ctx: inngest.Context,
         step: inngest.Step,
-    ) -> str:
-        return f"Hello, {ctx.event.data['name']}!"
+    ) -> dict[str, str]:
+        return {
+            "msg": f"Hello, {ctx.event.data['name']}!",
+        }
 
     @client.create_function(
         fn_id=fn_id,
@@ -96,13 +100,13 @@ def create(
     ) -> None:
         state.run_id = ctx.run_id
 
-        result = step.invoke(
+        result = await step.invoke(
             "invoke",
-            function=child_fn_sync,
+            function=child_fn_async,
             data={"name": "Alice"},
         )
-        assert isinstance(result, str)
-        assert result == "Hello, Alice!"
+        assert isinstance(result, dict)
+        assert result["msg"] == "Hello, Alice!"
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
