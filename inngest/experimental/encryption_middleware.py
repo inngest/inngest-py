@@ -16,6 +16,7 @@ import nacl.secret
 import nacl.utils
 
 import inngest
+from inngest._internal import server_lib
 
 # Marker to indicate that the data is encrypted
 _encryption_marker: typing.Final = "__ENCRYPTED__"
@@ -176,6 +177,31 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
             data.keys(), key=lambda k: k != self._event_encryption_field
         )
 
+        if _is_encrypted(data):
+            # Event data has top-level encryption. However, there may also be
+            # unencrypted fields (like "_inngest" if this is an invoke event).
+
+            decrypted = self._decrypt(data)
+            if not isinstance(decrypted, dict):
+                raise Exception("decrypted data is not a dict")
+
+            # Need to type cast because mypy thinks it's a `dict[str, object]`.
+            decrypted = typing.cast(
+                typing.Mapping[str, inngest.JSON], decrypted
+            )
+
+            # This should be empty if this isn't an invoke event.
+            unencrypted_data = {
+                k: v
+                for k, v in data.items()
+                if k not in (_encryption_marker, _strategy_marker, "data")
+            }
+
+            return {
+                **unencrypted_data,
+                **decrypted,
+            }
+
         # Iterate over all the keys, decrypting the first encrypted field found.
         # It's possible that the event producer uses a different encryption
         # field
@@ -235,6 +261,19 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
 
         if result.has_output():
             result.output = self._encrypt(result.output)
+
+        # Encrypt invoke data if present.
+        if (
+            result.step is not None
+            and result.step.op is server_lib.Opcode.INVOKE
+            and result.step.opts is not None
+        ):
+            payload = result.step.opts.get("payload", {})
+            if isinstance(payload, dict):
+                data = payload.get("data")
+                if data is not None:
+                    payload["data"] = self._encrypt(data)
+                    result.step.opts["payload"] = payload
 
 
 def _is_encrypted(value: object) -> bool:

@@ -28,7 +28,10 @@ class Client:
             return Error(message=f"failed to parse response as JSON: {e}")
 
         if gql_res.errors is not None:
-            return Error(message="GraphQL error", response=gql_res)
+            msg = "GraphQL error"
+            if len(gql_res.errors) > 0:
+                msg += f": {gql_res.errors[0].get('message')}"
+            return Error(message=msg, response=gql_res)
 
         return gql_res
 

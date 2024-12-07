@@ -2,6 +2,8 @@
 Ensure that invoke works.
 """
 
+import typing
+
 import nacl.encoding
 import nacl.hash
 import nacl.secret
@@ -26,8 +28,8 @@ enc = base.Encryptor(
 
 
 class _State(base.BaseState):
-    event: inngest.Event
-    events: list[inngest.Event]
+    child_run_id: typing.Optional[str] = None
+    child_event: typing.Optional[inngest.Event] = None
 
 
 def create(
@@ -50,6 +52,9 @@ def create(
         ctx: inngest.Context,
         step: inngest.StepSync,
     ) -> dict[str, str]:
+        state.child_run_id = ctx.run_id
+        state.child_event = ctx.event
+
         return {
             "msg": f"Hello, {ctx.event.data['name']}!",
         }
@@ -84,6 +89,9 @@ def create(
         ctx: inngest.Context,
         step: inngest.Step,
     ) -> dict[str, str]:
+        state.child_run_id = ctx.run_id
+        state.child_event = ctx.event
+
         return {
             "msg": f"Hello, {ctx.event.data['name']}!",
         }
@@ -116,6 +124,33 @@ def create(
             run_id,
             tests.helper.RunStatus.COMPLETED,
         )
+
+        assert state.child_event is not None
+
+        # Ensure we stripped the encryption fields (encryption marker, strategy
+        # marker, and encrypted data).
+        assert sorted(state.child_event.data.keys()) == ["_inngest", "name"]
+
+        assert state.child_run_id is not None
+        child_run = tests.helper.client.wait_for_run_status(
+            state.child_run_id,
+            tests.helper.RunStatus.COMPLETED,
+        )
+
+        # Ensure the stored event has the encryption fields.
+        assert sorted(child_run.event.data.keys()) == [
+            "__ENCRYPTED__",
+            "__STRATEGY__",
+            "_inngest",
+            "data",
+        ]
+
+        # Ensure the data is encrypted.
+        encrypted_data = child_run.event.data["data"]
+        assert isinstance(encrypted_data, str)
+        assert enc.decrypt(encrypted_data.encode("utf-8")) == {
+            "name": "Alice",
+        }
 
     if is_sync:
         fn = [child_fn_sync, fn_sync]
