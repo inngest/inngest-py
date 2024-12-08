@@ -72,7 +72,7 @@ def create(
             )
         self.client.send_sync(events)
 
-        run_id = state.wait_for_run_id()
+        run_id = state.wait_for_run_id(timeout=datetime.timedelta(seconds=10))
         tests.helper.client.wait_for_run_status(
             run_id,
             tests.helper.RunStatus.COMPLETED,
