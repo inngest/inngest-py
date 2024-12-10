@@ -41,10 +41,14 @@ def create(
     event_name = base.create_event_name(framework, test_name)
     fn_id = base.create_fn_id(test_name)
     state = _State()
+    mw = EncryptionMiddleware.factory(
+        _secret_key,
+        encrypt_invoke_data=True,
+    )
 
     @client.create_function(
         fn_id=f"{fn_id}/child",
-        middleware=[EncryptionMiddleware.factory(_secret_key)],
+        middleware=[mw],
         retries=0,
         trigger=inngest.TriggerEvent(event="never"),
     )
@@ -61,7 +65,7 @@ def create(
 
     @client.create_function(
         fn_id=fn_id,
-        middleware=[EncryptionMiddleware.factory(_secret_key)],
+        middleware=[mw],
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
@@ -81,7 +85,7 @@ def create(
 
     @client.create_function(
         fn_id=f"{fn_id}/child",
-        middleware=[EncryptionMiddleware.factory(_secret_key)],
+        middleware=[mw],
         retries=0,
         trigger=inngest.TriggerEvent(event="never"),
     )
@@ -98,7 +102,7 @@ def create(
 
     @client.create_function(
         fn_id=fn_id,
-        middleware=[EncryptionMiddleware.factory(_secret_key)],
+        middleware=[mw],
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )

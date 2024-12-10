@@ -54,6 +54,7 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
         secret_key: typing.Union[bytes, str],
         *,
         decrypt_only: bool = False,
+        encrypt_invoke_data: bool = False,
         event_encryption_field: str = _default_event_encryption_field,
         fallback_decryption_keys: typing.Optional[
             list[typing.Union[bytes, str]]
@@ -66,6 +67,7 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
             raw_request: Framework/platform specific request object.
             secret_key: Secret key used for encryption and decryption.
             decrypt_only: Only decrypt data (do not encrypt).
+            encrypt_invoke_data: Encrypt the data sent to invoked functions. Deprecated: Will be removed in a future release, where invoke data will always be encrypted (equivalent to encrypt_invoke_data=True).
             event_encryption_field: Automatically encrypt and decrypt this field in event data.
             fallback_decryption_keys: Fallback secret keys used for decryption.
         """
@@ -78,6 +80,7 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
         )
 
         self._decrypt_only = decrypt_only
+        self._encrypt_invoke_data = encrypt_invoke_data
         self._event_encryption_field = event_encryption_field
 
         self._fallback_decryption_boxes = [
@@ -94,6 +97,7 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
         secret_key: typing.Union[bytes, str],
         *,
         decrypt_only: bool = False,
+        encrypt_invoke_data: bool = False,
         event_encryption_field: str = _default_event_encryption_field,
         fallback_decryption_keys: typing.Optional[
             list[typing.Union[bytes, str]]
@@ -107,6 +111,7 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
         ----
             secret_key: Fernet secret key used for encryption and decryption.
             decrypt_only: Only decrypt data (do not encrypt).
+            encrypt_invoke_data: Encrypt the data sent to invoked functions. Deprecated: Will be removed in a future release, where invoke data will always be encrypted (equivalent to encrypt_invoke_data=True).
             event_encryption_field: Automatically encrypt and decrypt this field in event data.
             fallback_decryption_keys: Fallback secret keys used for decryption.
         """
@@ -120,6 +125,7 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
                 raw_request,
                 secret_key,
                 decrypt_only=decrypt_only,
+                encrypt_invoke_data=encrypt_invoke_data,
                 event_encryption_field=event_encryption_field,
                 fallback_decryption_keys=fallback_decryption_keys,
             )
@@ -264,7 +270,8 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
 
         # Encrypt invoke data if present.
         if (
-            result.step is not None
+            self._encrypt_invoke_data
+            and result.step is not None
             and result.step.op is server_lib.Opcode.INVOKE
             and result.step.opts is not None
         ):
