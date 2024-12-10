@@ -2,6 +2,8 @@
 Ensure that invoke works.
 """
 
+import typing
+
 import nacl.encoding
 import nacl.hash
 import nacl.secret
@@ -26,8 +28,8 @@ enc = base.Encryptor(
 
 
 class _State(base.BaseState):
-    event: inngest.Event
-    events: list[inngest.Event]
+    child_run_id: typing.Optional[str] = None
+    child_event: typing.Optional[inngest.Event] = None
 
 
 def create(
@@ -39,22 +41,31 @@ def create(
     event_name = base.create_event_name(framework, test_name)
     fn_id = base.create_fn_id(test_name)
     state = _State()
+    mw = EncryptionMiddleware.factory(
+        _secret_key,
+        encrypt_invoke_data=True,
+    )
 
     @client.create_function(
         fn_id=f"{fn_id}/child",
-        middleware=[EncryptionMiddleware.factory(_secret_key)],
+        middleware=[mw],
         retries=0,
         trigger=inngest.TriggerEvent(event="never"),
     )
     def child_fn_sync(
         ctx: inngest.Context,
         step: inngest.StepSync,
-    ) -> str:
-        return f"Hello, {ctx.event.data['name']}!"
+    ) -> dict[str, str]:
+        state.child_run_id = ctx.run_id
+        state.child_event = ctx.event
+
+        return {
+            "msg": f"Hello, {ctx.event.data['name']}!",
+        }
 
     @client.create_function(
         fn_id=fn_id,
-        middleware=[EncryptionMiddleware.factory(_secret_key)],
+        middleware=[mw],
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
@@ -69,24 +80,29 @@ def create(
             function=child_fn_sync,
             data={"name": "Alice"},
         )
-        assert isinstance(result, str)
-        assert result == "Hello, Alice!"
+        assert isinstance(result, dict)
+        assert result["msg"] == "Hello, Alice!"
 
     @client.create_function(
         fn_id=f"{fn_id}/child",
-        middleware=[EncryptionMiddleware.factory(_secret_key)],
+        middleware=[mw],
         retries=0,
         trigger=inngest.TriggerEvent(event="never"),
     )
     async def child_fn_async(
         ctx: inngest.Context,
         step: inngest.Step,
-    ) -> str:
-        return f"Hello, {ctx.event.data['name']}!"
+    ) -> dict[str, str]:
+        state.child_run_id = ctx.run_id
+        state.child_event = ctx.event
+
+        return {
+            "msg": f"Hello, {ctx.event.data['name']}!",
+        }
 
     @client.create_function(
         fn_id=fn_id,
-        middleware=[EncryptionMiddleware.factory(_secret_key)],
+        middleware=[mw],
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
@@ -96,13 +112,13 @@ def create(
     ) -> None:
         state.run_id = ctx.run_id
 
-        result = step.invoke(
+        result = await step.invoke(
             "invoke",
-            function=child_fn_sync,
+            function=child_fn_async,
             data={"name": "Alice"},
         )
-        assert isinstance(result, str)
-        assert result == "Hello, Alice!"
+        assert isinstance(result, dict)
+        assert result["msg"] == "Hello, Alice!"
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
@@ -112,6 +128,33 @@ def create(
             run_id,
             tests.helper.RunStatus.COMPLETED,
         )
+
+        assert state.child_event is not None
+
+        # Ensure we stripped the encryption fields (encryption marker, strategy
+        # marker, and encrypted data).
+        assert sorted(state.child_event.data.keys()) == ["_inngest", "name"]
+
+        assert state.child_run_id is not None
+        child_run = tests.helper.client.wait_for_run_status(
+            state.child_run_id,
+            tests.helper.RunStatus.COMPLETED,
+        )
+
+        # Ensure the stored event has the encryption fields.
+        assert sorted(child_run.event.data.keys()) == [
+            "__ENCRYPTED__",
+            "__STRATEGY__",
+            "_inngest",
+            "data",
+        ]
+
+        # Ensure the data is encrypted.
+        encrypted_data = child_run.event.data["data"]
+        assert isinstance(encrypted_data, str)
+        assert enc.decrypt(encrypted_data.encode("utf-8")) == {
+            "name": "Alice",
+        }
 
     if is_sync:
         fn = [child_fn_sync, fn_sync]
