@@ -1,4 +1,3 @@
-import os
 import typing
 import unittest
 
@@ -8,7 +7,7 @@ import flask.testing
 
 import inngest
 import inngest.flask
-from inngest._internal import const, server_lib
+from inngest._internal import server_lib
 
 from . import base, cases
 
@@ -18,18 +17,8 @@ _framework = server_lib.Framework.FLASK
 class TestRegistration(base.TestCase):
     def setUp(self) -> None:
         super().setUp()
-
-        # TODO: Delete this when we default to allowing in-band sync
-        os.environ[const.EnvKey.ALLOW_IN_BAND_SYNC.value] = "1"
-
         self.app = flask.Flask(__name__)
         self.app_client = self.app.test_client()
-
-    def tearDown(self) -> None:
-        super().tearDown()
-
-        # TODO: Delete this when we default to allowing in-band sync
-        os.environ.pop(const.EnvKey.ALLOW_IN_BAND_SYNC.value, None)
 
     def put(
         self,

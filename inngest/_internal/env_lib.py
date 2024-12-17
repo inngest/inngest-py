@@ -38,6 +38,15 @@ def get_url(
     return parsed
 
 
+def is_false(env_var: const.EnvKey) -> bool:
+    val = os.getenv(env_var.value)
+    if val is None:
+        return False
+    val = val.strip()
+
+    return val.lower() in ("false", "0")
+
+
 def is_true(env_var: const.EnvKey) -> bool:
     val = os.getenv(env_var.value)
     if val is None:
