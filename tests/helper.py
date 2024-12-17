@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import enum
+import json
 import time
 import typing
 
 import pydantic
 
+import inngest
 from inngest._internal import types
 from inngest.experimental import dev_server
 
@@ -153,6 +155,9 @@ class _Client:
         query = """
         query GetRun($run_id: ID!) {
             functionRun(query: { functionRunId: $run_id }) {
+                event {
+                    raw
+                }
                 id
                 output
                 status
@@ -168,6 +173,7 @@ class _Client:
                 if not isinstance(run, dict):
                     raise Exception("unexpected response")
                 if run["status"] == status.value:
+                    run["event"] = json.loads(run["event"]["raw"])
                     return _Run.model_validate(run)
 
                 if any(run["status"] == s.value for s in ended_statuses):
@@ -185,6 +191,7 @@ class _Client:
 
 
 class _Run(types.BaseModel):
+    event: inngest.Event
     id: str
     output: typing.Optional[str]
     status: RunStatus

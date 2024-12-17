@@ -8,6 +8,7 @@ from . import (
     decrypt_unexpected_encryption_field,
     encrypt_overridden_encryption_field,
     fallback_decryption_key,
+    invoke,
     step_and_fn_output,
 )
 
@@ -17,6 +18,7 @@ _modules = (
     decrypt_unexpected_encryption_field,
     encrypt_overridden_encryption_field,
     fallback_decryption_key,
+    invoke,
     step_and_fn_output,
 )
 

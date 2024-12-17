@@ -2,6 +2,9 @@
   "[python]": {
     "editor.defaultFormatter": "charliermarsh.ruff"
   },
+  "editor.codeActionsOnSave": {
+    "source.organizeImports.ruff": "explicit"
+  },
   "editor.formatOnSave": true,
   "mypy-type-checker.importStrategy": "fromEnvironment",
   "mypy-type-checker.preferDaemon": true,
