@@ -17,6 +17,8 @@ class _State(base.BaseState):
     step_1b_counter = 0
     step_2a_counter = 0
     step_2b_counter = 0
+    step_2c_counter = 0
+    step_3_counter = 0
     step_after_counter = 0
     parallel_output: object = None
 
@@ -54,35 +56,52 @@ def create(
     ) -> None:
         state.run_id = ctx.run_id
 
-        def _step_1a() -> str:
-            state.step_1a_counter += 1
-            return "1a"
+        # Group of 2 sequential steps.
+        def _group_1() -> list[str]:
+            def _step_1a() -> str:
+                state.step_1a_counter += 1
+                return "1a"
 
-        def _step_1b() -> str:
-            state.step_1b_counter += 1
-            return "1b"
+            def _step_1b() -> str:
+                state.step_1b_counter += 1
+                return "1b"
 
-        def _step_2a() -> str:
-            state.step_2a_counter += 1
-            return "2a"
-
-        def _step_2b() -> str:
-            state.step_2b_counter += 1
-            return "2b"
-
-        def _wrapper_a() -> list[str]:
             out = []
             out.append(step.run("1a", _step_1a))
             out.append(step.run("1b", _step_1b))
             return out
 
-        def _wrapper_b() -> list[str]:
+        # Group of 3 sequential steps.
+        def _group_2() -> list[str]:
+            def _step_2a() -> str:
+                state.step_2a_counter += 1
+                return "2a"
+
+            def _step_2b() -> str:
+                state.step_2b_counter += 1
+                return "2b"
+
+            def _step_2c() -> str:
+                state.step_2c_counter += 1
+                return "2c"
+
             out = []
             out.append(step.run("2a", _step_2a))
             out.append(step.run("2b", _step_2b))
+            out.append(step.run("2c", _step_2c))
             return out
 
-        state.parallel_output = step.parallel((_wrapper_a, _wrapper_b))
+        def _step_3() -> str:
+            state.step_3_counter += 1
+            return "3"
+
+        state.parallel_output = step.parallel(
+            (
+                _group_1,
+                _group_2,
+                lambda: step.run("3", _step_3),
+            )
+        )
 
         def _step_after() -> None:
             state.step_after_counter += 1
@@ -112,35 +131,52 @@ def create(
     ) -> None:
         state.run_id = ctx.run_id
 
-        async def _step_1a() -> str:
-            state.step_1a_counter += 1
-            return "1a"
+        # Group of 2 sequential steps.
+        async def _group_1() -> list[str]:
+            async def _step_1a() -> str:
+                state.step_1a_counter += 1
+                return "1a"
 
-        async def _step_1b() -> str:
-            state.step_1b_counter += 1
-            return "1b"
+            async def _step_1b() -> str:
+                state.step_1b_counter += 1
+                return "1b"
 
-        async def _step_2a() -> str:
-            state.step_2a_counter += 1
-            return "2a"
-
-        async def _step_2b() -> str:
-            state.step_2b_counter += 1
-            return "2b"
-
-        async def _wrapper_a() -> list[str]:
             out = []
             out.append(await step.run("1a", _step_1a))
             out.append(await step.run("1b", _step_1b))
             return out
 
-        async def _wrapper_b() -> list[str]:
+        # Group of 3 sequential steps.
+        async def _group_2() -> list[str]:
+            async def _step_2a() -> str:
+                state.step_2a_counter += 1
+                return "2a"
+
+            async def _step_2b() -> str:
+                state.step_2b_counter += 1
+                return "2b"
+
+            async def _step_2c() -> str:
+                state.step_2c_counter += 1
+                return "2c"
+
             out = []
             out.append(await step.run("2a", _step_2a))
             out.append(await step.run("2b", _step_2b))
+            out.append(await step.run("2c", _step_2c))
             return out
 
-        state.parallel_output = await step.parallel((_wrapper_a, _wrapper_b))
+        async def _step_3() -> str:
+            state.step_3_counter += 1
+            return "3"
+
+        state.parallel_output = await step.parallel(
+            (
+                _group_1,
+                _group_2,
+                lambda: step.run("3", _step_3),
+            )
+        )
 
         async def _step_after() -> None:
             state.step_after_counter += 1
@@ -158,12 +194,15 @@ def create(
 
         assert state.parallel_output == (
             ["1a", "1b"],
-            ["2a", "2b"],
+            ["2a", "2b", "2c"],
+            "3",
         )
         assert state.step_1a_counter == 1
         assert state.step_1b_counter == 1
         assert state.step_2a_counter == 1
         assert state.step_2b_counter == 1
+        assert state.step_2c_counter == 1
+        assert state.step_3_counter == 1
         assert state.step_after_counter == 1
 
     if is_sync:
