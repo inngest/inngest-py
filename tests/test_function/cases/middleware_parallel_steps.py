@@ -47,6 +47,12 @@ def create(
             )
         )
 
+        # Only necessary because of a parallel step bug within the Inngest
+        # server. If a function ends with parallel steps then sometimes a
+        # discovery step happens after the run is finalized (and therefore its
+        # state was deleted).
+        step.run("converge", lambda: None)
+
         return "2 (fn)"
 
     @client.create_function(
@@ -68,6 +74,12 @@ def create(
             )
         )
 
+        # Only necessary because of a parallel step bug within the Inngest
+        # server. If a function ends with parallel steps then sometimes a
+        # discovery step happens after the run is finalized (and therefore its
+        # state was deleted).
+        await step.run("converge", lambda: None)
+
         return "2 (fn)"
 
     async def run_test(self: base.TestClass) -> None:
@@ -79,12 +91,6 @@ def create(
         )
 
         results = sorted(state.results, key=lambda x: str(x.output))
-
-        if len(results) == 4:
-            # The last request (the function return) usually happens twice but
-            # sometimes only once. This is probably a race condition between the
-            # Executor and SDK, so we'll pop the "extra" result if it exists
-            results.pop()
 
         _assert_results(
             results,
@@ -111,6 +117,33 @@ def create(
                     error=None,
                     output="2 (fn)",
                     step=None,
+                ),
+                inngest.TransformOutputResult(
+                    error=None,
+                    output=None,
+                    step=middleware_lib.TransformOutputStepInfo(
+                        id="converge",
+                        op=server_lib.Opcode.PLANNED,
+                        opts=None,
+                    ),
+                ),
+                inngest.TransformOutputResult(
+                    error=None,
+                    output=None,
+                    step=middleware_lib.TransformOutputStepInfo(
+                        id="converge",
+                        op=server_lib.Opcode.PLANNED,
+                        opts=None,
+                    ),
+                ),
+                inngest.TransformOutputResult(
+                    error=None,
+                    output=None,
+                    step=middleware_lib.TransformOutputStepInfo(
+                        id="converge",
+                        op=server_lib.Opcode.STEP_RUN,
+                        opts=None,
+                    ),
                 ),
             ],
         )
