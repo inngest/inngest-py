@@ -148,9 +148,9 @@ class _Client:
     def wait_for_run_status(
         self,
         run_id: str,
-        status: RunStatus,
+        expected_status: RunStatus,
         *,
-        timeout: int = 5,
+        timeout: int = 10,
     ) -> _Run:
         query = """
         query GetRun($run_id: ID!) {
@@ -166,26 +166,30 @@ class _Client:
         """
 
         start = time.time()
+        actual_status: typing.Optional[str] = None
         while True:
             res = self._gql.query(gql.Query(query, {"run_id": run_id}))
             if isinstance(res, gql.Response):
                 run = res.data.get("functionRun")
                 if not isinstance(run, dict):
                     raise Exception("unexpected response")
-                if run["status"] == status.value:
+                actual_status = run["status"]
+
+                if actual_status == expected_status.value:
                     run["event"] = json.loads(run["event"]["raw"])
                     return _Run.model_validate(run)
 
-                if any(run["status"] == s.value for s in ended_statuses):
+                if any(actual_status == s.value for s in ended_statuses):
                     # Fail early if the run ended with a different status
                     raise Exception(
-                        f"run ended with a different status: {run['status']}"
+                        f"run ended with a different status: {actual_status}"
                     )
 
             if time.time() - start > timeout:
-                raise Exception(
-                    "timed out waiting for run status, actual status is"
-                )
+                msg = "timed out waiting for run status: no status available"
+                if actual_status is not None:
+                    msg = f"timed out waiting for run status: actual status is {actual_status}"
+                raise Exception(msg)
 
             time.sleep(0.2)
 

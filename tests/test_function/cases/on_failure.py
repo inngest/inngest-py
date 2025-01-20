@@ -1,3 +1,4 @@
+import datetime
 import json
 import typing
 import unittest.mock
@@ -20,7 +21,7 @@ class _State(base.BaseState):
         def assertion() -> None:
             assert self.on_failure_run_id is not None
 
-        base.wait_for(assertion)
+        base.wait_for(assertion, timeout=datetime.timedelta(seconds=10))
         assert self.on_failure_run_id is not None
         return self.on_failure_run_id
 
