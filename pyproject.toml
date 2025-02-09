@@ -1,34 +1,16 @@
 [project]
-name = "inngest"
-version = "0.4.18"
+name = "inngest-py"
+version = "0.0.0"
 authors = [{ name = "Inngest Inc.", email = "hello@inngest.com" }]
 description = "Python SDK for Inngest"
 readme = "README.md"
-classifiers = [
-    "Development Status :: 5 - Production/Stable",
-    "Framework :: Django",
-    "Framework :: FastAPI",
-    "Framework :: Flask",
-    "Intended Audience :: Developers",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-]
 requires-python = ">=3.9"
-
-dependencies = [
-    "httpx>=0.24.0",
-    "jcs>=0.2.1",
-    "pydantic>=2.1.1",
-    "typing-extensions>=4.8.0",
-]
 
 [project.optional-dependencies]
 extra = [
     "Django==4.2",
     "Flask==2.3.0",
-    "boto3-stubs[s3]==1.35.46 ",
+    "boto3-stubs[s3]==1.35.46",
     "boto3==1.35.47",
     "build==1.0.3",
     "cryptography==42.0.5",
@@ -37,10 +19,10 @@ extra = [
     "moto[s3,server]==5.0.18",
     "mypy==1.10.0",
     "pynacl==1.5.0",
-    "pytest==7.4.2",
+    "pytest==8.3.4",
     "pytest-django==4.7.0",
     "pytest-xdist[psutil]==3.3.1",
-    "ruff==0.1.9",
+    "ruff==0.9.5",
     "sentry-sdk==2.1.1",
     "toml==0.10.2",
     "tornado==6.3",
@@ -57,81 +39,3 @@ extra = [
 [project.urls]
 "Homepage" = "https://github.com/inngest/inngest-py"
 "Bug Tracker" = "https://github.com/inngest/inngest-py/issues"
-
-[tool.mypy]
-enable_error_code = ["possibly-undefined", "redundant-expr", "truthy-bool"]
-incremental = false
-strict = true
-warn_unreachable = true
-
-[tool.pylint.'MESSAGES CONTROL']
-disable = [
-    'broad-exception-caught',
-    'broad-exception-raised',
-    'duplicate-code',
-    'fixme',
-    'invalid-envvar-value',
-    'line-too-long',
-    'missing-docstring',
-    'too-few-public-methods',
-    'too-many-arguments',
-    'too-many-instance-attributes',
-    'too-many-return-statements',
-    'unused-argument',
-]
-
-[tool.pytest.ini_options]
-filterwarnings = ['ignore::pytest.PytestAssertRewriteWarning']
-
-[tool.ruff]
-exclude = [".venv"]
-
-# https://docs.astral.sh/ruff/rules
-extend-select = [
-    'ASYNC',
-    'C90',
-    'D',
-    'ERA',
-    'I',
-    'N',
-    'Q',
-    'RUF',
-    'S',
-    'T',
-    'UP',
-]
-extend-ignore = [
-    'D100',
-    'D200',
-    'D202',
-    'D203',
-    'D205',
-    'D212',
-    'D400',
-    'D401',
-    'D415',
-    'S112',
-
-    # Can't use the "|" operator for unions until we drop support for Python 3.9
-    'UP007',
-]
-
-line-length = 80
-mccabe = { max-complexity = 21 }
-
-[[tool.mypy.overrides]]
-module = "jcs"
-ignore_missing_imports = true
-
-[tool.ruff.extend-per-file-ignores]
-"examples/**/*.py" = ['D', 'T20']
-"inngest/**/*_test.py" = ['C901', 'D', 'N', 'S', 'T20']
-"tests/**/*.py" = ['C901', 'D', 'N', 'S', 'T20']
-
-[tool.ruff.lint]
-# Allow fix for all enabled rules (when `--fix`) is provided.
-fixable = ["ALL"]
-
-[tool.setuptools.package-data]
-# Makes py.typed appear when users install the inngest package.
-inngest = ["py.typed"]

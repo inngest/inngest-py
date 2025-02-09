@@ -1,8 +1,7 @@
-from src.inngest.client import inngest_client
-from src.inngest.functions import hello
-
 import inngest.digital_ocean
 from inngest.experimental.digital_ocean_simulator import DigitalOceanSimulator
+from src.inngest.client import inngest_client
+from src.inngest.functions import hello
 
 main = inngest.digital_ocean.serve(
     inngest_client,
