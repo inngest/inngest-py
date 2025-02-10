@@ -5,10 +5,10 @@ check-venv:
 	fi
 
 format: check-venv
-	@ruff format --check .
+	@ruff format .
 
 format-check: check-venv
-	@ruff format .
+	@ruff format --check .
 
 install: check-venv
 	@pip install -e '.[extra]' -e ./pkg/inngest -e ./pkg/test_core -c constraints.txt

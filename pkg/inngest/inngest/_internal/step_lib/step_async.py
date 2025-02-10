@@ -188,8 +188,7 @@ class Step(base.StepBase):
             typing.Awaitable[types.JSONT],
         ],
         *handler_args: typing_extensions.Unpack[types.TTuple],
-    ) -> types.JSONT:
-        ...
+    ) -> types.JSONT: ...
 
     @typing.overload
     async def run(
@@ -199,8 +198,7 @@ class Step(base.StepBase):
             [typing_extensions.Unpack[types.TTuple]], types.JSONT
         ],
         *handler_args: typing_extensions.Unpack[types.TTuple],
-    ) -> types.JSONT:
-        ...
+    ) -> types.JSONT: ...
 
     async def run(
         self,

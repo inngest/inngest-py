@@ -3,7 +3,6 @@ Ensure that we encrypt the correct event.data field when the event encryption
 field is overridden
 """
 
-
 import inngest
 import nacl.encoding
 import nacl.hash

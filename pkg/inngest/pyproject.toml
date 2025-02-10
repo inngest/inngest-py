@@ -28,17 +28,6 @@ dependencies = [
 "Homepage" = "https://github.com/inngest/inngest-py"
 "Bug Tracker" = "https://github.com/inngest/inngest-py/issues"
 
-[tool.mypy]
-enable_error_code = ["possibly-undefined", "redundant-expr", "truthy-bool"]
-incremental = false
-mypy_path = ["pkg/inngest", "pkg/inngest_encryption", "pkg/test_core"]
-strict = true
-warn_unreachable = true
-
-[[tool.mypy.overrides]]
-module = "jcs"
-ignore_missing_imports = true
-
 [tool.setuptools.package-data]
 # Makes py.typed appear when users install the inngest package.
 inngest = ["py.typed"]

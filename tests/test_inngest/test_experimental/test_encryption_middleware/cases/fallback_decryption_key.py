@@ -3,7 +3,6 @@ Ensure that the encryption middleware can decrypt data using a fallback
 decryption key. The primary key is intentionally wrong
 """
 
-
 import inngest
 import nacl.encoding
 import nacl.hash

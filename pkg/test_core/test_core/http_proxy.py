@@ -152,8 +152,7 @@ class OnRequest(typing.Protocol):
         headers: dict[str, list[str]],
         method: str,
         path: str,
-    ) -> Response:
-        ...
+    ) -> Response: ...
 
 
 def on_proxy_fast_api_request(

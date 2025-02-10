@@ -74,8 +74,7 @@ class FunctionHandlerAsync(typing.Protocol):
         self,
         ctx: Context,
         step: step_lib.Step,
-    ) -> typing.Awaitable[types.JSON]:
-        ...
+    ) -> typing.Awaitable[types.JSON]: ...
 
 
 @typing.runtime_checkable
@@ -84,8 +83,7 @@ class FunctionHandlerSync(typing.Protocol):
         self,
         ctx: Context,
         step: step_lib.StepSync,
-    ) -> types.JSON:
-        ...
+    ) -> types.JSON: ...
 
 
 class ReportedStep:
