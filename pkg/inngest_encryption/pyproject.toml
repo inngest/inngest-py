@@ -1,9 +1,9 @@
 [project]
 name = "inngest_encryption"
-version = "0.0.1a0"
+version = "0.0.1a1"
 authors = [{ name = "Inngest Inc.", email = "hello@inngest.com" }]
 description = "Encryption for the Inngest SDK"
-readme = "README.md"
+readme = "../../README.md"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -19,17 +19,6 @@ dependencies = ["pynacl>=1.5.0"]
 [project.urls]
 "Homepage" = "https://github.com/inngest/inngest-py"
 "Bug Tracker" = "https://github.com/inngest/inngest-py/issues"
-
-# [tool.mypy]
-# enable_error_code = ["possibly-undefined", "redundant-expr", "truthy-bool"]
-# incremental = false
-# mypy_path = ["../inngest", "../test_core"]
-# strict = true
-# warn_unreachable = true
-
-# [[tool.mypy.overrides]]
-# module = "jcs"
-# ignore_missing_imports = true
 
 [tool.pylint.'MESSAGES CONTROL']
 disable = [
