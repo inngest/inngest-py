@@ -76,7 +76,7 @@ jobs:
           python-version: "${{ matrix.python-version }}"
       - name: "Install"
         run: "make install"
-      - name: "Install"
+      - name: "Build"
         run: "make build"
         working-directory: "./pkg/inngest_encryption"
       - name: "Upload package to PyPI"
