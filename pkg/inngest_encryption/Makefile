@@ -1,4 +1,4 @@
-export MYPYPATH=../inngest:../test_core
+export MYPYPATH=../inngest
 
 .PHONY: check-venv
 check-venv:

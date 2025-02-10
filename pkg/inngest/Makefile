@@ -1,5 +1,3 @@
-export MYPYPATH=../test_core
-
 .PHONY: build
 build:
 	@if [ -d "dist" ]; then rm -rf dist; fi
