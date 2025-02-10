@@ -1,6 +1,6 @@
 [project]
 name = "inngest_encryption"
-version = "0.0.1a2"
+version = "0.0.1a3"
 authors = [{ name = "Inngest Inc.", email = "hello@inngest.com" }]
 description = "Encryption for the Inngest SDK"
 readme = "README.md"
@@ -14,7 +14,7 @@ classifiers = [
 ]
 requires-python = ">=3.9"
 
-dependencies = ["pynacl>=1.5.0"]
+dependencies = ["inngest>=0.4.18", "pynacl>=1.5.0"]
 
 [project.urls]
 "Homepage" = "https://github.com/inngest/inngest-py"
