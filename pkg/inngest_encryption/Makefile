@@ -20,6 +20,9 @@ itest: check-venv
 lint: check-venv
 	@ruff check .
 
+release:
+	@grep "version = \"$${VERSION}\"" pyproject.toml && git tag inngest_encryption@$${VERSION} && git push origin inngest_encryption@$${VERSION} || echo "pyproject.toml version does not match"
+
 .PHONY: type-check
 type-check: check-venv
 	@mypy --config-file=../../mypy.ini .

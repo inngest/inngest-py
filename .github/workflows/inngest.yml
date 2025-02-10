@@ -84,6 +84,8 @@ jobs:
         working-directory: "./pkg/inngest"
       - name: "Upload package to PyPI"
         uses: "pypa/gh-action-pypi-publish@release/v1"
+        with:
+          packages-dir: "./pkg/inngest/dist"
 
   type-check:
     runs-on: "ubuntu-latest"
