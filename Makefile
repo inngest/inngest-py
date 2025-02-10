@@ -1,8 +1,3 @@
-.PHONY: build
-build:
-	@if [ -d "dist" ]; then rm -rf dist; fi
-	@python -m build
-
 check-venv:
 	@if [ -z "$${CI}" ] && [ -z "$${VIRTUAL_ENV}" ]; then \
 		echo "virtual environment is not activated"; \
@@ -16,24 +11,26 @@ format-check: check-venv
 	@ruff format .
 
 install: check-venv
-	@pip install -e '.[extra]' -c constraints.txt
+	@pip install -e '.[extra]' -e ./pkg/inngest -e ./pkg/test_core -c constraints.txt
 
 itest: check-venv
-	@pytest -n 4 -v tests
+	@cd pkg/inngest && make itest
+	@cd pkg/inngest_encryption && make itest
 
 pre-commit: format-check lint type-check utest
 
-release:
-	@grep  "version = \"$${VERSION}\"" pyproject.toml && git tag $${VERSION} && git push origin $${VERSION} || echo "pyproject.toml version does not match"
-
 lint: check-venv
-	@ruff check .
+	@cd examples && make lint
+	@cd pkg/inngest && make lint
+	@cd pkg/inngest_encryption && make lint
+	@cd pkg/test_core && make lint
 
 type-check: check-venv
-	@mypy inngest tests
-	@mypy examples/fast_api
-	@mypy examples/flask
-	@mypy examples/tornado
+	@cd examples && make type-check
+	@cd pkg/inngest && make type-check
+	@cd pkg/inngest_encryption && make type-check
+	@cd pkg/test_core && make type-check
 
 utest: check-venv
-	@pytest -v inngest
+	@cd pkg/inngest && make utest
+	@cd pkg/inngest_encryption && make utest

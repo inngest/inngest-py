@@ -1,0 +1,4 @@
+[project]
+name = "test_utils"
+version = "0.0.0"
+authors = [{ name = "Inngest Inc.", email = "hello@inngest.com" }]

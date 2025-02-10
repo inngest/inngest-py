@@ -8,6 +8,11 @@
   "editor.formatOnSave": true,
   "mypy-type-checker.importStrategy": "fromEnvironment",
   "mypy-type-checker.preferDaemon": true,
+  "python.analysis.extraPaths": [
+    "pkg/inngest",
+    "pkg/inngest_encryption",
+    "pkg/test_core"
+  ],
   "python.analysis.typeCheckingMode": "basic",
   "python.languageServer": "Pylance",
   "ruff.fixAll": true

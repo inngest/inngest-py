@@ -1,7 +1,6 @@
+import inngest.django
 from django.contrib import admin
 from django.urls import path
-
-import inngest.django
 
 from .functions import hello
 from .inngest_client import inngest_client

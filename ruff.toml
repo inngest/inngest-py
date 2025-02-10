@@ -1,0 +1,47 @@
+exclude = [".venv"]
+
+line-length = 80
+
+[lint.extend-per-file-ignores]
+"**/*_test.py" = ['C901', 'D', 'N', 'S', 'T20']
+"tests/**/*.py" = ['C901', 'D', 'N', 'S', 'T20']
+"examples/**/*.py" = ['D', 'T20']
+"pkg/test_core/**/*.py" = ['C901', 'D', 'N', 'S', 'T20']
+
+[lint]
+# https://docs.astral.sh/ruff/rules
+extend-select = [
+    'ASYNC',
+    'C90',
+    'D',
+    'ERA',
+    'I',
+    'N',
+    'Q',
+    'RUF',
+    'S',
+    'T',
+    'UP',
+]
+extend-ignore = [
+    'D100',
+    'D200',
+    'D202',
+    'D203',
+    'D205',
+    'D212',
+    'D400',
+    'D401',
+    'D413',
+    'D415',
+    'RUF022',
+    'S112',
+
+    # Can't use the "|" operator for unions until we drop support for Python 3.9
+    'UP007',
+]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+
+mccabe = { max-complexity = 21 }

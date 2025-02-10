@@ -1,6 +1,7 @@
 import logging
 
 import inngest
+
 from src.flask import app
 
 logger = logging.getLogger(f"{app.logger.name}.inngest")
