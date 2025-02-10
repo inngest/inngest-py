@@ -3,7 +3,6 @@ Ensure that the function receives decrypted event data but does not encrypt
 anything
 """
 
-
 import json
 
 import inngest

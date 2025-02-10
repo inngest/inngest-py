@@ -1,6 +1,5 @@
 """Public entrypoint for the Inngest SDK."""
 
-
 from ._internal.client_lib import Inngest, SendEventsResult
 from ._internal.errors import NonRetriableError, RetryAfterError, StepError
 from ._internal.execution_lib import Context

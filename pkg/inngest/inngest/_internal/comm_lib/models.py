@@ -82,9 +82,9 @@ class CommResponse:
                 headers[server_lib.HeaderKey.NO_RETRY.value] = "true"
 
             if isinstance(call_res.error, errors.RetryAfterError):
-                headers[
-                    server_lib.HeaderKey.RETRY_AFTER.value
-                ] = transforms.to_iso_utc(call_res.error.retry_after)
+                headers[server_lib.HeaderKey.RETRY_AFTER.value] = (
+                    transforms.to_iso_utc(call_res.error.retry_after)
+                )
 
         return cls(
             body=body,

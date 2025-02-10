@@ -65,9 +65,9 @@ def create_headers(
     if framework is not None:
         headers[server_lib.HeaderKey.FRAMEWORK.value] = framework.value
     if server_kind is not None:
-        headers[
-            server_lib.HeaderKey.EXPECTED_SERVER_KIND.value
-        ] = server_kind.value
+        headers[server_lib.HeaderKey.EXPECTED_SERVER_KIND.value] = (
+            server_kind.value
+        )
 
     return headers
 
@@ -130,9 +130,9 @@ async def fetch_with_auth_fallback(
     """
 
     if signing_key is not None:
-        request.headers[
-            server_lib.HeaderKey.AUTHORIZATION.value
-        ] = f"Bearer {transforms.hash_signing_key(signing_key)}"
+        request.headers[server_lib.HeaderKey.AUTHORIZATION.value] = (
+            f"Bearer {transforms.hash_signing_key(signing_key)}"
+        )
 
     try:
         res = await fetch_with_thready_safety(
@@ -146,9 +146,9 @@ async def fetch_with_auth_fallback(
             and signing_key_fallback is not None
         ):
             # Try again with the signing key fallback
-            request.headers[
-                server_lib.HeaderKey.AUTHORIZATION.value
-            ] = f"Bearer {transforms.hash_signing_key(signing_key_fallback)}"
+            request.headers[server_lib.HeaderKey.AUTHORIZATION.value] = (
+                f"Bearer {transforms.hash_signing_key(signing_key_fallback)}"
+            )
 
             res = await fetch_with_thready_safety(
                 client,
@@ -177,9 +177,9 @@ def fetch_with_auth_fallback_sync(
     """
 
     if signing_key is not None:
-        request.headers[
-            server_lib.HeaderKey.AUTHORIZATION.value
-        ] = f"Bearer {transforms.hash_signing_key(signing_key)}"
+        request.headers[server_lib.HeaderKey.AUTHORIZATION.value] = (
+            f"Bearer {transforms.hash_signing_key(signing_key)}"
+        )
 
     try:
         res = client.send(request)
@@ -189,9 +189,9 @@ def fetch_with_auth_fallback_sync(
             and signing_key_fallback is not None
         ):
             # Try again with the signing key fallback
-            request.headers[
-                server_lib.HeaderKey.AUTHORIZATION.value
-            ] = f"Bearer {transforms.hash_signing_key(signing_key_fallback)}"
+            request.headers[server_lib.HeaderKey.AUTHORIZATION.value] = (
+                f"Bearer {transforms.hash_signing_key(signing_key_fallback)}"
+            )
             res = client.send(request)
         return res
     except Exception as err:

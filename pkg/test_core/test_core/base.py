@@ -57,8 +57,7 @@ class _FrameworkTestCase(typing.Protocol):
         headers: dict[str, list[str]],
         method: str,
         path: str,
-    ) -> http_proxy.Response:
-        ...
+    ) -> http_proxy.Response: ...
 
 
 def create_app_id(framework: str) -> str:

@@ -22,8 +22,7 @@ class BaseExecution(typing.Protocol):
         self,
         step_info: step_lib.StepInfo,
         inside_parallel: bool,
-    ) -> ReportedStep:
-        ...
+    ) -> ReportedStep: ...
 
     async def run(
         self,
@@ -34,8 +33,7 @@ class BaseExecution(typing.Protocol):
             FunctionHandlerSync,
         ],
         fn: function.Function,
-    ) -> CallResult:
-        ...
+    ) -> CallResult: ...
 
 
 class BaseExecutionSync(typing.Protocol):
@@ -45,8 +43,7 @@ class BaseExecutionSync(typing.Protocol):
         self,
         step_info: step_lib.StepInfo,
         inside_parallel: bool,
-    ) -> ReportedStepSync:
-        ...
+    ) -> ReportedStepSync: ...
 
     def run(
         self,
@@ -57,5 +54,4 @@ class BaseExecutionSync(typing.Protocol):
             FunctionHandlerSync,
         ],
         fn: function.Function,
-    ) -> CallResult:
-        ...
+    ) -> CallResult: ...

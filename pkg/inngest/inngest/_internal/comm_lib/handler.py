@@ -611,9 +611,9 @@ class _Syncer:
 
         outgoing_params = {}
         if params.sync_id is not None:
-            outgoing_params[
-                server_lib.QueryParamKey.SYNC_ID.value
-            ] = params.sync_id
+            outgoing_params[server_lib.QueryParamKey.SYNC_ID.value] = (
+                params.sync_id
+            )
 
         return handler._client._http_client_sync.build_request(
             "POST",
