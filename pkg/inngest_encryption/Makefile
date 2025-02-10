@@ -1,5 +1,10 @@
 export MYPYPATH=../inngest
 
+.PHONY: build
+build:
+	@if [ -d "dist" ]; then rm -rf dist; fi
+	@python -m build
+
 .PHONY: check-venv
 check-venv:
 	@if [ -z "$${CI}" ] && [ -z "$${VIRTUAL_ENV}" ]; then \
