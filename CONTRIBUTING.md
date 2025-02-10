@@ -65,12 +65,12 @@ DEV_SERVER_VERBOSE=1
 
 # Publish
 
-Change the package version in `pyproject.toml` and `const.py`.
+Change the package version in the package's `pyproject.toml` (e.g. `pkg/inngest/pyproject.toml`).
 
-Create and push a git tag that matches the package version. For example, the following command tags and releases version `1.2.3`:
+Set the `VERSION` env var and run the `release` make target for the package. For example, the following command releases version `1.2.3` of the `inngest` package:
 
 ```sh
-(export TAG=1.2.3 && git tag $TAG && git push origin $TAG)
+(cd pkg/inngest && export VERSION=1.2.3 && make release)
 ```
 
 This will start CI for the tag, including publishing to PyPI.

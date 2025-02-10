@@ -19,7 +19,7 @@ lint: check-venv
 	@ruff check .
 
 release:
-	@grep  "version = \"$${VERSION}\"" pyproject.toml && git tag $${VERSION} && git push origin $${VERSION} || echo "pyproject.toml version does not match"
+	@grep "version = \"$${VERSION}\"" pyproject.toml && git tag inngest@$${VERSION} && git push origin inngest@$${VERSION} || echo "pyproject.toml version does not match"
 
 .PHONY: type-check
 type-check: check-venv
