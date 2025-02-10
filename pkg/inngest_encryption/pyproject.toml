@@ -3,7 +3,7 @@ name = "inngest_encryption"
 version = "0.0.1a1"
 authors = [{ name = "Inngest Inc.", email = "hello@inngest.com" }]
 description = "Encryption for the Inngest SDK"
-readme = "../../README.md"
+readme = "README.md"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
