@@ -281,6 +281,9 @@ class StepSync(base.StepBase):
             if isinstance(middleware_err, Exception):
                 raise middleware_err
 
+            # Need to initialize `result` because of the `finally` block.
+            result: typing.Optional[client_models.SendEventsResult] = None
+
             try:
                 result = client_models.SendEventsResult(
                     ids=self._client.send_sync(
@@ -303,9 +306,15 @@ class StepSync(base.StepBase):
                 )
                 raise err
             finally:
-                middleware_err = self._middleware.after_send_events_sync(result)
-                if isinstance(middleware_err, Exception):
-                    raise middleware_err
+                if result is not None:
+                    middleware_err = self._middleware.after_send_events_sync(
+                        result
+                    )
+                    if isinstance(middleware_err, Exception):
+                        raise middleware_err
+
+            if result is None:
+                raise Exception("unreachable")
 
             return result.ids
 
