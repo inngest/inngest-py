@@ -57,7 +57,7 @@ def create(
     ) -> None:
         state.run_id = ctx.run_id
 
-        step.send_event("a", inngest.Event(name="never"))
+        step.send_event("a", inngest.Event(name=f"{event_name}-never"))
 
     @client.create_function(
         fn_id=fn_id,
@@ -71,7 +71,7 @@ def create(
     ) -> None:
         state.run_id = ctx.run_id
 
-        await step.send_event("a", inngest.Event(name="never"))
+        await step.send_event("a", inngest.Event(name=f"{event_name}-never"))
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
