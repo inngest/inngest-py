@@ -22,6 +22,7 @@ from . import (
     invoke_failure,
     invoke_timeout,
     logger,
+    middleware_order,
     middleware_parallel_steps,
     multiple_triggers,
     no_cancel_if_exp_not_match,
@@ -67,6 +68,7 @@ _modules = (
     invoke_failure,
     invoke_timeout,
     logger,
+    middleware_order,
     middleware_parallel_steps,
     multiple_triggers,
     no_cancel_if_exp_not_match,
@@ -114,6 +116,3 @@ def create_sync_cases(
         cases.append(case)
 
     return cases
-
-
-__all__ = ["create_async_cases", "create_sync_cases"]
