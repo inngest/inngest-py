@@ -26,7 +26,8 @@ class _Server:
             port = 8288
         self.port = port
 
-        artifacts_dir = pathlib.Path("artifacts")
+        artifacts_dir = pathlib.Path("artifacts").absolute()
+        print(f"Using artifacts directory: {artifacts_dir}")
 
         # Create artifacts directory if it doesn't exist.
         artifacts_dir.mkdir(exist_ok=True)
