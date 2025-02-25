@@ -52,7 +52,7 @@ jobs:
         if: failure()
         with:
           name: dev-server-logs
-          path: "./inngest-py/inngest-py/tests/test_inngest/artifacts/dev_server.log"
+          path: "./tests/test_inngest/artifacts/dev_server.log"
 
   lint:
     runs-on: "ubuntu-latest"
