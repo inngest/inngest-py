@@ -1,7 +1,7 @@
 """
 Test that middleware classes are called in the correct order.
 
-TODO: In v0.4, we should reverse middleware order for the "after" hooks.
+TODO: In v0.5, we should reverse middleware order for the "after" hooks.
 """
 
 import inspect
