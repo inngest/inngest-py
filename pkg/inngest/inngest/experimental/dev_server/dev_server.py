@@ -26,15 +26,19 @@ class _Server:
             port = 8288
         self.port = port
 
-        artifacts_dir = pathlib.Path("artifacts").absolute()
-        print(f"Using artifacts directory: {artifacts_dir}")
+        log_path: typing.Optional[pathlib.Path] = None
+        if os.getenv("DEV_SERVER_LOGS") == "1":
+            artifacts_dir = pathlib.Path("artifacts").absolute()
+            print(f"Using artifacts directory: {artifacts_dir}")
 
-        # Create artifacts directory if it doesn't exist.
-        artifacts_dir.mkdir(exist_ok=True)
+            # Create artifacts directory if it doesn't exist.
+            artifacts_dir.mkdir(exist_ok=True)
+
+            log_path = artifacts_dir / "dev_server.log"
 
         self._runner = _CommandRunner(
             f"npx --yes inngest-cli@latest dev --no-discovery --no-poll --port {self.port}",
-            output_path=artifacts_dir / "dev_server.log",
+            log_path=log_path,
         )
 
         self._enabled = os.getenv("DEV_SERVER_ENABLED") != "0"

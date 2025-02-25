@@ -15,10 +15,10 @@ class _CommandRunner:
         self,
         command: str,
         *,
-        output_path: typing.Optional[pathlib.Path] = None,
+        log_path: typing.Optional[pathlib.Path] = None,
     ):
         self._command = command
-        self._output_path = output_path
+        self._log_path = log_path
         self._process: typing.Optional[subprocess.Popen[str]] = None
         self._stdout_queue: queue.Queue[str] = queue.Queue()
         self._stderr_queue: queue.Queue[str] = queue.Queue()
@@ -79,8 +79,8 @@ class _CommandRunner:
         q: queue.Queue[str],
     ) -> None:
         try:
-            if self._output_path:
-                with open(self._output_path, "a") as f:
+            if self._log_path:
+                with open(self._log_path, "a") as f:
                     for line in iter(stream.readline, ""):
                         q.put(line.strip())
                         f.write(line)
