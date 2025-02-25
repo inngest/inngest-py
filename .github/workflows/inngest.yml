@@ -28,7 +28,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.9", "3.12"]
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: "actions/checkout@v2"
       - name: "Set up Python ${{ matrix.python-version }}"
@@ -41,6 +41,7 @@ jobs:
         run: "make itest"
         working-directory: "./pkg/inngest"
       - name: foo
+        if: failure()
         run: "pwd && ls -la"
       - name: Upload Dev Server logs
         uses: actions/upload-artifact@v4
