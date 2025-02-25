@@ -43,13 +43,13 @@ jobs:
       - name: foo
         if: failure()
         run: "pwd && ls -la"
-        working-directory: "./pkg/inngest"
+        working-directory: "./inngest-py/inngest-py/tests/test_inngest"
       - name: Upload Dev Server logs
         uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: dev-server-logs
-          path: ./pkg/inngest/artifacts/dev_server.log
+          path: ./inngest-py/inngest-py/tests/test_inngest/artifacts/dev_server.log
 
   lint:
     runs-on: "ubuntu-latest"
