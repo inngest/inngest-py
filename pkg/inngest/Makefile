@@ -12,7 +12,7 @@ check-venv:
 
 .PHONY: itest
 itest: check-venv
-	@cd ../../tests/test_inngest && pytest -n 4 -v -x .
+	@cd ../../tests/test_inngest && pytest -n 4 -v .
 
 .PHONY: lint
 lint: check-venv
