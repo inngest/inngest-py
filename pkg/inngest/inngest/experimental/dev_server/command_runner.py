@@ -1,23 +1,30 @@
 # ruff: noqa: S602, T201
 
 import os
+import pathlib
 import queue
 import signal
 import subprocess
 import threading
 import time
-from typing import IO, Optional
+import typing
 
 
 class _CommandRunner:
-    def __init__(self, command: str):
+    def __init__(
+        self,
+        command: str,
+        *,
+        log_path: typing.Optional[pathlib.Path] = None,
+    ):
         self._command = command
-        self._process: Optional[subprocess.Popen[str]] = None
+        self._log_path = log_path
+        self._process: typing.Optional[subprocess.Popen[str]] = None
         self._stdout_queue: queue.Queue[str] = queue.Queue()
         self._stderr_queue: queue.Queue[str] = queue.Queue()
         self._stop_printing_flag = False
-        self._stdout_thread: Optional[threading.Thread] = None
-        self._stderr_thread: Optional[threading.Thread] = None
+        self._stdout_thread: typing.Optional[threading.Thread] = None
+        self._stderr_thread: typing.Optional[threading.Thread] = None
         self._running = False
 
     def run(self) -> None:
@@ -66,9 +73,23 @@ class _CommandRunner:
             print(f"an error occurred: {e}")
             self._running = False
 
-    def _enqueue_output(self, stream: IO[str], q: queue.Queue[str]) -> None:
-        for line in iter(stream.readline, ""):
-            q.put(line.strip())
+    def _enqueue_output(
+        self,
+        stream: typing.IO[str],
+        q: queue.Queue[str],
+    ) -> None:
+        try:
+            if self._log_path:
+                with open(self._log_path, "a") as f:
+                    for line in iter(stream.readline, ""):
+                        q.put(line.strip())
+                        f.write(line)
+                        f.flush()
+            else:
+                for line in iter(stream.readline, ""):
+                    q.put(line.strip())
+        except ValueError:
+            pass
 
     def is_running(self) -> bool:
         return self._running

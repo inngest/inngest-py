@@ -117,7 +117,7 @@ def create(
             "message": 'found step "after" when targeting a different step',
             "name": "StepUnexpectedError",
             "stack": None,
-        }
+        }, run.output
 
     if is_sync:
         fn = [fn_sync, fn_child_sync]

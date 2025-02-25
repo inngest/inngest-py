@@ -19,13 +19,19 @@ on:
       - "pytest.ini"
       - "ruff.toml"
 
+  # Allow manually triggering.
+  workflow_dispatch:
+
+env:
+  DEV_SERVER_LOGS: 1
+
 jobs:
   itest:
     runs-on: "ubuntu-latest"
     strategy:
       matrix:
         python-version: ["3.9", "3.12"]
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: "actions/checkout@v2"
       - name: "Set up Python ${{ matrix.python-version }}"
@@ -37,6 +43,12 @@ jobs:
       - name: "Integration test"
         run: "make itest"
         working-directory: "./pkg/inngest"
+      - name: Upload Dev Server logs
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: dev-server-logs
+          path: "./tests/test_inngest/artifacts/dev_server.log"
 
   lint:
     runs-on: "ubuntu-latest"
