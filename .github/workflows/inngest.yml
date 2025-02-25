@@ -19,6 +19,9 @@ on:
       - "pytest.ini"
       - "ruff.toml"
 
+  # Allow manually triggering.
+  workflow_dispatch:
+
 jobs:
   itest:
     runs-on: "ubuntu-latest"
@@ -37,6 +40,12 @@ jobs:
       - name: "Integration test"
         run: "make itest"
         working-directory: "./pkg/inngest"
+      - name: Upload Dev Server logs
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: dev-server-logs
+          path: artifacts/dev_server.log
 
   lint:
     runs-on: "ubuntu-latest"

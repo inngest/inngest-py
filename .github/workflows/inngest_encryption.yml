@@ -17,6 +17,9 @@ on:
       - "pytest.ini"
       - "ruff.toml"
 
+  # Allow manually triggering.
+  workflow_dispatch:
+
 jobs:
   itest:
     runs-on: "ubuntu-latest"
