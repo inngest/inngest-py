@@ -150,7 +150,7 @@ class TestTriggerSync(unittest.TestCase):
             ctx: inngest.Context,
             step: inngest.StepSync,
         ) -> tuple[str, ...]:
-            return ctx.group.parallel(
+            return ctx.group.parallel_sync(
                 (
                     lambda: step.run("a", lambda: "a"),
                     lambda: step.run("b", lambda: "b"),

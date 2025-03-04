@@ -81,6 +81,7 @@ def trigger(
             attempt=request.ctx.attempt,
             event=event[0],
             events=event,
+            group=step_lib.Group(),
             logger=logger,
             run_id=request.ctx.run_id,
         )
