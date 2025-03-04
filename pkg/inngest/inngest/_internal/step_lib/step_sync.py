@@ -177,7 +177,6 @@ class StepSync(base.StepBase):
 
         return Group().parallel_sync(callables)
 
-
     def run(
         self,
         step_id: str,

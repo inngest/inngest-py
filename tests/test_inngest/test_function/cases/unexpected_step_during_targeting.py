@@ -55,7 +55,7 @@ def create(
         if is_targeting_enabled:
             step.run("unexpected", unexpected)
 
-        ctx.group.parallel(
+        ctx.group.parallel_sync(
             (
                 lambda: step.run("parallel_1", parallel_1),
                 lambda: step.run("parallel_2", parallel_2),

@@ -7,7 +7,7 @@ from .base import (
     StepMemos,
     StepResponse,
 )
-from .group import Group, in_parallel, is_fn_sync
+from .group import Group, in_parallel
 from .step_async import Step
 from .step_sync import StepSync
 
@@ -23,5 +23,4 @@ __all__ = [
     "StepResponse",
     "StepSync",
     "in_parallel",
-    "is_fn_sync",
 ]

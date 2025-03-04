@@ -8,8 +8,6 @@ from .base import ResponseInterrupt, SkipInterrupt, StepResponse
 # Create a context variable to track if we're in a parallel group.
 in_parallel = contextvars.ContextVar("in_parallel", default=False)
 
-is_fn_sync = contextvars.ContextVar("is_fn_async", default=False)
-
 
 class Group:
     async def parallel(
@@ -23,11 +21,6 @@ class Group:
         ----
             callables: An arbitrary number of step callbacks to run. These are callables that contain the step (e.g. `lambda: step.run("my_step", my_step_fn)`.
         """
-
-        if is_fn_sync.get() is True:
-            raise Exception(
-                "group.parallel can only be called in an async Inngest function"
-            )
 
         token = in_parallel.set(True)
 
@@ -64,11 +57,6 @@ class Group:
         ----
             callables: An arbitrary number of step callbacks to run. These are callables that contain the step (e.g. `lambda: step.run("my_step", my_step_fn)`.
         """
-
-        if is_fn_sync.get() is False:
-            raise Exception(
-                "group.parallel_sync can only be called in a non-async Inngest function"
-            )
 
         # Tell steps that they're running in parallel.
         token = in_parallel.set(True)
