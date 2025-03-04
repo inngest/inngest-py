@@ -1,3 +1,10 @@
+"""
+Test that step.parallel() works as expected.
+
+This is a legacy test that should be removed when we remove support for
+step.parallel() in favor of ctx.group.parallel().
+"""
+
 import datetime
 import unittest.mock
 
@@ -56,7 +63,7 @@ def create(
             state.step_1b_counter += 1
             return 2
 
-        state.parallel_output = ctx.group.parallel_sync(
+        state.parallel_output = step.parallel(
             (
                 lambda: step.invoke("invoke", function=fn_child_sync),
                 lambda: step.run("1a", _step_1a),
@@ -113,7 +120,7 @@ def create(
             state.step_1b_counter += 1
             return 2
 
-        state.parallel_output = await ctx.group.parallel(
+        state.parallel_output = await step.parallel(
             (
                 lambda: step.invoke("invoke", function=fn_child_async),
                 lambda: step.run("1a", _step_1a),

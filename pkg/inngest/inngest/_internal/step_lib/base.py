@@ -91,7 +91,6 @@ class StepBase:
         target_hashed_id: typing.Optional[str],
     ) -> None:
         self._client = client
-        self._inside_parallel = False
         self._memos = memos
         self._middleware = middleware
         self._step_id_counter = step_id_counter

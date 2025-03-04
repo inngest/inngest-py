@@ -95,7 +95,7 @@ def create(
             state.step_3_counter += 1
             return "3"
 
-        state.parallel_output = step.parallel(
+        state.parallel_output = ctx.group.parallel_sync(
             (
                 _group_1,
                 _group_2,
@@ -170,7 +170,7 @@ def create(
             state.step_3_counter += 1
             return "3"
 
-        state.parallel_output = await step.parallel(
+        state.parallel_output = await ctx.group.parallel(
             (
                 _group_1,
                 _group_2,

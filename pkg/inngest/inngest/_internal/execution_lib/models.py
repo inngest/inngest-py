@@ -4,10 +4,7 @@ import asyncio
 import dataclasses
 import typing
 
-from inngest._internal import errors, server_lib, types
-
-if typing.TYPE_CHECKING:
-    from inngest._internal import step_lib
+from inngest._internal import errors, server_lib, step_lib, types
 
 
 @dataclasses.dataclass
@@ -64,6 +61,7 @@ class Context:
     attempt: int
     event: server_lib.Event
     events: list[server_lib.Event]
+    group: step_lib.Group
     logger: types.Logger
     run_id: str
 
