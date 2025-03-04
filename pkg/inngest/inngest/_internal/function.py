@@ -138,6 +138,8 @@ class Function:
         steps: step_lib.StepMemos,
         target_hashed_id: typing.Optional[str],
     ) -> execution_lib.CallResult:
+        step_lib.is_fn_sync.set(False)
+
         middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
         for m in self._middleware:
             middleware.add(m)
@@ -202,6 +204,8 @@ class Function:
         steps: step_lib.StepMemos,
         target_hashed_id: typing.Optional[str],
     ) -> execution_lib.CallResult:
+        step_lib.is_fn_sync.set(True)
+
         middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
         for m in self._middleware:
             middleware.add(m)
