@@ -148,6 +148,7 @@ class ExecutionV0:
                 # # it). Sync functions are OK in async contexts, so it's OK if the
                 # # handler is sync.
                 if is_function_handler_async(handler):
+                    step_lib.is_fn_sync.set(False)
                     output = await handler(
                         ctx=ctx,
                         step=step_lib.Step(
@@ -160,6 +161,7 @@ class ExecutionV0:
                         ),
                     )
                 elif is_function_handler_sync(handler):
+                    step_lib.is_fn_sync.set(True)
                     output = handler(
                         ctx=ctx,
                         step=step_lib.StepSync(

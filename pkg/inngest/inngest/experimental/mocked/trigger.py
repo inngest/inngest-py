@@ -88,6 +88,7 @@ def trigger(
 
         memos = step_lib.StepMemos.from_raw(steps)
 
+        step_lib.is_fn_sync.set(fn.is_handler_async is False)
         if fn.is_handler_async:
             loop = async_lib.get_event_loop()
             if loop is None:
