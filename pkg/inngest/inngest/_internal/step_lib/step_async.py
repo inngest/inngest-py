@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import typing
-import warnings
+
 import typing_extensions
 
 from inngest._internal import client_lib, errors, server_lib, transforms, types
