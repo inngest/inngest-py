@@ -40,7 +40,7 @@ def create(
     ) -> str:
         state.run_id = ctx.run_id
 
-        ctx.group.parallel(
+        ctx.group.parallel_sync(
             (
                 lambda: step.run("1.1", lambda: "1.1 (step)"),
                 lambda: step.run("1.2", lambda: "1.2 (step)"),
