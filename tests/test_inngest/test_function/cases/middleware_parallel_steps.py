@@ -164,7 +164,7 @@ def _assert_results(
     actual: list[inngest.TransformOutputResult],
     expected: list[inngest.TransformOutputResult],
 ) -> None:
-    assert len(actual) == len(expected)
-
     for i, (a, e) in enumerate(zip(actual, expected)):
         assert a.__dict__ == e.__dict__, f"index={i}"
+
+    assert len(actual) == len(expected)

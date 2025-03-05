@@ -65,53 +65,6 @@ class CommHandler:
 
         self._signing_key_fallback = client.signing_key_fallback
 
-    def _build_register_request(
-        self,
-        *,
-        app_url: str,
-        server_kind: typing.Optional[server_lib.ServerKind],
-        sync_id: typing.Optional[str],
-    ) -> types.MaybeError[httpx.Request]:
-        registration_url = urllib.parse.urljoin(
-            self._api_origin,
-            "/fn/register",
-        )
-
-        fn_configs = self.get_function_configs(app_url)
-        if isinstance(fn_configs, Exception):
-            return fn_configs
-
-        body = server_lib.SynchronizeRequest(
-            app_name=self._client.app_id,
-            deploy_type=server_lib.DeployType.PING,
-            framework=self._framework,
-            functions=fn_configs,
-            sdk=f"{const.LANGUAGE}:v{const.VERSION}",
-            url=app_url,
-            v="0.1",
-        ).to_dict()
-        if isinstance(body, Exception):
-            return body
-
-        headers = net.create_headers(
-            env=self._client.env,
-            framework=self._framework,
-            server_kind=server_kind,
-        )
-
-        params = {}
-        if sync_id is not None:
-            params[server_lib.QueryParamKey.SYNC_ID.value] = sync_id
-
-        return self._client._http_client_sync.build_request(
-            "POST",
-            registration_url,
-            headers=headers,
-            json=transforms.deep_strip_none(body),
-            params=params,
-            timeout=30,
-        )
-
     @wrap_handler()
     async def post(
         self,
@@ -539,6 +492,11 @@ class _Syncer:
         if isinstance(res_body, Exception):
             return res_body
 
+        # Remove any None values from the response body. If we don't Go
+        # marshalling may break in the Inngest server. Specifically, we saw this
+        # with the concurrency scope.
+        res_body = transforms.deep_strip_none(res_body)
+
         self._logger.debug("Responding to in-band sync")
 
         return CommResponse(
@@ -615,11 +573,16 @@ class _Syncer:
                 params.sync_id
             )
 
+        # Remove any None values from the response body. If we don't Go
+        # marshalling may break in the Inngest server. Specifically, we saw this
+        # with the concurrency scope.
+        body = transforms.deep_strip_none(body)
+
         return handler._client._http_client_sync.build_request(
             "POST",
             registration_url,
             headers=headers,
-            json=transforms.deep_strip_none(body),
+            json=body,
             params=outgoing_params,
             timeout=30,
         )

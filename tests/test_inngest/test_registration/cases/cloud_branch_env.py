@@ -75,15 +75,8 @@ def create(framework: server_lib.Framework) -> base.Case:
             "framework": framework.value,
             "functions": [
                 {
-                    "batchEvents": None,
-                    "cancel": None,
-                    "concurrency": None,
-                    "debounce": None,
                     "id": fn.id,
-                    "idempotency": None,
                     "name": "foo",
-                    "priority": None,
-                    "rateLimit": None,
                     "steps": {
                         "step": {
                             "id": "step",
@@ -95,8 +88,7 @@ def create(framework: server_lib.Framework) -> base.Case:
                             },
                         }
                     },
-                    "throttle": None,
-                    "triggers": [{"event": "app/foo", "expression": None}],
+                    "triggers": [{"event": "app/foo"}],
                 }
             ],
             "inspection": {
@@ -107,7 +99,6 @@ def create(framework: server_lib.Framework) -> base.Case:
                 "capabilities": {"in_band_sync": "v1", "trust_probe": "v1"},
                 "env": "my-env",
                 "event_api_origin": "https://inn.gs/",
-                "event_key_hash": None,
                 "framework": framework.value,
                 "function_count": 1,
                 "has_event_key": False,
@@ -116,12 +107,8 @@ def create(framework: server_lib.Framework) -> base.Case:
                 "mode": "cloud",
                 "sdk_language": "py",
                 "sdk_version": const.VERSION,
-                "serve_origin": None,
-                "serve_path": None,
-                "signing_key_fallback_hash": None,
                 "signing_key_hash": "709e80c88487a2411e1ee4dfb9f22a861492d20c4765150c0c794abd70f8147c",
             },
-            "platform": None,
             "sdk_author": "inngest",
             "sdk_language": "py",
             "sdk_version": const.VERSION,
