@@ -131,14 +131,14 @@ def create(
         s3_client.create_bucket(Bucket=s3_bucket)
 
         self.client.send_sync(inngest.Event(name=event_name))
-        run_id = state.wait_for_run_id()
-        run = test_core.helper.client.wait_for_run_status(
+        run_id = await state.wait_for_run_id()
+        run = await test_core.helper.client.wait_for_run_status(
             run_id,
             test_core.helper.RunStatus.COMPLETED,
         )
 
         output = json.loads(
-            test_core.helper.client.get_step_output(
+            await test_core.helper.client.get_step_output(
                 run_id=run_id,
                 step_id="step_1",
             )
@@ -152,7 +152,7 @@ def create(
         assert driver._marker in data
 
         output = json.loads(
-            test_core.helper.client.get_step_output(
+            await test_core.helper.client.get_step_output(
                 run_id=run_id,
                 step_id="step_2",
             )

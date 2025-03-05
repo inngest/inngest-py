@@ -62,15 +62,15 @@ def create(
                 break
 
     async def run_test(self: base.TestClass) -> None:
-        def trigger_event_and_wait(state_event: StateAndEvent) -> None:
+        async def trigger_event_and_wait(state_event: StateAndEvent) -> None:
             self.client.send_sync(inngest.Event(name=state_event.event_name))
-            run_id = state_event.state.wait_for_run_id()
-            test_core.helper.client.wait_for_run_status(
+            run_id = await state_event.state.wait_for_run_id()
+            await test_core.helper.client.wait_for_run_status(
                 run_id, test_core.helper.RunStatus.COMPLETED
             )
 
         for se in states_events:
-            trigger_event_and_wait(se)
+            await trigger_event_and_wait(se)
 
         assert all(se.state.run_id for se in states_events)
         assert len(set(se.state.run_id for se in states_events)) == len(

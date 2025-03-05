@@ -70,7 +70,7 @@ def create(
                 name=event_name,
             )
         )
-        run_id = state.wait_for_run_id()
+        run_id = await state.wait_for_run_id()
 
         # Sleep long enough for the wait_for_event to register.
         await asyncio.sleep(0.5)
@@ -81,7 +81,7 @@ def create(
                 name=f"{event_name}.fulfill",
             )
         )
-        test_core.helper.client.wait_for_run_status(
+        await test_core.helper.client.wait_for_run_status(
             run_id,
             test_core.helper.RunStatus.COMPLETED,
         )

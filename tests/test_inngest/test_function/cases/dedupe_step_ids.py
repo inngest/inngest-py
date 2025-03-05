@@ -94,8 +94,8 @@ def create(
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
-        run_id = state.wait_for_run_id()
-        test_core.helper.client.wait_for_run_status(
+        run_id = await state.wait_for_run_id()
+        await test_core.helper.client.wait_for_run_status(
             run_id,
             test_core.helper.RunStatus.COMPLETED,
         )
@@ -103,7 +103,7 @@ def create(
         assert state.step_1_counter == 1
         assert state.step_1_output == 0
         step_1_output_in_api = json.loads(
-            test_core.helper.client.get_step_output(
+            await test_core.helper.client.get_step_output(
                 run_id=run_id,
                 step_id="foo",
             )
@@ -113,7 +113,7 @@ def create(
         assert state.step_2_counter == 1
         assert state.step_2_output == 1
         step_2_output_in_api = json.loads(
-            test_core.helper.client.get_step_output(
+            await test_core.helper.client.get_step_output(
                 run_id=run_id,
                 step_id="foo:1",
             )

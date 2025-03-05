@@ -17,11 +17,11 @@ class _State(base.BaseState):
     on_failure_run_id: typing.Optional[str] = None
     step: typing.Union[inngest.Step, inngest.StepSync, None] = None
 
-    def wait_for_on_failure_run_id(self) -> str:
+    async def wait_for_on_failure_run_id(self) -> str:
         def assertion() -> None:
             assert self.on_failure_run_id is not None
 
-        base.wait_for(assertion, timeout=datetime.timedelta(seconds=10))
+        await base.wait_for(assertion, timeout=datetime.timedelta(seconds=10))
         assert self.on_failure_run_id is not None
         return self.on_failure_run_id
 
@@ -89,8 +89,8 @@ def create(
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(data={"foo": 1}, name=event_name))
 
-        run_id = state.wait_for_run_id()
-        run = test_core.helper.client.wait_for_run_status(
+        run_id = await state.wait_for_run_id()
+        run = await test_core.helper.client.wait_for_run_status(
             run_id,
             test_core.helper.RunStatus.FAILED,
         )
@@ -98,7 +98,7 @@ def create(
         def assert_is_done() -> None:
             assert state.attempt == 0
 
-        base.wait_for(assert_is_done)
+        await base.wait_for(assert_is_done)
 
         assert run.output is not None
         output = json.loads(run.output)
@@ -119,8 +119,8 @@ def create(
         # User code is in the traceback.
         assert 'test_function/cases/on_failure.py", line' in stack
 
-        run_id = state.wait_for_on_failure_run_id()
-        test_core.helper.client.wait_for_run_status(
+        run_id = await state.wait_for_on_failure_run_id()
+        await test_core.helper.client.wait_for_run_status(
             run_id,
             test_core.helper.RunStatus.COMPLETED,
         )
