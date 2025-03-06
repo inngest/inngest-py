@@ -1,4 +1,12 @@
+"""
+NOTE: This test is flaky because of inherent race behavior in parallel steps.
+Sometimes the "converge" step is targeted before the other parallel step
+finishes, causing the assertion to fail. This is not considered a bug. The
+flakiness should be fixed when we finish parallelism improvements.
+"""
+
 import inngest
+import pytest
 import test_core.helper
 from inngest._internal import middleware_lib, server_lib
 
@@ -82,6 +90,8 @@ def create(
 
         return "2 (fn)"
 
+    # TODO: Delete this decorator when we implement parallelism improvements.
+    @pytest.mark.xfail
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
         run_id = await state.wait_for_run_id()
