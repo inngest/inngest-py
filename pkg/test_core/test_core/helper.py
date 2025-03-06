@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import enum
 import json
 import time
@@ -33,7 +34,7 @@ class _Client:
     def __init__(self) -> None:
         self._gql = gql.Client(f"{dev_server.server.origin}/v0/gql")
 
-    def _get_history(
+    async def _get_history(
         self,
         run_id: str,
     ) -> list[object]:
@@ -47,7 +48,7 @@ class _Client:
             }
         }
         """
-        res = self._gql.query(gql.Query(query, {"run_id": run_id}))
+        res = await self._gql.query(gql.Query(query, {"run_id": run_id}))
         if isinstance(res, gql.Error):
             raise Exception(res.message)
 
@@ -61,13 +62,13 @@ class _Client:
 
         return history
 
-    def get_step_output(
+    async def get_step_output(
         self,
         *,
         run_id: str,
         step_id: str,
     ) -> str:
-        history = self._get_history(run_id)
+        history = await self._get_history(run_id)
         if not isinstance(history, list):
             raise Exception("unexpected response")
 
@@ -88,7 +89,7 @@ class _Client:
             }
         }
         """
-        res = self._gql.query(
+        res = await self._gql.query(
             gql.Query(
                 query,
                 {
@@ -109,7 +110,7 @@ class _Client:
             raise Exception("unexpected response")
         return output
 
-    def get_run_ids_from_event_id(
+    async def get_run_ids_from_event_id(
         self,
         event_id: str,
         *,
@@ -128,7 +129,9 @@ class _Client:
 
         start = time.time()
         while True:
-            res = self._gql.query(gql.Query(query, {"event_id": event_id}))
+            res = await self._gql.query(
+                gql.Query(query, {"event_id": event_id})
+            )
             if isinstance(res, gql.Response):
                 event = res.data.get("event")
                 if not isinstance(event, dict):
@@ -142,14 +145,14 @@ class _Client:
             if time.time() - start > timeout:
                 raise Exception("timed out waiting for run status")
 
-            time.sleep(0.2)
+            await asyncio.sleep(0.2)
 
-    def wait_for_run_status(
+    async def wait_for_run_status(
         self,
         run_id: str,
         expected_status: RunStatus,
         *,
-        timeout: int = 10,
+        timeout: int = 20,
     ) -> _Run:
         query = """
         query GetRun($run_id: ID!) {
@@ -167,7 +170,7 @@ class _Client:
         start = time.time()
         actual_status: typing.Optional[str] = None
         while True:
-            res = self._gql.query(gql.Query(query, {"run_id": run_id}))
+            res = await self._gql.query(gql.Query(query, {"run_id": run_id}))
             if isinstance(res, gql.Response):
                 run = res.data.get("functionRun")
                 if not isinstance(run, dict):
@@ -185,12 +188,12 @@ class _Client:
                     )
 
             if time.time() - start > timeout:
-                msg = "timed out waiting for run status: no status available"
+                msg = f"timed out waiting for run {run_id} status: no status available"
                 if actual_status is not None:
-                    msg = f"timed out waiting for run status: actual status is {actual_status}"
+                    msg = f"timed out waiting for run {run_id} status: actual status is {actual_status}"
                 raise Exception(msg)
 
-            time.sleep(0.2)
+            await asyncio.sleep(0.2)
 
 
 class _Run(types.BaseModel):

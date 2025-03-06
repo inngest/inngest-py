@@ -10,12 +10,13 @@ class Client:
     def __init__(self, endpoint: str):
         self._endpoint = endpoint
 
-    def query(self, query: Query) -> typing.Union[Response, Error]:
-        http_res = httpx.post(
-            self._endpoint,
-            json=query.payload(),
-            timeout=30,
-        )
+    async def query(self, query: Query) -> typing.Union[Response, Error]:
+        async with httpx.AsyncClient() as client:
+            http_res = await client.post(
+                self._endpoint,
+                json=query.payload(),
+                timeout=30,
+            )
         if http_res.status_code != 200:
             return Error(
                 message=f"API call failed with status code {http_res.status_code}"

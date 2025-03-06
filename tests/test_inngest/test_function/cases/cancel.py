@@ -74,11 +74,11 @@ def create(
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name, data={"id": 123}))
-        run_id = state.wait_for_run_id()
+        run_id = await state.wait_for_run_id()
         self.client.send_sync(
             inngest.Event(name=f"{event_name}.cancel", data={"id": 123})
         )
-        test_core.helper.client.wait_for_run_status(
+        await test_core.helper.client.wait_for_run_status(
             run_id,
             test_core.helper.RunStatus.CANCELLED,
         )
@@ -86,7 +86,7 @@ def create(
         def assert_is_done() -> None:
             assert state.is_done
 
-        base.wait_for(assert_is_done)
+        await base.wait_for(assert_is_done)
 
     if is_sync:
         fn = fn_sync

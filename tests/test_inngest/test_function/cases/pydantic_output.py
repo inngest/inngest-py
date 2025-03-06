@@ -63,8 +63,8 @@ def create(
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
-        run = test_core.helper.client.wait_for_run_status(
-            state.wait_for_run_id(),
+        run = await test_core.helper.client.wait_for_run_status(
+            await state.wait_for_run_id(),
             test_core.helper.RunStatus.FAILED,
         )
 
