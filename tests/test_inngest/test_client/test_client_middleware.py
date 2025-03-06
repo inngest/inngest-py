@@ -29,12 +29,12 @@ class State(base.BaseState):
 
 
 class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
-    def assert_state(
+    async def assert_state(
         self,
         state: State,
     ) -> None:
-        run_id = state.wait_for_run_id()
-        test_core.helper.client.wait_for_run_status(
+        run_id = await state.wait_for_run_id()
+        await test_core.helper.client.wait_for_run_status(
             run_id,
             test_core.helper.RunStatus.COMPLETED,
         )
@@ -72,7 +72,7 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
         ]
 
         step_1_output = json.loads(
-            test_core.helper.client.get_step_output(
+            await test_core.helper.client.get_step_output(
                 run_id=run_id,
                 step_id="step_1",
             )
@@ -178,9 +178,9 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
         inngest.fast_api.serve(app, client, [fn])
         base.register(proxy.port)
         await client.send(inngest.Event(name="trigger"))
-        self.assert_state(state)
+        await self.assert_state(state)
 
-    def test_sync(self) -> None:
+    async def test_sync(self) -> None:
         """
         All synchronous middleware hooks are called in the correct order
         """
@@ -279,4 +279,4 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
         inngest.flask.serve(app, client, [fn])
         base.register(proxy.port)
         client.send_sync(inngest.Event(name="trigger"))
-        self.assert_state(state)
+        await self.assert_state(state)

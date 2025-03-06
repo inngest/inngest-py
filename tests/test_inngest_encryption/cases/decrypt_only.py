@@ -114,8 +114,8 @@ def create(
             )
         )
 
-        run_id = state.wait_for_run_id()
-        run = test_core.helper.client.wait_for_run_status(
+        run_id = await state.wait_for_run_id()
+        run = await test_core.helper.client.wait_for_run_status(
             run_id,
             test_core.helper.RunStatus.COMPLETED,
         )
@@ -136,7 +136,7 @@ def create(
 
         # Ensure that step_1 output is encrypted and its value is correct
         output = json.loads(
-            test_core.helper.client.get_step_output(
+            await test_core.helper.client.get_step_output(
                 run_id=run_id,
                 step_id="step_1",
             )
@@ -146,7 +146,7 @@ def create(
 
         # Ensure that step_2 output is encrypted and its value is correct
         output = json.loads(
-            test_core.helper.client.get_step_output(
+            await test_core.helper.client.get_step_output(
                 run_id=run_id,
                 step_id="step_2",
             )

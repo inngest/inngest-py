@@ -1,4 +1,6 @@
+import asyncio
 import datetime
+import inspect
 import os
 import time
 import typing
@@ -15,7 +17,7 @@ from . import http_proxy, net
 class BaseState:
     run_id: typing.Optional[str] = None
 
-    def wait_for_run_id(
+    async def wait_for_run_id(
         self,
         *,
         timeout: datetime.timedelta = datetime.timedelta(seconds=5),
@@ -23,27 +25,32 @@ class BaseState:
         def assertion() -> None:
             assert self.run_id is not None
 
-        wait_for(assertion, timeout=timeout)
+        await wait_for(assertion, timeout=timeout)
         assert self.run_id is not None
         return self.run_id
 
 
-def wait_for(
-    assertion: typing.Callable[[], None],
+async def wait_for(
+    assertion: typing.Union[
+        typing.Callable[[], None], typing.Callable[[], typing.Awaitable[None]]
+    ],
     *,
     timeout: datetime.timedelta = datetime.timedelta(seconds=5),
 ) -> None:
     start = datetime.datetime.now()
     while True:
         try:
-            assertion()
+            if inspect.iscoroutinefunction(assertion):
+                await assertion()
+            else:
+                assertion()
             return
         except Exception as err:
             timed_out = datetime.datetime.now() > start + timeout
             if timed_out:
                 raise err
 
-        time.sleep(0.2)
+        await asyncio.sleep(0.2)
 
 
 class _FrameworkTestCase(typing.Protocol):

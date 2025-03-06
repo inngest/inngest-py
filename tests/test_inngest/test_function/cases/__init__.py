@@ -5,7 +5,6 @@ from . import (
     asyncio_first_completed,
     asyncio_gather,
     asyncio_immediate_execution,
-    base,
     batch_that_needs_api,
     cancel,
     change_step_error,
@@ -48,6 +47,7 @@ from . import (
     wait_for_event_timeout_if_exp_not_match,
     wait_for_event_timeout_name_not_match,
 )
+from .base import Case
 
 _modules = (
     asyncio_gather,
@@ -100,7 +100,7 @@ _modules = (
 def create_async_cases(
     client: inngest.Inngest,
     framework: server_lib.Framework,
-) -> list[base.Case]:
+) -> list[Case]:
     return [
         module.create(client, framework, is_sync=False) for module in _modules
     ]
@@ -109,7 +109,7 @@ def create_async_cases(
 def create_sync_cases(
     client: inngest.Inngest,
     framework: server_lib.Framework,
-) -> list[base.Case]:
+) -> list[Case]:
     cases = []
     for module in _modules:
         case = module.create(client, framework, is_sync=True)

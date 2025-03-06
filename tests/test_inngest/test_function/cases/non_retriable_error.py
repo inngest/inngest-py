@@ -58,10 +58,10 @@ def create(
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
-        run_id = state.wait_for_run_id()
+        run_id = await state.wait_for_run_id()
 
-        def assert_output() -> None:
-            run = test_core.helper.client.wait_for_run_status(
+        async def assert_output() -> None:
+            run = await test_core.helper.client.wait_for_run_status(
                 run_id,
                 test_core.helper.RunStatus.FAILED,
             )
@@ -76,7 +76,7 @@ def create(
                 "stack": unittest.mock.ANY,
             }
 
-        base.wait_for(assert_output)
+        await base.wait_for(assert_output)
 
         assert state.attempt == 0
 
