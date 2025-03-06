@@ -9,6 +9,7 @@ from inngest._internal import client_lib, errors, server_lib, transforms, types
 from inngest._internal.client_lib import models as client_models
 
 from . import base
+from .group import Group
 
 # Avoid circular import at runtime
 if typing.TYPE_CHECKING:
@@ -135,10 +136,7 @@ class Step(base.StepBase):
             opts=opts,
         )
 
-        async with await self._execution.report_step(
-            step_info,
-            self._inside_parallel,
-        ) as step:
+        async with await self._execution.report_step(step_info) as step:
             if step.skip:
                 raise base.SkipInterrupt(parsed_step_id.user_facing)
             if step.error is not None:
@@ -153,6 +151,8 @@ class Step(base.StepBase):
         callables: tuple[typing.Callable[[], typing.Awaitable[types.T]], ...],
     ) -> tuple[types.T, ...]:
         """
+        @deprecated Use `ctx.group.parallel()` instead. This method will be removed in the next major version.
+
         Run multiple steps in parallel.
 
         Args:
@@ -160,24 +160,7 @@ class Step(base.StepBase):
             callables: An arbitrary number of step callbacks to run. These are callables that contain the step (e.g. `lambda: step.run("my_step", my_step_fn)`.
         """
 
-        self._inside_parallel = True
-
-        outputs = tuple[types.T]()
-        responses: list[base.StepResponse] = []
-        for cb in callables:
-            try:
-                output = await cb()
-                outputs = (*outputs, output)
-            except base.ResponseInterrupt as interrupt:
-                responses = [*responses, *interrupt.responses]
-            except base.SkipInterrupt:
-                pass
-
-        if len(responses) > 0:
-            raise base.ResponseInterrupt(responses)
-
-        self._inside_parallel = False
-        return outputs
+        return await Group().parallel(callables)
 
     @typing.overload
     async def run(
@@ -233,10 +216,7 @@ class Step(base.StepBase):
             op=server_lib.Opcode.STEP_RUN,
         )
 
-        async with await self._execution.report_step(
-            step_info,
-            self._inside_parallel,
-        ) as step:
+        async with await self._execution.report_step(step_info) as step:
             if step.skip:
                 raise base.SkipInterrupt(parsed_step_id.user_facing)
             if step.error is not None:
@@ -378,10 +358,7 @@ class Step(base.StepBase):
             op=server_lib.Opcode.SLEEP,
         )
 
-        async with await self._execution.report_step(
-            step_info,
-            self._inside_parallel,
-        ) as step:
+        async with await self._execution.report_step(step_info) as step:
             if step.skip:
                 raise base.SkipInterrupt(parsed_step_id.user_facing)
             if step.error is not None:
@@ -431,10 +408,7 @@ class Step(base.StepBase):
             opts=opts,
         )
 
-        async with await self._execution.report_step(
-            step_info,
-            self._inside_parallel,
-        ) as step:
+        async with await self._execution.report_step(step_info) as step:
             if step.skip:
                 raise base.SkipInterrupt(parsed_step_id.user_facing)
             if step.error is not None:

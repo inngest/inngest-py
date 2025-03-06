@@ -23,7 +23,7 @@ class TestTriggerAsync(unittest.TestCase):
             ctx: inngest.Context,
             step: inngest.Step,
         ) -> tuple[str, ...]:
-            return await step.parallel(
+            return await ctx.group.parallel(
                 (
                     lambda: step.run("a", lambda: "a"),
                     lambda: step.run("b", lambda: "b"),
@@ -150,7 +150,7 @@ class TestTriggerSync(unittest.TestCase):
             ctx: inngest.Context,
             step: inngest.StepSync,
         ) -> tuple[str, ...]:
-            return step.parallel(
+            return ctx.group.parallel_sync(
                 (
                     lambda: step.run("a", lambda: "a"),
                     lambda: step.run("b", lambda: "b"),
