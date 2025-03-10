@@ -11,7 +11,7 @@ import nacl.secret
 import nacl.utils
 import test_core.helper
 from inngest._internal import server_lib
-from inngest.experimental.encryption_middleware import EncryptionMiddleware
+from inngest_encryption import EncryptionMiddleware
 
 from . import base
 
@@ -40,10 +40,7 @@ def create(
     event_name = base.create_event_name(framework, test_name)
     fn_id = base.create_fn_id(test_name)
     state = _State()
-    mw = EncryptionMiddleware.factory(
-        _secret_key,
-        encrypt_invoke_data=True,
-    )
+    mw = EncryptionMiddleware.factory(_secret_key)
 
     @client.create_function(
         fn_id=f"{fn_id}/child",

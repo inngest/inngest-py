@@ -11,7 +11,7 @@ import nacl.utils
 import test_core.helper
 from inngest._internal import server_lib
 from inngest.experimental import dev_server
-from inngest.experimental.encryption_middleware import EncryptionMiddleware
+from inngest_encryption import EncryptionMiddleware
 
 from . import base
 

@@ -1,6 +1,6 @@
 [project]
 name = "inngest_encryption"
-version = "0.0.1"
+version = "0.1.0"
 authors = [{ name = "Inngest Inc.", email = "hello@inngest.com" }]
 description = "Encryption for the Inngest SDK"
 readme = "README.md"

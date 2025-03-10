@@ -76,9 +76,6 @@ class TestEncryptionMiddleware(unittest.IsolatedAsyncioTestCase):
             path=path,
         )
 
-    async def test_foo(self) -> None:
-        assert True
-
 
 for case in _cases:
     test_name = f"test_{case.name}"
