@@ -9,6 +9,9 @@ from . import (
     encrypt_overridden_encryption_field,
     fallback_decryption_key,
     invoke,
+    invoke_custom_encryption_field,
+    send_event,
+    send_event_custom_encryption_field,
     step_and_fn_output,
 )
 
@@ -19,6 +22,9 @@ _modules = (
     encrypt_overridden_encryption_field,
     fallback_decryption_key,
     invoke,
+    invoke_custom_encryption_field,
+    send_event,
+    send_event_custom_encryption_field,
     step_and_fn_output,
 )
 
@@ -44,6 +50,3 @@ def create_sync_cases(
         cases.append(case)
 
     return cases
-
-
-__all__ = ["create_async_cases", "create_sync_cases"]

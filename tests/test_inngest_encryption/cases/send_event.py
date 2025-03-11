@@ -1,6 +1,6 @@
 """
-step.invoke properly encrypts the event data. The triggered function receives
-decrypted data.
+step.send_event properly encrypts the event data. The triggered function
+receives decrypted data.
 """
 
 import typing
@@ -47,6 +47,7 @@ def create(
 ) -> base.Case:
     test_name = base.create_test_name(__file__)
     event_name = base.create_event_name(framework, test_name)
+    child_event_name = f"{event_name}/child"
     fn_id = base.create_fn_id(test_name)
     state = _State()
     mw = EncryptionMiddleware.factory(_secret_key)
@@ -55,7 +56,7 @@ def create(
         fn_id=f"{fn_id}/child",
         middleware=[mw],
         retries=0,
-        trigger=inngest.TriggerEvent(event="never"),
+        trigger=inngest.TriggerEvent(event=child_event_name),
     )
     def child_fn_sync(
         ctx: inngest.Context,
@@ -82,24 +83,24 @@ def create(
     ) -> None:
         state.run_id = ctx.run_id
 
-        result = step.invoke(
-            "invoke",
-            function=child_fn_async,
-            data={
-                "encrypted": {
-                    "phone": "867-5309",
+        step.send_event(
+            "send",
+            inngest.Event(
+                data={
+                    "encrypted": {
+                        "phone": "867-5309",
+                    },
+                    "user_id": "abc123",
                 },
-                "user_id": "abc123",
-            },
+                name=child_event_name,
+            ),
         )
-        assert isinstance(result, dict)
-        assert result == {"msg": "Number is 867-5309"}
 
     @client.create_function(
         fn_id=f"{fn_id}/child",
         middleware=[mw],
         retries=0,
-        trigger=inngest.TriggerEvent(event="never"),
+        trigger=inngest.TriggerEvent(event=child_event_name),
     )
     async def child_fn_async(
         ctx: inngest.Context,
@@ -126,18 +127,18 @@ def create(
     ) -> None:
         state.run_id = ctx.run_id
 
-        result = await step.invoke(
-            "invoke",
-            function=child_fn_async,
-            data={
-                "encrypted": {
-                    "phone": "867-5309",
+        await step.send_event(
+            "send",
+            inngest.Event(
+                data={
+                    "encrypted": {
+                        "phone": "867-5309",
+                    },
+                    "user_id": "abc123",
                 },
-                "user_id": "abc123",
-            },
+                name=child_event_name,
+            ),
         )
-        assert isinstance(result, dict)
-        assert result == {"msg": "Number is 867-5309"}
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
@@ -174,16 +175,11 @@ def _assert_event_in_child_run(event: inngest.Event) -> None:
     Assert the event that the child run received. It should be decrypted.
     """
 
-    # Only the _inngest field was added.
-    assert sorted(event.data.keys()) == [
-        "_inngest",
-        "encrypted",
-        "user_id",
-    ]
-
-    # The encrypted data was decrypted for the child run.
-    assert event.data["encrypted"] == {
-        "phone": "867-5309",
+    assert event.data == {
+        "encrypted": {
+            "phone": "867-5309",
+        },
+        "user_id": "abc123",
     }
 
 
@@ -193,9 +189,7 @@ def _assert_event_in_db(event: inngest.Event) -> None:
     encrypted.
     """
 
-    # Only the _inngest field was added.
     assert sorted(event.data.keys()) == [
-        "_inngest",
         "encrypted",
         "user_id",
     ]
