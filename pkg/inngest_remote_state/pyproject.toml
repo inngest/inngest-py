@@ -1,0 +1,25 @@
+[project]
+name = "inngest_remote_state"
+version = "0.0.1"
+authors = [{ name = "Inngest Inc.", email = "hello@inngest.com" }]
+description = "Remote state for the Inngest SDK"
+readme = "README.md"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.9"
+
+dependencies = ["inngest>=0.4.20"]
+
+[project.urls]
+"Homepage" = "https://github.com/inngest/inngest-py"
+"Bug Tracker" = "https://github.com/inngest/inngest-py/issues"
+
+[tool.setuptools.package-data]
+# Makes py.typed appear when users install the inngest package.
+inngest_encryption = ["py.typed"]
