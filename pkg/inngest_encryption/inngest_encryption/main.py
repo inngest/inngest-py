@@ -65,7 +65,7 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
             raw_request: Framework/platform specific request object.
             secret_key: Secret key used for encryption and decryption.
             decrypt_only: Only decrypt data (do not encrypt).
-            event_encryption_field: Automatically encrypt and decrypt this field in event data.
+            event_encryption_field: Automatically encrypt and decrypt this field in event and invoke data.
             fallback_decryption_keys: Fallback secret keys used for decryption.
         """
 
@@ -106,8 +106,7 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
         ----
             secret_key: Fernet secret key used for encryption and decryption.
             decrypt_only: Only decrypt data (do not encrypt).
-            encrypt_invoke_data: Encrypt the data sent to invoked functions. Deprecated: Will be removed in a future release, where invoke data will always be encrypted (equivalent to encrypt_invoke_data=True).
-            event_encryption_field: Automatically encrypt and decrypt this field in event data.
+            event_encryption_field: Automatically encrypt and decrypt this field in event and invoke data.
             fallback_decryption_keys: Fallback secret keys used for decryption.
         """
 
@@ -271,8 +270,16 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
             payload = result.step.opts.get("payload", {})
             if isinstance(payload, dict):
                 data = payload.get("data")
-                if data is not None:
-                    payload["data"] = self._encrypt(data)
+                if (
+                    isinstance(data, dict)
+                    and self._event_encryption_field in data
+                ):
+                    payload["data"] = {
+                        **data,
+                        self._event_encryption_field: self._encrypt(
+                            data[self._event_encryption_field]
+                        ),
+                    }
                     result.step.opts["payload"] = payload
 
 

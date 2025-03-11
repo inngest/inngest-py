@@ -94,7 +94,6 @@ def create(
         return "function output"
 
     async def run_test(self: base.TestClass) -> None:
-        print("running step and fn output test")
         self.client.send_sync(inngest.Event(name=event_name))
 
         run_id = await state.wait_for_run_id()
@@ -131,7 +130,6 @@ def create(
         run_output = json.loads(run.output)
         assert isinstance(run_output, dict)
         assert enc.decrypt(run_output["data"]) == "function output"
-        print("step and fn output test passed")
 
     if is_sync:
         fn = fn_sync

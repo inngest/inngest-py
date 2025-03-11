@@ -54,10 +54,8 @@ class TestEncryptionMiddleware(unittest.IsolatedAsyncioTestCase):
 
     @classmethod
     def tearDownClass(cls) -> None:
-        print("tearing down Flask")
         super().tearDownClass()
         cls.proxy.stop()
-        print("Flask torn down")
 
     @classmethod
     def on_proxy_request(

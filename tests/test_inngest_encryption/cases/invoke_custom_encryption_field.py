@@ -1,6 +1,6 @@
 """
-step.invoke properly encrypts the event data. The triggered function receives
-decrypted data.
+step.invoke properly encrypts the event data when event_encryption_field is
+specified. The triggered function receives decrypted data.
 """
 
 import typing
@@ -49,7 +49,10 @@ def create(
     event_name = base.create_event_name(framework, test_name)
     fn_id = base.create_fn_id(test_name)
     state = _State()
-    mw = EncryptionMiddleware.factory(_secret_key)
+    mw = EncryptionMiddleware.factory(
+        _secret_key,
+        event_encryption_field="foo",
+    )
 
     @client.create_function(
         fn_id=f"{fn_id}/child",
@@ -64,7 +67,7 @@ def create(
         state.child_run_id = ctx.run_id
         state.child_event = ctx.event
 
-        encrypted = ctx.event.data["encrypted"]
+        encrypted = ctx.event.data["foo"]
         assert isinstance(encrypted, dict)
         phone = encrypted["phone"]
         assert isinstance(phone, str)
@@ -86,7 +89,7 @@ def create(
             "invoke",
             function=child_fn_async,
             data={
-                "encrypted": {
+                "foo": {
                     "phone": "867-5309",
                 },
                 "user_id": "abc123",
@@ -108,7 +111,7 @@ def create(
         state.child_run_id = ctx.run_id
         state.child_event = ctx.event
 
-        encrypted = ctx.event.data["encrypted"]
+        encrypted = ctx.event.data["foo"]
         assert isinstance(encrypted, dict)
         phone = encrypted["phone"]
         assert isinstance(phone, str)
@@ -130,7 +133,7 @@ def create(
             "invoke",
             function=child_fn_async,
             data={
-                "encrypted": {
+                "foo": {
                     "phone": "867-5309",
                 },
                 "user_id": "abc123",
@@ -177,12 +180,12 @@ def _assert_event_in_child_run(event: inngest.Event) -> None:
     # Only the _inngest field was added.
     assert sorted(event.data.keys()) == [
         "_inngest",
-        "encrypted",
+        "foo",
         "user_id",
     ]
 
     # The encrypted data was decrypted for the child run.
-    assert event.data["encrypted"] == {
+    assert event.data["foo"] == {
         "phone": "867-5309",
     }
 
@@ -196,12 +199,12 @@ def _assert_event_in_db(event: inngest.Event) -> None:
     # Only the _inngest field was added.
     assert sorted(event.data.keys()) == [
         "_inngest",
-        "encrypted",
+        "foo",
         "user_id",
     ]
 
     # The encrypted data schema is correct.
-    encrypted = event.data["encrypted"]
+    encrypted = event.data["foo"]
     assert isinstance(encrypted, dict)
     assert sorted(encrypted.keys()) == [
         "__ENCRYPTED__",
