@@ -1,5 +1,5 @@
 """
-step.invoke properly encrypts the event data when event_encryption_field is
+step.send_event properly encrypts the event data when event_encryption_field is
 specified. The triggered function receives decrypted data.
 """
 
@@ -87,7 +87,7 @@ def create(
         state.run_id = ctx.run_id
 
         step.send_event(
-            "invoke",
+            "send",
             inngest.Event(
                 data={
                     "foo": {
@@ -130,18 +130,18 @@ def create(
     ) -> None:
         state.run_id = ctx.run_id
 
-        result = await step.invoke(
-            "invoke",
-            function=child_fn_async,
-            data={
-                "foo": {
-                    "phone": "867-5309",
+        await step.send_event(
+            "send",
+            inngest.Event(
+                data={
+                    "foo": {
+                        "phone": "867-5309",
+                    },
+                    "user_id": "abc123",
                 },
-                "user_id": "abc123",
-            },
+                name=child_event_name,
+            ),
         )
-        assert isinstance(result, dict)
-        assert result == {"msg": "Number is 867-5309"}
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
@@ -180,7 +180,6 @@ def _assert_event_in_child_run(event: inngest.Event) -> None:
 
     # Only the _inngest field was added.
     assert sorted(event.data.keys()) == [
-        "_inngest",
         "foo",
         "user_id",
     ]
@@ -199,7 +198,6 @@ def _assert_event_in_db(event: inngest.Event) -> None:
 
     # Only the _inngest field was added.
     assert sorted(event.data.keys()) == [
-        "_inngest",
         "foo",
         "user_id",
     ]
