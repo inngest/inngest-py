@@ -11,6 +11,7 @@
   "python.analysis.extraPaths": [
     "pkg/inngest",
     "pkg/inngest_encryption",
+    "pkg/inngest_remote_state",
     "pkg/test_core"
   ],
   "python.analysis.typeCheckingMode": "basic",
