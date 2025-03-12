@@ -11,11 +11,12 @@ format-check: check-venv
 	@ruff format --check .
 
 install: check-venv
-	@pip install -e '.[extra]' -c constraints.txt
-	@pip install -e ./pkg/inngest
-	@pip install -e ./pkg/inngest_encryption
-	@pip install -e ./pkg/inngest_remote_state
-	@pip install -e ./pkg/test_core
+	@pip install \
+		-e '.[extra]' -c constraints.txt \
+		-e ./pkg/inngest \
+		-e ./pkg/inngest_encryption \
+		-e ./pkg/inngest_remote_state \
+		-e ./pkg/test_core
 
 itest: check-venv
 	@cd pkg/inngest && make itest
