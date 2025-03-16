@@ -3,5 +3,5 @@
 # constraints won't affect installed versions by consumers.
 httpx==0.24.0
 jcs==0.2.1
-pydantic==2.1.1
+pydantic==2.8.0
 typing-extensions==4.8.0

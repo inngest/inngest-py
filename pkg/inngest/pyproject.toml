@@ -14,13 +14,14 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 requires-python = ">=3.9"
 
 dependencies = [
     "httpx>=0.24.0",
     "jcs>=0.2.1",
-    "pydantic>=2.1.1",
+    "pydantic>=2.8.0",
     "typing-extensions>=4.8.0",
 ]
 
