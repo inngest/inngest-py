@@ -22,7 +22,7 @@ dependencies = [
     "httpx>=0.24.0",
     "jcs>=0.2.1",
     "pydantic>=2.8.0",
-    "typing-extensions>=4.8.0",
+    "typing-extensions>=4.12.2",
 ]
 
 [project.urls]
