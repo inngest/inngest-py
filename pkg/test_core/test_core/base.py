@@ -53,6 +53,17 @@ async def wait_for(
         await asyncio.sleep(0.2)
 
 
+async def wait_for_truthy(
+    get_value: typing.Callable[[], object],
+    *,
+    timeout: datetime.timedelta = datetime.timedelta(seconds=5),
+) -> None:
+    def assertion() -> None:
+        assert bool(get_value())
+
+    await wait_for(assertion, timeout=timeout)
+
+
 class _FrameworkTestCase(typing.Protocol):
     dev_server_port: int
     proxy: http_proxy.Proxy

@@ -256,22 +256,6 @@ class CommHandler:
 
         return errors.FunctionNotFoundError(f"function {fn_id} not found")
 
-    def get_function_configs(
-        self,
-        app_url: str,
-    ) -> types.MaybeError[list[server_lib.FunctionConfig]]:
-        configs: list[server_lib.FunctionConfig] = []
-        for fn in self._fns.values():
-            config = fn.get_config(app_url)
-            configs.append(config.main)
-
-            if config.on_failure is not None:
-                configs.append(config.on_failure)
-
-        if len(configs) == 0:
-            return errors.FunctionConfigInvalidError("no functions found")
-        return configs
-
     @wrap_handler_sync(require_signature=False)
     def get_sync(
         self,
@@ -319,7 +303,7 @@ class CommHandler:
         """Handle a PUT request."""
 
         self._client.logger.debug("Syncing app")
-        syncer = _Syncer(logger=self._client.logger)
+        syncer = Syncer(logger=self._client.logger)
 
         if (
             req.headers.get(server_lib.HeaderKey.SYNC_KIND.value)
@@ -350,7 +334,7 @@ class CommHandler:
         """Handle a PUT request."""
 
         self._client.logger.debug("Syncing app")
-        syncer = _Syncer(logger=self._client.logger)
+        syncer = Syncer(logger=self._client.logger)
 
         if (
             req.headers.get(server_lib.HeaderKey.SYNC_KIND.value)
@@ -442,7 +426,7 @@ def _build_inspection_response(
     )
 
 
-class _Syncer:
+class Syncer:
     def __init__(self, logger: types.Logger) -> None:
         self._logger = logger
 
@@ -467,7 +451,7 @@ class _Syncer:
             serve_path=req.serve_path,
         )
 
-        fn_configs = handler.get_function_configs(app_url)
+        fn_configs = get_function_configs(app_url, handler._fns)
         if isinstance(fn_configs, Exception):
             return fn_configs
 
@@ -547,7 +531,7 @@ class _Syncer:
             "/fn/register",
         )
 
-        fn_configs = handler.get_function_configs(app_url)
+        fn_configs = get_function_configs(app_url, handler._fns)
         if isinstance(fn_configs, Exception):
             return fn_configs
 
@@ -667,3 +651,20 @@ class _Syncer:
             return res
 
         return self._parse_out_of_band_response(handler, res)
+
+
+def get_function_configs(
+    app_url: str,
+    fns: dict[str, function.Function],
+) -> types.MaybeError[list[server_lib.FunctionConfig]]:
+    configs: list[server_lib.FunctionConfig] = []
+    for fn in fns.values():
+        config = fn.get_config(app_url)
+        configs.append(config.main)
+
+        if config.on_failure is not None:
+            configs.append(config.on_failure)
+
+    if len(configs) == 0:
+        return errors.FunctionConfigInvalidError("no functions found")
+    return configs

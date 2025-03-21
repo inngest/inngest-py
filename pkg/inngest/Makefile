@@ -18,6 +18,11 @@ itest: check-venv
 lint: check-venv
 	@ruff check .
 
+.PHONY: proto
+proto:
+	@protoc --proto_path=./inngest/experimental/connect/ --python_out=./inngest/experimental/connect/ ./inngest/experimental/connect/connect.proto --pyi_out=./inngest/experimental/connect/
+
+
 release:
 	@grep "version = \"$${VERSION}\"" pyproject.toml && git tag inngest@$${VERSION} && git push origin inngest@$${VERSION} || echo "pyproject.toml version does not match"
 

@@ -22,6 +22,10 @@ dependencies = [
     "jcs>=0.2.1",
     "pydantic>=2.1.1",
     "typing-extensions>=4.8.0",
+
+    # TODO: Move this to an optional dependency.
+    "protobuf>=5.29.4",
+    "websockets>=15.0.1",
 ]
 
 [project.urls]

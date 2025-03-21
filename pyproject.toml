@@ -18,17 +18,22 @@ extra = [
     "fastapi==0.100.0",
     "moto[s3,server]==5.0.18",
     "mypy==1.10.0",
+    "protobuf==5.29.4",
     "pynacl==1.5.0",
     "pytest==8.3.4",
     "pytest-django==4.7.0",
+    "pytest-timeout==2.3.1",
     "pytest-xdist[psutil]==3.3.1",
     "ruff==0.9.5",
     "sentry-sdk==2.1.1",
+    "structlog==25.2.0",
     "toml==0.10.2",
     "tornado==6.3",
+    "types-protobuf==5.29.1.20250315",
     "types-toml==0.10.8.7",
     "types-tornado==5.1.1",
     "uvicorn==0.23.2",
+    "websockets==15.0.1",
 
     # Werkzeug v3.1 deleted something that breaks our minimum Flask version
     # (v2.3.0). So for now, only allow Werkzeug versions below v3.1. See this PR

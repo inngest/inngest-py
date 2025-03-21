@@ -5,9 +5,9 @@ import logging
 import unittest
 
 import inngest
-from inngest._internal import errors, server_lib
+from inngest._internal import errors
 
-from .handler import CommHandler
+from .handler import get_function_configs
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -56,26 +56,12 @@ class Test_get_function_configs(unittest.TestCase):
         ) -> int:
             return 1
 
-        handler = CommHandler(
-            client=client,
-            framework=server_lib.Framework.FLASK,
-            functions=[fn],
-        )
-
-        configs = handler.get_function_configs("http://foo.bar")
+        configs = get_function_configs("http://foo.bar", {fn.id: fn})
         assert not isinstance(configs, Exception), (
             f"Unexpected error: {configs}"
         )
 
     def test_no_functions(self) -> None:
-        functions: list[inngest.Function] = []
-
-        handler = CommHandler(
-            client=client,
-            framework=server_lib.Framework.FLASK,
-            functions=functions,
-        )
-
-        configs = handler.get_function_configs("http://foo.bar")
+        configs = get_function_configs("http://foo.bar", {})
         assert isinstance(configs, errors.FunctionConfigInvalidError)
         assert str(configs) == "no functions found"

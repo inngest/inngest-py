@@ -35,6 +35,28 @@ class CommResponse:
         self.body = body
         self.status_code = status_code
 
+    @property
+    def no_retry(self) -> bool:
+        value = self.headers.get(server_lib.HeaderKey.NO_RETRY.value)
+        if value == "true":
+            return True
+        return False
+
+    @property
+    def request_version(self) -> typing.Optional[int]:
+        value = self.headers.get(server_lib.HeaderKey.REQUEST_VERSION.value)
+        if value is None:
+            return None
+        return int(value)
+
+    @property
+    def retry_after(self) -> typing.Optional[str]:
+        return self.headers.get(server_lib.HeaderKey.RETRY_AFTER.value)
+
+    @property
+    def sdk_version(self) -> typing.Optional[str]:
+        return self.headers.get(server_lib.HeaderKey.SDK.value)
+
     @classmethod
     def from_call_result(
         cls,
