@@ -164,6 +164,7 @@ class BaseTestIntrospection(BaseTest):
             "app_id": "my-app",
             "authentication_succeeded": True,
             "capabilities": {
+                "connect": "v1",
                 "in_band_sync": "v1",
                 "trust_probe": "v1",
             },

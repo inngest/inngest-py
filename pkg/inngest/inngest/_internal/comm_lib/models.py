@@ -47,7 +47,10 @@ class CommResponse:
         value = self.headers.get(server_lib.HeaderKey.REQUEST_VERSION.value)
         if value is None:
             return None
-        return int(value)
+        try:
+            return int(value)
+        except ValueError:
+            return None
 
     @property
     def retry_after(self) -> typing.Optional[str]:
