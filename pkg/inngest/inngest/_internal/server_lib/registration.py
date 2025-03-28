@@ -126,7 +126,7 @@ class Retries(_BaseConfig):
 
 
 class Runtime(_BaseConfig):
-    type: typing.Literal["http"]
+    type: typing.Literal["http", "ws"]
     url: str
 
 

@@ -24,6 +24,9 @@ dependencies = [
     "typing-extensions>=4.8.0",
 ]
 
+[project.optional-dependencies]
+connect = ["protobuf>=5.29.4", "websockets>=15.0.0"]
+
 [project.urls]
 "Homepage" = "https://github.com/inngest/inngest-py"
 "Bug Tracker" = "https://github.com/inngest/inngest-py/issues"

@@ -114,7 +114,11 @@ def create(framework: server_lib.Framework) -> base.Case:
         assert state.body is not None
         assert json.loads(state.body.decode("utf-8")) == {
             "appname": client.app_id,
-            "capabilities": {"in_band_sync": "v1", "trust_probe": "v1"},
+            "capabilities": {
+                "connect": "v1",
+                "in_band_sync": "v1",
+                "trust_probe": "v1",
+            },
             "deploy_type": "ping",
             "framework": framework.value,
             "functions": [

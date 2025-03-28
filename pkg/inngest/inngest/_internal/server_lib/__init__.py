@@ -19,7 +19,11 @@ from .execution_request import (
     ServerRequestCtx,
     ServerRequestCtxStack,
 )
-from .inspection import AuthenticatedInspection, UnauthenticatedInspection
+from .inspection import (
+    AuthenticatedInspection,
+    Capabilities,
+    UnauthenticatedInspection,
+)
 from .registration import (
     Batch,
     Cancel,
@@ -43,6 +47,7 @@ __all__ = [
     "AuthenticatedInspection",
     "Batch",
     "Cancel",
+    "Capabilities",
     "Concurrency",
     "Debounce",
     "DeployType",

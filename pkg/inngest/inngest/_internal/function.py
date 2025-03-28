@@ -265,6 +265,10 @@ class Function:
             )
         )
 
+        runtime_type: typing.Literal["http", "ws"] = "http"
+        if url.startswith("wss://"):
+            runtime_type = "ws"
+
         main = server_lib.FunctionConfig(
             batch_events=self._opts.batch_events,
             cancel=self._opts.cancel,
@@ -281,7 +285,7 @@ class Function:
                     name=server_lib.ROOT_STEP_ID,
                     retries=retries,
                     runtime=server_lib.Runtime(
-                        type="http",
+                        type=runtime_type,
                         url=url,
                     ),
                 ),

@@ -37,6 +37,7 @@ PREFERRED_EXECUTION_VERSION: typing.Final = ExecutionVersion.V1.value
 
 
 class Framework(enum.Enum):
+    CONNECT = "connect"
     DIGITAL_OCEAN = "digitalocean"
     DJANGO = "django"
     FAST_API = "fast_api"

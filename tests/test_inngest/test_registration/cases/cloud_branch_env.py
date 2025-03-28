@@ -96,7 +96,11 @@ def create(framework: server_lib.Framework) -> base.Case:
                 "api_origin": "https://api.inngest.com/",
                 "app_id": client.app_id,
                 "authentication_succeeded": True,
-                "capabilities": {"in_band_sync": "v1", "trust_probe": "v1"},
+                "capabilities": {
+                    "connect": "v1",
+                    "in_band_sync": "v1",
+                    "trust_probe": "v1",
+                },
                 "env": "my-env",
                 "event_api_origin": "https://inn.gs/",
                 "framework": framework.value,
