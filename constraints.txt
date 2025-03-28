@@ -1,0 +1,9 @@
+# Constrain to the lowest version for each range in pyproject.toml. This ensures
+# that our code won't rely on features in newer versions of dependencies. These
+# constraints won't affect installed versions by consumers.
+httpx==0.24.0
+jcs==0.2.1
+protobuf==5.29.4
+pydantic==2.1.1
+typing-extensions==4.8.0
+websockets==15.0.0
