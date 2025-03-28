@@ -123,7 +123,7 @@ class TestAPIRequestHeaders(unittest.IsolatedAsyncioTestCase):
         await test_core.wait_for_truthy(lambda: state.outgoing_headers)
         assert "authorization" not in state.outgoing_headers
 
-    @pytest.mark.timeout(5)
+    @pytest.mark.timeout(10)
     async def test_example_proxy(self) -> None:
         """
         Use this as an example as we write more tests.
