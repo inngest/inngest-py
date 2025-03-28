@@ -33,7 +33,7 @@ extra = [
     "types-toml==0.10.8.7",
     "types-tornado==5.1.1",
     "uvicorn==0.23.2",
-    "websockets==15.0.1",
+    "websockets==15.0.0",
 
     # Werkzeug v3.1 deleted something that breaks our minimum Flask version
     # (v2.3.0). So for now, only allow Werkzeug versions below v3.1. See this PR

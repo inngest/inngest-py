@@ -11,7 +11,7 @@ format-check: check-venv
 	@ruff format --check .
 
 install: check-venv
-	@pip install -e '.[extra]' -e ./pkg/inngest -e ./pkg/inngest_encryption -e ./pkg/test_core -c constraints.txt
+	@pip install -e '.[extra]' -e ./pkg/inngest -e ./pkg/inngest_encryption -e ./pkg/test_core
 
 itest: check-venv
 	@cd pkg/inngest && make itest
