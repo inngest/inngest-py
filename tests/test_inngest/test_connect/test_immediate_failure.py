@@ -1,10 +1,10 @@
-import unittest
-
 import inngest
 from inngest.experimental.connect import connect
 
+from .base import BaseTest
 
-class TestImmediateFailure(unittest.IsolatedAsyncioTestCase):
+
+class TestImmediateFailure(BaseTest):
     """
     These tests check that the connect function immediately raises an error under
     certain conditions.

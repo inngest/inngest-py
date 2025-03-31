@@ -3,18 +3,18 @@ import dataclasses
 import typing
 
 import pydantic_core
-import websockets
 
 from inngest._internal import const, server_lib, types
 
 from . import connect_pb2
+from .errors import _UnreachableError
 from .models import ConnectionState, _State
 
 
 class _InitHandler:
+    _closed_event: typing.Optional[asyncio.Event] = None
     _send_data_task: typing.Optional[asyncio.Task[None]] = None
     _state_watcher_task: typing.Optional[asyncio.Task[None]] = None
-    _ws: typing.Optional[websockets.ClientConnection] = None
 
     def __init__(
         self,
@@ -29,31 +29,36 @@ class _InitHandler:
         self._kind_state = _KindState()
         self._state = state
 
-    def start(
-        self,
-        ws: websockets.ClientConnection,
-    ) -> types.MaybeError[None]:
-        self._ws = ws
+    def start(self) -> types.MaybeError[None]:
+        if self._closed_event is None:
+            self._closed_event = asyncio.Event()
+
         if self._send_data_task is not None:
-            # Unreachable.
-            return Exception("init handler already started")
-        self._state_watcher_task = asyncio.create_task(self._state_watcher())
+            return None
+        self._state_watcher_task = asyncio.create_task(
+            self._state_watcher(self._closed_event)
+        )
         return None
 
     def close(self) -> None:
-        if self._send_data_task is None:
-            return
-        self._send_data_task.cancel()
+        if self._closed_event is not None:
+            self._closed_event.set()
+
+        if self._send_data_task is not None:
+            self._send_data_task.cancel()
 
     async def closed(self) -> None:
+        if self._closed_event is not None:
+            await self._closed_event.wait()
+
         if self._send_data_task is not None:
             await self._send_data_task
 
-    async def _state_watcher(self) -> None:
-        async for state in self._state.conn_state.watch():
-            if state == ConnectionState.RECONNECTING:
-                # Reset the kind state when we reconnect.
-                self._kind_state = _KindState()
+    async def _state_watcher(self, closed_event: asyncio.Event) -> None:
+        while closed_event.is_set() is False:
+            await self._state.conn_state.wait_for(ConnectionState.RECONNECTING)
+            # Reset the kind state when we reconnect.
+            self._kind_state = _KindState()
 
     def handle_msg(
         self,
@@ -61,9 +66,8 @@ class _InitHandler:
         auth_data: connect_pb2.AuthData,
         connection_id: str,
     ) -> None:
-        if self._ws is None:
-            # Unreachable.
-            raise Exception("missing websocket")
+        if self._state.ws is None:
+            raise _UnreachableError("missing websocket")
 
         if self._kind_state.GATEWAY_HELLO is False:
             if msg.kind != connect_pb2.GatewayMessageType.GATEWAY_HELLO:
@@ -130,9 +134,9 @@ class _InitHandler:
             )
             return
 
-        if self._ws is None or self._ws.close_reason is not None:
+        if self._state.ws is None or self._state.ws.close_reason is not None:
             return None
-        await self._ws.send(sync_message.SerializeToString())
+        await self._state.ws.send(sync_message.SerializeToString())
         self._kind_state.SYNCED = True
         return None
 

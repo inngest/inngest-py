@@ -7,6 +7,7 @@ from inngest._internal import types
 
 from . import connect_pb2
 from .consts import _heartbeat_interval_sec
+from .errors import _UnreachableError
 from .models import ConnectionState, _State
 
 
@@ -27,17 +28,17 @@ class _HeartbeatHandler:
         self._logger = logger
         self._state = state
 
-    def start(
-        self,
-        ws: websockets.ClientConnection,
-    ) -> types.MaybeError[None]:
+    def start(self) -> types.MaybeError[None]:
+        if self._state.ws is None:
+            return _UnreachableError("missing websocket")
+
         if self._closed_event is None:
             self._closed_event = asyncio.Event()
 
         if self._heartbeat_sender_task is None:
             self._heartbeat_sender_task = asyncio.create_task(
                 self._heartbeat_sender(
-                    ws,
+                    self._state.ws,
                     closed_event=self._closed_event,
                 )
             )
