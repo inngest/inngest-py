@@ -1,7 +1,9 @@
 import asyncio
 import dataclasses
+import os
 import typing
 
+import httpx
 import inngest
 import test_core
 import test_core.http_proxy
@@ -64,6 +66,96 @@ class TestAPIRequestHeaders(BaseTest):
             assert state.outgoing_headers["authorization"] == [
                 "Bearer 5f78c33274e43fa9de5659265c1d917e25c03722dcb0b8d27db8d5feaa813953"
             ]
+
+        await test_core.wait_for(assert_headers)
+
+    async def test_cloud_with_signing_key_fallback(self) -> None:
+        """
+        A 401 response from the API should trigger a retry with the signing key
+        fallback.
+        """
+
+        @dataclasses.dataclass
+        class State:
+            attempt_1_auth_header: typing.Optional[str] = None
+            attempt_2_auth_header: typing.Optional[str] = None
+
+        state = State()
+
+        def mock_api_handler(
+            *,
+            body: typing.Optional[bytes],
+            headers: dict[str, list[str]],
+            method: str,
+            path: str,
+        ) -> test_core.http_proxy.Response:
+            if state.attempt_1_auth_header is None:
+                value = headers.get("authorization")
+                assert value is not None
+                state.attempt_1_auth_header = value[0]
+                return test_core.http_proxy.Response(
+                    body=b"",
+                    headers={},
+                    status_code=401,
+                )
+
+            if state.attempt_2_auth_header is None:
+                value = headers.get("authorization")
+                assert value is not None
+                state.attempt_2_auth_header = value[0]
+
+                # Forward request to the Dev Server.
+                resp = httpx.request(
+                    content=body,
+                    headers={k: v[0] for k, v in headers.items()},
+                    method=method,
+                    url=f"http://0.0.0.0:8288{path}",
+                )
+                return test_core.http_proxy.Response(
+                    body=resp.content,
+                    headers={k: v[0] for k, v in resp.headers.items()},
+                    status_code=resp.status_code,
+                )
+
+            raise Exception("Unexpected number of API requests")
+
+        mock_api = test_core.http_proxy.Proxy(mock_api_handler).start()
+        self.addCleanup(mock_api.stop)
+
+        os.environ["INNGEST_SIGNING_KEY_FALLBACK"] = "cafebabe"
+        self.addCleanup(lambda: os.environ.pop("INNGEST_SIGNING_KEY_FALLBACK"))
+        client = inngest.Inngest(
+            app_id="app",
+            api_base_url=f"http://{mock_api.host}:{mock_api.port}",
+            signing_key="deadbeef",
+        )
+
+        @client.create_function(
+            fn_id="fn",
+            trigger=inngest.TriggerEvent(event="event"),
+        )
+        async def fn(ctx: inngest.Context, step: inngest.Step) -> None:
+            pass
+
+        conn = connect(
+            [(client, [fn])],
+        )
+        self.addCleanup(conn.close, wait=True)
+        task = asyncio.create_task(conn.start())
+        self.addCleanup(task.cancel)
+
+        def assert_headers() -> None:
+            # Signing key.
+            assert (
+                state.attempt_1_auth_header
+                == "Bearer 5f78c33274e43fa9de5659265c1d917e25c03722dcb0b8d27db8d5feaa813953"
+            )
+
+            # Signing key fallback.
+            assert (
+                state.attempt_2_auth_header
+                == "Bearer 65ab12a8ff3263fbc257e5ddf0aa563c64573d0bab1f1115b9b107834cfa6971"
+            )
 
         await test_core.wait_for(assert_headers)
 
