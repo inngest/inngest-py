@@ -11,7 +11,8 @@ class TestReconnect(BaseTest):
     @pytest.mark.timeout(10, method="thread")
     async def test_reconnect(self) -> None:
         """
-        Use this as an example as we write more tests.
+        An unexpected WebSocket disconnect (a.k.a. abort) should trigger a
+        reconnect. That reconnect should eventually succeed.
         """
 
         proxies = await self.create_proxies()

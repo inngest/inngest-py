@@ -130,7 +130,6 @@ class _ConnStarter:
             except _NonRetryableError as e:
                 return e
             except Exception as e:
-                print("error", e)
                 err = e
 
                 if attempts < _max_attempts:
