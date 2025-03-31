@@ -119,18 +119,18 @@ class _ConnStarter:
                     sync_token=start_resp.sync_token,
                 )
                 self._state.conn_id = start_resp.connection_id
-                self._connection_id = start_resp.connection_id
 
                 final_endpoint = start_resp.gateway_endpoint
                 if self._rewrite_gateway_endpoint:
                     final_endpoint = self._rewrite_gateway_endpoint(
                         final_endpoint
                     )
-                self._state.gateway_url = final_endpoint
+                self._state.gateway_url.value = final_endpoint
                 return None
             except _NonRetryableError as e:
                 return e
             except Exception as e:
+                print("error", e)
                 err = e
 
                 if attempts < _max_attempts:

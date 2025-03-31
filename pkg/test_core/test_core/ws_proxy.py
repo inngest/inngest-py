@@ -7,12 +7,15 @@ from inngest.experimental.connect.consts import _protocol
 
 from .net import get_available_port
 
+_Connection = websockets.asyncio.connection.Connection
+
 
 class WebSocketProxy:
     def __init__(
         self,
         server_uri: str,
     ):
+        self._conns = set[tuple[_Connection, _Connection]]()
         self._port = get_available_port()
         self._server_uri = server_uri
         self._server: typing.Optional[websockets.Server] = None
@@ -43,23 +46,18 @@ class WebSocketProxy:
 
     async def _handle_client(
         self,
-        server_conn: websockets.ServerConnection,
-    ) -> None:
-        await self._proxy(server_conn)
-
-    async def _proxy(
-        self,
-        server_conn: websockets.ServerConnection,
+        client_conn: websockets.ServerConnection,
     ) -> None:
         async with websockets.connect(
             self._server_uri,
             subprotocols=[_protocol],
-        ) as client_conn:
+        ) as server_conn:
+            self._conns.add((client_conn, server_conn))
             client_to_server = asyncio.create_task(
-                self._forward_messages(server_conn, client_conn)
+                self._forward_messages(client_conn, server_conn)
             )
             server_to_client = asyncio.create_task(
-                self._forward_messages(client_conn, server_conn)
+                self._forward_messages(server_conn, client_conn)
             )
 
             self._tasks.add(client_to_server)
@@ -82,8 +80,20 @@ class WebSocketProxy:
 
     async def _forward_messages(
         self,
-        source: websockets.asyncio.connection.Connection,
-        destination: websockets.asyncio.connection.Connection,
+        source: _Connection,
+        destination: _Connection,
     ) -> None:
         async for message in source:
-            await destination.send(message)
+            try:
+                await destination.send(message)
+            except Exception as e:
+                print("error sending message", e)
+
+    async def abort_conns(self) -> None:
+        for conn in self._conns:
+            for c in conn:
+                try:
+                    c.transport.abort()
+                except Exception:
+                    pass
+        self._conns.clear()

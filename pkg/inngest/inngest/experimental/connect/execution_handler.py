@@ -1,11 +1,9 @@
 import asyncio
-import typing
-
-import websockets
 
 from inngest._internal import comm_lib, server_lib, types
 
 from . import connect_pb2
+from .models import _State
 
 
 class _ExecutionHandler:
@@ -13,24 +11,20 @@ class _ExecutionHandler:
     Handles incoming execution requests from the Gateway.
     """
 
-    _ws: typing.Optional[websockets.ClientConnection] = None
-
     def __init__(
         self,
         logger: types.Logger,
+        state: _State,
         comm_handlers: dict[str, comm_lib.CommHandler],
     ) -> None:
         self._comm_handlers = comm_handlers
         self._logger = logger
+        self._state = state
 
         # Keep track of pending tasks to allow for graceful shutdown.
         self._pending_tasks: set[asyncio.Task[None]] = set()
 
-    def start(
-        self,
-        ws: websockets.ClientConnection,
-    ) -> types.MaybeError[None]:
-        self._ws = ws
+    def start(self) -> types.MaybeError[None]:
         return None
 
     def close(self) -> None:
@@ -63,13 +57,13 @@ class _ExecutionHandler:
             return
 
         async def execute() -> None:
-            if self._ws is None:
+            if self._state.ws is None:
                 # Unreachable.
                 self._logger.error("No connection")
                 return
 
             try:
-                await self._ws.send(
+                await self._state.ws.send(
                     connect_pb2.ConnectMessage(
                         kind=connect_pb2.GatewayMessageType.WORKER_REQUEST_ACK,
                         payload=connect_pb2.WorkerRequestAckData(
@@ -122,7 +116,7 @@ class _ExecutionHandler:
                     )
 
                 self._logger.debug("Sending execution reply")
-                await self._ws.send(
+                await self._state.ws.send(
                     connect_pb2.ConnectMessage(
                         kind=connect_pb2.GatewayMessageType.WORKER_REPLY,
                         payload=connect_pb2.SDKResponse(

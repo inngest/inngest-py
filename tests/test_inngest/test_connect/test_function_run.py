@@ -1,11 +1,12 @@
 import asyncio
 import dataclasses
 import json
-import unittest
 
 import inngest
 import test_core
-from inngest.experimental.connect import connect
+from inngest.experimental.connect import ConnectionState, connect
+
+from .base import BaseTest
 
 
 @dataclasses.dataclass
@@ -13,7 +14,7 @@ class _State(test_core.BaseState):
     step_counter = 0
 
 
-class TestFunctionRun(unittest.IsolatedAsyncioTestCase):
+class TestFunctionRun(BaseTest):
     async def test(self) -> None:
         client = inngest.Inngest(
             app_id=test_core.random_suffix("app"),
@@ -40,6 +41,8 @@ class TestFunctionRun(unittest.IsolatedAsyncioTestCase):
         task = asyncio.create_task(conn.start())
         self.addCleanup(conn.close, wait=True)
         self.addCleanup(task.cancel)
+
+        await conn.wait_for_state(ConnectionState.ACTIVE)
 
         # Trigger the function and wait for it to complete.
         await client.send(inngest.Event(name=event_name))
