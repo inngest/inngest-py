@@ -16,6 +16,10 @@ from inngest._internal import (
 class CommRequest(types.BaseModel):
     body: bytes
     headers: typing.Union[dict[str, str], dict[str, str]]
+
+    # Is this a Connect request? (As opposed to our HTTP execution model)
+    is_connect: bool = False
+
     query_params: typing.Union[dict[str, str], dict[str, list[str]]]
     raw_request: object
     request_url: str

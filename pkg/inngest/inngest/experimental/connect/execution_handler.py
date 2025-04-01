@@ -83,6 +83,7 @@ class _ExecutionHandler:
                     comm_lib.CommRequest(
                         body=req_data.request_payload,
                         headers={},
+                        is_connect=True,
                         query_params={
                             server_lib.QueryParamKey.FUNCTION_ID.value: req_data.function_slug,
                         },
@@ -92,52 +93,52 @@ class _ExecutionHandler:
                         serve_path=None,
                     )
                 )
-
-                body = comm_res.body_bytes()
-                if isinstance(body, Exception):
-                    raise body
-
-                status: connect_pb2.SDKResponseStatus
-                if comm_res.status_code == 200:
-                    # Function-level success.
-                    status = connect_pb2.SDKResponseStatus.DONE
-                elif comm_res.status_code == 206:
-                    # Step-level success.
-                    status = connect_pb2.SDKResponseStatus.NOT_COMPLETED
-                elif comm_res.status_code == 500:
-                    # Error.
-                    status = connect_pb2.SDKResponseStatus.ERROR
-                else:
-                    # Unreachable.
-                    status = connect_pb2.SDKResponseStatus.ERROR
-                    self._logger.error(
-                        "Unexpected status code",
-                        extra={"status_code": comm_res.status_code},
-                    )
-
-                self._logger.debug("Sending execution reply")
-                await self._state.ws.send(
-                    connect_pb2.ConnectMessage(
-                        kind=connect_pb2.GatewayMessageType.WORKER_REPLY,
-                        payload=connect_pb2.SDKResponse(
-                            account_id=req_data.account_id,
-                            app_id=req_data.app_id,
-                            body=body,
-                            env_id=req_data.env_id,
-                            no_retry=comm_res.no_retry,
-                            request_id=req_data.request_id,
-                            request_version=comm_res.request_version,
-                            retry_after=comm_res.retry_after,
-                            sdk_version=comm_res.sdk_version,
-                            status=status,
-                            system_trace_ctx=req_data.system_trace_ctx,
-                            user_trace_ctx=req_data.user_trace_ctx,
-                        ).SerializeToString(),
-                    ).SerializeToString()
-                )
-
             except Exception as e:
                 self._logger.error("Execution failed", extra={"error": str(e)})
+                comm_res = comm_lib.CommResponse.from_error(self._logger, e)
+
+            body = comm_res.body_bytes()
+            if isinstance(body, Exception):
+                raise body
+
+            status: connect_pb2.SDKResponseStatus
+            if comm_res.status_code == 200:
+                # Function-level success.
+                status = connect_pb2.SDKResponseStatus.DONE
+            elif comm_res.status_code == 206:
+                # Step-level success.
+                status = connect_pb2.SDKResponseStatus.NOT_COMPLETED
+            elif comm_res.status_code == 500:
+                # Error.
+                status = connect_pb2.SDKResponseStatus.ERROR
+            else:
+                # Unreachable.
+                status = connect_pb2.SDKResponseStatus.ERROR
+                self._logger.error(
+                    "Unexpected status code",
+                    extra={"status_code": comm_res.status_code},
+                )
+
+            self._logger.debug("Sending execution reply")
+            await self._state.ws.send(
+                connect_pb2.ConnectMessage(
+                    kind=connect_pb2.GatewayMessageType.WORKER_REPLY,
+                    payload=connect_pb2.SDKResponse(
+                        account_id=req_data.account_id,
+                        app_id=req_data.app_id,
+                        body=body,
+                        env_id=req_data.env_id,
+                        no_retry=comm_res.no_retry,
+                        request_id=req_data.request_id,
+                        request_version=comm_res.request_version,
+                        retry_after=comm_res.retry_after,
+                        sdk_version=comm_res.sdk_version,
+                        status=status,
+                        system_trace_ctx=req_data.system_trace_ctx,
+                        user_trace_ctx=req_data.user_trace_ctx,
+                    ).SerializeToString(),
+                ).SerializeToString()
+            )
 
         # Store the task.
         task = asyncio.create_task(execute())

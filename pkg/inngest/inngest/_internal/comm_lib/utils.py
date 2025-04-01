@@ -74,21 +74,29 @@ def wrap_handler(
             self: CommHandler,
             req: CommRequest,
         ) -> CommResponse:
-            req.headers = net.normalize_headers(req.headers)
+            request_signing_key = None
+            if req.is_connect is False:
+                # Connect uses WebSockets so there isn't a request signature
+                # header.
 
-            request_signing_key = net.validate_request_sig(
-                body=req.body,
-                headers=req.headers,
-                mode=self._client._mode,
-                signing_key=self._signing_key,
-                signing_key_fallback=self._signing_key_fallback,
-            )
-            if isinstance(request_signing_key, Exception) and require_signature:
-                return CommResponse.from_error(
-                    self._client.logger,
-                    request_signing_key,
-                    status=http.HTTPStatus.UNAUTHORIZED,
+                req.headers = net.normalize_headers(req.headers)
+
+                request_signing_key = net.validate_request_sig(
+                    body=req.body,
+                    headers=req.headers,
+                    mode=self._client._mode,
+                    signing_key=self._signing_key,
+                    signing_key_fallback=self._signing_key_fallback,
                 )
+                if (
+                    isinstance(request_signing_key, Exception)
+                    and require_signature
+                ):
+                    return CommResponse.from_error(
+                        self._client.logger,
+                        request_signing_key,
+                        status=http.HTTPStatus.UNAUTHORIZED,
+                    )
 
             res = await method(
                 self,
@@ -143,21 +151,29 @@ def wrap_handler_sync(
             self: CommHandler,
             req: CommRequest,
         ) -> CommResponse:
-            req.headers = net.normalize_headers(req.headers)
+            request_signing_key = None
+            if req.is_connect is False:
+                # Connect uses WebSockets so there isn't a request signature
+                # header.
 
-            request_signing_key = net.validate_request_sig(
-                body=req.body,
-                headers=req.headers,
-                mode=self._client._mode,
-                signing_key=self._signing_key,
-                signing_key_fallback=self._signing_key_fallback,
-            )
-            if isinstance(request_signing_key, Exception) and require_signature:
-                return CommResponse.from_error(
-                    self._client.logger,
-                    request_signing_key,
-                    status=http.HTTPStatus.UNAUTHORIZED,
+                req.headers = net.normalize_headers(req.headers)
+
+                request_signing_key = net.validate_request_sig(
+                    body=req.body,
+                    headers=req.headers,
+                    mode=self._client._mode,
+                    signing_key=self._signing_key,
+                    signing_key_fallback=self._signing_key_fallback,
                 )
+                if (
+                    isinstance(request_signing_key, Exception)
+                    and require_signature
+                ):
+                    return CommResponse.from_error(
+                        self._client.logger,
+                        request_signing_key,
+                        status=http.HTTPStatus.UNAUTHORIZED,
+                    )
 
             res = method(
                 self,
