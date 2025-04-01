@@ -3,7 +3,6 @@ import dataclasses
 import json
 
 import inngest
-import structlog
 import test_core
 from inngest.experimental import dev_server
 from inngest.experimental.connect import ConnectionState, connect
@@ -25,12 +24,11 @@ class TestFunctionRun(BaseTest):
         """
 
         client = inngest.Inngest(
-            app_id=test_core.random_suffix("app"),
             api_base_url=dev_server.server.origin,
+            app_id=test_core.random_suffix("app"),
             event_api_base_url=dev_server.server.origin,
             event_key="foo",
             signing_key="deadbeef",
-            logger=structlog.get_logger(),
         )
         event_name = test_core.random_suffix("event")
         state = _State()
