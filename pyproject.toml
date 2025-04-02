@@ -29,6 +29,7 @@ extra = [
     "toml==0.10.2",
     "tornado==6.3",
     "types-protobuf==5.29.1.20250315",
+    "types-psutil==7.0.0.20250401",
     "types-toml==0.10.8.7",
     "types-tornado==5.1.1",
     "uvicorn==0.23.2",
