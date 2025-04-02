@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import socket
 import typing
 
 import httpx
@@ -134,7 +135,10 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 functions=fns,
             )
 
+        if instance_id is None:
+            instance_id = socket.gethostname()
         self._instance_id = instance_id
+
         self._max_concurrency = max_concurrency
         self._handle_shutdown_signals = handle_shutdown_signals
         self._rewrite_gateway_endpoint = rewrite_gateway_endpoint
@@ -172,6 +176,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 self._state,
                 self._app_configs,
                 default_client.env,
+                self._instance_id,
             ),
             _ExecutionHandler(
                 self._logger,

@@ -25,7 +25,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-connect = ["protobuf>=5.29.4", "websockets>=15.0.0"]
+connect = ["protobuf>=5.29.4", "psutil>=6.0.0", "websockets>=15.0.0"]
 
 [project.urls]
 "Homepage" = "https://github.com/inngest/inngest-py"
