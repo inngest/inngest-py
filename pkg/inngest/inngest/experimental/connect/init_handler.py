@@ -1,7 +1,9 @@
 import asyncio
 import dataclasses
+import platform
 import typing
 
+import psutil
 import pydantic_core
 
 from inngest._internal import const, server_lib, types
@@ -22,9 +24,11 @@ class _InitHandler:
         state: _State,
         app_configs: dict[str, list[server_lib.FunctionConfig]],
         env: typing.Optional[str],
+        instance_id: str,
     ) -> None:
         self._app_configs = app_configs
         self._env = env
+        self._instance_id = instance_id
         self._logger = logger
         self._kind_state = _KindState()
         self._state = state
@@ -78,18 +82,6 @@ class _InitHandler:
         if self._kind_state.SYNCED is False:
             self._logger.debug("Syncing")
 
-            sync_message = _create_sync_message(
-                apps_configs=self._app_configs,
-                auth_data=auth_data,
-                connection_id=connection_id,
-                env=self._env,
-            )
-            if isinstance(sync_message, Exception):
-                self._logger.error(
-                    "Failed to create sync message",
-                    extra={"error": str(sync_message)},
-                )
-
             if (
                 self._send_data_task is not None
                 and not self._send_data_task.done()
@@ -126,6 +118,7 @@ class _InitHandler:
             auth_data=auth_data,
             connection_id=connection_id,
             env=self._env,
+            instance_id=self._instance_id,
         )
         if isinstance(sync_message, Exception):
             self._logger.error(
@@ -154,6 +147,7 @@ def _create_sync_message(
     auth_data: connect_pb2.AuthData,
     connection_id: str,
     env: typing.Optional[str],
+    instance_id: str,
 ) -> types.MaybeError[connect_pb2.ConnectMessage]:
     apps: list[connect_pb2.AppConfiguration] = []
     for app_id, functions in apps_configs.items():
@@ -172,25 +166,21 @@ def _create_sync_message(
     capabilities = server_lib.Capabilities().model_dump_json().encode("utf-8")
 
     payload = connect_pb2.WorkerConnectRequestData(
+        apps=apps,
+        auth_data=auth_data,
+        capabilities=capabilities,
         connection_id=connection_id,
         environment=env,
-        auth_data=auth_data,
+        framework=server_lib.Framework.CONNECT.value,
+        instance_id=instance_id,
         sdk_language=const.LANGUAGE,
         sdk_version=const.VERSION,
-        framework=server_lib.Framework.CONNECT.value,
-        # TODO
-        worker_manual_readiness_ack=False,
-        # TODO
         system_attributes=connect_pb2.SystemAttributes(
-            cpu_cores=1,
-            mem_bytes=1024 * 1024 * 1024,
-            os="linux",
+            cpu_cores=psutil.cpu_count(),
+            mem_bytes=psutil.virtual_memory().total,
+            os=platform.system().lower(),
         ),
-        # TODO
-        apps=apps,
-        capabilities=capabilities,
-        # TODO
-        instance_id="foo",
+        worker_manual_readiness_ack=False,
     )
 
     return connect_pb2.ConnectMessage(
