@@ -136,7 +136,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
             )
 
         if instance_id is None:
-            instance_id = socket.getfqdn()
+            instance_id = socket.gethostname()
         self._instance_id = instance_id
 
         self._max_concurrency = max_concurrency
