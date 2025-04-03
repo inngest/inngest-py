@@ -29,11 +29,11 @@ class _Handler(typing.Protocol):
 
 @dataclasses.dataclass
 class _State:
-    auth_data: typing.Optional[connect_pb2.AuthData]
     conn_id: typing.Optional[str]
+    conn_init: _ValueWatcher[typing.Optional[tuple[connect_pb2.AuthData, str]]]
     conn_state: _ValueWatcher[ConnectionState]
+    draining: _ValueWatcher[bool]
     exclude_gateways: list[str]
-    gateway_url: _ValueWatcher[typing.Optional[str]]
     ws: typing.Optional[websockets.ClientConnection]
 
 

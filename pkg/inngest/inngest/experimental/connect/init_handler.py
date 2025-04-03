@@ -15,8 +15,9 @@ from .models import ConnectionState, _State
 
 class _InitHandler:
     _closed_event: typing.Optional[asyncio.Event] = None
+    _drain_task: typing.Optional[asyncio.Task[None]] = None
     _send_data_task: typing.Optional[asyncio.Task[None]] = None
-    _state_watcher_task: typing.Optional[asyncio.Task[None]] = None
+    _reconnect_task: typing.Optional[asyncio.Task[None]] = None
 
     def __init__(
         self,
@@ -37,11 +38,15 @@ class _InitHandler:
         if self._closed_event is None:
             self._closed_event = asyncio.Event()
 
-        if self._send_data_task is not None:
-            return None
-        self._state_watcher_task = asyncio.create_task(
-            self._state_watcher(self._closed_event)
-        )
+        if self._drain_task is None:
+            self._drain_task = asyncio.create_task(
+                self._drain_watcher(self._closed_event)
+            )
+
+        if self._reconnect_task is None:
+            self._reconnect_task = asyncio.create_task(
+                self._reconnect_watcher(self._closed_event)
+            )
         return None
 
     def close(self) -> None:
@@ -58,10 +63,21 @@ class _InitHandler:
         if self._send_data_task is not None:
             await self._send_data_task
 
-    async def _state_watcher(self, closed_event: asyncio.Event) -> None:
+    async def _drain_watcher(self, closed_event: asyncio.Event) -> None:
         while closed_event.is_set() is False:
-            await self._state.conn_state.wait_for(ConnectionState.RECONNECTING)
-            # Reset the kind state when we reconnect.
+            await self._state.draining.wait_for(True, immediate=False)
+
+            # Reset the kind state so that we redo initialization.
+            self._kind_state = _KindState()
+
+    async def _reconnect_watcher(self, closed_event: asyncio.Event) -> None:
+        while closed_event.is_set() is False:
+            await self._state.conn_state.wait_for(
+                ConnectionState.RECONNECTING,
+                immediate=False,
+            )
+
+            # Reset the kind state so that we redo initialization.
             self._kind_state = _KindState()
 
     def handle_msg(

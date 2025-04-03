@@ -21,8 +21,9 @@ class _ConnStarter:
     """
 
     _closed_event: typing.Optional[asyncio.Event] = None
+    _drain_watcher_task: typing.Optional[asyncio.Task[None]] = None
     _initial_request_sent: bool = False
-    _watcher_task: typing.Optional[asyncio.Task[None]] = None
+    _reconnect_watcher_task: typing.Optional[asyncio.Task[None]] = None
 
     def __init__(
         self,
@@ -54,9 +55,14 @@ class _ConnStarter:
                 return err
             self._initial_request_sent = True
 
-        if self._watcher_task is None:
-            self._watcher_task = asyncio.create_task(
-                self._watcher(self._closed_event)
+        if self._drain_watcher_task is None:
+            self._drain_watcher_task = asyncio.create_task(
+                self._drain_watcher(self._closed_event)
+            )
+
+        if self._reconnect_watcher_task is None:
+            self._reconnect_watcher_task = asyncio.create_task(
+                self._reconnect_watcher(self._closed_event)
             )
 
         return None
@@ -65,8 +71,11 @@ class _ConnStarter:
         if self._closed_event is not None:
             self._closed_event.set()
 
-        if self._watcher_task is not None:
-            self._watcher_task.cancel()
+        if self._drain_watcher_task is not None:
+            self._drain_watcher_task.cancel()
+
+        if self._reconnect_watcher_task is not None:
+            self._reconnect_watcher_task.cancel()
 
     async def _send_start_request(self) -> types.MaybeError[None]:
         self._state.conn_state.value = ConnectionState.CONNECTING
@@ -75,14 +84,22 @@ class _ConnStarter:
             exclude_gateways=self._state.exclude_gateways,
         )
 
+        url = urllib.parse.urljoin(self._api_origin, "/v0/connect/start")
+
         attempts = 0
         err: typing.Optional[Exception] = None
         while attempts < _max_attempts:
             if attempts == 0:
-                self._logger.debug("ConnectionStart request send")
+                self._logger.debug(
+                    "ConnectionStart request send",
+                    extra={"url": url},
+                )
             else:
                 await asyncio.sleep(_reconnect_interval.seconds)
-                self._logger.debug("ConnectionStart request retry")
+                self._logger.debug(
+                    "ConnectionStart request retry",
+                    extra={"url": url},
+                )
 
             try:
                 res = await net.fetch_with_auth_fallback(
@@ -90,9 +107,7 @@ class _ConnStarter:
                     self._http_client_sync,
                     httpx.Request(
                         method="POST",
-                        url=urllib.parse.urljoin(
-                            self._api_origin, "/v0/connect/start"
-                        ),
+                        url=url,
                         content=req.SerializeToString(),
                         headers={
                             "content-type": "application/protobuf",
@@ -114,10 +129,6 @@ class _ConnStarter:
                 start_resp = connect_pb2.StartResponse()
                 start_resp.ParseFromString(res.content)
 
-                self._state.auth_data = connect_pb2.AuthData(
-                    session_token=start_resp.session_token,
-                    sync_token=start_resp.sync_token,
-                )
                 self._state.conn_id = start_resp.connection_id
 
                 final_endpoint = start_resp.gateway_endpoint
@@ -125,7 +136,15 @@ class _ConnStarter:
                     final_endpoint = self._rewrite_gateway_endpoint(
                         final_endpoint
                     )
-                self._state.gateway_url.value = final_endpoint
+
+                self._state.conn_init.value = (
+                    connect_pb2.AuthData(
+                        session_token=start_resp.session_token,
+                        sync_token=start_resp.sync_token,
+                    ),
+                    final_endpoint,
+                )
+
                 return None
             except _NonRetryableError as e:
                 return e
@@ -142,13 +161,11 @@ class _ConnStarter:
 
         return err
 
-    async def _watcher(self, closed_event: asyncio.Event) -> None:
+    async def _drain_watcher(self, closed_event: asyncio.Event) -> None:
         while closed_event.is_set() is False:
-            # Only send start requests when the connection is reconnecting.
-            if self._state.conn_state.value != ConnectionState.RECONNECTING:
-                await self._state.conn_state.wait_for(
-                    ConnectionState.RECONNECTING
-                )
+            await self._state.draining.wait_for(True, immediate=False)
+
+            self._state.conn_init.value = None
 
             err = await self._send_start_request()
             if isinstance(err, Exception):
@@ -156,6 +173,19 @@ class _ConnStarter:
                     "ConnectionStart request failed",
                     extra={"error": str(err)},
                 )
-                await self.stop()
+
+    async def _reconnect_watcher(self, closed_event: asyncio.Event) -> None:
+        while closed_event.is_set() is False:
+            await self._state.conn_state.wait_for(
+                ConnectionState.RECONNECTING,
+                immediate=False,
+            )
+
+            err = await self._send_start_request()
+            if isinstance(err, Exception):
+                self._logger.error(
+                    "ConnectionStart request failed",
+                    extra={"error": str(err)},
+                )
 
             await asyncio.sleep(_reconnect_interval.seconds)

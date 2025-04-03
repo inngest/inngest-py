@@ -53,6 +53,18 @@ async def wait_for(
         await asyncio.sleep(0.2)
 
 
+async def wait_for_len(
+    get_value: typing.Callable[[], typing.Sequence[object]],
+    length: int,
+    *,
+    timeout: datetime.timedelta = datetime.timedelta(seconds=5),
+) -> None:
+    def assertion() -> None:
+        assert len(get_value()) == length
+
+    await wait_for(assertion, timeout=timeout)
+
+
 async def wait_for_truthy(
     get_value: typing.Callable[[], object],
     *,

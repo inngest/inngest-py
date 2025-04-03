@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import dataclasses
 import typing
 import unittest
@@ -13,7 +15,16 @@ from inngest.experimental.connect import connect_pb2
 @dataclasses.dataclass
 class _Proxies:
     http_proxy: test_core.http_proxy.Proxy
+    requests: list[_Request]
     ws_proxy: test_core.ws_proxy.WebSocketProxy
+
+
+@dataclasses.dataclass
+class _Request:
+    body: typing.Optional[bytes]
+    headers: dict[str, list[str]]
+    method: str
+    path: str
 
 
 @pytest.mark.timeout(5, method="thread")
@@ -25,6 +36,8 @@ class BaseTest(unittest.IsolatedAsyncioTestCase):
         self.addCleanup(ws_proxy.stop)
         await ws_proxy.start()
 
+        requests: list[_Request] = []
+
         def http_proxy_handler(
             *,
             body: typing.Optional[bytes],
@@ -32,6 +45,8 @@ class BaseTest(unittest.IsolatedAsyncioTestCase):
             method: str,
             path: str,
         ) -> test_core.http_proxy.Response:
+            requests.append(_Request(body, headers, method, path))
+
             resp = httpx.request(
                 content=body,
                 headers={k: v[0] for k, v in headers.items()},
@@ -58,5 +73,6 @@ class BaseTest(unittest.IsolatedAsyncioTestCase):
 
         return _Proxies(
             http_proxy=http_proxy,
+            requests=requests,
             ws_proxy=ws_proxy,
         )

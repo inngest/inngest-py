@@ -44,6 +44,14 @@ class WebSocketProxy:
         if self._tasks:
             await asyncio.gather(*self._tasks, return_exceptions=True)
 
+    async def send_to_clients(self, message: bytes) -> None:
+        """
+        Send a message to all connected clients (a.k.a. the SDKs).
+        """
+
+        for conn in self._conns:
+            await conn[0].send(message)
+
     async def _handle_client(
         self,
         client_conn: websockets.ServerConnection,
