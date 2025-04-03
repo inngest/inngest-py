@@ -4,12 +4,15 @@ import asyncio
 import typing
 
 T = typing.TypeVar("T")
+S = typing.TypeVar("S")
 
 
 class _ValueWatcher(typing.Generic[T]):
     """
     A container that allows consumers to watch for changes to the wrapped value.
     """
+
+    _on_changes: list[typing.Callable[[T, T], None]]
 
     def __init__(
         self,
@@ -23,7 +26,9 @@ class _ValueWatcher(typing.Generic[T]):
             on_change: Called when the value changes. Good for debug logging.
         """
 
-        self._on_change = on_change
+        self._on_changes = []
+        if on_change:
+            self._on_changes.append(on_change)
 
         # Every watcher gets its own queue. The queue is used to communicate
         # value changes, so its items are tuples of the old and new values.
@@ -47,45 +52,89 @@ class _ValueWatcher(typing.Generic[T]):
         for queue in self._watch_queues:
             queue.put_nowait((old_value, new_value))
 
-        if self._on_change:
-            self._on_change(old_value, new_value)
+        for on_change in self._on_changes:
+            on_change(old_value, new_value)
 
-    async def wait_for(self, value: T) -> None:
+    def on_change(self, on_change: typing.Callable[[T, T], None]) -> None:
+        """
+        Add a callback that's called when the value changes.
+
+        Args:
+            on_change: The callback to call when the value changes.
+        """
+
+        self._on_changes.append(on_change)
+
+    async def wait_for(self, value: T, *, immediate: bool = True) -> T:
         """
         Wait for the value to be equal to the given value.
+
+        Args:
+            value: Return when the value is equal to this.
+            immediate: If True and the value is already equal to the given value, return immediately. Defaults to True.
         """
 
-        if self._value == value:
+        if immediate and self._value == value:
             # No need to wait.
-            return
+            return self._value
 
         with self._watch() as watch:
             async for _, new in watch:
                 if new == value:
-                    return
+                    return new
 
-    async def wait_for_not(self, value: T) -> None:
+        raise Exception("unreachable")
+
+    async def wait_for_not(self, value: T, *, immediate: bool = True) -> T:
         """
         Wait for the value to not be equal to the given value.
+
+        Args:
+            value: Return when the value is not equal to this.
+            immediate: If True and the value is already not equal to the given value, return immediately. Defaults to True.
         """
 
-        if self._value != value:
+        if immediate and self._value != value:
             # No need to wait.
-            return
+            return self._value
 
         with self._watch() as watch:
             async for _, new in watch:
                 if new != value:
-                    return
+                    return new
 
-    async def wait_for_change(self) -> None:
+        raise Exception("unreachable")
+
+    async def wait_for_not_none(
+        self: _ValueWatcher[typing.Optional[S]],
+        *,
+        immediate: bool = True,
+    ) -> S:
+        """
+        Wait for the value to be not None.
+        """
+
+        if immediate and self._value is not None:
+            # No need to wait.
+            return self._value
+
+        with self._watch() as watch:
+            async for _, new in watch:
+                if new is not None:
+                    return new
+
+        raise Exception("unreachable")
+
+    async def wait_for_change(self) -> T:
         """
         Wait for the value to change.
         """
 
         with self._watch() as watch:
-            async for _ in watch:
-                return
+            async for _, new in watch:
+                return new
+
+        raise Exception("unreachable")
 
     def _watch(self) -> _WatchContextManager[T]:
         """

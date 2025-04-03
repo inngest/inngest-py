@@ -17,6 +17,7 @@ from .consts import (
     _framework,
     _protocol,
 )
+from .drain_handler import _DrainHandler
 from .errors import _UnreachableError
 from .execution_handler import _ExecutionHandler
 from .heartbeat_handler import _HeartbeatHandler
@@ -158,14 +159,14 @@ class _WebSocketWorkerConnection(WorkerConnection):
             )
 
         self._state = _State(
-            auth_data=None,
             conn_id=None,
+            conn_init=_ValueWatcher(None),
             conn_state=_ValueWatcher(
                 ConnectionState.CLOSED,
                 on_change=on_conn_state_change,
             ),
+            draining=_ValueWatcher(False),
             exclude_gateways=[],
-            gateway_url=_ValueWatcher(None),
             ws=None,
         )
 
@@ -183,6 +184,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 self._state,
                 self._comm_handlers,
             ),
+            _DrainHandler(self._logger, self._state),
         ]
 
         self._start_requester = _ConnStarter(
@@ -214,10 +216,8 @@ class _WebSocketWorkerConnection(WorkerConnection):
     ) -> types.MaybeError[None]:
         try:
             async for raw_msg in ws:
-                if self._state.auth_data is None:
-                    # Unreachable.
-                    self._logger.error("Missing auth data")
-                    continue
+                if self._state.conn_init.value is None:
+                    return _UnreachableError("Missing conn init")
 
                 if not isinstance(raw_msg, bytes):
                     self._logger.debug(
@@ -238,7 +238,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 for h in self._handlers:
                     h.handle_msg(
                         msg,
-                        self._state.auth_data,
+                        self._state.conn_init.value[0],
                         self.get_connection_id(),
                     )
 
@@ -247,15 +247,15 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 "Connection closed abnormally", extra={"error": str(e)}
             )
             self._state.conn_state.value = ConnectionState.RECONNECTING
-            self._state.gateway_url.value = None
+            self._state.conn_init.value = None
         except websockets.exceptions.ConnectionClosedOK:
             self._logger.debug("Connection closed normally")
             self._state.conn_state.value = ConnectionState.CLOSED
-            self._state.gateway_url.value = None
+            self._state.conn_init.value = None
         except Exception as e:
             self._logger.debug("Connection error", extra={"error": str(e)})
             self._state.conn_state.value = ConnectionState.RECONNECTING
-            self._state.gateway_url.value = None
+            self._state.conn_init.value = None
         return None
 
     async def start(self) -> None:
@@ -268,19 +268,18 @@ class _WebSocketWorkerConnection(WorkerConnection):
 
         while self._closed_event.is_set() is False:
             try:
-                await self._state.gateway_url.wait_for_not(None)
-                if self._state.gateway_url.value is None:
-                    raise _UnreachableError("missing gateway URL")
+                _, endpoint = await self._state.conn_init.wait_for_not_none()
 
                 self._logger.debug(
-                    "Connecting to gateway",
-                    extra={"endpoint": self._state.gateway_url.value},
+                    "Gateway connecting",
+                    extra={"endpoint": endpoint},
                 )
 
                 async with websockets.connect(
-                    self._state.gateway_url.value,
+                    endpoint,
                     subprotocols=[_protocol],
                 ) as ws:
+                    self._logger.debug("Gateway connected")
                     self._state.ws = ws
                     self._message_handler_task = asyncio.create_task(
                         self._handle_msg(ws)
@@ -291,10 +290,12 @@ class _WebSocketWorkerConnection(WorkerConnection):
                         if isinstance(err, Exception):
                             raise err
 
-                    await self._state.gateway_url.wait_for_change()
+                    await self._state.conn_init.wait_for_change()
                     await asyncio.sleep(1)
             except Exception as e:
-                self._logger.error(f"Connection error: {e}. Reconnecting...")
+                self._logger.error(
+                    f"Gateway connection error: {e}. Reconnecting..."
+                )
                 self._state.conn_state.value = ConnectionState.RECONNECTING
                 await asyncio.sleep(5)  # Reconnection delay
             finally:
