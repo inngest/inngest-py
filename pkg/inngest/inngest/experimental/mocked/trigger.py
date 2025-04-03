@@ -77,18 +77,31 @@ def trigger(
             {},
         )
 
-        ctx = execution_lib.Context(
-            attempt=request.ctx.attempt,
-            event=event[0],
-            events=event,
-            group=step_lib.Group(),
-            logger=logger,
-            run_id=request.ctx.run_id,
-        )
-
         memos = step_lib.StepMemos.from_raw(steps)
 
+        ctx: execution_lib.Context | execution_lib.ContextSync
         if fn.is_handler_async:
+            ctx = execution_lib.Context(
+                attempt=request.ctx.attempt,
+                event=event[0],
+                events=event,
+                group=step_lib.Group(),
+                logger=logger,
+                run_id=request.ctx.run_id,
+                step=step_lib.Step(
+                    client,
+                    execution_lib.ExecutionV0(
+                        memos,
+                        middleware,
+                        request,
+                        step_id,
+                    ),
+                    middleware,
+                    step_lib.StepIDCounter(),
+                    step_id,
+                ),
+            )
+
             loop = async_lib.get_event_loop()
             if loop is None:
                 loop = asyncio.new_event_loop()
@@ -99,20 +112,35 @@ def trigger(
                     ctx,
                     fn.id,
                     middleware,
-                    request,
-                    memos,
-                    step_id,
                 )
             )
         else:
+            ctx = execution_lib.ContextSync(
+                attempt=request.ctx.attempt,
+                event=event[0],
+                events=event,
+                group=step_lib.GroupSync(),
+                logger=logger,
+                run_id=request.ctx.run_id,
+                step=step_lib.StepSync(
+                    client,
+                    execution_lib.ExecutionV0Sync(
+                        memos,
+                        middleware,
+                        request,
+                        step_id,
+                    ),
+                    middleware,
+                    step_lib.StepIDCounter(),
+                    step_id,
+                ),
+            )
+
             res = fn.call_sync(
                 client,
                 ctx,
                 fn.id,
                 middleware,
-                request,
-                memos,
-                step_id,
             )
 
         if res.error:

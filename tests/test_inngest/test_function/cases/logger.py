@@ -42,17 +42,14 @@ def create(
         retries=1,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_sync(ctx: inngest.ContextSync) -> None:
         ctx.logger.info("function start")
         state.run_id = ctx.run_id
 
         def step_1() -> None:
             ctx.logger.info("step_1")
 
-        step.run("step_1", step_1)
+        ctx.step.run("step_1", step_1)
 
         ctx.logger.info("log before function-level raise")
         if state.fn_raise is False:
@@ -62,7 +59,7 @@ def create(
         def step_2() -> None:
             ctx.logger.info("step_2")
 
-        step.run("step_2", step_2)
+        ctx.step.run("step_2", step_2)
 
         ctx.logger.info("log before step-level raise")
 
@@ -71,7 +68,7 @@ def create(
                 state.step_raise = True
                 raise inngest.RetryAfterError("", 1000, quiet=True)
 
-        step.run("step_3", step_3)
+        ctx.step.run("step_3", step_3)
 
         ctx.logger.info("function end")
 
@@ -80,17 +77,14 @@ def create(
         retries=1,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn_async(ctx: inngest.Context) -> None:
         ctx.logger.info("function start")
         state.run_id = ctx.run_id
 
         async def step_1() -> None:
             ctx.logger.info("step_1")
 
-        await step.run("step_1", step_1)
+        await ctx.step.run("step_1", step_1)
 
         ctx.logger.info("log before function-level raise")
         if state.fn_raise is False:
@@ -100,7 +94,7 @@ def create(
         async def step_2() -> None:
             ctx.logger.info("step_2")
 
-        await step.run("step_2", step_2)
+        await ctx.step.run("step_2", step_2)
 
         ctx.logger.info("log before step-level raise")
 
@@ -109,7 +103,7 @@ def create(
                 state.step_raise = True
                 raise inngest.RetryAfterError("", 1000, quiet=True)
 
-        await step.run("step_3", step_3)
+        await ctx.step.run("step_3", step_3)
 
         ctx.logger.info("function end")
 

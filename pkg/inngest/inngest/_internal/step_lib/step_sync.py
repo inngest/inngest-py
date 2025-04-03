@@ -9,7 +9,7 @@ from inngest._internal import errors, server_lib, transforms, types
 from inngest._internal.client_lib import models as client_models
 
 from . import base
-from .group import Group
+from .group import GroupSync
 
 # Avoid circular import at runtime
 if typing.TYPE_CHECKING:
@@ -154,7 +154,7 @@ class StepSync(base.StepBase):
         callables: tuple[typing.Callable[[], types.T], ...],
     ) -> tuple[types.T, ...]:
         """
-        @deprecated Use `ctx.group.parallel_sync()` instead. This method will be removed in the next major version.
+        @deprecated Use `ctx.group.parallel()` instead. This method will be removed in the next major version.
 
         Run multiple steps in parallel.
 
@@ -163,7 +163,7 @@ class StepSync(base.StepBase):
             callables: An arbitrary number of step callbacks to run. These are callables that contain the step (e.g. `lambda: step.run("my_step", my_step_fn)`.
         """
 
-        return Group().parallel_sync(callables)
+        return GroupSync().parallel(callables)
 
     def run(
         self,

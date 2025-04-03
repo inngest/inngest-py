@@ -46,7 +46,9 @@ class Group:
             # No longer tell steps that they're running in parallel.
             in_parallel.reset(token)
 
-    def parallel_sync(
+
+class GroupSync:
+    def parallel(
         self,
         callables: tuple[typing.Callable[[], types.T], ...],
     ) -> tuple[types.T, ...]:

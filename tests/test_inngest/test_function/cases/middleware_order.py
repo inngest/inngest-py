@@ -5,6 +5,7 @@ TODO: In v0.5, we should reverse middleware order for the "after" hooks.
 """
 
 import inspect
+import typing
 
 import inngest
 import test_core.helper
@@ -51,13 +52,10 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
 
-        step.send_event("a", inngest.Event(name=f"{event_name}-never"))
+        ctx.step.send_event("a", inngest.Event(name=f"{event_name}-never"))
 
     @client.create_function(
         fn_id=fn_id,
@@ -65,13 +63,12 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
 
-        await step.send_event("a", inngest.Event(name=f"{event_name}-never"))
+        await ctx.step.send_event(
+            "a", inngest.Event(name=f"{event_name}-never")
+        )
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
@@ -158,7 +155,7 @@ class _MwSyncBase(inngest.MiddlewareSync):
 
     def transform_input(
         self,
-        ctx: inngest.Context,
+        ctx: typing.Union[inngest.Context, inngest.ContextSync],
         function: inngest.Function,
         steps: inngest.StepMemos,
     ) -> None:
@@ -195,7 +192,7 @@ class _MwAsyncBase(inngest.Middleware):
 
     async def transform_input(
         self,
-        ctx: inngest.Context,
+        ctx: typing.Union[inngest.Context, inngest.ContextSync],
         function: inngest.Function,
         steps: inngest.StepMemos,
     ) -> None:

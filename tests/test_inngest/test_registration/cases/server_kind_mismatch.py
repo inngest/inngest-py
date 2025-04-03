@@ -27,10 +27,7 @@ def create(framework: server_lib.Framework) -> base.Case:
             retries=0,
             trigger=inngest.TriggerEvent(event="dummy"),
         )
-        async def fn(
-            ctx: inngest.Context,
-            step: inngest.Step,
-        ) -> None:
+        async def fn(ctx: inngest.Context) -> None:
             pass
 
         self.serve(client, [fn])

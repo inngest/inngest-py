@@ -31,16 +31,13 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
 
         if state.before_sleep is None:
             state.before_sleep = datetime.datetime.now()
 
-        step.sleep_until(
+        ctx.step.sleep_until(
             "zzz", datetime.datetime.now() + datetime.timedelta(seconds=2)
         )
 
@@ -52,16 +49,13 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
 
         if state.before_sleep is None:
             state.before_sleep = datetime.datetime.now()
 
-        await step.sleep_until(
+        await ctx.step.sleep_until(
             "zzz", datetime.datetime.now() + datetime.timedelta(seconds=2)
         )
 

@@ -38,14 +38,14 @@ class TestFunctionRun(BaseTest):
             retries=0,
             trigger=inngest.TriggerEvent(event=event_name),
         )
-        async def fn(ctx: inngest.Context, step: inngest.Step) -> str:
+        async def fn(ctx: inngest.Context) -> str:
             state.run_id = ctx.run_id
 
             def step_a() -> str:
                 state.step_counter += 1
                 return "Alice"
 
-            name = await step.run("a", step_a)
+            name = await ctx.step.run("a", step_a)
             return f"Hello {name}"
 
         conn = connect([(client, [fn])])
@@ -78,14 +78,14 @@ class TestFunctionRun(BaseTest):
             retries=0,
             trigger=inngest.TriggerEvent(event=event_name),
         )
-        async def fn(ctx: inngest.Context, step: inngest.Step) -> str:
+        async def fn(ctx: inngest.Context) -> str:
             state.run_id = ctx.run_id
 
             def step_a() -> str:
                 state.step_counter += 1
                 return "Alice"
 
-            name = await step.run("a", step_a)
+            name = await ctx.step.run("a", step_a)
             return f"Hello {name}"
 
         conn = connect([(client, [fn])])

@@ -27,34 +27,28 @@ def create(
         retries=1,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_sync(ctx: inngest.ContextSync) -> None:
         state.attempt = ctx.attempt
         state.run_id = ctx.run_id
 
         def step_1() -> None:
             raise inngest.NonRetriableError("foo", quiet=True)
 
-        step.run("step_1", step_1)
+        ctx.step.run("step_1", step_1)
 
     @client.create_function(
         fn_id=fn_id,
         retries=1,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn_async(ctx: inngest.Context) -> None:
         state.attempt = ctx.attempt
         state.run_id = ctx.run_id
 
         def step_1() -> None:
             raise inngest.NonRetriableError("foo", quiet=True)
 
-        await step.run("step_1", step_1)
+        await ctx.step.run("step_1", step_1)
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))

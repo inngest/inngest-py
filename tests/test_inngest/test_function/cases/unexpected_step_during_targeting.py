@@ -35,10 +35,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
         state.request_counter += 1
 
@@ -51,14 +48,14 @@ def create(
         def unexpected() -> None:
             state.step_unexpected_counter += 1
 
-        is_targeting_enabled = step._target_hashed_id is not None
+        is_targeting_enabled = ctx.step._target_hashed_id is not None
         if is_targeting_enabled:
-            step.run("unexpected", unexpected)
+            ctx.step.run("unexpected", unexpected)
 
-        ctx.group.parallel_sync(
+        ctx.group.parallel(
             (
-                lambda: step.run("parallel_1", parallel_1),
-                lambda: step.run("parallel_2", parallel_2),
+                lambda: ctx.step.run("parallel_1", parallel_1),
+                lambda: ctx.step.run("parallel_2", parallel_2),
             )
         )
 
@@ -67,10 +64,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
         state.request_counter += 1
 
@@ -83,14 +77,14 @@ def create(
         async def unexpected() -> None:
             state.step_unexpected_counter += 1
 
-        is_targeting_enabled = step._target_hashed_id is not None
+        is_targeting_enabled = ctx.step._target_hashed_id is not None
         if is_targeting_enabled:
-            await step.run("unexpected", unexpected)
+            await ctx.step.run("unexpected", unexpected)
 
         await ctx.group.parallel(
             (
-                lambda: step.run("parallel_1", parallel_1),
-                lambda: step.run("parallel_2", parallel_2),
+                lambda: ctx.step.run("parallel_1", parallel_1),
+                lambda: ctx.step.run("parallel_2", parallel_2),
             )
         )
 

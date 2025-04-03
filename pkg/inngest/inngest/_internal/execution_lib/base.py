@@ -5,6 +5,7 @@ import typing
 from .models import (
     CallResult,
     Context,
+    ContextSync,
     FunctionHandlerAsync,
     FunctionHandlerSync,
     ReportedStep,
@@ -27,10 +28,7 @@ class BaseExecution(typing.Protocol):
         self,
         client: client_lib.Inngest,
         ctx: Context,
-        handler: typing.Union[
-            FunctionHandlerAsync,
-            FunctionHandlerSync,
-        ],
+        handler: FunctionHandlerAsync,
         fn: function.Function,
     ) -> CallResult: ...
 
@@ -46,10 +44,7 @@ class BaseExecutionSync(typing.Protocol):
     def run(
         self,
         client: client_lib.Inngest,
-        ctx: Context,
-        handler: typing.Union[
-            FunctionHandlerAsync,
-            FunctionHandlerSync,
-        ],
+        ctx: ContextSync,
+        handler: FunctionHandlerSync,
         fn: function.Function,
     ) -> CallResult: ...
