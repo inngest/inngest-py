@@ -116,7 +116,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
             max_thread_pool_workers = int(
                 os.getenv("INNGEST_MAX_THREAD_POOL_WORKERS", "10")
             )
-        except Exception:
+        except ValueError:
             max_thread_pool_workers = 10
 
         # We need a thread pool to run sync Inngest functions in a non-blocking

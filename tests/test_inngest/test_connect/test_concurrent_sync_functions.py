@@ -36,6 +36,7 @@ class TestConcurrentSyncFunctions(BaseTest):
             while True:
                 if len(run_ids) == 2:
                     break
+                time.sleep(0.1)
 
         conn = connect([(client, [fn])])
         task = asyncio.create_task(conn.start())
