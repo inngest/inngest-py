@@ -75,12 +75,9 @@ class WorkerConnection(typing.Protocol):
 
 
 class _WebSocketWorkerConnection(WorkerConnection):
-    _closed_event: typing.Optional[asyncio.Event] = None
     _message_handler_task: typing.Optional[
         asyncio.Task[types.MaybeError[None]]
     ] = None
-
-    _ws: typing.Optional[websockets.ClientConnection] = None
 
     def __init__(
         self,
@@ -93,6 +90,9 @@ class _WebSocketWorkerConnection(WorkerConnection):
             typing.Callable[[str], str]
         ] = None,
     ) -> None:
+        # Used to ensure that no messages are being handled when we fully close.
+        self._handling_message_count = _ValueWatcher(0)
+
         if handle_shutdown_signals is None:
             handle_shutdown_signals = _default_shutdown_signals
 
@@ -259,12 +259,16 @@ class _WebSocketWorkerConnection(WorkerConnection):
                     },
                 )
 
-                for h in self._handlers:
-                    h.handle_msg(
-                        msg,
-                        self._state.conn_init.value[0],
-                        self.get_connection_id(),
-                    )
+                self._handling_message_count.value += 1
+                try:
+                    for h in self._handlers:
+                        h.handle_msg(
+                            msg,
+                            self._state.conn_init.value[0],
+                            self.get_connection_id(),
+                        )
+                finally:
+                    self._handling_message_count.value -= 1
 
         except websockets.exceptions.ConnectionClosedError as e:
             self._logger.debug(
@@ -274,8 +278,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
             self._state.conn_init.value = None
         except websockets.exceptions.ConnectionClosedOK:
             self._logger.debug("Connection closed normally")
-            self._state.conn_state.value = ConnectionState.CLOSED
-            self._state.conn_init.value = None
+            await self.close()
         except Exception as e:
             self._logger.debug("Connection error", extra={"error": str(e)})
             self._state.conn_state.value = ConnectionState.RECONNECTING
@@ -283,14 +286,11 @@ class _WebSocketWorkerConnection(WorkerConnection):
         return None
 
     async def start(self) -> None:
-        self._closed_event = asyncio.Event()
-        self._running = True
-
         err = await self._start_requester.start()
         if isinstance(err, Exception):
             raise err
 
-        while self._closed_event.is_set() is False:
+        while self._state.conn_state.value != ConnectionState.CLOSED:
             try:
                 _, endpoint = await self._state.conn_init.wait_for_not_none()
 
@@ -326,21 +326,23 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 self._logger.debug("Gateway connection closed")
 
     async def close(self, *, wait: bool = False) -> None:
+        if self._state.conn_state.value == ConnectionState.CLOSED:
+            # Already closed.
+            return
+
+        self._state.conn_state.value = ConnectionState.CLOSING
+
         # Tell all the handlers to close.
         for h in self._handlers:
             h.close()
-
-        self._state.conn_state.value = ConnectionState.CLOSED
-
-        if self._closed_event is not None:
-            self._closed_event.set()
 
         if wait:
             await self.closed()
 
     async def closed(self) -> None:
-        if self._closed_event is not None:
-            await self._closed_event.wait()
+        if self._state.conn_state.value == ConnectionState.CLOSED:
+            # Already closed.
+            return
 
         if self._message_handler_task:
             err = await self._message_handler_task
@@ -349,3 +351,9 @@ class _WebSocketWorkerConnection(WorkerConnection):
 
         # Wait for all the handlers to close.
         await asyncio.gather(*[h.closed() for h in self._handlers])
+
+        # Ensure that no messages are being handled when we fully close.
+        await self._handling_message_count.wait_for(0)
+
+        self._state.conn_state.value = ConnectionState.CLOSED
+        self._state.conn_init.value = None
