@@ -29,13 +29,11 @@ class TestConcurrentSyncFunctions(BaseTest):
             trigger=inngest.TriggerEvent(event=event_name),
         )
         def fn(ctx: inngest.Context, step: inngest.StepSync) -> None:
-            nonlocal run_ids
             run_ids.add(ctx.run_id)
 
             # This will loop forever if the function run is blocking the event
             # loop, causing the test to timeout.
             while True:
-                print(ctx.run_id, len(run_ids))
                 if len(run_ids) == 2:
                     break
                 time.sleep(0.1)
