@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import http
 import os
 import typing
@@ -42,6 +43,9 @@ class CommHandler:
         client: client_lib.Inngest,
         framework: server_lib.Framework,
         functions: list[function.Function],
+        thread_pool: typing.Optional[
+            concurrent.futures.ThreadPoolExecutor
+        ] = None,
     ) -> None:
         # In-band syncing is opt-out.
         self._allow_in_band_sync = not env_lib.is_false(
@@ -53,6 +57,7 @@ class CommHandler:
         self._api_origin = client.api_origin
         self._fns = {fn.get_id(): fn for fn in functions}
         self._framework = framework
+        self._thread_pool = thread_pool
 
         signing_key = client.signing_key
         if signing_key is None:
@@ -139,6 +144,7 @@ class CommHandler:
             request,
             step_lib.StepMemos.from_raw(steps),
             params.step_id,
+            self._thread_pool,
         )
 
         return CommResponse.from_call_result(

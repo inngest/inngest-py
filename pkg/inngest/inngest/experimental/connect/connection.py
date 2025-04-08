@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
+import os
 import socket
 import typing
 
@@ -77,6 +79,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
     _message_handler_task: typing.Optional[
         asyncio.Task[types.MaybeError[None]]
     ] = None
+
     _ws: typing.Optional[websockets.ClientConnection] = None
 
     def __init__(
@@ -107,6 +110,26 @@ class _WebSocketWorkerConnection(WorkerConnection):
             self._signing_key = default_client.signing_key
             self._fallback_signing_key = default_client.signing_key_fallback
 
+        # TODO: Graduate this to a config option, rather than an env var.
+        max_thread_pool_workers: int
+        try:
+            max_thread_pool_workers = int(
+                os.getenv("INNGEST_MAX_THREAD_POOL_WORKERS", "10")
+            )
+        except Exception:
+            max_thread_pool_workers = 10
+
+        # We need a thread pool to run sync Inngest functions in a non-blocking
+        # way. We only need this for Connect (and not HTTP execution) because
+        # HTTP execution already gets thread creation for free from HTTP
+        # frameworks. For example, Flask creates a thread for each request. If
+        # we don't use a thread pool, sync Inngest functions will block the
+        # whole thread (including the event loop).
+        # TODO: Should we have a separate thread pool for each app?
+        self._thread_pool = concurrent.futures.ThreadPoolExecutor(
+            max_workers=max_thread_pool_workers,
+        )
+
         self._comm_handlers: dict[str, comm_lib.CommHandler] = {}
         self._app_configs: dict[str, list[server_lib.FunctionConfig]] = {}
         for a in apps:
@@ -134,6 +157,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 client=client,
                 framework=_framework,
                 functions=fns,
+                thread_pool=self._thread_pool,
             )
 
         if instance_id is None:
