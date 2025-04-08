@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
+import functools
 import typing
 
 from inngest._internal import errors, server_lib, step_lib, transforms, types
@@ -29,6 +31,9 @@ class ExecutionV0:
         middleware: middleware_lib.MiddlewareManager,
         request: server_lib.ServerRequest,
         target_hashed_id: typing.Optional[str],
+        thread_pool: typing.Optional[
+            concurrent.futures.ThreadPoolExecutor
+        ] = None,
     ) -> None:
         self._memos = memos
         self._middleware = middleware
@@ -40,6 +45,7 @@ class ExecutionV0:
             target_hashed_id,
         )
         self._target_hashed_id = target_hashed_id
+        self._thread_pool = thread_pool
 
     def _handle_skip(
         self,
@@ -160,17 +166,36 @@ class ExecutionV0:
                         ),
                     )
                 elif is_function_handler_sync(handler):
-                    output = handler(
-                        ctx=ctx,
-                        step=step_lib.StepSync(
-                            client,
-                            self._sync,
-                            self._memos,
-                            self._middleware,
-                            step_lib.StepIDCounter(),
-                            self._target_hashed_id,
-                        ),
-                    )
+                    if self._thread_pool is not None:
+                        loop = asyncio.get_running_loop()
+                        func = functools.partial(
+                            handler,
+                            ctx=ctx,
+                            step=step_lib.StepSync(
+                                client,
+                                self._sync,
+                                self._memos,
+                                self._middleware,
+                                step_lib.StepIDCounter(),
+                                self._target_hashed_id,
+                            ),
+                        )
+                        output = await loop.run_in_executor(
+                            self._thread_pool,
+                            func,
+                        )
+                    else:
+                        output = handler(
+                            ctx=ctx,
+                            step=step_lib.StepSync(
+                                client,
+                                self._sync,
+                                self._memos,
+                                self._middleware,
+                                step_lib.StepIDCounter(),
+                                self._target_hashed_id,
+                            ),
+                        )
                 else:
                     # Should be unreachable but Python's custom type guards don't
                     # support negative checks :(

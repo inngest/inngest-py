@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import concurrent.futures
 import dataclasses
 import inspect
 import typing
@@ -137,6 +138,9 @@ class Function:
         request: server_lib.ServerRequest,
         steps: step_lib.StepMemos,
         target_hashed_id: typing.Optional[str],
+        thread_pool: typing.Optional[
+            concurrent.futures.ThreadPoolExecutor
+        ] = None,
     ) -> execution_lib.CallResult:
         middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
         for m in self._middleware:
@@ -173,6 +177,7 @@ class Function:
                 middleware,
                 request,
                 target_hashed_id,
+                thread_pool,
             )
 
         call_res = await execution.run(
@@ -223,6 +228,8 @@ class Function:
                 errors.FunctionNotFoundError("function ID mismatch")
             )
 
+        # We don't need to pass a thread pool here because the sync handler is
+        # not used by Connect.
         call_res = execution_lib.ExecutionV0Sync(
             steps,
             middleware,
