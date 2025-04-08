@@ -9,7 +9,7 @@ from .base import BaseTest
 
 
 class TestConcurrentSyncFunctions(BaseTest):
-    async def test_cloud(self) -> None:
+    async def test(self) -> None:
         """
         Test that sync functions can be run concurrently. Under-the-hood, this
         is accomplished with a ThreadPoolExecutor that is shared across all
@@ -29,11 +29,13 @@ class TestConcurrentSyncFunctions(BaseTest):
             trigger=inngest.TriggerEvent(event=event_name),
         )
         def fn(ctx: inngest.Context, step: inngest.StepSync) -> None:
+            nonlocal run_ids
             run_ids.add(ctx.run_id)
 
             # This will loop forever if the function run is blocking the event
             # loop, causing the test to timeout.
             while True:
+                print(ctx.run_id, len(run_ids))
                 if len(run_ids) == 2:
                     break
                 time.sleep(0.1)
@@ -57,11 +59,14 @@ class TestConcurrentSyncFunctions(BaseTest):
 
         await test_core.wait_for(assert_runs)
 
+        run_1_id = next(iter(run_ids))
+        run_2_id = next(iter(run_ids))
+
         await test_core.helper.client.wait_for_run_status(
-            run_ids.pop(),
+            run_1_id,
             test_core.helper.RunStatus.COMPLETED,
         )
         await test_core.helper.client.wait_for_run_status(
-            run_ids.pop(),
+            run_2_id,
             test_core.helper.RunStatus.COMPLETED,
         )
