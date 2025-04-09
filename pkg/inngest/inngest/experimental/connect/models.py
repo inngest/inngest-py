@@ -6,25 +6,8 @@ import typing
 
 import websockets
 
-from inngest._internal import types
-
 from . import connect_pb2
 from .value_watcher import _ValueWatcher
-
-
-class _Handler(typing.Protocol):
-    def handle_msg(
-        self,
-        msg: connect_pb2.ConnectMessage,
-        auth_data: connect_pb2.AuthData,
-        connection_id: str,
-    ) -> None: ...
-
-    def start(self) -> types.MaybeError[None]: ...
-
-    def close(self) -> None: ...
-
-    async def closed(self) -> None: ...
 
 
 @dataclasses.dataclass

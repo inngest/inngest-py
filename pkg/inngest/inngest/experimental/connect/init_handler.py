@@ -9,11 +9,12 @@ import pydantic_core
 from inngest._internal import const, server_lib, types
 
 from . import connect_pb2
+from .base_handler import _BaseHandler
 from .errors import _UnreachableError
 from .models import ConnectionState, _State
 
 
-class _InitHandler:
+class _InitHandler(_BaseHandler):
     _closed_event: typing.Optional[asyncio.Event] = None
     _drain_task: typing.Optional[asyncio.Task[None]] = None
     _send_data_task: typing.Optional[asyncio.Task[None]] = None
@@ -35,30 +36,29 @@ class _InitHandler:
         self._state = state
 
     def start(self) -> types.MaybeError[None]:
-        if self._closed_event is None:
-            self._closed_event = asyncio.Event()
+        err = super().start()
+        if err is not None:
+            return err
 
         if self._drain_task is None:
             self._drain_task = asyncio.create_task(
-                self._drain_watcher(self._closed_event)
+                self._drain_watcher(self.closed_event)
             )
 
         if self._reconnect_task is None:
             self._reconnect_task = asyncio.create_task(
-                self._reconnect_watcher(self._closed_event)
+                self._reconnect_watcher(self.closed_event)
             )
         return None
 
     def close(self) -> None:
-        if self._closed_event is not None:
-            self._closed_event.set()
+        super().close()
 
         if self._send_data_task is not None:
             self._send_data_task.cancel()
 
     async def closed(self) -> None:
-        if self._closed_event is not None:
-            await self._closed_event.wait()
+        await super().closed()
 
         if self._send_data_task is not None:
             await self._send_data_task

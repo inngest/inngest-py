@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import os
+import signal
 import socket
 import typing
 
@@ -13,6 +14,7 @@ import inngest
 from inngest._internal import comm_lib, net, server_lib, types
 
 from . import connect_pb2
+from .base_handler import _BaseHandler
 from .conn_starter import _ConnStarter
 from .consts import (
     _default_shutdown_signals,
@@ -24,7 +26,7 @@ from .errors import _UnreachableError
 from .execution_handler import _ExecutionHandler
 from .heartbeat_handler import _HeartbeatHandler
 from .init_handler import _InitHandler
-from .models import ConnectionState, _Handler, _State
+from .models import ConnectionState, _State
 from .value_watcher import _ValueWatcher
 
 
@@ -85,16 +87,18 @@ class _WebSocketWorkerConnection(WorkerConnection):
         *,
         instance_id: typing.Optional[str] = None,
         max_concurrency: typing.Optional[int] = None,
-        handle_shutdown_signals: typing.Optional[list[str]] = None,
         rewrite_gateway_endpoint: typing.Optional[
             typing.Callable[[str], str]
         ] = None,
+        shutdown_signals: typing.Optional[list[signal.Signals]] = None,
     ) -> None:
         # Used to ensure that no messages are being handled when we fully close.
         self._handling_message_count = _ValueWatcher(0)
 
-        if handle_shutdown_signals is None:
-            handle_shutdown_signals = _default_shutdown_signals
+        if shutdown_signals is None:
+            shutdown_signals = _default_shutdown_signals
+        for sig in shutdown_signals:
+            signal.signal(sig, lambda _, __: self._close())
 
         if len(apps) == 0:
             raise Exception("no apps provided")
@@ -165,7 +169,6 @@ class _WebSocketWorkerConnection(WorkerConnection):
         self._instance_id = instance_id
 
         self._max_concurrency = max_concurrency
-        self._handle_shutdown_signals = handle_shutdown_signals
         self._rewrite_gateway_endpoint = rewrite_gateway_endpoint
         self._http_client = net.ThreadAwareAsyncHTTPClient().initialize()
         self._http_client_sync = httpx.Client()
@@ -194,7 +197,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
             ws=None,
         )
 
-        self._handlers: list[_Handler] = [
+        self._handlers: list[_BaseHandler] = [
             _HeartbeatHandler(self._logger, self._state),
             _InitHandler(
                 self._logger,
@@ -290,7 +293,10 @@ class _WebSocketWorkerConnection(WorkerConnection):
         if isinstance(err, Exception):
             raise err
 
-        while self._state.conn_state.value != ConnectionState.CLOSED:
+        while self._state.conn_state.value not in [
+            ConnectionState.CLOSED,
+            ConnectionState.CLOSING,
+        ]:
             try:
                 _, endpoint = await self._state.conn_init.wait_for_not_none()
 
@@ -314,7 +320,23 @@ class _WebSocketWorkerConnection(WorkerConnection):
                         if isinstance(err, Exception):
                             raise err
 
-                    await self._state.conn_init.wait_for_change()
+                    # Wait for either:
+                    # - Connection info change, signaling a reconnect is
+                    #   necessary.
+                    # - All consumers have closed, signaling that the worker
+                    #   should exit.
+                    await asyncio.wait(
+                        [
+                            asyncio.create_task(
+                                self._state.conn_init.wait_for_change()
+                            ),
+                            asyncio.create_task(
+                                self._wait_for_consumers_closed()
+                            ),
+                        ],
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+
                     await asyncio.sleep(1)
             except Exception as e:
                 self._logger.error(
@@ -326,6 +348,16 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 self._logger.debug("Gateway connection closed")
 
     async def close(self, *, wait: bool = False) -> None:
+        self._close()
+
+        if wait:
+            await self.closed()
+
+    def _close(self) -> None:
+        """
+        Must be sync since it's called in signal handlers.
+        """
+
         if self._state.conn_state.value == ConnectionState.CLOSED:
             # Already closed.
             return
@@ -336,24 +368,24 @@ class _WebSocketWorkerConnection(WorkerConnection):
         for h in self._handlers:
             h.close()
 
-        if wait:
-            await self.closed()
-
     async def closed(self) -> None:
         if self._state.conn_state.value == ConnectionState.CLOSED:
             # Already closed.
             return
 
-        if self._message_handler_task:
-            err = await self._message_handler_task
-            if isinstance(err, Exception):
-                raise err
+        await self._wait_for_consumers_closed()
+
+        self._state.conn_state.value = ConnectionState.CLOSED
+        self._state.conn_init.value = None
+
+    async def _wait_for_consumers_closed(self) -> None:
+        """
+        Wait for all consumers to close. The WebSocket connection should not
+        close until then.
+        """
 
         # Wait for all the handlers to close.
         await asyncio.gather(*[h.closed() for h in self._handlers])
 
         # Ensure that no messages are being handled when we fully close.
         await self._handling_message_count.wait_for(0)
-
-        self._state.conn_state.value = ConnectionState.CLOSED
-        self._state.conn_init.value = None

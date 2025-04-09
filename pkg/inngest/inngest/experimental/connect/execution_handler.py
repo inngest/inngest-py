@@ -1,12 +1,14 @@
 import asyncio
+import typing
 
 from inngest._internal import comm_lib, server_lib, types
 
 from . import connect_pb2
+from .base_handler import _BaseHandler
 from .models import _State
 
 
-class _ExecutionHandler:
+class _ExecutionHandler(_BaseHandler):
     """
     Handles incoming execution requests from the Gateway.
     """
@@ -24,13 +26,8 @@ class _ExecutionHandler:
         # Keep track of pending tasks to allow for graceful shutdown.
         self._pending_tasks: set[asyncio.Task[None]] = set()
 
-    def start(self) -> types.MaybeError[None]:
-        return None
-
-    def close(self) -> None:
-        pass
-
     async def closed(self) -> None:
+        await super().closed()
         await asyncio.gather(*self._pending_tasks)
         self._pending_tasks.clear()
 

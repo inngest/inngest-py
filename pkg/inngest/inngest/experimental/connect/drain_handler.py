@@ -4,10 +4,11 @@ import typing
 from inngest._internal import types
 
 from . import connect_pb2
+from .base_handler import _BaseHandler
 from .models import _State
 
 
-class _DrainHandler:
+class _DrainHandler(_BaseHandler):
     _closed_event: typing.Optional[asyncio.Event] = None
 
     def __init__(
@@ -17,19 +18,6 @@ class _DrainHandler:
     ) -> None:
         self._logger = logger
         self._state = state
-
-    def start(self) -> types.MaybeError[None]:
-        if self._closed_event is None:
-            self._closed_event = asyncio.Event()
-        return None
-
-    def close(self) -> None:
-        if self._closed_event is not None:
-            self._closed_event.set()
-
-    async def closed(self) -> None:
-        if self._closed_event is not None:
-            await self._closed_event.wait()
 
     def handle_msg(
         self,
