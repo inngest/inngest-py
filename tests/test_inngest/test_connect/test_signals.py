@@ -122,12 +122,10 @@ import asyncio
 import inngest
 from inngest.experimental.connect import connect
 import signal
-import structlog
 
 client = inngest.Inngest(
     app_id="{app_id}",
     is_production=False,
-    logger=structlog.get_logger(),
 )
 
 @client.create_function(

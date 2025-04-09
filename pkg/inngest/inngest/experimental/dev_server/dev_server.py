@@ -66,7 +66,9 @@ class _Server:
 
         while not self._ready_event.is_set():
             try:
-                res = httpx.post(f"http://0.0.0.0:{self.port}/v0/connect/start")
+                res = httpx.post(
+                    f"http://127.0.0.1:{self.port}/v0/connect/start"
+                )
                 if res.status_code == 200:
                     self._ready_event.set()
                     break

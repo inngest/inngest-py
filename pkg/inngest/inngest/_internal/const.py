@@ -6,7 +6,7 @@ AUTHOR: typing.Final = "inngest"
 DEFAULT_API_ORIGIN: typing.Final = "https://api.inngest.com/"
 DEFAULT_EVENT_API_ORIGIN: typing.Final = "https://inn.gs/"
 DEFAULT_SERVE_PATH: typing.Final = "/api/inngest"
-DEV_SERVER_ORIGIN: typing.Final = "http://0.0.0.0:8288/"
+DEV_SERVER_ORIGIN: typing.Final = "http://127.0.0.1:8288/"
 LANGUAGE: typing.Final = "py"
 VERSION: typing.Final = importlib.metadata.version("inngest")
 

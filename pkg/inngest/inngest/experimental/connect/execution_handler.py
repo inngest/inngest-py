@@ -1,5 +1,4 @@
 import asyncio
-import typing
 
 from inngest._internal import comm_lib, server_lib, types
 
