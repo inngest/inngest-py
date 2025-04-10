@@ -1,5 +1,6 @@
 import asyncio
 import json
+import multiprocessing.connection
 import signal
 import subprocess
 import time
@@ -21,9 +22,16 @@ class TestSignals(BaseTest):
         receiving a SIGTERM.
         """
 
+        # Use a listener to allow the subprocess to tell this test when its
+        # Inngest function is running.
+        listener = multiprocessing.connection.Listener(("localhost", 6000))
+        self.addCleanup(listener.close)
+        listener_port = listener.address[1]
+        assert isinstance(listener_port, int)
+
         app_id = test_core.random_suffix("app")
         event_name = test_core.random_suffix("event")
-        proc = _start_app(app_id, event_name)
+        proc = _start_app(app_id, event_name, listener_port)
         self.addCleanup(proc.terminate)
 
         # Wait for app to be ready for execution.
@@ -41,6 +49,11 @@ class TestSignals(BaseTest):
         )
         assert len(run_ids) == 1
         run_id = run_ids[0]
+
+        # Wait for the Inngest function to start.
+        listener_conn = listener.accept()
+        self.addCleanup(listener_conn.close)
+        listener_conn.recv()
 
         # Send signal to the worker.
         proc.send_signal(signal.SIGTERM)
@@ -67,9 +80,21 @@ class TestSignals(BaseTest):
         receiving a SIGTERM.
         """
 
+        # Use a listener to allow the subprocess to tell this test when its
+        # Inngest function is running.
+        listener = multiprocessing.connection.Listener(("localhost", 6000))
+        self.addCleanup(listener.close)
+        listener_port = listener.address[1]
+        assert isinstance(listener_port, int)
+
         app_id = test_core.random_suffix("app")
         event_name = test_core.random_suffix("event")
-        proc = _start_app(app_id, event_name, [signal.SIGUSR1])
+        proc = _start_app(
+            app_id,
+            event_name,
+            listener_port,
+            [signal.SIGUSR1],
+        )
         self.addCleanup(proc.terminate)
 
         # Wait for app to be ready for execution.
@@ -87,6 +112,11 @@ class TestSignals(BaseTest):
         )
         assert len(run_ids) == 1
         run_id = run_ids[0]
+
+        # Wait for the Inngest function to start.
+        listener_conn = listener.accept()
+        self.addCleanup(listener_conn.close)
+        listener_conn.recv()
 
         # Send signal to the worker.
         proc.send_signal(signal.SIGUSR1)
@@ -110,6 +140,7 @@ class TestSignals(BaseTest):
 def _start_app(
     app_id: str,
     event_name: str,
+    listener_port: int,
     signals: typing.Optional[list[signal.Signals]] = None,
 ) -> subprocess.Popen[bytes]:
     signals_str = "None"
@@ -128,6 +159,9 @@ import asyncio
 import inngest
 from inngest.experimental.connect import connect
 import signal
+from multiprocessing.connection import Client
+
+conn = Client(("localhost", {listener_port}))
 
 client = inngest.Inngest(
     app_id="{app_id}",
@@ -140,6 +174,7 @@ client = inngest.Inngest(
     trigger=inngest.TriggerEvent(event="{event_name}"),
 )
 async def fn(ctx: inngest.Context, step: inngest.Step) -> str:
+    conn.send("started")
     await asyncio.sleep(5)
     return "Hello"
 
@@ -150,6 +185,8 @@ asyncio.run(
         shutdown_signals={signals_str},
     ).start()
 )
+
+conn.close()
     """
 
     return subprocess.Popen(["python", "-c", app_code])
