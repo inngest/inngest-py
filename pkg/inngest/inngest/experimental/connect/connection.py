@@ -77,6 +77,8 @@ class WorkerConnection(typing.Protocol):
 
 
 class _WebSocketWorkerConnection(WorkerConnection):
+    _consumers_closed_task: typing.Optional[asyncio.Task[None]] = None
+
     _message_handler_task: typing.Optional[
         asyncio.Task[types.MaybeError[None]]
     ] = None
@@ -194,7 +196,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
             ),
             draining=_ValueWatcher(False),
             exclude_gateways=[],
-            ws=None,
+            ws=_ValueWatcher(None),
         )
 
         self._handlers: list[_BaseHandler] = [
@@ -293,6 +295,15 @@ class _WebSocketWorkerConnection(WorkerConnection):
         if isinstance(err, Exception):
             raise err
 
+        for h in self._handlers:
+            err = h.start()
+            if isinstance(err, Exception):
+                raise err
+
+        self._consumers_closed_task = asyncio.create_task(
+            self._wait_for_consumers_closed(),
+        )
+
         while self._state.conn_state.value not in [
             ConnectionState.CLOSED,
             ConnectionState.CLOSING,
@@ -310,33 +321,12 @@ class _WebSocketWorkerConnection(WorkerConnection):
                     subprotocols=[_protocol],
                 ) as ws:
                     self._logger.debug("Gateway connected")
-                    self._state.ws = ws
+                    self._state.ws.value = ws
                     self._message_handler_task = asyncio.create_task(
                         self._handle_msg(ws)
                     )
 
-                    for h in self._handlers:
-                        err = h.start()
-                        if isinstance(err, Exception):
-                            raise err
-
-                    # Wait for either:
-                    # - Connection info change, signaling a reconnect is
-                    #   necessary.
-                    # - All consumers have closed, signaling that the worker
-                    #   should exit.
-                    await asyncio.wait(
-                        [
-                            asyncio.create_task(
-                                self._state.conn_init.wait_for_change()
-                            ),
-                            asyncio.create_task(
-                                self._wait_for_consumers_closed()
-                            ),
-                        ],
-                        return_when=asyncio.FIRST_COMPLETED,
-                    )
-
+                    await self._state.conn_init.wait_for_change()
                     await asyncio.sleep(1)
             except Exception as e:
                 self._logger.error(
@@ -344,6 +334,9 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 )
                 self._state.conn_state.value = ConnectionState.RECONNECTING
                 await asyncio.sleep(5)  # Reconnection delay
+            except asyncio.CancelledError:
+                # TODO: Figure out why we reach here sometimes.
+                pass
             finally:
                 self._logger.debug("Gateway connection closed")
 
@@ -376,7 +369,6 @@ class _WebSocketWorkerConnection(WorkerConnection):
         await self._wait_for_consumers_closed()
 
         self._state.conn_state.value = ConnectionState.CLOSED
-        self._state.conn_init.value = None
 
     async def _wait_for_consumers_closed(self) -> None:
         """
@@ -384,8 +376,6 @@ class _WebSocketWorkerConnection(WorkerConnection):
         close until then.
         """
 
-        # Wait for all the handlers to close.
         await asyncio.gather(*[h.closed() for h in self._handlers])
-
-        # Ensure that no messages are being handled when we fully close.
         await self._handling_message_count.wait_for(0)
+        self._state.conn_init.value = None

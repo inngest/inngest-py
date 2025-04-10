@@ -53,13 +53,9 @@ class _ExecutionHandler(_BaseHandler):
             return
 
         async def execute() -> None:
-            if self._state.ws is None:
-                # Unreachable.
-                self._logger.error("No connection")
-                return
-
+            ws = await self._state.ws.wait_for_not_none()
             try:
-                await self._state.ws.send(
+                await ws.send(
                     connect_pb2.ConnectMessage(
                         kind=connect_pb2.GatewayMessageType.WORKER_REQUEST_ACK,
                         payload=connect_pb2.WorkerRequestAckData(
@@ -116,7 +112,7 @@ class _ExecutionHandler(_BaseHandler):
                 )
 
             self._logger.debug("Sending execution reply")
-            await self._state.ws.send(
+            await ws.send(
                 connect_pb2.ConnectMessage(
                     kind=connect_pb2.GatewayMessageType.WORKER_REPLY,
                     payload=connect_pb2.SDKResponse(

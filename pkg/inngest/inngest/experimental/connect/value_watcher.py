@@ -78,7 +78,7 @@ class _ValueWatcher(typing.Generic[T]):
             # No need to wait.
             return self._value
 
-        async with self._watch() as watch:
+        with self._watch() as watch:
             async for _, new in watch:
                 if new == value:
                     return new
@@ -98,7 +98,7 @@ class _ValueWatcher(typing.Generic[T]):
             # No need to wait.
             return self._value
 
-        async with self._watch() as watch:
+        with self._watch() as watch:
             async for _, new in watch:
                 if new != value:
                     return new
@@ -118,7 +118,7 @@ class _ValueWatcher(typing.Generic[T]):
             # No need to wait.
             return self._value
 
-        async with self._watch() as watch:
+        with self._watch() as watch:
             async for _, new in watch:
                 if new is not None:
                     return new
@@ -130,7 +130,7 @@ class _ValueWatcher(typing.Generic[T]):
         Wait for the value to change.
         """
 
-        async with self._watch() as watch:
+        with self._watch() as watch:
             async for _, new in watch:
                 return new
 
@@ -171,14 +171,14 @@ class _WatchContextManager(typing.Generic[T]):
         self._on_exit = on_exit
         self._queue = queue
 
-    async def __aenter__(self) -> typing.AsyncGenerator[tuple[T, T], None]:
+    def __enter__(self) -> typing.AsyncGenerator[tuple[T, T], None]:
         async def _watch() -> typing.AsyncGenerator[tuple[T, T], None]:
             while True:
                 yield await self._queue.get()
 
         return _watch()
 
-    async def __aexit__(
+    def __exit__(
         self,
         exc_type: typing.Optional[type[BaseException]],
         exc_value: typing.Optional[BaseException],

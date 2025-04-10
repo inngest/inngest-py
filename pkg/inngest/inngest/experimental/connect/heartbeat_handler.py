@@ -1,14 +1,11 @@
 import asyncio
 import typing
 
-import websockets
-
 from inngest._internal import types
 
 from . import connect_pb2
 from .base_handler import _BaseHandler
 from .consts import _heartbeat_interval_sec
-from .errors import _UnreachableError
 from .models import ConnectionState, _State
 
 
@@ -33,12 +30,9 @@ class _HeartbeatHandler(_BaseHandler):
         if err is not None:
             return err
 
-        if self._state.ws is None:
-            return _UnreachableError("missing websocket")
-
         if self._heartbeat_sender_task is None:
             self._heartbeat_sender_task = asyncio.create_task(
-                self._heartbeat_sender(self._state.ws)
+                self._heartbeat_sender()
             )
 
         return None
@@ -60,8 +54,9 @@ class _HeartbeatHandler(_BaseHandler):
 
     async def _heartbeat_sender(
         self,
-        ws: websockets.ClientConnection,
     ) -> None:
+        ws = await self._state.ws.wait_for_not_none()
+
         while self.closed_event.is_set() is False:
             # Only send heartbeats when the connection is active.
             if self._state.conn_state.value != ConnectionState.ACTIVE:

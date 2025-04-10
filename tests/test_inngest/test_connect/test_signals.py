@@ -14,7 +14,7 @@ from .base import BaseTest
 
 
 class TestSignals(BaseTest):
-    @pytest.mark.timeout(20, method="thread")
+    @pytest.mark.timeout(30, method="thread")
     async def test_sigterm(self) -> None:
         """
         Test that the worker waits for an execution request to complete when
@@ -26,8 +26,8 @@ class TestSignals(BaseTest):
         proc = _start_app(app_id, event_name)
         self.addCleanup(proc.terminate)
 
-        # Wait for the worker to be ready for execution.
-        await _wait_for_app_ready(app_id)
+        # Wait for app to be ready for execution.
+        await _wait_for_app(app_id, True)
 
         # Trigger the function.
         client = inngest.Inngest(app_id="test", is_production=False)
@@ -53,11 +53,14 @@ class TestSignals(BaseTest):
         assert run.output is not None
         assert json.loads(run.output) == "Hello"
 
+        # Wait for app to close.
+        await _wait_for_app(app_id, False)
+
         # Wait for the worker process to exit.
         proc.wait(timeout=5)
         assert proc.returncode == 0
 
-    @pytest.mark.timeout(20, method="thread")
+    @pytest.mark.timeout(30, method="thread")
     async def test_non_standard_signal(self) -> None:
         """
         Test that the worker waits for an execution request to complete when
@@ -69,8 +72,8 @@ class TestSignals(BaseTest):
         proc = _start_app(app_id, event_name, [signal.SIGUSR1])
         self.addCleanup(proc.terminate)
 
-        # Wait for the worker to be ready for execution.
-        await _wait_for_app_ready(app_id)
+        # Wait for app to be ready for execution.
+        await _wait_for_app(app_id, True)
 
         # Trigger the function.
         client = inngest.Inngest(app_id="test", is_production=False)
@@ -95,6 +98,9 @@ class TestSignals(BaseTest):
         )
         assert run.output is not None
         assert json.loads(run.output) == "Hello"
+
+        # Wait for app to close.
+        await _wait_for_app(app_id, False)
 
         # Wait for the worker process to exit.
         proc.wait(timeout=5)
@@ -149,7 +155,7 @@ asyncio.run(
     return subprocess.Popen(["python", "-c", app_code])
 
 
-async def _wait_for_app_ready(app_id: str) -> None:
+async def _wait_for_app(app_id: str, should_exist: bool) -> None:
     async with httpx.AsyncClient() as client:
         start = time.time()
         while True:
@@ -169,10 +175,13 @@ async def _wait_for_app_ready(app_id: str) -> None:
             if not isinstance(data, list):
                 raise Exception("unexpected response")
 
+            exists = False
             for app in data:
                 if not isinstance(app, dict):
                     raise Exception("unexpected response")
-                if app["instance_id"] == app_id:
-                    return
+
+                exists = app["instance_id"] == app_id
+            if exists == should_exist:
+                return
 
             await asyncio.sleep(0.1)

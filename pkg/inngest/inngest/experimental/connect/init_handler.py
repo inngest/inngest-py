@@ -61,7 +61,11 @@ class _InitHandler(_BaseHandler):
         await super().closed()
 
         if self._send_data_task is not None:
-            await self._send_data_task
+            try:
+                await self._send_data_task
+            except asyncio.CancelledError:
+                # Expected.
+                pass
 
     async def _drain_watcher(self, closed_event: asyncio.Event) -> None:
         while closed_event.is_set() is False:
@@ -86,9 +90,6 @@ class _InitHandler(_BaseHandler):
         auth_data: connect_pb2.AuthData,
         connection_id: str,
     ) -> None:
-        if self._state.ws is None:
-            raise _UnreachableError("missing websocket")
-
         if self._kind_state.GATEWAY_HELLO is False:
             if msg.kind != connect_pb2.GatewayMessageType.GATEWAY_HELLO:
                 self._logger.error("Expected GATEWAY_HELLO")
@@ -129,6 +130,8 @@ class _InitHandler(_BaseHandler):
         auth_data: connect_pb2.AuthData,
         connection_id: str,
     ) -> None:
+        ws = await self._state.ws.wait_for_not_none()
+
         sync_message = _create_sync_message(
             apps_configs=self._app_configs,
             auth_data=auth_data,
@@ -143,9 +146,7 @@ class _InitHandler(_BaseHandler):
             )
             return
 
-        if self._state.ws is None or self._state.ws.close_reason is not None:
-            return None
-        await self._state.ws.send(sync_message.SerializeToString())
+        await ws.send(sync_message.SerializeToString())
         self._kind_state.SYNCED = True
         return None
 
