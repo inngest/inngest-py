@@ -10,7 +10,6 @@ from inngest._internal import const, server_lib, types
 
 from . import connect_pb2
 from .base_handler import _BaseHandler
-from .errors import _UnreachableError
 from .models import ConnectionState, _State
 
 
