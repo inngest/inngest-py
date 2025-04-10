@@ -2,7 +2,6 @@ import asyncio
 
 import inngest
 import pytest
-import structlog
 import test_core
 from inngest.experimental.connect import ConnectionState, connect, connect_pb2
 from inngest.experimental.connect.connection import _WebSocketWorkerConnection
@@ -23,7 +22,6 @@ class TestDrain(BaseTest):
             api_base_url=f"http://0.0.0.0:{proxies.http_proxy.port}",
             app_id="app",
             is_production=False,
-            logger=structlog.get_logger(),
         )
 
         @client.create_function(

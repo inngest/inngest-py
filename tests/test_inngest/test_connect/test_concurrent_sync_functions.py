@@ -57,8 +57,9 @@ class TestConcurrentSyncFunctions(BaseTest):
 
         await test_core.wait_for(assert_runs)
 
-        run_1_id = next(iter(run_ids))
-        run_2_id = next(iter(run_ids))
+        i = iter(run_ids)
+        run_1_id = next(i)
+        run_2_id = next(i)
 
         await test_core.helper.client.wait_for_run_status(
             run_1_id,

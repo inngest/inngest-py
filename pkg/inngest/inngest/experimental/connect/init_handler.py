@@ -9,11 +9,11 @@ import pydantic_core
 from inngest._internal import const, server_lib, types
 
 from . import connect_pb2
-from .errors import _UnreachableError
+from .base_handler import _BaseHandler
 from .models import ConnectionState, _State
 
 
-class _InitHandler:
+class _InitHandler(_BaseHandler):
     _closed_event: typing.Optional[asyncio.Event] = None
     _drain_task: typing.Optional[asyncio.Task[None]] = None
     _send_data_task: typing.Optional[asyncio.Task[None]] = None
@@ -35,33 +35,36 @@ class _InitHandler:
         self._state = state
 
     def start(self) -> types.MaybeError[None]:
-        if self._closed_event is None:
-            self._closed_event = asyncio.Event()
+        err = super().start()
+        if err is not None:
+            return err
 
         if self._drain_task is None:
             self._drain_task = asyncio.create_task(
-                self._drain_watcher(self._closed_event)
+                self._drain_watcher(self.closed_event)
             )
 
         if self._reconnect_task is None:
             self._reconnect_task = asyncio.create_task(
-                self._reconnect_watcher(self._closed_event)
+                self._reconnect_watcher(self.closed_event)
             )
         return None
 
     def close(self) -> None:
-        if self._closed_event is not None:
-            self._closed_event.set()
+        super().close()
 
         if self._send_data_task is not None:
             self._send_data_task.cancel()
 
     async def closed(self) -> None:
-        if self._closed_event is not None:
-            await self._closed_event.wait()
+        await super().closed()
 
         if self._send_data_task is not None:
-            await self._send_data_task
+            try:
+                await self._send_data_task
+            except asyncio.CancelledError:
+                # Expected.
+                pass
 
     async def _drain_watcher(self, closed_event: asyncio.Event) -> None:
         while closed_event.is_set() is False:
@@ -86,9 +89,6 @@ class _InitHandler:
         auth_data: connect_pb2.AuthData,
         connection_id: str,
     ) -> None:
-        if self._state.ws is None:
-            raise _UnreachableError("missing websocket")
-
         if self._kind_state.GATEWAY_HELLO is False:
             if msg.kind != connect_pb2.GatewayMessageType.GATEWAY_HELLO:
                 self._logger.error("Expected GATEWAY_HELLO")
@@ -129,6 +129,8 @@ class _InitHandler:
         auth_data: connect_pb2.AuthData,
         connection_id: str,
     ) -> None:
+        ws = await self._state.ws.wait_for_not_none()
+
         sync_message = _create_sync_message(
             apps_configs=self._app_configs,
             auth_data=auth_data,
@@ -143,9 +145,7 @@ class _InitHandler:
             )
             return
 
-        if self._state.ws is None or self._state.ws.close_reason is not None:
-            return None
-        await self._state.ws.send(sync_message.SerializeToString())
+        await ws.send(sync_message.SerializeToString())
         self._kind_state.SYNCED = True
         return None
 

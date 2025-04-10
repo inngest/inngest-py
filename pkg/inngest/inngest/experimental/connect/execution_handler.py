@@ -3,10 +3,11 @@ import asyncio
 from inngest._internal import comm_lib, server_lib, types
 
 from . import connect_pb2
+from .base_handler import _BaseHandler
 from .models import _State
 
 
-class _ExecutionHandler:
+class _ExecutionHandler(_BaseHandler):
     """
     Handles incoming execution requests from the Gateway.
     """
@@ -24,13 +25,8 @@ class _ExecutionHandler:
         # Keep track of pending tasks to allow for graceful shutdown.
         self._pending_tasks: set[asyncio.Task[None]] = set()
 
-    def start(self) -> types.MaybeError[None]:
-        return None
-
-    def close(self) -> None:
-        pass
-
     async def closed(self) -> None:
+        await super().closed()
         await asyncio.gather(*self._pending_tasks)
         self._pending_tasks.clear()
 
@@ -57,13 +53,9 @@ class _ExecutionHandler:
             return
 
         async def execute() -> None:
-            if self._state.ws is None:
-                # Unreachable.
-                self._logger.error("No connection")
-                return
-
+            ws = await self._state.ws.wait_for_not_none()
             try:
-                await self._state.ws.send(
+                await ws.send(
                     connect_pb2.ConnectMessage(
                         kind=connect_pb2.GatewayMessageType.WORKER_REQUEST_ACK,
                         payload=connect_pb2.WorkerRequestAckData(
@@ -120,7 +112,7 @@ class _ExecutionHandler:
                 )
 
             self._logger.debug("Sending execution reply")
-            await self._state.ws.send(
+            await ws.send(
                 connect_pb2.ConnectMessage(
                     kind=connect_pb2.GatewayMessageType.WORKER_REPLY,
                     payload=connect_pb2.SDKResponse(

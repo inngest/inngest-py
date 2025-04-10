@@ -128,7 +128,12 @@ class _Client:
         """
 
         start = time.time()
+        attempts = 0
         while True:
+            if attempts > 0:
+                await asyncio.sleep(0.2)
+            attempts += 1
+
             res = await self._gql.query(
                 gql.Query(query, {"event_id": event_id})
             )
@@ -136,7 +141,7 @@ class _Client:
                 event = res.data.get("event")
                 if not isinstance(event, dict):
                     raise Exception("unexpected response")
-                runs = event.get("functionRuns")
+                runs = event.get("functionRuns") or []
                 if not isinstance(runs, list):
                     raise Exception("unexpected response")
                 if len(runs) == run_count:
@@ -144,8 +149,6 @@ class _Client:
 
             if time.time() - start > timeout:
                 raise Exception("timed out waiting for run status")
-
-            await asyncio.sleep(0.2)
 
     async def wait_for_run_status(
         self,
