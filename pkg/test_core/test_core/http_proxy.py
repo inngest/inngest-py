@@ -22,6 +22,10 @@ class Proxy:
         return net.HOST
 
     @property
+    def origin(self) -> str:
+        return f"http://{self.host}:{self.port}"
+
+    @property
     def port(self) -> int:
         return self._port
 

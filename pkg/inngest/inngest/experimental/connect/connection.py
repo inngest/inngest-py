@@ -15,7 +15,7 @@ from inngest._internal import comm_lib, net, server_lib, types
 
 from . import connect_pb2
 from .base_handler import _BaseHandler
-from .conn_starter import _ConnStarter
+from .conn_init_starter import _ConnInitHandler
 from .consts import (
     _default_shutdown_signals,
     _framework,
@@ -25,7 +25,7 @@ from .drain_handler import _DrainHandler
 from .errors import _UnreachableError
 from .execution_handler import _ExecutionHandler
 from .heartbeat_handler import _HeartbeatHandler
-from .init_handler import _InitHandler
+from .init_handshake_handler import _InitHandshakeHandler
 from .models import ConnectionState, _State
 from .value_watcher import _ValueWatcher
 
@@ -78,6 +78,7 @@ class WorkerConnection(typing.Protocol):
 
 class _WebSocketWorkerConnection(WorkerConnection):
     _consumers_closed_task: typing.Optional[asyncio.Task[None]] = None
+    _event_loop_keep_alive_task: typing.Optional[asyncio.Task[None]] = None
 
     _message_handler_task: typing.Optional[
         asyncio.Task[types.MaybeError[None]]
@@ -191,7 +192,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
             conn_id=None,
             conn_init=_ValueWatcher(None),
             conn_state=_ValueWatcher(
-                ConnectionState.CLOSED,
+                ConnectionState.CONNECTING,
                 on_change=on_conn_state_change,
             ),
             draining=_ValueWatcher(False),
@@ -200,8 +201,18 @@ class _WebSocketWorkerConnection(WorkerConnection):
         )
 
         self._handlers: list[_BaseHandler] = [
+            _ConnInitHandler(
+                api_origin=self._api_origin,
+                http_client=self._http_client,
+                http_client_sync=self._http_client_sync,
+                logger=self._logger,
+                rewrite_gateway_endpoint=self._rewrite_gateway_endpoint,
+                signing_key=self._signing_key,
+                signing_key_fallback=self._fallback_signing_key,
+                state=self._state,
+            ),
             _HeartbeatHandler(self._logger, self._state),
-            _InitHandler(
+            _InitHandshakeHandler(
                 self._logger,
                 self._state,
                 self._app_configs,
@@ -216,16 +227,16 @@ class _WebSocketWorkerConnection(WorkerConnection):
             _DrainHandler(self._logger, self._state),
         ]
 
-        self._start_requester = _ConnStarter(
-            api_origin=self._api_origin,
-            http_client=self._http_client,
-            http_client_sync=self._http_client_sync,
-            logger=self._logger,
-            rewrite_gateway_endpoint=self._rewrite_gateway_endpoint,
-            signing_key=self._signing_key,
-            signing_key_fallback=self._fallback_signing_key,
-            state=self._state,
-        )
+        # self._start_requester = _ConnStarter(
+        #     api_origin=self._api_origin,
+        #     http_client=self._http_client,
+        #     http_client_sync=self._http_client_sync,
+        #     logger=self._logger,
+        #     rewrite_gateway_endpoint=self._rewrite_gateway_endpoint,
+        #     signing_key=self._signing_key,
+        #     signing_key_fallback=self._fallback_signing_key,
+        #     state=self._state,
+        # )
 
     def get_connection_id(self) -> str:
         if self._state.conn_id is None:
@@ -291,9 +302,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
         return None
 
     async def start(self) -> None:
-        err = await self._start_requester.start()
-        if isinstance(err, Exception):
-            raise err
+        self._event_loop_keep_alive_task = _event_loop_keep_alive()
 
         for h in self._handlers:
             err = h.start()
@@ -309,7 +318,11 @@ class _WebSocketWorkerConnection(WorkerConnection):
             ConnectionState.CLOSING,
         ]:
             try:
-                _, endpoint = await self._state.conn_init.wait_for_not_none()
+                endpoint, closing = await _wait_for_gateway_endpoint(
+                    self._state
+                )
+                if closing:
+                    return
 
                 self._logger.debug(
                     "Gateway connecting",
@@ -367,8 +380,10 @@ class _WebSocketWorkerConnection(WorkerConnection):
             return
 
         await self._wait_for_consumers_closed()
-
         self._state.conn_state.value = ConnectionState.CLOSED
+
+        if self._event_loop_keep_alive_task is not None:
+            self._event_loop_keep_alive_task.cancel()
 
     async def _wait_for_consumers_closed(self) -> None:
         """
@@ -379,3 +394,57 @@ class _WebSocketWorkerConnection(WorkerConnection):
         await asyncio.gather(*[h.closed() for h in self._handlers])
         await self._handling_message_count.wait_for(0)
         self._state.conn_init.value = None
+
+
+def _event_loop_keep_alive() -> asyncio.Task[None]:
+    """
+    Create a task whose sole purpose is to keep the event loop alive. Without
+    this, the event loop can go into an idle mode. This isn't a huge deal, but
+    it can make graceful shutdown take ~5 seconds longer.
+    """
+
+    async def _keep_alive() -> None:
+        while True:  # noqa: ASYNC110
+            await asyncio.sleep(1)
+
+    return asyncio.create_task(_keep_alive())
+
+
+async def _wait_for_gateway_endpoint(
+    state: _State,
+) -> tuple[str, bool]:
+    """
+    Wait for the Gateway endpoint to be set or for the connection to be closing.
+    Returns the Gateway endpoint and a boolean indicating if the connection is
+    closing.
+    """
+
+    done_tasks, _ = await asyncio.wait(
+        (
+            asyncio.create_task(state.conn_init.wait_for_not_none()),
+            asyncio.create_task(
+                state.conn_state.wait_for(ConnectionState.CLOSING)
+            ),
+        ),
+        return_when=asyncio.FIRST_COMPLETED,
+    )
+
+    for t in done_tasks:
+        # Need to cast because Mypy doesn't understand the type (it thinks it's
+        # `object`).
+        r = typing.cast(
+            typing.Union[ConnectionState, tuple[connect_pb2.AuthData, str]],
+            t.result(),
+        )
+
+        if r is ConnectionState.CLOSING:
+            # We need to shutdown.
+            return ("", True)
+        if isinstance(r, ConnectionState):
+            raise _UnreachableError(
+                "We already checked the only possible ConnectionState"
+            )
+
+        return r[1], False
+
+    raise _UnreachableError()

@@ -44,7 +44,7 @@ class TestAPIRequestHeaders(BaseTest):
         self.addCleanup(mock_api.stop)
         client = inngest.Inngest(
             app_id="app",
-            api_base_url=f"http://{mock_api.host}:{mock_api.port}",
+            api_base_url=mock_api.origin,
             signing_key="deadbeef",
         )
 
@@ -126,7 +126,7 @@ class TestAPIRequestHeaders(BaseTest):
         self.addCleanup(lambda: os.environ.pop("INNGEST_SIGNING_KEY_FALLBACK"))
         client = inngest.Inngest(
             app_id="app",
-            api_base_url=f"http://{mock_api.host}:{mock_api.port}",
+            api_base_url=mock_api.origin,
             signing_key="deadbeef",
         )
 
@@ -189,7 +189,7 @@ class TestAPIRequestHeaders(BaseTest):
         self.addCleanup(mock_api.stop)
         client = inngest.Inngest(
             app_id="app",
-            api_base_url=f"http://{mock_api.host}:{mock_api.port}",
+            api_base_url=mock_api.origin,
             is_production=False,
             signing_key="deadbeef",
         )
