@@ -227,17 +227,6 @@ class _WebSocketWorkerConnection(WorkerConnection):
             _DrainHandler(self._logger, self._state),
         ]
 
-        # self._start_requester = _ConnStarter(
-        #     api_origin=self._api_origin,
-        #     http_client=self._http_client,
-        #     http_client_sync=self._http_client_sync,
-        #     logger=self._logger,
-        #     rewrite_gateway_endpoint=self._rewrite_gateway_endpoint,
-        #     signing_key=self._signing_key,
-        #     signing_key_fallback=self._fallback_signing_key,
-        #     state=self._state,
-        # )
-
     def get_connection_id(self) -> str:
         if self._state.conn_id is None:
             raise Exception("connection not established")
