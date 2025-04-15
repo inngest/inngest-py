@@ -44,6 +44,8 @@ class _HeartbeatHandler(_BaseHandler):
             self._heartbeat_sender_task.cancel()
 
     async def closed(self) -> None:
+        await super().closed()
+
         if self._heartbeat_sender_task is not None:
             try:
                 await self._heartbeat_sender_task

@@ -5,7 +5,7 @@ import inngest
 import test_core
 from inngest.experimental.connect import ConnectionState, connect
 
-from .base import BaseTest
+from .base import BaseTest, collect_states
 
 
 class TestWaitForExecutionRequest(BaseTest):
@@ -37,6 +37,7 @@ class TestWaitForExecutionRequest(BaseTest):
             return "Hello"
 
         conn = connect([(client, [fn])])
+        states = collect_states(conn)
         task = asyncio.create_task(conn.start())
         self.addCleanup(conn.closed)
         self.addCleanup(task.cancel)
@@ -59,3 +60,11 @@ class TestWaitForExecutionRequest(BaseTest):
         )
         assert run.output is not None
         assert json.loads(run.output) == "Hello"
+
+        await conn.closed()
+        assert states == [
+            ConnectionState.CONNECTING,
+            ConnectionState.ACTIVE,
+            ConnectionState.CLOSING,
+            ConnectionState.CLOSED,
+        ]

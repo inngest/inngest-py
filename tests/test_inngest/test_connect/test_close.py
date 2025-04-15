@@ -1,15 +1,17 @@
 import asyncio
 import json
+import typing
 
 import inngest
 import test_core
 from inngest.experimental.connect import ConnectionState, connect
+from test_core import http_proxy
 
-from .base import BaseTest
+from .base import BaseTest, collect_states
 
 
 class TestWaitForExecutionRequest(BaseTest):
-    async def test(self) -> None:
+    async def test_after_initial_connection(self) -> None:
         """
         Test that the worker waits for an execution request to complete before
         closing.
@@ -37,8 +39,8 @@ class TestWaitForExecutionRequest(BaseTest):
             return "Hello"
 
         conn = connect([(client, [fn])])
+        states = collect_states(conn)
         task = asyncio.create_task(conn.start())
-        self.addCleanup(conn.closed)
         self.addCleanup(task.cancel)
         await conn.wait_for_state(ConnectionState.ACTIVE)
 
@@ -59,3 +61,69 @@ class TestWaitForExecutionRequest(BaseTest):
         )
         assert run.output is not None
         assert json.loads(run.output) == "Hello"
+
+        await conn.closed()
+        assert states == [
+            ConnectionState.CONNECTING,
+            ConnectionState.ACTIVE,
+            ConnectionState.CLOSING,
+            ConnectionState.CLOSED,
+        ]
+
+    async def test_without_initial_connection(self) -> None:
+        """
+        Test that the worker gracefully closes even if it never establishes a
+        connection.
+        """
+
+        api_called = False
+
+        def on_request(
+            *,
+            body: typing.Optional[bytes],
+            headers: dict[str, list[str]],
+            method: str,
+            path: str,
+        ) -> http_proxy.Response:
+            print("on_request")
+            nonlocal api_called
+            api_called = True
+
+            # Always return a 500, which prevents the worker from establishing a
+            # connection.
+            return http_proxy.Response(
+                body=b"",
+                headers={},
+                status_code=500,
+            )
+
+        proxy = http_proxy.Proxy(on_request).start()
+
+        client = inngest.Inngest(
+            api_base_url=proxy.origin,
+            app_id=test_core.random_suffix("app"),
+            is_production=False,
+        )
+
+        @client.create_function(
+            fn_id="fn",
+            trigger=inngest.TriggerEvent(
+                event=test_core.random_suffix("event"),
+            ),
+        )
+        async def fn(ctx: inngest.Context, step: inngest.Step) -> None:
+            pass
+
+        conn = connect([(client, [fn])])
+        states = collect_states(conn)
+        task = asyncio.create_task(conn.start())
+        self.addCleanup(task.cancel)
+
+        await test_core.wait_for_truthy(lambda: api_called)
+        await conn.close()
+        await conn.closed()
+        assert states == [
+            ConnectionState.CONNECTING,
+            ConnectionState.CLOSING,
+            ConnectionState.CLOSED,
+        ]

@@ -70,7 +70,7 @@ class TestSignals(BaseTest):
         await _wait_for_app(app_id, False)
 
         # Wait for the worker process to exit.
-        proc.wait(timeout=5)
+        proc.wait(timeout=1)
         assert proc.returncode == 0
 
     @pytest.mark.timeout(30, method="thread")
@@ -133,7 +133,7 @@ class TestSignals(BaseTest):
         await _wait_for_app(app_id, False)
 
         # Wait for the worker process to exit.
-        proc.wait(timeout=5)
+        proc.wait(timeout=1)
         assert proc.returncode == 0
 
 
@@ -196,7 +196,7 @@ async def _wait_for_app(app_id: str, should_exist: bool) -> None:
     async with httpx.AsyncClient() as client:
         start = time.time()
         while True:
-            if time.time() - start > 10:
+            if time.time() - start > 3:
                 raise Exception("timed out waiting for app")
 
             res = await client.get(

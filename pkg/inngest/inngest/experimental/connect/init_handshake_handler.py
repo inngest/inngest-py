@@ -13,7 +13,7 @@ from .base_handler import _BaseHandler
 from .models import ConnectionState, _State
 
 
-class _InitHandler(_BaseHandler):
+class _InitHandshakeHandler(_BaseHandler):
     _closed_event: typing.Optional[asyncio.Event] = None
     _drain_task: typing.Optional[asyncio.Task[None]] = None
     _send_data_task: typing.Optional[asyncio.Task[None]] = None

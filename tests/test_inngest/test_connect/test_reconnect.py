@@ -1,15 +1,11 @@
 import asyncio
-import typing
 
 import inngest
 import pytest
 import test_core
 from inngest.experimental.connect import ConnectionState, connect
-from inngest.experimental.connect.connection import (
-    _WebSocketWorkerConnection,
-)
 
-from .base import BaseTest
+from .base import BaseTest, collect_states
 
 
 class TestReconnect(BaseTest):
@@ -23,7 +19,7 @@ class TestReconnect(BaseTest):
         proxies = await self.create_proxies()
 
         client = inngest.Inngest(
-            api_base_url=f"http://0.0.0.0:{proxies.http_proxy.port}",
+            api_base_url=proxies.http_proxy.origin,
             app_id="app",
             is_production=False,
         )
@@ -36,13 +32,7 @@ class TestReconnect(BaseTest):
             pass
 
         conn = connect([(client, [fn])])
-
-        states: list[ConnectionState] = []
-        if isinstance(conn, _WebSocketWorkerConnection):
-            conn._state.conn_state.on_change(
-                lambda _, state: states.append(state)
-            )
-
+        states = collect_states(conn)
         task = asyncio.create_task(conn.start())
         self.addCleanup(conn.close, wait=True)
         self.addCleanup(task.cancel)

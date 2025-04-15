@@ -9,7 +9,14 @@ import pytest
 import test_core
 import test_core.http_proxy
 import test_core.ws_proxy
-from inngest.experimental.connect import connect_pb2
+from inngest.experimental.connect import (
+    ConnectionState,
+    connect_pb2,
+)
+from inngest.experimental.connect.connection import (
+    WorkerConnection,
+    _WebSocketWorkerConnection,
+)
 
 
 @dataclasses.dataclass
@@ -76,3 +83,11 @@ class BaseTest(unittest.IsolatedAsyncioTestCase):
             requests=requests,
             ws_proxy=ws_proxy,
         )
+
+
+def collect_states(conn: WorkerConnection) -> list[ConnectionState]:
+    states: list[ConnectionState] = []
+    if isinstance(conn, _WebSocketWorkerConnection):
+        conn._state.conn_state.on_change(lambda _, state: states.append(state))
+    states.append(conn.get_state())
+    return states
