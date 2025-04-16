@@ -10,10 +10,10 @@ on:
     paths:
       - "!examples/**"
       - "**/*.py"
+      - "**/Makefile"
+      - "**/pyproject.toml"
       - ".github/**"
-      - "Makefile"
       - "constraints.txt"
-      - "pyproject.toml"
       - "pytest.ini"
       - "ruff.toml"
 
