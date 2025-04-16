@@ -247,6 +247,12 @@ class Step(base.StepBase):
                         step=step_info,
                     )
                 )
+            except base.ResponseInterrupt as interrupt:
+                # Only reachable with nested steps (which are not supported).
+
+                step_info.op = server_lib.Opcode.STEP_ERROR
+                interrupt.set_step_info(step_info)
+                raise interrupt
 
     async def send_event(
         self,

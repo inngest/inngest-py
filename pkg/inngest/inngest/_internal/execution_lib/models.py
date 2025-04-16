@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import dataclasses
 import typing
 
@@ -84,7 +85,13 @@ class FunctionHandlerSync(typing.Protocol):
     ) -> types.JSON: ...
 
 
+# Context variable to detect nested steps.
+_in_step = contextvars.ContextVar("in_step", default=False)
+
+
 class ReportedStep:
+    _in_step_token: typing.Optional[contextvars.Token[bool]] = None
+
     def __init__(
         self,
         step_signal: asyncio.Future[ReportedStep],
@@ -98,9 +105,25 @@ class ReportedStep:
         self._done_signal = asyncio.Future[None]()
 
     async def __aenter__(self) -> ReportedStep:
+        if _in_step.get() is True:
+            self.info.op = server_lib.Opcode.STEP_ERROR
+            raise step_lib.ResponseInterrupt(
+                step_lib.StepResponse(
+                    original_error=errors.CodedError(
+                        server_lib.ErrorCode.STEP_NESTED,
+                        "Nested steps are not supported.",
+                        is_retriable=False,
+                    ),
+                    step=self.info,
+                )
+            )
+        self._in_step_token = _in_step.set(True)
         return self
 
     async def __aexit__(self, *args: object) -> None:
+        if self._in_step_token is None:
+            raise errors.UnreachableError("missing in_step token")
+        _in_step.reset(self._in_step_token)
         self._done_signal.set_result(None)
 
     async def release(self) -> None:
@@ -127,6 +150,8 @@ class ReportedStep:
 
 
 class ReportedStepSync:
+    _in_step_token: typing.Optional[contextvars.Token[bool]] = None
+
     def __init__(self, step_info: step_lib.StepInfo) -> None:
         self.error: typing.Optional[errors.StepError] = None
         self.info = step_info
@@ -134,10 +159,25 @@ class ReportedStepSync:
         self.skip = False
 
     def __enter__(self) -> ReportedStepSync:
+        if _in_step.get() is True:
+            self.info.op = server_lib.Opcode.STEP_ERROR
+            raise step_lib.ResponseInterrupt(
+                step_lib.StepResponse(
+                    original_error=errors.CodedError(
+                        server_lib.ErrorCode.STEP_NESTED,
+                        "Nested steps are not supported.",
+                        is_retriable=False,
+                    ),
+                    step=self.info,
+                )
+            )
+        self._in_step_token = _in_step.set(True)
         return self
 
     def __exit__(self, *args: object) -> None:
-        pass
+        if self._in_step_token is None:
+            raise errors.UnreachableError("missing in_step token")
+        _in_step.reset(self._in_step_token)
 
 
 class UserError(Exception):
