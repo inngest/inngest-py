@@ -12,10 +12,11 @@ on:
       - "!pkg/inngest_encryption/**"
       - "!tests/inngest_encryption/**"
       - "**/*.py"
+      - "**/Makefile"
+      - "**/pyproject.toml"
       - ".github/**"
       - "Makefile"
       - "constraints.txt"
-      - "pyproject.toml"
       - "pytest.ini"
       - "ruff.toml"
 
