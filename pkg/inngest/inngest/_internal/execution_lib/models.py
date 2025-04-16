@@ -107,16 +107,7 @@ class ReportedStep:
     async def __aenter__(self) -> ReportedStep:
         if _in_step.get() is True:
             self.info.op = server_lib.Opcode.STEP_ERROR
-            raise step_lib.ResponseInterrupt(
-                step_lib.StepResponse(
-                    original_error=errors.CodedError(
-                        server_lib.ErrorCode.STEP_NESTED,
-                        "Nested steps are not supported.",
-                        is_retriable=False,
-                    ),
-                    step=self.info,
-                )
-            )
+            raise step_lib.NestedStepInterrupt()
         self._in_step_token = _in_step.set(True)
         return self
 
@@ -160,17 +151,7 @@ class ReportedStepSync:
 
     def __enter__(self) -> ReportedStepSync:
         if _in_step.get() is True:
-            self.info.op = server_lib.Opcode.STEP_ERROR
-            raise step_lib.ResponseInterrupt(
-                step_lib.StepResponse(
-                    original_error=errors.CodedError(
-                        server_lib.ErrorCode.STEP_NESTED,
-                        "Nested steps are not supported.",
-                        is_retriable=False,
-                    ),
-                    step=self.info,
-                )
-            )
+            raise step_lib.NestedStepInterrupt()
         self._in_step_token = _in_step.set(True)
         return self
 

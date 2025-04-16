@@ -247,12 +247,18 @@ class Step(base.StepBase):
                         step=step_info,
                     )
                 )
-            except base.ResponseInterrupt as interrupt:
-                # Only reachable with nested steps (which are not supported).
-
+            except base.NestedStepInterrupt:
                 step_info.op = server_lib.Opcode.STEP_ERROR
-                interrupt.set_step_info(step_info)
-                raise interrupt
+                raise base.ResponseInterrupt(
+                    base.StepResponse(
+                        original_error=errors.CodedError(
+                            server_lib.ErrorCode.STEP_NESTED,
+                            "Nested steps are not supported.",
+                            is_retriable=False,
+                        ),
+                        step=step_info,
+                    )
+                )
 
     async def send_event(
         self,

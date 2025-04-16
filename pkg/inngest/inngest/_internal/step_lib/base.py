@@ -227,6 +227,10 @@ class SkipInterrupt(BaseException):
         self.step_id = step_id
 
 
+class NestedStepInterrupt(BaseException):
+    pass
+
+
 class InvokeOpts(types.BaseModel):
     function_id: str
     payload: InvokeOptsPayload
