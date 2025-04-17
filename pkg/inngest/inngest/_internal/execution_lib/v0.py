@@ -159,7 +159,6 @@ class ExecutionV0:
                         step=step_lib.Step(
                             client,
                             self,
-                            self._memos,
                             self._middleware,
                             step_lib.StepIDCounter(),
                             self._target_hashed_id,
@@ -174,7 +173,6 @@ class ExecutionV0:
                             step=step_lib.StepSync(
                                 client,
                                 self._sync,
-                                self._memos,
                                 self._middleware,
                                 step_lib.StepIDCounter(),
                                 self._target_hashed_id,
@@ -190,7 +188,6 @@ class ExecutionV0:
                             step=step_lib.StepSync(
                                 client,
                                 self._sync,
-                                self._memos,
                                 self._middleware,
                                 step_lib.StepIDCounter(),
                                 self._target_hashed_id,
@@ -352,7 +349,6 @@ class ExecutionV0Sync:
                         step=step_lib.StepSync(
                             client,
                             self,
-                            self._memos,
                             self._middleware,
                             step_lib.StepIDCounter(),
                             self._target_hashed_id,
