@@ -102,7 +102,6 @@ class ExecutionExperimental:
                         step=step_lib.Step(
                             client,
                             self,
-                            self._memos,
                             self._middleware,
                             step_lib.StepIDCounter(),
                             self._target_hashed_id,
@@ -114,7 +113,6 @@ class ExecutionExperimental:
                         step=step_lib.StepSync(
                             client,
                             self._sync,
-                            self._memos,
                             self._middleware,
                             step_lib.StepIDCounter(),
                             self._target_hashed_id,

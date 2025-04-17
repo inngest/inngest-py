@@ -8,7 +8,6 @@ import pydantic
 
 from inngest._internal import (
     client_lib,
-    errors,
     middleware_lib,
     server_lib,
     transforms,
@@ -85,60 +84,14 @@ class StepBase:
     def __init__(
         self,
         client: client_lib.Inngest,
-        memos: StepMemos,
         middleware: middleware_lib.MiddlewareManager,
         step_id_counter: StepIDCounter,
         target_hashed_id: typing.Optional[str],
     ) -> None:
         self._client = client
-        self._memos = memos
         self._middleware = middleware
         self._step_id_counter = step_id_counter
         self._target_hashed_id = target_hashed_id
-
-    async def _get_memo(
-        self,
-        hashed_id: str,
-    ) -> typing.Union[Output, types.EmptySentinel]:
-        memo = self._memos.pop(hashed_id)
-
-        # If there are no more memos then all future code is new.
-        if self._memos.size == 0:
-            await self._middleware.before_execution()
-
-        if not isinstance(memo, types.EmptySentinel):
-            if memo.error is not None:
-                # If there's a memoized error then raise an error, since the
-                # step exhausted its retries
-                raise errors.StepError(
-                    message=memo.error.message,
-                    name=memo.error.name,
-                    stack=memo.error.stack,
-                )
-
-        return memo
-
-    def _get_memo_sync(
-        self,
-        hashed_id: str,
-    ) -> typing.Union[Output, types.EmptySentinel]:
-        memo = self._memos.pop(hashed_id)
-
-        # If there are no more memos then all future code is new.
-        if self._memos.size == 0:
-            self._middleware.before_execution_sync()
-
-        if not isinstance(memo, types.EmptySentinel):
-            if memo.error is not None:
-                # If there's a memoized error then raise an error, since the
-                # step exhausted its retries
-                raise errors.StepError(
-                    message=memo.error.message,
-                    name=memo.error.name,
-                    stack=memo.error.stack,
-                )
-
-        return memo
 
     def _handle_skip(
         self,

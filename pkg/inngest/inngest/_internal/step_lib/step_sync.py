@@ -26,14 +26,12 @@ class StepSync(base.StepBase):
         self,
         client: client_lib.Inngest,
         exe: execution_lib.BaseExecutionSync,
-        memos: base.StepMemos,
         middleware: middleware_lib.MiddlewareManager,
         step_id_counter: base.StepIDCounter,
         target_hashed_id: typing.Optional[str],
     ) -> None:
         super().__init__(
             client,
-            memos,
             middleware,
             step_id_counter,
             target_hashed_id,
@@ -116,16 +114,6 @@ class StepSync(base.StepBase):
             app_id = self._client.app_id
 
         parsed_step_id = self._parse_step_id(step_id)
-
-        memo = self._get_memo_sync(parsed_step_id.hashed)
-        if not isinstance(memo, types.EmptySentinel):
-            return memo.data
-
-        self._handle_skip(parsed_step_id)
-
-        err = self._middleware.before_execution_sync()
-        if isinstance(err, Exception):
-            raise err
 
         timeout_str = transforms.to_maybe_duration_str(timeout)
         if isinstance(timeout_str, Exception):
@@ -375,24 +363,6 @@ class StepSync(base.StepBase):
         """
 
         parsed_step_id = self._parse_step_id(step_id)
-
-        memo = self._get_memo_sync(parsed_step_id.hashed)
-        if not isinstance(memo, types.EmptySentinel):
-            if memo.data is None:
-                # Timeout
-                return None
-
-            # Fulfilled by an event
-            event_obj = server_lib.Event.from_raw(memo.data)
-            if isinstance(event_obj, Exception):
-                raise errors.UnknownError("invalid event shape") from event_obj
-            return event_obj
-
-        self._handle_skip(parsed_step_id)
-
-        err = self._middleware.before_execution_sync()
-        if isinstance(err, Exception):
-            raise err
 
         timeout_str = transforms.to_duration_str(timeout)
         if isinstance(timeout_str, Exception):

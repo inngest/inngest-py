@@ -21,14 +21,12 @@ class Step(base.StepBase):
         self,
         client: client_lib.Inngest,
         exe: execution_lib.BaseExecution,
-        memos: base.StepMemos,
         middleware: middleware_lib.MiddlewareManager,
         step_id_counter: base.StepIDCounter,
         target_hashed_id: typing.Optional[str],
     ) -> None:
         super().__init__(
             client,
-            memos,
             middleware,
             step_id_counter,
             target_hashed_id,
