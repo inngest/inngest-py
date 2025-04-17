@@ -164,10 +164,24 @@ class ResponseInterrupt(BaseException):
             responses = [responses]
         self.responses = responses
 
+    def set_step_info(self, step_info: StepInfo) -> None:
+        """
+        Set the step info on all responses. This is useful for catching nested
+        steps, since we want to report the "parent" step info and not the
+        "child" step info.
+        """
+
+        for response in self.responses:
+            response.step = step_info
+
 
 class SkipInterrupt(BaseException):
     def __init__(self, step_id: str) -> None:
         self.step_id = step_id
+
+
+class NestedStepInterrupt(BaseException):
+    pass
 
 
 class InvokeOpts(types.BaseModel):

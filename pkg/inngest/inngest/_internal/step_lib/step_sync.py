@@ -224,6 +224,18 @@ class StepSync(base.StepBase):
                         step=step_info,
                     )
                 )
+            except base.NestedStepInterrupt:
+                step_info.op = server_lib.Opcode.STEP_ERROR
+                raise base.ResponseInterrupt(
+                    base.StepResponse(
+                        original_error=errors.CodedError(
+                            server_lib.ErrorCode.STEP_NESTED,
+                            "Nested steps are not supported.",
+                            is_retriable=False,
+                        ),
+                        step=step_info,
+                    )
+                )
 
     def send_event(
         self,

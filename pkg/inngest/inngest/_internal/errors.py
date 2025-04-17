@@ -8,6 +8,15 @@ import pydantic
 from inngest._internal import server_lib, transforms
 
 
+class UnreachableError(Exception):
+    """
+    We should never raise this error. Its only purpose is to explicitly indicate
+    theoretically unreachable code.
+    """
+
+    pass
+
+
 class Error(Exception):
     """
     Base error for all our custom errors
@@ -33,7 +42,20 @@ class Error(Exception):
         return transforms.get_traceback(self)
 
 
-class URLInvalidError(Error):
+class CodedError(Error):
+    def __init__(
+        self,
+        code: server_lib.ErrorCode,
+        message: str,
+        *,
+        is_retriable: bool = True,
+    ) -> None:
+        super().__init__(message)
+        self.code = code
+        self.is_retriable = is_retriable
+
+
+class URLInvalidError(CodedError):
     code = server_lib.ErrorCode.URL_INVALID
 
 

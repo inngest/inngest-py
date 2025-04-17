@@ -1,4 +1,5 @@
 from .base import (
+    NestedStepInterrupt,
     ParsedStepID,
     ResponseInterrupt,
     SkipInterrupt,
@@ -13,6 +14,7 @@ from .step_sync import StepSync
 
 __all__ = [
     "Group",
+    "NestedStepInterrupt",
     "ParsedStepID",
     "ResponseInterrupt",
     "SkipInterrupt",

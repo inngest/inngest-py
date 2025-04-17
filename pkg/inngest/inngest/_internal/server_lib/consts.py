@@ -23,6 +23,7 @@ class ErrorCode(enum.Enum):
     SIGNING_KEY_UNSPECIFIED = "signing_key_unspecified"
     SIG_VERIFICATION_FAILED = "sig_verification_failed"
     STEP_ERRORED = "step_errored"
+    STEP_NESTED = "step_nested"
     STEP_UNEXPECTED = "step_unexpected"
     UNKNOWN = "unknown"
     URL_INVALID = "url_invalid"
