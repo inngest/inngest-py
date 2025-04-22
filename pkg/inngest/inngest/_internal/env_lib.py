@@ -66,3 +66,18 @@ def is_truthy(env_var: const.EnvKey) -> bool:
         return False
 
     return True
+
+
+def get_int(env_var: const.EnvKey) -> typing.Optional[int]:
+    """
+    Get an int from an env var. Returns None if the env var is not set or if its
+    value is not an int.
+    """
+
+    val = os.getenv(env_var.value)
+    if not isinstance(val, str):
+        return None
+    try:
+        return int(val)
+    except ValueError:
+        return None

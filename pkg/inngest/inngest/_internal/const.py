@@ -26,6 +26,11 @@ class EnvKey(enum.Enum):
     EVENT_KEY = "INNGEST_EVENT_KEY"
     ENV = "INNGEST_ENV"
 
+    # The ThreadPoolExecutor max_workers arg.. If set to 0, the thread pool will
+    # not be created. There probably isn't a use case for disabling, though we
+    # should have it until we get lots of feedback on the thread pool.
+    THREAD_POOL_MAX_WORKERS = "INNGEST_THREAD_POOL_MAX_WORKERS"
+
     # Railway deployment's git branch
     # https://docs.railway.app/develop/variables#railway-provided-variables
     RAILWAY_GIT_BRANCH = "RAILWAY_GIT_BRANCH"
