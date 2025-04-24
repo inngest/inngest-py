@@ -17,6 +17,7 @@ class _State:
     conn_state: _ValueWatcher[ConnectionState]
     draining: _ValueWatcher[bool]
     exclude_gateways: list[str]
+    extend_lease_interval: _ValueWatcher[typing.Optional[int]]
     ws: _ValueWatcher[typing.Optional[websockets.ClientConnection]]
 
 

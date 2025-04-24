@@ -174,6 +174,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
             ),
             draining=_ValueWatcher(False),
             exclude_gateways=[],
+            extend_lease_interval=_ValueWatcher(None),
             ws=_ValueWatcher(None),
         )
 

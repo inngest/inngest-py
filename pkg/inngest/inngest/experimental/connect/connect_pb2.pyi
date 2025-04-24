@@ -15,6 +15,8 @@ class GatewayMessageType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     GATEWAY_EXECUTOR_REQUEST: _ClassVar[GatewayMessageType]
     WORKER_READY: _ClassVar[GatewayMessageType]
     WORKER_REQUEST_ACK: _ClassVar[GatewayMessageType]
+    WORKER_REQUEST_EXTEND_LEASE: _ClassVar[GatewayMessageType]
+    WORKER_REQUEST_EXTEND_LEASE_ACK: _ClassVar[GatewayMessageType]
     WORKER_REPLY: _ClassVar[GatewayMessageType]
     WORKER_REPLY_ACK: _ClassVar[GatewayMessageType]
     WORKER_PAUSE: _ClassVar[GatewayMessageType]
@@ -39,12 +41,18 @@ class ConnectionStatus(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
 class WorkerDisconnectReason(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     WORKER_SHUTDOWN: _ClassVar[WorkerDisconnectReason]
+    UNEXPECTED: _ClassVar[WorkerDisconnectReason]
+    GATEWAY_DRAINING: _ClassVar[WorkerDisconnectReason]
+    CONSECUTIVE_HEARTBEATS_MISSED: _ClassVar[WorkerDisconnectReason]
+    MESSAGE_TOO_LARGE: _ClassVar[WorkerDisconnectReason]
 GATEWAY_HELLO: GatewayMessageType
 WORKER_CONNECT: GatewayMessageType
 GATEWAY_CONNECTION_READY: GatewayMessageType
 GATEWAY_EXECUTOR_REQUEST: GatewayMessageType
 WORKER_READY: GatewayMessageType
 WORKER_REQUEST_ACK: GatewayMessageType
+WORKER_REQUEST_EXTEND_LEASE: GatewayMessageType
+WORKER_REQUEST_EXTEND_LEASE_ACK: GatewayMessageType
 WORKER_REPLY: GatewayMessageType
 WORKER_REPLY_ACK: GatewayMessageType
 WORKER_PAUSE: GatewayMessageType
@@ -60,6 +68,10 @@ DRAINING: ConnectionStatus
 DISCONNECTING: ConnectionStatus
 DISCONNECTED: ConnectionStatus
 WORKER_SHUTDOWN: WorkerDisconnectReason
+UNEXPECTED: WorkerDisconnectReason
+GATEWAY_DRAINING: WorkerDisconnectReason
+CONSECUTIVE_HEARTBEATS_MISSED: WorkerDisconnectReason
+MESSAGE_TOO_LARGE: WorkerDisconnectReason
 
 class ConnectMessage(_message.Message):
     __slots__ = ("kind", "payload")
@@ -117,8 +129,16 @@ class WorkerConnectRequestData(_message.Message):
     started_at: _timestamp_pb2.Timestamp
     def __init__(self, connection_id: _Optional[str] = ..., instance_id: _Optional[str] = ..., auth_data: _Optional[_Union[AuthData, _Mapping]] = ..., capabilities: _Optional[bytes] = ..., apps: _Optional[_Iterable[_Union[AppConfiguration, _Mapping]]] = ..., worker_manual_readiness_ack: bool = ..., system_attributes: _Optional[_Union[SystemAttributes, _Mapping]] = ..., environment: _Optional[str] = ..., framework: _Optional[str] = ..., platform: _Optional[str] = ..., sdk_version: _Optional[str] = ..., sdk_language: _Optional[str] = ..., started_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
 
+class GatewayConnectionReadyData(_message.Message):
+    __slots__ = ("heartbeat_interval", "extend_lease_interval")
+    HEARTBEAT_INTERVAL_FIELD_NUMBER: _ClassVar[int]
+    EXTEND_LEASE_INTERVAL_FIELD_NUMBER: _ClassVar[int]
+    heartbeat_interval: str
+    extend_lease_interval: str
+    def __init__(self, heartbeat_interval: _Optional[str] = ..., extend_lease_interval: _Optional[str] = ...) -> None: ...
+
 class GatewayExecutorRequestData(_message.Message):
-    __slots__ = ("request_id", "account_id", "env_id", "app_id", "app_name", "function_id", "function_slug", "step_id", "request_payload", "system_trace_ctx", "user_trace_ctx")
+    __slots__ = ("request_id", "account_id", "env_id", "app_id", "app_name", "function_id", "function_slug", "step_id", "request_payload", "system_trace_ctx", "user_trace_ctx", "run_id", "lease_id")
     REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
     ACCOUNT_ID_FIELD_NUMBER: _ClassVar[int]
     ENV_ID_FIELD_NUMBER: _ClassVar[int]
@@ -130,6 +150,8 @@ class GatewayExecutorRequestData(_message.Message):
     REQUEST_PAYLOAD_FIELD_NUMBER: _ClassVar[int]
     SYSTEM_TRACE_CTX_FIELD_NUMBER: _ClassVar[int]
     USER_TRACE_CTX_FIELD_NUMBER: _ClassVar[int]
+    RUN_ID_FIELD_NUMBER: _ClassVar[int]
+    LEASE_ID_FIELD_NUMBER: _ClassVar[int]
     request_id: str
     account_id: str
     env_id: str
@@ -141,10 +163,12 @@ class GatewayExecutorRequestData(_message.Message):
     request_payload: bytes
     system_trace_ctx: bytes
     user_trace_ctx: bytes
-    def __init__(self, request_id: _Optional[str] = ..., account_id: _Optional[str] = ..., env_id: _Optional[str] = ..., app_id: _Optional[str] = ..., app_name: _Optional[str] = ..., function_id: _Optional[str] = ..., function_slug: _Optional[str] = ..., step_id: _Optional[str] = ..., request_payload: _Optional[bytes] = ..., system_trace_ctx: _Optional[bytes] = ..., user_trace_ctx: _Optional[bytes] = ...) -> None: ...
+    run_id: str
+    lease_id: str
+    def __init__(self, request_id: _Optional[str] = ..., account_id: _Optional[str] = ..., env_id: _Optional[str] = ..., app_id: _Optional[str] = ..., app_name: _Optional[str] = ..., function_id: _Optional[str] = ..., function_slug: _Optional[str] = ..., step_id: _Optional[str] = ..., request_payload: _Optional[bytes] = ..., system_trace_ctx: _Optional[bytes] = ..., user_trace_ctx: _Optional[bytes] = ..., run_id: _Optional[str] = ..., lease_id: _Optional[str] = ...) -> None: ...
 
 class WorkerRequestAckData(_message.Message):
-    __slots__ = ("request_id", "account_id", "env_id", "app_id", "function_slug", "step_id", "system_trace_ctx", "user_trace_ctx")
+    __slots__ = ("request_id", "account_id", "env_id", "app_id", "function_slug", "step_id", "system_trace_ctx", "user_trace_ctx", "run_id")
     REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
     ACCOUNT_ID_FIELD_NUMBER: _ClassVar[int]
     ENV_ID_FIELD_NUMBER: _ClassVar[int]
@@ -153,6 +177,7 @@ class WorkerRequestAckData(_message.Message):
     STEP_ID_FIELD_NUMBER: _ClassVar[int]
     SYSTEM_TRACE_CTX_FIELD_NUMBER: _ClassVar[int]
     USER_TRACE_CTX_FIELD_NUMBER: _ClassVar[int]
+    RUN_ID_FIELD_NUMBER: _ClassVar[int]
     request_id: str
     account_id: str
     env_id: str
@@ -161,10 +186,51 @@ class WorkerRequestAckData(_message.Message):
     step_id: str
     system_trace_ctx: bytes
     user_trace_ctx: bytes
-    def __init__(self, request_id: _Optional[str] = ..., account_id: _Optional[str] = ..., env_id: _Optional[str] = ..., app_id: _Optional[str] = ..., function_slug: _Optional[str] = ..., step_id: _Optional[str] = ..., system_trace_ctx: _Optional[bytes] = ..., user_trace_ctx: _Optional[bytes] = ...) -> None: ...
+    run_id: str
+    def __init__(self, request_id: _Optional[str] = ..., account_id: _Optional[str] = ..., env_id: _Optional[str] = ..., app_id: _Optional[str] = ..., function_slug: _Optional[str] = ..., step_id: _Optional[str] = ..., system_trace_ctx: _Optional[bytes] = ..., user_trace_ctx: _Optional[bytes] = ..., run_id: _Optional[str] = ...) -> None: ...
+
+class WorkerRequestExtendLeaseData(_message.Message):
+    __slots__ = ("request_id", "account_id", "env_id", "app_id", "function_slug", "step_id", "system_trace_ctx", "user_trace_ctx", "run_id", "lease_id")
+    REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
+    ACCOUNT_ID_FIELD_NUMBER: _ClassVar[int]
+    ENV_ID_FIELD_NUMBER: _ClassVar[int]
+    APP_ID_FIELD_NUMBER: _ClassVar[int]
+    FUNCTION_SLUG_FIELD_NUMBER: _ClassVar[int]
+    STEP_ID_FIELD_NUMBER: _ClassVar[int]
+    SYSTEM_TRACE_CTX_FIELD_NUMBER: _ClassVar[int]
+    USER_TRACE_CTX_FIELD_NUMBER: _ClassVar[int]
+    RUN_ID_FIELD_NUMBER: _ClassVar[int]
+    LEASE_ID_FIELD_NUMBER: _ClassVar[int]
+    request_id: str
+    account_id: str
+    env_id: str
+    app_id: str
+    function_slug: str
+    step_id: str
+    system_trace_ctx: bytes
+    user_trace_ctx: bytes
+    run_id: str
+    lease_id: str
+    def __init__(self, request_id: _Optional[str] = ..., account_id: _Optional[str] = ..., env_id: _Optional[str] = ..., app_id: _Optional[str] = ..., function_slug: _Optional[str] = ..., step_id: _Optional[str] = ..., system_trace_ctx: _Optional[bytes] = ..., user_trace_ctx: _Optional[bytes] = ..., run_id: _Optional[str] = ..., lease_id: _Optional[str] = ...) -> None: ...
+
+class WorkerRequestExtendLeaseAckData(_message.Message):
+    __slots__ = ("request_id", "account_id", "env_id", "app_id", "function_slug", "new_lease_id")
+    REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
+    ACCOUNT_ID_FIELD_NUMBER: _ClassVar[int]
+    ENV_ID_FIELD_NUMBER: _ClassVar[int]
+    APP_ID_FIELD_NUMBER: _ClassVar[int]
+    FUNCTION_SLUG_FIELD_NUMBER: _ClassVar[int]
+    NEW_LEASE_ID_FIELD_NUMBER: _ClassVar[int]
+    request_id: str
+    account_id: str
+    env_id: str
+    app_id: str
+    function_slug: str
+    new_lease_id: str
+    def __init__(self, request_id: _Optional[str] = ..., account_id: _Optional[str] = ..., env_id: _Optional[str] = ..., app_id: _Optional[str] = ..., function_slug: _Optional[str] = ..., new_lease_id: _Optional[str] = ...) -> None: ...
 
 class SDKResponse(_message.Message):
-    __slots__ = ("request_id", "account_id", "env_id", "app_id", "status", "body", "no_retry", "retry_after", "sdk_version", "request_version", "system_trace_ctx", "user_trace_ctx")
+    __slots__ = ("request_id", "account_id", "env_id", "app_id", "status", "body", "no_retry", "retry_after", "sdk_version", "request_version", "system_trace_ctx", "user_trace_ctx", "run_id")
     REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
     ACCOUNT_ID_FIELD_NUMBER: _ClassVar[int]
     ENV_ID_FIELD_NUMBER: _ClassVar[int]
@@ -177,6 +243,7 @@ class SDKResponse(_message.Message):
     REQUEST_VERSION_FIELD_NUMBER: _ClassVar[int]
     SYSTEM_TRACE_CTX_FIELD_NUMBER: _ClassVar[int]
     USER_TRACE_CTX_FIELD_NUMBER: _ClassVar[int]
+    RUN_ID_FIELD_NUMBER: _ClassVar[int]
     request_id: str
     account_id: str
     env_id: str
@@ -189,7 +256,8 @@ class SDKResponse(_message.Message):
     request_version: int
     system_trace_ctx: bytes
     user_trace_ctx: bytes
-    def __init__(self, request_id: _Optional[str] = ..., account_id: _Optional[str] = ..., env_id: _Optional[str] = ..., app_id: _Optional[str] = ..., status: _Optional[_Union[SDKResponseStatus, str]] = ..., body: _Optional[bytes] = ..., no_retry: bool = ..., retry_after: _Optional[str] = ..., sdk_version: _Optional[str] = ..., request_version: _Optional[int] = ..., system_trace_ctx: _Optional[bytes] = ..., user_trace_ctx: _Optional[bytes] = ...) -> None: ...
+    run_id: str
+    def __init__(self, request_id: _Optional[str] = ..., account_id: _Optional[str] = ..., env_id: _Optional[str] = ..., app_id: _Optional[str] = ..., status: _Optional[_Union[SDKResponseStatus, str]] = ..., body: _Optional[bytes] = ..., no_retry: bool = ..., retry_after: _Optional[str] = ..., sdk_version: _Optional[str] = ..., request_version: _Optional[int] = ..., system_trace_ctx: _Optional[bytes] = ..., user_trace_ctx: _Optional[bytes] = ..., run_id: _Optional[str] = ...) -> None: ...
 
 class WorkerReplyAckData(_message.Message):
     __slots__ = ("request_id",)
