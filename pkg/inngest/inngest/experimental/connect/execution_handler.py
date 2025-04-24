@@ -203,12 +203,12 @@ class _ExecutionHandler(_BaseHandler):
         pending_req[0].lease_id = req_data.new_lease_id
 
     async def _leaser_extender(self) -> None:
-        ws = await self._state.ws.wait_for_not_none()
-        extend_lease_interval = (
-            await self._state.extend_lease_interval.wait_for_not_none()
-        )
-
         while self.closed_event.is_set() is False:
+            ws = await self._state.ws.wait_for_not_none()
+            extend_lease_interval = (
+                await self._state.extend_lease_interval.wait_for_not_none()
+            )
+
             await asyncio.sleep(extend_lease_interval)
 
             if len(self._pending_requests) == 0:
