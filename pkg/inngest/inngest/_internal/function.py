@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import concurrent.futures
 import dataclasses
 import inspect
 import typing
@@ -9,6 +8,7 @@ import urllib.parse
 import pydantic
 
 from inngest._internal import (
+    async_lib,
     client_lib,
     errors,
     execution_lib,
@@ -138,9 +138,7 @@ class Function:
         request: server_lib.ServerRequest,
         steps: step_lib.StepMemos,
         target_hashed_id: typing.Optional[str],
-        thread_pool: typing.Optional[
-            concurrent.futures.ThreadPoolExecutor
-        ] = None,
+        thread_pool: typing.Optional[async_lib.ThreadPool] = None,
     ) -> execution_lib.CallResult:
         middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
         for m in self._middleware:

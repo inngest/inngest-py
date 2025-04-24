@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 import asyncio
-import concurrent.futures
 import functools
 import typing
 
-from inngest._internal import errors, server_lib, step_lib, transforms, types
+from inngest._internal import (
+    async_lib,
+    errors,
+    server_lib,
+    step_lib,
+    transforms,
+    types,
+)
 
 from .models import (
     CallResult,
@@ -31,9 +37,7 @@ class ExecutionV0:
         middleware: middleware_lib.MiddlewareManager,
         request: server_lib.ServerRequest,
         target_hashed_id: typing.Optional[str],
-        thread_pool: typing.Optional[
-            concurrent.futures.ThreadPoolExecutor
-        ] = None,
+        thread_pool: typing.Optional[async_lib.ThreadPool] = None,
     ) -> None:
         self._memos = memos
         self._middleware = middleware
@@ -166,7 +170,6 @@ class ExecutionV0:
                     )
                 elif is_function_handler_sync(handler):
                     if self._thread_pool is not None:
-                        loop = asyncio.get_running_loop()
                         func = functools.partial(
                             handler,
                             ctx=ctx,
@@ -178,10 +181,7 @@ class ExecutionV0:
                                 self._target_hashed_id,
                             ),
                         )
-                        output = await loop.run_in_executor(
-                            self._thread_pool,
-                            func,
-                        )
+                        output = await self._thread_pool.run_in_thread(func)
                     else:
                         output = handler(
                             ctx=ctx,

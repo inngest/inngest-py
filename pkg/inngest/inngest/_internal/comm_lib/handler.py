@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import concurrent.futures
 import http
 import os
 import typing
@@ -10,6 +9,7 @@ import urllib.parse
 import httpx
 
 from inngest._internal import (
+    async_lib,
     client_lib,
     const,
     env_lib,
@@ -77,8 +77,10 @@ class CommHandler:
             # We don't need the thread pool when CommHandler is called from a
             # non-async context because we can assume that the HTTP framework
             # (e.g.  Flask) created a thread for the request.
-            self._thread_pool = concurrent.futures.ThreadPoolExecutor(
-                max_workers=thread_pool_max_workers,
+            self._thread_pool = async_lib.ThreadPool(thread_pool_max_workers)
+
+            self._client.logger.debug(
+                f"Created thread pool with {self._thread_pool.max_workers} max workers",
             )
 
         signing_key = client.signing_key
