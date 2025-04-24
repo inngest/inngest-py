@@ -1,12 +1,13 @@
 import asyncio
 import dataclasses
 import platform
+import re
 import typing
 
 import psutil
 import pydantic_core
 
-from inngest._internal import const, server_lib, types
+from inngest._internal import const, errors, server_lib, types
 
 from . import connect_pb2
 from .base_handler import _BaseHandler
@@ -111,7 +112,7 @@ class _InitHandshakeHandler(_BaseHandler):
                     connection_id,
                 )
             )
-            return None
+            return
 
         if self._kind_state.GATEWAY_CONNECTION_READY is False:
             if (
@@ -119,10 +120,29 @@ class _InitHandshakeHandler(_BaseHandler):
                 != connect_pb2.GatewayMessageType.GATEWAY_CONNECTION_READY
             ):
                 self._logger.error("Expected GATEWAY_CONNECTION_READY")
+                return
+
+            req_data = connect_pb2.GatewayConnectionReadyData()
+            req_data.ParseFromString(msg.payload)
+
+            extend_lease_interval = _duration_str_to_sec(
+                req_data.extend_lease_interval
+            )
+            if isinstance(extend_lease_interval, Exception):
+                self._logger.error(
+                    "Failed to parse extend_lease_interval",
+                )
+            else:
+                self._state.extend_lease_interval.value = extend_lease_interval
+                self._logger.debug(
+                    "Set extend lease interval",
+                    extra={"value": extend_lease_interval},
+                )
+
             self._kind_state.GATEWAY_CONNECTION_READY = True
             self._state.conn_state.value = ConnectionState.ACTIVE
 
-        return None
+        return
 
     async def _send_response(
         self,
@@ -203,3 +223,24 @@ def _create_sync_message(
         kind=connect_pb2.GatewayMessageType.WORKER_CONNECT,
         payload=payload.SerializeToString(),
     )
+
+
+def _duration_str_to_sec(duration_str: str) -> types.MaybeError[int]:
+    """
+    Convert a duration string (e.g. "10s") to a number of seconds. Does not
+    support any other units (e.g. "1m" will error).
+    """
+
+    regex = r"^(\d+)s$"
+    match = re.match(regex, duration_str)
+    if match is None:
+        return errors.UnreachableError(
+            f"Invalid duration string: {duration_str}"
+        )
+
+    try:
+        return int(match.group(1))
+    except Exception:
+        return errors.UnreachableError(
+            f"Invalid duration string: {duration_str}"
+        )
