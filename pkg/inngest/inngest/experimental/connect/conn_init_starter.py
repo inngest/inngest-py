@@ -161,6 +161,10 @@ class _ConnInitHandler(_BaseHandler):
                         )
                     self._logger.debug("ConnectionStart response received")
 
+                    # Clear the error since we got a successful response. Err is
+                    # set if this was a retry.
+                    err = None
+
                     start_resp = connect_pb2.StartResponse()
                     start_resp.ParseFromString(res.content)
 
