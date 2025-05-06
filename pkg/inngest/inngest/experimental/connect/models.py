@@ -18,6 +18,10 @@ class _State:
     draining: _ValueWatcher[bool]
     exclude_gateways: list[str]
     extend_lease_interval: _ValueWatcher[typing.Optional[int]]
+
+    # Error that should make Connect close and raise an exception.
+    fatal_error: _ValueWatcher[typing.Optional[Exception]]
+
     ws: _ValueWatcher[typing.Optional[websockets.ClientConnection]]
 
 

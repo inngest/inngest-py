@@ -5,6 +5,7 @@ import typing
 
 import httpx
 import inngest
+import pytest
 import test_core
 import test_core.http_proxy
 import test_core.net
@@ -213,7 +214,7 @@ class TestAPIRequestHeaders(BaseTest):
 
     async def test_start_request_non_retryable_failure(self) -> None:
         """
-        Closes when the start request fails non-retryably.
+        Raises an exception when the start request fails non-retryably.
         """
 
         @dataclasses.dataclass
@@ -258,4 +259,7 @@ class TestAPIRequestHeaders(BaseTest):
         task = asyncio.create_task(conn.start())
         self.addCleanup(task.cancel)
 
-        await conn.closed()
+        with pytest.raises(Exception) as e:
+            await task
+
+        assert str(e.value) == "unauthorized"

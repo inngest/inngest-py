@@ -35,7 +35,6 @@ class _ConnInitHandler(_BaseHandler):
     def __init__(
         self,
         api_origin: str,
-        close_all: typing.Callable[[], None],
         http_client: net.ThreadAwareAsyncHTTPClient,
         http_client_sync: httpx.Client,
         logger: types.Logger,
@@ -45,7 +44,6 @@ class _ConnInitHandler(_BaseHandler):
         state: _State,
     ):
         self._api_origin = api_origin
-        self._close_all = close_all
         self._http_client = http_client
         self._http_client_sync = http_client_sync
         self._logger = logger
@@ -108,7 +106,7 @@ class _ConnInitHandler(_BaseHandler):
             if err is not None:
                 # Close everything because we non-retryably failed to send the
                 # start request.
-                self._close_all()
+                self._state.fatal_error.value = err
                 return
 
             await self._state.conn_init.wait_for(None)
