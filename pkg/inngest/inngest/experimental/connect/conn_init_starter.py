@@ -12,7 +12,7 @@ from .base_handler import _BaseHandler
 from .errors import _NonRetryableError
 from .models import ConnectionState, _State
 
-_max_attempts = 10
+_max_attempts = 1
 _reconnect_interval = datetime.timedelta(seconds=5)
 
 
@@ -100,7 +100,15 @@ class _ConnInitHandler(_BaseHandler):
                 pass
 
     async def _send_start_request(self) -> None:
+        err: typing.Optional[Exception] = None
+
         while self.closed_event.is_set() is False:
+            if err is not None:
+                # Close everything because we non-retryably failed to send the
+                # start request.
+                self._state.fatal_error.value = err
+                return
+
             await self._state.conn_init.wait_for(None)
             if self._state.conn_state.value in [
                 ConnectionState.CLOSED,
@@ -117,7 +125,6 @@ class _ConnInitHandler(_BaseHandler):
             url = urllib.parse.urljoin(self._api_origin, "/v0/connect/start")
 
             attempts = 0
-            err: typing.Optional[Exception] = None
             while (
                 attempts < _max_attempts and self.closed_event.is_set() is False
             ):

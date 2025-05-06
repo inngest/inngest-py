@@ -5,6 +5,7 @@ import typing
 
 import httpx
 import inngest
+import pytest
 import test_core
 import test_core.http_proxy
 import test_core.net
@@ -210,3 +211,55 @@ class TestAPIRequestHeaders(BaseTest):
 
         await test_core.wait_for_truthy(lambda: state.outgoing_headers)
         assert "authorization" not in state.outgoing_headers
+
+    async def test_start_request_non_retryable_failure(self) -> None:
+        """
+        Raises an exception when the start request fails non-retryably.
+        """
+
+        @dataclasses.dataclass
+        class State:
+            outgoing_headers: dict[str, list[str]]
+
+        state = State(outgoing_headers={})
+
+        def mock_api_handler(
+            *,
+            body: typing.Optional[bytes],
+            headers: dict[str, list[str]],
+            method: str,
+            path: str,
+        ) -> test_core.http_proxy.Response:
+            state.outgoing_headers = headers
+            return test_core.http_proxy.Response(
+                body=b"",
+                headers={},
+                status_code=401,
+            )
+
+        mock_api = test_core.http_proxy.Proxy(mock_api_handler).start()
+        self.addCleanup(mock_api.stop)
+        client = inngest.Inngest(
+            app_id="app",
+            api_base_url=mock_api.origin,
+            is_production=False,
+        )
+
+        @client.create_function(
+            fn_id="fn",
+            trigger=inngest.TriggerEvent(event="event"),
+        )
+        async def fn(ctx: inngest.Context, step: inngest.Step) -> None:
+            pass
+
+        conn = connect(
+            [(client, [fn])],
+        )
+        self.addCleanup(conn.close, wait=True)
+        task = asyncio.create_task(conn.start())
+        self.addCleanup(task.cancel)
+
+        with pytest.raises(Exception) as e:
+            await task
+
+        assert str(e.value) == "unauthorized"

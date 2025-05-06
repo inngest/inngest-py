@@ -175,6 +175,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
             draining=_ValueWatcher(False),
             exclude_gateways=[],
             extend_lease_interval=_ValueWatcher(None),
+            fatal_error=_ValueWatcher(None),
             ws=_ValueWatcher(None),
         )
 
@@ -284,13 +285,15 @@ class _WebSocketWorkerConnection(WorkerConnection):
             ConnectionState.CLOSED,
             ConnectionState.CLOSING,
         ]:
-            try:
-                endpoint, closing = await _wait_for_gateway_endpoint(
-                    self._state
-                )
-                if closing:
-                    return
+            gateway_endpoint = await _wait_for_gateway_endpoint(self._state)
+            if isinstance(gateway_endpoint, Exception):
+                # Fatal error.
+                raise gateway_endpoint
+            endpoint, closing = gateway_endpoint
+            if closing:
+                return
 
+            try:
                 self._logger.debug(
                     "Gateway connecting",
                     extra={"endpoint": endpoint},
@@ -379,7 +382,7 @@ def _event_loop_keep_alive() -> asyncio.Task[None]:
 
 async def _wait_for_gateway_endpoint(
     state: _State,
-) -> tuple[str, bool]:
+) -> types.MaybeError[tuple[str, bool]]:
     """
     Wait for the Gateway endpoint to be set or for the connection to be closing.
     Returns the Gateway endpoint and a boolean indicating if the connection is
@@ -392,6 +395,7 @@ async def _wait_for_gateway_endpoint(
             asyncio.create_task(
                 state.conn_state.wait_for(ConnectionState.CLOSING)
             ),
+            asyncio.create_task(state.fatal_error.wait_for_not_none()),
         ),
         return_when=asyncio.FIRST_COMPLETED,
     )
@@ -400,18 +404,24 @@ async def _wait_for_gateway_endpoint(
         # Need to cast because Mypy doesn't understand the type (it thinks it's
         # `object`).
         r = typing.cast(
-            typing.Union[ConnectionState, tuple[connect_pb2.AuthData, str]],
+            typing.Union[
+                ConnectionState,
+                tuple[connect_pb2.AuthData, str],
+                Exception,
+            ],
             t.result(),
         )
 
         if r is ConnectionState.CLOSING:
             # We need to shutdown.
             return ("", True)
+        if isinstance(r, Exception):
+            return r
         if isinstance(r, ConnectionState):
-            raise _UnreachableError(
+            return _UnreachableError(
                 "We already checked the only possible ConnectionState"
             )
 
         return r[1], False
 
-    raise _UnreachableError()
+    return _UnreachableError()
