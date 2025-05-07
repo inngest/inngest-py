@@ -1,6 +1,10 @@
 """
 Send a batch so large that it can't be included in the request sent from the
 Executor to the SDK. The SDK will need to fetch the batch from the API
+
+TODO: Improve this test. It's kinda testing the use_api field in a roundabout
+way. We should have a simpler test that just ensures the SDK reaches out to the
+API when use_api is true.
 """
 
 import datetime
@@ -29,7 +33,7 @@ def create(
 
     @client.create_function(
         batch_events=inngest.Batch(
-            max_size=50,
+            max_size=8,
             timeout=datetime.timedelta(seconds=10),
         ),
         fn_id=fn_id,
@@ -45,7 +49,7 @@ def create(
 
     @client.create_function(
         batch_events=inngest.Batch(
-            max_size=50,
+            max_size=8,
             timeout=datetime.timedelta(seconds=10),
         ),
         fn_id=fn_id,
@@ -63,7 +67,7 @@ def create(
         # Send a large (in terms of bytes, not event count) enough batch to
         # ensure that the SDK needs to fetch the batch from the API
         events = []
-        for _ in range(50):
+        for _ in range(8):
             events.append(
                 inngest.Event(
                     data={"msg": "a" * 1024 * 1024},
@@ -81,7 +85,7 @@ def create(
         )
 
         assert state.events is not None
-        assert len(state.events) == 50
+        assert len(state.events) == 8
 
     if is_sync:
         fn = fn_sync
