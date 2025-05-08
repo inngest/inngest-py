@@ -1,5 +1,4 @@
 from .base import BaseExecution, BaseExecutionSync
-from .experimental import ExecutionExperimental
 from .models import (
     CallResult,
     Context,
@@ -17,7 +16,6 @@ __all__ = [
     "Context",
     "FunctionHandlerAsync",
     "FunctionHandlerSync",
-    "ExecutionExperimental",
     "ExecutionV0",
     "ExecutionV0Sync",
     "ReportedStep",

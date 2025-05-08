@@ -210,7 +210,6 @@ class Inngest:
             server_lib.TriggerEvent,
             list[typing.Union[server_lib.TriggerCron, server_lib.TriggerEvent]],
         ],
-        _experimental_execution: bool = False,
     ) -> typing.Callable[
         [
             typing.Union[
@@ -256,7 +255,6 @@ class Inngest:
                     cancel=cancel,
                     concurrency=concurrency,
                     debounce=debounce,
-                    experimental_execution=_experimental_execution,
                     fully_qualified_id=fully_qualified_fn_id,
                     idempotency=idempotency,
                     local_id=fn_id,

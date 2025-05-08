@@ -35,7 +35,6 @@ class FunctionOpts(types.BaseModel):
     cancel: typing.Optional[list[server_lib.Cancel]]
     concurrency: typing.Optional[list[server_lib.Concurrency]]
     debounce: typing.Optional[server_lib.Debounce]
-    experimental_execution: bool
 
     # Unique within an environment
     fully_qualified_id: str
@@ -120,7 +119,6 @@ class Function:
             list[middleware_lib.UninitializedMiddleware]
         ] = None,
     ) -> None:
-        self._experimental_execution = opts.experimental_execution
         self._handler = handler
         self._middleware = middleware or []
         self._opts = opts
@@ -163,22 +161,13 @@ class Function:
                 errors.FunctionNotFoundError("function ID mismatch")
             )
 
-        execution: execution_lib.BaseExecution
-        if self._experimental_execution:
-            execution = execution_lib.ExecutionExperimental(
-                steps,
-                middleware,
-                request,
-                target_hashed_id,
-            )
-        else:
-            execution = execution_lib.ExecutionV0(
-                steps,
-                middleware,
-                request,
-                target_hashed_id,
-                thread_pool,
-            )
+        execution = execution_lib.ExecutionV0(
+            steps,
+            middleware,
+            request,
+            target_hashed_id,
+            thread_pool,
+        )
 
         call_res = await execution.run(
             client,
