@@ -34,13 +34,6 @@ class Middleware:
         """
         return None
 
-    async def after_memoization(self) -> None:
-        """
-        After exhausting memoized step data. Always called immediately before
-        before_execution.
-        """
-        return None
-
     async def after_send_events(
         self,
         result: client_lib.SendEventsResult,
@@ -54,13 +47,6 @@ class Middleware:
         """
         Before executing new code. Called multiple times per run when using
         steps.
-        """
-        return None
-
-    async def before_memoization(self) -> None:
-        """
-        Before checking memoized step data. Always called immediately after
-        transform_input.
         """
         return None
 
@@ -121,13 +107,6 @@ class MiddlewareSync:
         """
         return None
 
-    def after_memoization(self) -> None:
-        """
-        After exhausting memoized step data. Always called immediately before
-        before_execution.
-        """
-        return None
-
     def after_send_events(
         self,
         result: client_lib.SendEventsResult,
@@ -141,13 +120,6 @@ class MiddlewareSync:
         """
         Before executing new code. Called multiple times per run when using
         steps.
-        """
-        return None
-
-    def before_memoization(self) -> None:
-        """
-        Before checking memoized step data. Always called immediately after
-        transform_input.
         """
         return None
 
