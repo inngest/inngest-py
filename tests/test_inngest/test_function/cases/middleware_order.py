@@ -87,34 +87,26 @@ def create(
             [
                 "1.transform_input",
                 "2.transform_input",
-                "1.before_memoization",
-                "2.before_memoization",
-                "1.after_memoization",
-                "2.after_memoization",
                 "1.before_execution",
                 "2.before_execution",
                 "1.before_send_events",
                 "2.before_send_events",
-                "1.after_send_events",
                 "2.after_send_events",
-                "1.after_execution",
+                "1.after_send_events",
                 "2.after_execution",
-                "1.transform_output",
+                "1.after_execution",
                 "2.transform_output",
+                "1.transform_output",
                 "1.before_response",
                 "2.before_response",
                 "1.transform_input",
                 "2.transform_input",
-                "1.before_memoization",
-                "2.before_memoization",
-                "1.after_memoization",
-                "2.after_memoization",
                 "1.before_execution",
                 "2.before_execution",
-                "1.after_execution",
                 "2.after_execution",
-                "1.transform_output",
+                "1.after_execution",
                 "2.transform_output",
+                "1.transform_output",
                 "1.before_response",
                 "2.before_response",
             ],
@@ -149,9 +141,6 @@ class _MwSyncBase(inngest.MiddlewareSync):
     def after_execution(self) -> None:
         self.append_message(_get_method_name())
 
-    def after_memoization(self) -> None:
-        self.append_message(_get_method_name())
-
     def after_send_events(
         self,
         result: inngest.SendEventsResult,
@@ -159,9 +148,6 @@ class _MwSyncBase(inngest.MiddlewareSync):
         self.append_message(_get_method_name())
 
     def before_execution(self) -> None:
-        self.append_message(_get_method_name())
-
-    def before_memoization(self) -> None:
         self.append_message(_get_method_name())
 
     def before_response(self) -> None:
@@ -192,9 +178,6 @@ class _MwAsyncBase(inngest.Middleware):
     async def after_execution(self) -> None:
         self.append_message(_get_method_name())
 
-    async def after_memoization(self) -> None:
-        self.append_message(_get_method_name())
-
     async def after_send_events(
         self,
         result: inngest.SendEventsResult,
@@ -202,9 +185,6 @@ class _MwAsyncBase(inngest.Middleware):
         self.append_message(_get_method_name())
 
     async def before_execution(self) -> None:
-        self.append_message(_get_method_name())
-
-    async def before_memoization(self) -> None:
         self.append_message(_get_method_name())
 
     async def before_response(self) -> None:

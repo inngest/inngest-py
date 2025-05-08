@@ -82,7 +82,7 @@ class MiddlewareManager:
 
     async def after_execution(self) -> types.MaybeError[None]:
         try:
-            for m in self._middleware:
+            for m in reversed(self._middleware):
                 await transforms.maybe_await(m.after_execution())
             return None
         except Exception as err:
@@ -90,7 +90,7 @@ class MiddlewareManager:
 
     def after_execution_sync(self) -> types.MaybeError[None]:
         try:
-            for m in self._middleware:
+            for m in reversed(self._middleware):
                 if inspect.iscoroutinefunction(m.after_execution):
                     return _mismatched_sync
                 m.after_execution()
@@ -103,7 +103,7 @@ class MiddlewareManager:
         result: client_lib.SendEventsResult,
     ) -> types.MaybeError[None]:
         try:
-            for m in self._middleware:
+            for m in reversed(self._middleware):
                 await transforms.maybe_await(m.after_send_events(result))
             return None
         except Exception as err:
@@ -114,7 +114,7 @@ class MiddlewareManager:
         result: client_lib.SendEventsResult,
     ) -> types.MaybeError[None]:
         try:
-            for m in self._middleware:
+            for m in reversed(self._middleware):
                 if inspect.iscoroutinefunction(m.after_execution):
                     return _mismatched_sync
                 m.after_send_events(result)
@@ -129,14 +129,6 @@ class MiddlewareManager:
             # code since execution can start at the function or step level.
             return None
         self._disabled_hooks.add(hook)
-
-        # Also handle after_memoization here since it's always called
-        # immediately before before_execution
-        try:
-            for m in self._middleware:
-                await transforms.maybe_await(m.after_memoization())
-        except Exception as err:
-            return err
 
         try:
             for m in self._middleware:
@@ -154,16 +146,6 @@ class MiddlewareManager:
             return None
         self._disabled_hooks.add(hook)
 
-        try:
-            for m in self._middleware:
-                if inspect.iscoroutinefunction(m.after_memoization):
-                    return _mismatched_sync
-                m.after_memoization()
-        except Exception as err:
-            return err
-
-        # Also handle after_memoization here since it's always called
-        # immediately before before_execution
         try:
             for m in self._middleware:
                 if inspect.iscoroutinefunction(m.before_execution):
@@ -230,14 +212,6 @@ class MiddlewareManager:
         except Exception as err:
             return err
 
-        # Also handle before_memoization here since it's always called
-        # immediately after transform_input
-        try:
-            for m in self._middleware:
-                await transforms.maybe_await(m.before_memoization())
-        except Exception as err:
-            return err
-
         return None
 
     def transform_input_sync(
@@ -251,16 +225,6 @@ class MiddlewareManager:
                 if inspect.iscoroutinefunction(m.transform_input):
                     return _mismatched_sync
                 m.transform_input(ctx, function, steps)
-        except Exception as err:
-            return err
-
-        # Also handle before_memoization here since it's always called
-        # immediately after transform_input
-        try:
-            for m in self._middleware:
-                if inspect.iscoroutinefunction(m.before_memoization):
-                    return _mismatched_sync
-                m.before_memoization()
         except Exception as err:
             return err
 
@@ -296,7 +260,7 @@ class MiddlewareManager:
             )
 
         try:
-            for m in self._middleware:
+            for m in reversed(self._middleware):
                 await transforms.maybe_await(m.transform_output(result))
 
             # Update the original call result with the (possibly) mutated fields
@@ -337,7 +301,7 @@ class MiddlewareManager:
             )
 
         try:
-            for m in self._middleware:
+            for m in reversed(self._middleware):
                 if isinstance(m, Middleware):
                     return _mismatched_sync
                 m.transform_output(result)
