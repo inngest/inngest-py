@@ -82,6 +82,7 @@ class MiddlewareManager:
 
     async def after_execution(self) -> types.MaybeError[None]:
         try:
+            # Reverse order because this is an "after" hook.
             for m in reversed(self._middleware):
                 await transforms.maybe_await(m.after_execution())
             return None
@@ -90,6 +91,7 @@ class MiddlewareManager:
 
     def after_execution_sync(self) -> types.MaybeError[None]:
         try:
+            # Reverse order because this is an "after" hook.
             for m in reversed(self._middleware):
                 if inspect.iscoroutinefunction(m.after_execution):
                     return _mismatched_sync
@@ -103,6 +105,7 @@ class MiddlewareManager:
         result: client_lib.SendEventsResult,
     ) -> types.MaybeError[None]:
         try:
+            # Reverse order because this is an "after" hook.
             for m in reversed(self._middleware):
                 await transforms.maybe_await(m.after_send_events(result))
             return None
@@ -114,6 +117,7 @@ class MiddlewareManager:
         result: client_lib.SendEventsResult,
     ) -> types.MaybeError[None]:
         try:
+            # Reverse order because this is an "after" hook.
             for m in reversed(self._middleware):
                 if inspect.iscoroutinefunction(m.after_execution):
                     return _mismatched_sync
@@ -260,6 +264,7 @@ class MiddlewareManager:
             )
 
         try:
+            # Reverse order because this is an "after" hook.
             for m in reversed(self._middleware):
                 await transforms.maybe_await(m.transform_output(result))
 
@@ -301,6 +306,7 @@ class MiddlewareManager:
             )
 
         try:
+            # Reverse order because this is an "after" hook.
             for m in reversed(self._middleware):
                 if isinstance(m, Middleware):
                     return _mismatched_sync
