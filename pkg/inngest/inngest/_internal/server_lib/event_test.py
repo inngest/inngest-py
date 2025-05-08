@@ -32,8 +32,8 @@ def test_data_nested() -> None:
 def test_data_invalid() -> None:
     with pytest.raises(pydantic.ValidationError):
         Event(
-            data={
-                "foo": object(),  # type: ignore[dict-item]
-            },
+            data=[  # type: ignore[arg-type]
+                {"foo": 1},
+            ],
             name="foo",
         )

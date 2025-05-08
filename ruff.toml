@@ -41,7 +41,7 @@ extend-ignore = [
     'RUF022',
     'S112',
 
-    # Can't use the "|" operator for unions until we drop support for Python 3.9
+    # Delete when we use "|" for unions.
     'UP007',
 ]
 

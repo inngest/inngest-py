@@ -10,18 +10,17 @@ classifiers = [
     "Framework :: FastAPI",
     "Framework :: Flask",
     "Intended Audience :: Developers",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 dependencies = [
-    "httpx>=0.24.0",
+    "httpx>=0.26.0",
     "jcs>=0.2.1",
-    "pydantic>=2.1.1",
-    "typing-extensions>=4.8.0",
+    "pydantic>=2.11.0",
+    "typing-extensions>=4.13.0",
 ]
 
 [project.optional-dependencies]

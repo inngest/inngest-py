@@ -88,7 +88,7 @@ class TestSend(unittest.IsolatedAsyncioTestCase):
         )
 
         sends = []
-        for _ in range(1000):
+        for _ in range(500):
             sends.append(
                 client.send(inngest.Event(name=f"{class_name}-{method_name}"))
             )

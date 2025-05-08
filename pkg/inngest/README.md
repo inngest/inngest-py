@@ -23,18 +23,18 @@
 
 # Inngest Python SDK
 
-Inngest's SDK adds durable functions to Python in a few lines of code.  Using this SDK, you can write
+Inngest's SDK adds durable functions to Python in a few lines of code. Using this SDK, you can write
 background jobs as step functions without new queueing infrastructure such as celery.
 
 We currently support the following frameworks (but adding a new framework is easy!):
 
 - DigitalOcean Functions
-- Django (`>=4.2`)
-- FastAPI (`>=0.100.0`)
-- Flask (`>=2.3.0`)
-- Tornado (`>=6.3`)
+- Django (`>=5.0`)
+- FastAPI (`>=0.110.0`)
+- Flask (`>=3.0.0`)
+- Tornado (`>=6.4`)
 
-Python 3.9 is the minimum version we support.
+Python 3.10 is the minimum version we support.
 
 ## Getting started
 
@@ -86,10 +86,10 @@ inngest.flask.serve(
 app.run(port=8000)
 ```
 
-[Each function is automatically backed by its own queue](https://www.inngest.com/docs/learn/how-functions-are-executed).  Functions can contain steps, which act as code
-level transactions.  Each step retries on failure, and runs once on success.  Function state is automatically managed.
+[Each function is automatically backed by its own queue](https://www.inngest.com/docs/learn/how-functions-are-executed). Functions can contain steps, which act as code
+level transactions. Each step retries on failure, and runs once on success. Function state is automatically managed.
 
-Let's run the function.  Send the following event in the [local development server (Dev Server UI)](https://www.inngest.com/docs/local-development) and the `fetch_person` function will run:
+Let's run the function. Send the following event in the [local development server (Dev Server UI)](https://www.inngest.com/docs/local-development) and the `fetch_person` function will run:
 
 ```json
 {
