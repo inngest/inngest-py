@@ -27,7 +27,7 @@ class TestImmediateFailure(BaseTest):
             fn_id="fn",
             trigger=inngest.TriggerEvent(event="event"),
         )
-        async def fn_1(ctx: inngest.Context, step: inngest.Step) -> None:
+        async def fn_1(ctx: inngest.Context) -> None:
             pass
 
         client_2 = inngest.Inngest(
@@ -40,7 +40,7 @@ class TestImmediateFailure(BaseTest):
             fn_id="fn",
             trigger=inngest.TriggerEvent(event="event"),
         )
-        async def fn_2(ctx: inngest.Context, step: inngest.Step) -> None:
+        async def fn_2(ctx: inngest.Context) -> None:
             pass
 
         with self.assertRaises(Exception) as e:
@@ -64,7 +64,7 @@ class TestImmediateFailure(BaseTest):
             fn_id="fn",
             trigger=inngest.TriggerEvent(event="event"),
         )
-        async def fn_1(ctx: inngest.Context, step: inngest.Step) -> None:
+        async def fn_1(ctx: inngest.Context) -> None:
             pass
 
         client_2 = inngest.Inngest(
@@ -77,7 +77,7 @@ class TestImmediateFailure(BaseTest):
             fn_id="fn",
             trigger=inngest.TriggerEvent(event="event"),
         )
-        async def fn_2(ctx: inngest.Context, step: inngest.Step) -> None:
+        async def fn_2(ctx: inngest.Context) -> None:
             pass
 
         with self.assertRaises(Exception) as e:
@@ -97,7 +97,7 @@ class TestImmediateFailure(BaseTest):
             fn_id="fn",
             trigger=inngest.TriggerEvent(event="event"),
         )
-        async def fn_1(ctx: inngest.Context, step: inngest.Step) -> None:
+        async def fn_1(ctx: inngest.Context) -> None:
             pass
 
         client_2 = inngest.Inngest(
@@ -110,7 +110,7 @@ class TestImmediateFailure(BaseTest):
             fn_id="fn",
             trigger=inngest.TriggerEvent(event="event"),
         )
-        async def fn_2(ctx: inngest.Context, step: inngest.Step) -> None:
+        async def fn_2(ctx: inngest.Context) -> None:
             pass
 
         with self.assertRaises(Exception) as e:
@@ -130,7 +130,7 @@ class TestImmediateFailure(BaseTest):
             fn_id="fn",
             trigger=inngest.TriggerEvent(event="event"),
         )
-        async def fn_1(ctx: inngest.Context, step: inngest.Step) -> None:
+        async def fn_1(ctx: inngest.Context) -> None:
             pass
 
         client_2 = inngest.Inngest(app_id="app-2", signing_key="abc123")
@@ -139,7 +139,7 @@ class TestImmediateFailure(BaseTest):
             fn_id="fn",
             trigger=inngest.TriggerEvent(event="event"),
         )
-        async def fn_2(ctx: inngest.Context, step: inngest.Step) -> None:
+        async def fn_2(ctx: inngest.Context) -> None:
             pass
 
         with self.assertRaises(Exception) as e:

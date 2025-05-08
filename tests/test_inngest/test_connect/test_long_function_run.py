@@ -23,7 +23,7 @@ class TestLongFunctionRun(BaseTest):
             retries=0,
             trigger=inngest.TriggerEvent(event=event_name),
         )
-        async def fn(ctx: inngest.Context, step: inngest.Step) -> None:
+        async def fn(ctx: inngest.Context) -> None:
             state.run_id = ctx.run_id
 
             # Sleep for long enough to require lease extensions.

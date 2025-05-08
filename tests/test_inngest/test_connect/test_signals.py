@@ -173,7 +173,7 @@ client = inngest.Inngest(
     retries=0,
     trigger=inngest.TriggerEvent(event="{event_name}"),
 )
-async def fn(ctx: inngest.Context, step: inngest.Step) -> str:
+async def fn(ctx: inngest.Context) -> str:
     conn.send("started")
     await asyncio.sleep(5)
     return "Hello"

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import concurrent.futures
 import dataclasses
 import inspect
 import typing
@@ -14,7 +13,6 @@ from inngest._internal import (
     execution_lib,
     middleware_lib,
     server_lib,
-    step_lib,
     types,
 )
 
@@ -133,21 +131,10 @@ class Function:
         ctx: execution_lib.Context,
         fn_id: str,
         middleware: middleware_lib.MiddlewareManager,
-        request: server_lib.ServerRequest,
-        steps: step_lib.StepMemos,
-        target_hashed_id: typing.Optional[str],
-        thread_pool: typing.Optional[
-            concurrent.futures.ThreadPoolExecutor
-        ] = None,
     ) -> execution_lib.CallResult:
-        middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
         for m in self._middleware:
             middleware.add(m)
 
-        handler: typing.Union[
-            execution_lib.FunctionHandlerAsync,
-            execution_lib.FunctionHandlerSync,
-        ]
         if self.id == fn_id:
             handler = self._handler
         elif self.on_failure_fn_id == fn_id:
@@ -161,15 +148,10 @@ class Function:
                 errors.FunctionNotFoundError("function ID mismatch")
             )
 
-        execution = execution_lib.ExecutionV0(
-            steps,
-            middleware,
-            request,
-            target_hashed_id,
-            thread_pool,
-        )
+        if not execution_lib.is_function_handler_async(handler):
+            raise errors.UnreachableError("handler is not async")
 
-        call_res = await execution.run(
+        call_res = await ctx.step._execution.run(
             client,
             ctx,
             handler,
@@ -189,21 +171,13 @@ class Function:
     def call_sync(
         self,
         client: client_lib.Inngest,
-        ctx: execution_lib.Context,
+        ctx: execution_lib.ContextSync,
         fn_id: str,
         middleware: middleware_lib.MiddlewareManager,
-        request: server_lib.ServerRequest,
-        steps: step_lib.StepMemos,
-        target_hashed_id: typing.Optional[str],
     ) -> execution_lib.CallResult:
-        middleware = middleware_lib.MiddlewareManager.from_manager(middleware)
         for m in self._middleware:
             middleware.add(m)
 
-        handler: typing.Union[
-            execution_lib.FunctionHandlerAsync,
-            execution_lib.FunctionHandlerSync,
-        ]
         if self.id == fn_id:
             handler = self._handler
         elif self.on_failure_fn_id == fn_id:
@@ -217,14 +191,12 @@ class Function:
                 errors.FunctionNotFoundError("function ID mismatch")
             )
 
+        if not execution_lib.is_function_handler_sync(handler):
+            raise errors.UnreachableError("handler is not sync")
+
         # We don't need to pass a thread pool here because the sync handler is
         # not used by Connect.
-        call_res = execution_lib.ExecutionV0Sync(
-            steps,
-            middleware,
-            request,
-            target_hashed_id,
-        ).run(
+        call_res = ctx.step._execution.run(
             client,
             ctx,
             handler,

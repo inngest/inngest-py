@@ -53,7 +53,7 @@ class TestAPIRequestHeaders(BaseTest):
             fn_id="fn",
             trigger=inngest.TriggerEvent(event="event"),
         )
-        async def fn(ctx: inngest.Context, step: inngest.Step) -> None:
+        async def fn(ctx: inngest.Context) -> None:
             pass
 
         conn = connect(
@@ -135,7 +135,7 @@ class TestAPIRequestHeaders(BaseTest):
             fn_id="fn",
             trigger=inngest.TriggerEvent(event="event"),
         )
-        async def fn(ctx: inngest.Context, step: inngest.Step) -> None:
+        async def fn(ctx: inngest.Context) -> None:
             pass
 
         conn = connect(
@@ -199,7 +199,7 @@ class TestAPIRequestHeaders(BaseTest):
             fn_id="fn",
             trigger=inngest.TriggerEvent(event="event"),
         )
-        async def fn(ctx: inngest.Context, step: inngest.Step) -> None:
+        async def fn(ctx: inngest.Context) -> None:
             pass
 
         conn = connect(

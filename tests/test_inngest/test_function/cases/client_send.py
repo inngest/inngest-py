@@ -20,10 +20,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
 
     @client.create_function(
@@ -31,10 +28,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
 
     async def run_test(self: base.TestClass) -> None:

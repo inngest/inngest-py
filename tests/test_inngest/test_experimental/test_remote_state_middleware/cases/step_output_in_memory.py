@@ -37,27 +37,24 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> str:
+    def fn_sync(ctx: inngest.ContextSync) -> str:
         state.run_id = ctx.run_id
 
         def _step_1() -> str:
             return "test string"
 
-        step_1_output = step.run("step_1", _step_1)
+        step_1_output = ctx.step.run("step_1", _step_1)
         assert step_1_output == "test string"
 
         def _step_2() -> list[inngest.JSON]:
             return [{"a": {"b": 1}}]
 
-        step_2_output = step.run("step_2", _step_2)
+        step_2_output = ctx.step.run("step_2", _step_2)
         assert step_2_output == [{"a": {"b": 1}}]
 
-        step.sleep("zzz", datetime.timedelta(seconds=1))
+        ctx.step.sleep("zzz", datetime.timedelta(seconds=1))
 
-        step.wait_for_event(
+        ctx.step.wait_for_event(
             "wait",
             event="never",
             timeout=datetime.timedelta(seconds=1),
@@ -73,27 +70,24 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> str:
+    async def fn_async(ctx: inngest.Context) -> str:
         state.run_id = ctx.run_id
 
         def _step_1() -> str:
             return "test string"
 
-        step_1_output = await step.run("step_1", _step_1)
+        step_1_output = await ctx.step.run("step_1", _step_1)
         assert step_1_output == "test string"
 
         def _step_2() -> list[inngest.JSON]:
             return [{"a": {"b": 1}}]
 
-        step_2_output = await step.run("step_2", _step_2)
+        step_2_output = await ctx.step.run("step_2", _step_2)
         assert step_2_output == [{"a": {"b": 1}}]
 
-        await step.sleep("zzz", datetime.timedelta(seconds=1))
+        await ctx.step.sleep("zzz", datetime.timedelta(seconds=1))
 
-        await step.wait_for_event(
+        await ctx.step.wait_for_event(
             "wait",
             event="never",
             timeout=datetime.timedelta(seconds=1),

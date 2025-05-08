@@ -37,11 +37,8 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event="never"),
     )
-    def fn_child_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> str:
-        step.sleep("sleep", datetime.timedelta(seconds=1))
+    def fn_child_sync(ctx: inngest.ContextSync) -> str:
+        ctx.step.sleep("sleep", datetime.timedelta(seconds=1))
         return "done"
 
     @client.create_function(
@@ -49,10 +46,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
 
         def _step_1a() -> int:
@@ -63,20 +57,20 @@ def create(
             state.step_1b_counter += 1
             return 2
 
-        state.parallel_output = step.parallel(
+        state.parallel_output = ctx.step.parallel(
             (
-                lambda: step.invoke("invoke", function=fn_child_sync),
-                lambda: step.run("1a", _step_1a),
-                lambda: step.run("1b", _step_1b),
-                lambda: step.send_event(
+                lambda: ctx.step.invoke("invoke", function=fn_child_sync),
+                lambda: ctx.step.run("1a", _step_1a),
+                lambda: ctx.step.run("1b", _step_1b),
+                lambda: ctx.step.send_event(
                     "send", events=inngest.Event(name="noop")
                 ),
-                lambda: step.sleep("sleep", datetime.timedelta(seconds=1)),
-                lambda: step.sleep_until(
+                lambda: ctx.step.sleep("sleep", datetime.timedelta(seconds=1)),
+                lambda: ctx.step.sleep_until(
                     "sleep_until",
                     datetime.datetime.now() + datetime.timedelta(seconds=1),
                 ),
-                lambda: step.wait_for_event(
+                lambda: ctx.step.wait_for_event(
                     "wait",
                     event="never",
                     timeout=datetime.timedelta(seconds=1),
@@ -87,7 +81,7 @@ def create(
         def _step_after() -> None:
             state.step_after_counter += 1
 
-        step.run("after", _step_after)
+        ctx.step.run("after", _step_after)
 
     @client.create_function(
         fn_id=f"{fn_id}/child",
@@ -96,9 +90,8 @@ def create(
     )
     async def fn_child_async(
         ctx: inngest.Context,
-        step: inngest.Step,
     ) -> str:
-        await step.sleep("sleep", datetime.timedelta(seconds=1))
+        await ctx.step.sleep("sleep", datetime.timedelta(seconds=1))
         return "done"
 
     @client.create_function(
@@ -106,10 +99,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
 
         async def _step_1a() -> int:
@@ -120,20 +110,20 @@ def create(
             state.step_1b_counter += 1
             return 2
 
-        state.parallel_output = await step.parallel(
+        state.parallel_output = await ctx.step.parallel(
             (
-                lambda: step.invoke("invoke", function=fn_child_async),
-                lambda: step.run("1a", _step_1a),
-                lambda: step.run("1b", _step_1b),
-                lambda: step.send_event(
+                lambda: ctx.step.invoke("invoke", function=fn_child_async),
+                lambda: ctx.step.run("1a", _step_1a),
+                lambda: ctx.step.run("1b", _step_1b),
+                lambda: ctx.step.send_event(
                     "send", events=inngest.Event(name="noop")
                 ),
-                lambda: step.sleep("sleep", datetime.timedelta(seconds=1)),
-                lambda: step.sleep_until(
+                lambda: ctx.step.sleep("sleep", datetime.timedelta(seconds=1)),
+                lambda: ctx.step.sleep_until(
                     "sleep_until",
                     datetime.datetime.now() + datetime.timedelta(seconds=1),
                 ),
-                lambda: step.wait_for_event(
+                lambda: ctx.step.wait_for_event(
                     "wait",
                     event="never",
                     timeout=datetime.timedelta(seconds=1),
@@ -144,7 +134,7 @@ def create(
         async def _step_after() -> None:
             state.step_after_counter += 1
 
-        await step.run("after", _step_after)
+        await ctx.step.run("after", _step_after)
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))

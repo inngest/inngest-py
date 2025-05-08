@@ -42,16 +42,13 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> str:
+    def fn_sync(ctx: inngest.ContextSync) -> str:
         state.run_id = ctx.run_id
 
-        ctx.group.parallel_sync(
+        ctx.group.parallel(
             (
-                lambda: step.run("1.1", lambda: "1.1 (step)"),
-                lambda: step.run("1.2", lambda: "1.2 (step)"),
+                lambda: ctx.step.run("1.1", lambda: "1.1 (step)"),
+                lambda: ctx.step.run("1.2", lambda: "1.2 (step)"),
             )
         )
 
@@ -59,7 +56,7 @@ def create(
         # server. If a function ends with parallel steps then sometimes a
         # discovery step happens after the run is finalized (and therefore its
         # state was deleted).
-        step.run("converge", lambda: None)
+        ctx.step.run("converge", lambda: None)
 
         return "2 (fn)"
 
@@ -69,16 +66,13 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> str:
+    async def fn_async(ctx: inngest.Context) -> str:
         state.run_id = ctx.run_id
 
         await ctx.group.parallel(
             (
-                lambda: step.run("1.1", lambda: "1.1 (step)"),
-                lambda: step.run("1.2", lambda: "1.2 (step)"),
+                lambda: ctx.step.run("1.1", lambda: "1.1 (step)"),
+                lambda: ctx.step.run("1.2", lambda: "1.2 (step)"),
             )
         )
 
@@ -86,7 +80,7 @@ def create(
         # server. If a function ends with parallel steps then sometimes a
         # discovery step happens after the run is finalized (and therefore its
         # state was deleted).
-        await step.run("converge", lambda: None)
+        await ctx.step.run("converge", lambda: None)
 
         return "2 (fn)"
 

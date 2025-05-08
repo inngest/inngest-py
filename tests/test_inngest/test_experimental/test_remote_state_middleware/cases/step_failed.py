@@ -36,17 +36,14 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> str:
+    def fn_sync(ctx: inngest.ContextSync) -> str:
         state.run_id = ctx.run_id
 
         def _step() -> str:
             raise Exception("oh no")
 
         try:
-            step.run("step_1", _step)
+            ctx.step.run("step_1", _step)
         except Exception as e:
             return str(e)
 
@@ -60,10 +57,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> str:
+    async def fn_async(ctx: inngest.Context) -> str:
         state.run_id = ctx.run_id
 
         state.run_id = ctx.run_id
@@ -72,7 +66,7 @@ def create(
             raise Exception("oh no")
 
         try:
-            await step.run("step_1", _step)
+            await ctx.step.run("step_1", _step)
         except Exception as e:
             return str(e)
 

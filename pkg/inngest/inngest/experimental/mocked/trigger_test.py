@@ -19,14 +19,11 @@ class TestTriggerAsync(unittest.TestCase):
             fn_id="test",
             trigger=inngest.TriggerEvent(event="test"),
         )
-        async def fn(
-            ctx: inngest.Context,
-            step: inngest.Step,
-        ) -> tuple[str, ...]:
+        async def fn(ctx: inngest.Context) -> tuple[str, ...]:
             return await ctx.group.parallel(
                 (
-                    lambda: step.run("a", lambda: "a"),
-                    lambda: step.run("b", lambda: "b"),
+                    lambda: ctx.step.run("a", lambda: "a"),
+                    lambda: ctx.step.run("b", lambda: "b"),
                 )
             )
 
@@ -41,10 +38,7 @@ class TestTriggerSync(unittest.TestCase):
             fn_id="test",
             trigger=inngest.TriggerEvent(event="test"),
         )
-        def fn(
-            ctx: inngest.Context,
-            step: inngest.StepSync,
-        ) -> str:
+        def fn(ctx: inngest.ContextSync) -> str:
             return "hi"
 
         res = mocked.trigger(fn, inngest.Event(name="test"), client_mock)
@@ -56,12 +50,9 @@ class TestTriggerSync(unittest.TestCase):
             fn_id="test",
             trigger=inngest.TriggerEvent(event="test"),
         )
-        def fn(
-            ctx: inngest.Context,
-            step: inngest.StepSync,
-        ) -> str:
-            step.run("a", lambda: None)
-            step.run("b", lambda: None)
+        def fn(ctx: inngest.ContextSync) -> str:
+            ctx.step.run("a", lambda: None)
+            ctx.step.run("b", lambda: None)
             return "hi"
 
         res = mocked.trigger(fn, inngest.Event(name="test"), client_mock)
@@ -79,10 +70,7 @@ class TestTriggerSync(unittest.TestCase):
             fn_id="test",
             trigger=inngest.TriggerEvent(event="test"),
         )
-        def fn(
-            ctx: inngest.Context,
-            step: inngest.StepSync,
-        ) -> list[str]:
+        def fn(ctx: inngest.ContextSync) -> list[str]:
             return client.send_sync(
                 [
                     inngest.Event(name="other-event"),
@@ -98,11 +86,8 @@ class TestTriggerSync(unittest.TestCase):
             fn_id="test",
             trigger=inngest.TriggerEvent(event="test"),
         )
-        def fn(
-            ctx: inngest.Context,
-            step: inngest.StepSync,
-        ) -> list[str]:
-            return step.send_event(
+        def fn(ctx: inngest.ContextSync) -> list[str]:
+            return ctx.step.send_event(
                 "a",
                 [
                     inngest.Event(name="event-1"),
@@ -122,11 +107,8 @@ class TestTriggerSync(unittest.TestCase):
             fn_id="test",
             trigger=inngest.TriggerEvent(event="test"),
         )
-        def fn(
-            ctx: inngest.Context,
-            step: inngest.StepSync,
-        ) -> typing.Any:
-            return step.invoke_by_id(
+        def fn(ctx: inngest.ContextSync) -> typing.Any:
+            return ctx.step.invoke_by_id(
                 "a",
                 app_id="foo",
                 function_id="bar",
@@ -146,14 +128,11 @@ class TestTriggerSync(unittest.TestCase):
             fn_id="test",
             trigger=inngest.TriggerEvent(event="test"),
         )
-        def fn(
-            ctx: inngest.Context,
-            step: inngest.StepSync,
-        ) -> tuple[str, ...]:
-            return ctx.group.parallel_sync(
+        def fn(ctx: inngest.ContextSync) -> tuple[str, ...]:
+            return ctx.group.parallel(
                 (
-                    lambda: step.run("a", lambda: "a"),
-                    lambda: step.run("b", lambda: "b"),
+                    lambda: ctx.step.run("a", lambda: "a"),
+                    lambda: ctx.step.run("b", lambda: "b"),
                 )
             )
 
@@ -166,11 +145,8 @@ class TestTriggerSync(unittest.TestCase):
             fn_id="test",
             trigger=inngest.TriggerEvent(event="test"),
         )
-        def fn(
-            ctx: inngest.Context,
-            step: inngest.StepSync,
-        ) -> str:
-            step.sleep("a", datetime.timedelta(seconds=1))
+        def fn(ctx: inngest.ContextSync) -> str:
+            ctx.step.sleep("a", datetime.timedelta(seconds=1))
             return "hi"
 
         res = mocked.trigger(fn, inngest.Event(name="test"), client_mock)
@@ -182,11 +158,8 @@ class TestTriggerSync(unittest.TestCase):
             fn_id="test",
             trigger=inngest.TriggerEvent(event="test"),
         )
-        def fn(
-            ctx: inngest.Context,
-            step: inngest.StepSync,
-        ) -> typing.Mapping[str, inngest.JSON]:
-            event = step.wait_for_event(
+        def fn(ctx: inngest.ContextSync) -> typing.Mapping[str, inngest.JSON]:
+            event = ctx.step.wait_for_event(
                 "a",
                 event="other-event",
                 timeout=datetime.timedelta(seconds=1),
@@ -210,11 +183,8 @@ class TestTriggerSync(unittest.TestCase):
             fn_id="test",
             trigger=inngest.TriggerEvent(event="test"),
         )
-        def fn(
-            ctx: inngest.Context,
-            step: inngest.StepSync,
-        ) -> None:
-            event = step.wait_for_event(
+        def fn(ctx: inngest.ContextSync) -> None:
+            event = ctx.step.wait_for_event(
                 "a",
                 event="other-event",
                 timeout=datetime.timedelta(seconds=1),
@@ -234,11 +204,8 @@ class TestTriggerSync(unittest.TestCase):
             fn_id="test",
             trigger=inngest.TriggerEvent(event="test"),
         )
-        def fn(
-            ctx: inngest.Context,
-            step: inngest.StepSync,
-        ) -> None:
-            step.wait_for_event(
+        def fn(ctx: inngest.ContextSync) -> None:
+            ctx.step.wait_for_event(
                 "a",
                 event="other-event",
                 timeout=datetime.timedelta(seconds=1),
@@ -254,10 +221,7 @@ class TestTriggerSync(unittest.TestCase):
             fn_id="test",
             trigger=inngest.TriggerEvent(event="test"),
         )
-        def fn(
-            ctx: inngest.Context,
-            step: inngest.StepSync,
-        ) -> str:
+        def fn(ctx: inngest.ContextSync) -> str:
             def a() -> str:
                 nonlocal counter
                 counter += 1
@@ -265,7 +229,7 @@ class TestTriggerSync(unittest.TestCase):
                     raise Exception("oh no")
                 return "hi"
 
-            return step.run("a", a)
+            return ctx.step.run("a", a)
 
         res = mocked.trigger(fn, inngest.Event(name="test"), client_mock)
         assert res.status is mocked.Status.COMPLETED
@@ -277,14 +241,11 @@ class TestTriggerSync(unittest.TestCase):
             retries=0,
             trigger=inngest.TriggerEvent(event="test"),
         )
-        def fn(
-            ctx: inngest.Context,
-            step: inngest.StepSync,
-        ) -> None:
+        def fn(ctx: inngest.ContextSync) -> None:
             def a() -> None:
                 raise Exception("oh no")
 
-            step.run("a", a)
+            ctx.step.run("a", a)
 
         res = mocked.trigger(fn, inngest.Event(name="test"), client_mock)
         assert res.status is mocked.Status.FAILED
@@ -299,10 +260,7 @@ class TestTriggerSync(unittest.TestCase):
             fn_id="test",
             trigger=inngest.TriggerEvent(event="test"),
         )
-        def fn(
-            ctx: inngest.Context,
-            step: inngest.StepSync,
-        ) -> str:
+        def fn(ctx: inngest.ContextSync) -> str:
             nonlocal counter
             counter += 1
             if counter < 2:
@@ -319,10 +277,7 @@ class TestTriggerSync(unittest.TestCase):
             retries=0,
             trigger=inngest.TriggerEvent(event="test"),
         )
-        def fn(
-            ctx: inngest.Context,
-            step: inngest.StepSync,
-        ) -> None:
+        def fn(ctx: inngest.ContextSync) -> None:
             raise Exception("oh no")
 
         res = mocked.trigger(fn, inngest.Event(name="test"), client_mock)

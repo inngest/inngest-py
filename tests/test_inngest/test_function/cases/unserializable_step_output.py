@@ -27,10 +27,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
 
         class Foo:
@@ -40,7 +37,7 @@ def create(
             return Foo()
 
         try:
-            step.run(
+            ctx.step.run(
                 "step_1",
                 step_1,  # type: ignore[type-var]
             )
@@ -53,10 +50,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
 
         class Foo:
@@ -65,7 +59,7 @@ def create(
         async def step_1() -> Foo:
             return Foo()
 
-        await step.run(  # type: ignore[call-arg]
+        await ctx.step.run(  # type: ignore[call-arg]
             "step_1",
             step_1,  # type: ignore[type-var]
         )

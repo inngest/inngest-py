@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import concurrent.futures
+import functools
 import http
 import os
 import typing
@@ -151,23 +152,71 @@ class CommHandler:
             # batch or tell the SDK to fetch the batch
 
             return Exception("events not in request")
-        call_res = await fn.call(
-            self._client,
-            execution_lib.Context(
-                attempt=request.ctx.attempt,
-                event=request.event,
-                events=events,
-                group=step_lib.Group(),
-                logger=self._client.logger,
-                run_id=request.ctx.run_id,
-            ),
-            params.fn_id,
-            middleware,
-            request,
-            step_lib.StepMemos.from_raw(steps),
-            params.step_id,
-            self._thread_pool,
-        )
+
+        memos = step_lib.StepMemos.from_raw(steps)
+
+        if fn.is_handler_async:
+            call_res = await fn.call(
+                self._client,
+                execution_lib.Context(
+                    attempt=request.ctx.attempt,
+                    event=request.event,
+                    events=events,
+                    group=step_lib.Group(),
+                    logger=self._client.logger,
+                    run_id=request.ctx.run_id,
+                    step=step_lib.Step(
+                        self._client,
+                        execution_lib.ExecutionV0(
+                            memos,
+                            middleware,
+                            request,
+                            params.step_id,
+                        ),
+                        middleware,
+                        step_lib.StepIDCounter(),
+                        params.step_id,
+                    ),
+                ),
+                params.fn_id,
+                middleware,
+            )
+        else:
+            fn_call = functools.partial(
+                fn.call_sync,
+                self._client,
+                execution_lib.ContextSync(
+                    attempt=request.ctx.attempt,
+                    event=request.event,
+                    events=events,
+                    group=step_lib.GroupSync(),
+                    logger=self._client.logger,
+                    run_id=request.ctx.run_id,
+                    step=step_lib.StepSync(
+                        self._client,
+                        execution_lib.ExecutionV0Sync(
+                            memos,
+                            middleware,
+                            request,
+                            params.step_id,
+                        ),
+                        middleware,
+                        step_lib.StepIDCounter(),
+                        params.step_id,
+                    ),
+                ),
+                params.fn_id,
+                middleware,
+            )
+
+            if self._thread_pool is not None:
+                loop = asyncio.get_running_loop()
+                call_res = await loop.run_in_executor(
+                    self._thread_pool,
+                    fn_call,
+                )
+            else:
+                call_res = fn_call()
 
         return CommResponse.from_call_result(
             self._client.logger,
@@ -236,21 +285,32 @@ class CommHandler:
 
             return Exception("events not in request")
 
+        memos = step_lib.StepMemos.from_raw(steps)
+
         call_res = fn.call_sync(
             self._client,
-            execution_lib.Context(
+            execution_lib.ContextSync(
                 attempt=request.ctx.attempt,
                 event=request.event,
                 events=events,
-                group=step_lib.Group(),
+                group=step_lib.GroupSync(),
                 logger=self._client.logger,
                 run_id=request.ctx.run_id,
+                step=step_lib.StepSync(
+                    self._client,
+                    execution_lib.ExecutionV0Sync(
+                        memos,
+                        middleware,
+                        request,
+                        params.step_id,
+                    ),
+                    middleware,
+                    step_lib.StepIDCounter(),
+                    params.step_id,
+                ),
             ),
             params.fn_id,
             middleware,
-            request,
-            step_lib.StepMemos.from_raw(steps),
-            params.step_id,
         )
 
         return CommResponse.from_call_result(

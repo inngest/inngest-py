@@ -28,24 +28,18 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event="never"),
     )
-    def fn_receiver_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
-        step.sleep("sleep", 60_000)
+    def fn_receiver_sync(ctx: inngest.ContextSync) -> None:
+        ctx.step.sleep("sleep", 60_000)
 
     @client.create_function(
         fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sender_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_sender_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
         try:
-            step.invoke(
+            ctx.step.invoke(
                 "invoke",
                 function=fn_receiver_sync,
                 timeout=datetime.timedelta(seconds=1),
@@ -59,24 +53,18 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event="never"),
     )
-    async def fn_receiver_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
-        await step.sleep("sleep", 60_000)
+    async def fn_receiver_async(ctx: inngest.Context) -> None:
+        await ctx.step.sleep("sleep", 60_000)
 
     @client.create_function(
         fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_sender_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn_sender_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
         try:
-            await step.invoke(
+            await ctx.step.invoke(
                 "invoke",
                 function=fn_receiver_async,
                 timeout=datetime.timedelta(seconds=1),

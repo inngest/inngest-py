@@ -28,7 +28,7 @@ class TestServe(unittest.TestCase):
             fn_id="fn",
             trigger=inngest.TriggerEvent(event="event"),
         )
-        def fn(ctx: inngest.Context, step: inngest.StepSync) -> None:
+        def fn(ctx: inngest.ContextSync) -> None:
             pass
 
         with pytest.raises(Exception) as err:

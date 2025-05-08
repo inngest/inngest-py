@@ -59,10 +59,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=MyEvent.name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> typing.Any:
+    def fn_sync(ctx: inngest.ContextSync) -> typing.Any:
         state.run_id = ctx.run_id
         event = MyEvent.from_event(ctx.event)
         assert_type(event, MyEvent)
@@ -73,10 +70,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=MyEvent.name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> typing.Any:
+    async def fn_async(ctx: inngest.Context) -> typing.Any:
         state.run_id = ctx.run_id
         event = MyEvent.from_event(ctx.event)
         assert_type(event, MyEvent)

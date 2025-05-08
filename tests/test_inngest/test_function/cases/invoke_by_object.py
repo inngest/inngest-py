@@ -24,10 +24,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event="never"),
     )
-    def fn_receiver_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> dict[str, dict[str, int]]:
+    def fn_receiver_sync(ctx: inngest.ContextSync) -> dict[str, dict[str, int]]:
         return {"foo": {"bar": 1}}
 
     @client.create_function(
@@ -35,12 +32,9 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sender_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_sender_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
-        state.step_output = step.invoke(
+        state.step_output = ctx.step.invoke(
             "invoke",
             function=fn_receiver_sync,
         )
@@ -52,7 +46,6 @@ def create(
     )
     async def fn_receiver_async(
         ctx: inngest.Context,
-        step: inngest.Step,
     ) -> dict[str, dict[str, int]]:
         return {"foo": {"bar": 1}}
 
@@ -61,12 +54,9 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_sender_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn_sender_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
-        state.step_output = await step.invoke(
+        state.step_output = await ctx.step.invoke(
             "invoke",
             function=fn_receiver_async,
         )

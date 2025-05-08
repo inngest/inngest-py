@@ -28,7 +28,7 @@ class TestConcurrentSyncFunctions(BaseTest):
             retries=0,
             trigger=inngest.TriggerEvent(event=event_name),
         )
-        def fn(ctx: inngest.Context, step: inngest.StepSync) -> None:
+        def fn(ctx: inngest.ContextSync) -> None:
             run_ids.add(ctx.run_id)
 
             # This will loop forever if the function run is blocking the event

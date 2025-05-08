@@ -30,7 +30,7 @@ class TestWaitForExecutionRequest(BaseTest):
             retries=0,
             trigger=inngest.TriggerEvent(event=event_name),
         )
-        async def fn(ctx: inngest.Context, step: inngest.Step) -> str:
+        async def fn(ctx: inngest.Context) -> str:
             state.run_id = ctx.run_id
 
             # Suspend the function until the connection is closing.
@@ -111,7 +111,7 @@ class TestWaitForExecutionRequest(BaseTest):
                 event=test_core.random_suffix("event"),
             ),
         )
-        async def fn(ctx: inngest.Context, step: inngest.Step) -> None:
+        async def fn(ctx: inngest.Context) -> None:
             pass
 
         conn = connect([(client, [fn])])

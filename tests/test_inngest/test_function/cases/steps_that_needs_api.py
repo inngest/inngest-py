@@ -34,10 +34,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
 
         # Create a large enough total step output to force the SDK to fetch the
@@ -51,17 +48,14 @@ def create(
                 return "a" * 1024 * 1024
 
             step_id = f"step_{i}"
-            step.run(step_id, functools.partial(fn, step_id))
+            ctx.step.run(step_id, functools.partial(fn, step_id))
 
     @client.create_function(
         fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
 
         # Create a large enough total step output to force the SDK to fetch the
@@ -75,7 +69,7 @@ def create(
                 return "a" * 1024 * 1024
 
             step_id = f"step_{i}"
-            await step.run(step_id, functools.partial(fn, step_id))
+            await ctx.step.run(step_id, functools.partial(fn, step_id))
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))

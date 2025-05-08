@@ -151,17 +151,14 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
             retries=0,
             trigger=inngest.TriggerEvent(event="trigger"),
         )
-        async def fn(
-            ctx: inngest.Context,
-            step: inngest.Step,
-        ) -> None:
+        async def fn(ctx: inngest.Context) -> None:
             state.run_id = ctx.run_id
 
             async def _step_1() -> str:
                 return "original output"
 
-            await step.run("step_1", _step_1)
-            await step.send_event("send", inngest.Event(name="dummy"))
+            await ctx.step.run("step_1", _step_1)
+            await ctx.step.send_event("send", inngest.Event(name="dummy"))
 
         inngest.fast_api.serve(app, client, [fn])
         base.register(proxy.port)
@@ -246,17 +243,14 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
             retries=0,
             trigger=inngest.TriggerEvent(event="trigger"),
         )
-        def fn(
-            ctx: inngest.Context,
-            step: inngest.StepSync,
-        ) -> None:
+        def fn(ctx: inngest.ContextSync) -> None:
             state.run_id = ctx.run_id
 
             def _step_1() -> str:
                 return "original output"
 
-            step.run("step_1", _step_1)
-            step.send_event("send", inngest.Event(name="dummy"))
+            ctx.step.run("step_1", _step_1)
+            ctx.step.send_event("send", inngest.Event(name="dummy"))
 
         inngest.flask.serve(app, client, [fn])
         base.register(proxy.port)

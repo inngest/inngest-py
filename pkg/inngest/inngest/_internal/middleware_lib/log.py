@@ -49,7 +49,7 @@ class LoggerMiddleware(MiddlewareSync):
 
     def transform_input(
         self,
-        ctx: execution_lib.Context,
+        ctx: execution_lib.Context | execution_lib.ContextSync,
         function: function.Function,
         steps: step_lib.StepMemos,
     ) -> None:

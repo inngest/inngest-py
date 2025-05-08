@@ -40,25 +40,19 @@ def create(
     fn_id = base.create_fn_id(test_name)
     state = _State()
 
-    def on_failure_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def on_failure_sync(ctx: inngest.ContextSync) -> None:
         state.attempt = ctx.attempt
         state.event = ctx.event
         state.events = ctx.events
         state.on_failure_run_id = ctx.run_id
-        state.step = step
+        state.step = ctx.step
 
-    async def on_failure_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def on_failure_async(ctx: inngest.Context) -> None:
         state.attempt = ctx.attempt
         state.event = ctx.event
         state.events = ctx.events
         state.on_failure_run_id = ctx.run_id
-        state.step = step
+        state.step = ctx.step
 
     @client.create_function(
         fn_id=fn_id,
@@ -66,10 +60,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
         raise MyError("intentional failure")
 
@@ -79,10 +70,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
         raise MyError("intentional failure")
 
