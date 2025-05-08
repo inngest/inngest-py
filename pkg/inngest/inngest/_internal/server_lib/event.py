@@ -12,7 +12,6 @@ class Event(types.BaseModel):
     id: str = ""
     name: str
     ts: int = 0
-    user: typing.Mapping[str, types.JSON] = {}
 
     @pydantic.field_validator("data", mode="before")
     @classmethod
