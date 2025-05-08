@@ -40,6 +40,9 @@ extend-ignore = [
     'D415',
     'RUF022',
     'S112',
+
+    # Delete when we use "|" for unions.
+    'UP007',
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
