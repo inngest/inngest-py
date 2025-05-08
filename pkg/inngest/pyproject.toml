@@ -18,7 +18,7 @@ classifiers = [
 requires-python = ">=3.9"
 
 dependencies = [
-    "httpx>=0.28.0",
+    "httpx>=0.26.0",
     "jcs>=0.2.1",
     "pydantic>=2.11.0",
     "typing-extensions>=4.13.0",
