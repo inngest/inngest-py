@@ -192,7 +192,6 @@ class InvokeOpts(types.BaseModel):
 
 class InvokeOptsPayload(types.BaseModel):
     data: object
-    user: object
     v: typing.Optional[str]
 
 
