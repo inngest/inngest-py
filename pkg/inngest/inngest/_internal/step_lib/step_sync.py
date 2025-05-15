@@ -46,7 +46,6 @@ class StepSync(base.StepBase):
         function: function.Function,
         data: typing.Optional[typing.Mapping[str, object]] = None,
         timeout: typing.Union[int, datetime.timedelta, None] = None,
-        user: typing.Optional[typing.Mapping[str, object]] = None,
         v: typing.Optional[str] = None,
     ) -> object:
         """
@@ -63,7 +62,6 @@ class StepSync(base.StepBase):
             function: The function object to invoke.
             data: Will become `event.data` in the invoked function. Must be JSON serializable.
             timeout: The maximum number of milliseconds to wait for the function to complete.
-            user: Will become `event.user` in the invoked function. Must be JSON serializable.
             v: Will become `event.v` in the invoked function.
         """
 
@@ -73,7 +71,6 @@ class StepSync(base.StepBase):
             function_id=function._opts.local_id,
             data=data,
             timeout=timeout,
-            user=user,
             v=v,
         )
 
@@ -85,7 +82,6 @@ class StepSync(base.StepBase):
         function_id: str,
         data: typing.Optional[typing.Mapping[str, object]] = None,
         timeout: typing.Union[int, datetime.timedelta, None] = None,
-        user: typing.Optional[typing.Mapping[str, object]] = None,
         v: typing.Optional[str] = None,
     ) -> object:
         """
@@ -106,7 +102,6 @@ class StepSync(base.StepBase):
             function_id: The ID of the function to invoke.
             data: Will become `event.data` in the invoked function. Must be JSON serializable.
             timeout: The maximum number of milliseconds to wait for the function to complete.
-            user: Will become `event.user` in the invoked function. Must be JSON serializable.
             v: Will become `event.v` in the invoked function.
         """
 
@@ -123,7 +118,6 @@ class StepSync(base.StepBase):
             function_id=f"{app_id}-{function_id}",
             payload=base.InvokeOptsPayload(
                 data=data,
-                user=user,
                 v=v,
             ),
             timeout=timeout_str,
