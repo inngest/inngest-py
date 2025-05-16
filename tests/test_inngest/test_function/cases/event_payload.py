@@ -44,7 +44,6 @@ def create(
             inngest.Event(
                 data={"foo": {"bar": "baz"}},
                 name=event_name,
-                user={"a": {"b": "c"}},
             )
         )
         run_id = await state.wait_for_run_id()
@@ -58,7 +57,6 @@ def create(
         assert state.event.name == event_name
         assert state.event.data == {"foo": {"bar": "baz"}}
         assert state.event.ts > 0
-        assert state.event.user == {"a": {"b": "c"}}
 
     if is_sync:
         fn = fn_sync
