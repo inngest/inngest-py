@@ -9,7 +9,6 @@ from inngest._internal import client_lib, errors, server_lib, transforms, types
 from inngest._internal.client_lib import models as client_models
 
 from . import base
-from .group import Group
 
 # Avoid circular import at runtime
 if typing.TYPE_CHECKING:
@@ -137,22 +136,6 @@ class Step(base.StepBase):
                 return step.output
 
         raise Exception("unreachable")
-
-    async def parallel(
-        self,
-        callables: tuple[typing.Callable[[], typing.Awaitable[types.T]], ...],
-    ) -> tuple[types.T, ...]:
-        """
-        @deprecated Use `ctx.group.parallel()` instead. This method will be removed in the next major version.
-
-        Run multiple steps in parallel.
-
-        Args:
-        ----
-            callables: An arbitrary number of step callbacks to run. These are callables that contain the step (e.g. `lambda: step.run("my_step", my_step_fn)`.
-        """
-
-        return await Group().parallel(callables)
 
     @typing.overload
     async def run(
