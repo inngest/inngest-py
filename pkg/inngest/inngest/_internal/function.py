@@ -123,6 +123,21 @@ class Function:
         self._triggers = trigger if isinstance(trigger, list) else [trigger]
 
         if opts.on_failure is not None:
+            if (
+                self.is_handler_async
+                and self.is_on_failure_handler_async is False
+            ):
+                raise errors.Error(
+                    "an async function cannot have a non-async on_failure handler"
+                )
+            if (
+                self.is_handler_async is False
+                and self.is_on_failure_handler_async is True
+            ):
+                raise errors.Error(
+                    "a non-async function cannot have an async on_failure handler"
+                )
+
             self._on_failure_fn_id = f"{opts.fully_qualified_id}-failure"
 
     async def call(
