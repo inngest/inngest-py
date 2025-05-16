@@ -32,10 +32,7 @@ def create(
         retries=2,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
 
         if state.fn_level_raise_1_time is None:
@@ -59,7 +56,7 @@ def create(
                 # Track the time we retried
                 state.step_level_retry_time = datetime.datetime.now()
 
-        step.run("step_1", step_fn)
+        ctx.step.run("step_1", step_fn)
 
         if state.fn_level_raise_2_time is None:
             # Raise a RetryAfterError and track what time we raised it
@@ -77,10 +74,7 @@ def create(
         retries=2,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
 
         if state.fn_level_raise_1_time is None:
@@ -104,7 +98,7 @@ def create(
                 # Track the time we retried
                 state.step_level_retry_time = datetime.datetime.now()
 
-        await step.run("step_1", step_fn)
+        await ctx.step.run("step_1", step_fn)
 
         if state.fn_level_raise_2_time is None:
             # Raise a RetryAfterError and track what time we raised it

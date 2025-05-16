@@ -22,10 +22,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> dict[str, dict[str, int]]:
+    def fn_sync(ctx: inngest.ContextSync) -> dict[str, dict[str, int]]:
         state.run_id = ctx.run_id
         return {"foo": {"bar": 1}}
 
@@ -34,10 +31,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> dict[str, dict[str, int]]:
+    async def fn_async(ctx: inngest.Context) -> dict[str, dict[str, int]]:
         state.run_id = ctx.run_id
         return {"foo": {"bar": 1}}
 

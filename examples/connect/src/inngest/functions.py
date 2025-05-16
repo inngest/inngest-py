@@ -7,8 +7,5 @@ from .client import inngest_client
     fn_id="hello-world",
     trigger=inngest.TriggerEvent(event="say-hello"),
 )
-async def hello(
-    ctx: inngest.Context,
-    step: inngest.Step,
-) -> str:
+async def hello(ctx: inngest.Context) -> str:
     return "Hello world!"

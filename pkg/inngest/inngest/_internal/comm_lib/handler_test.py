@@ -50,10 +50,7 @@ class Test_get_function_configs(unittest.TestCase):
             ),
             trigger=inngest.TriggerEvent(event="app/fn"),
         )
-        def fn(
-            ctx: inngest.Context,
-            step: inngest.StepSync,
-        ) -> int:
+        def fn(ctx: inngest.ContextSync) -> int:
             return 1
 
         configs = get_function_configs("http://foo.bar", {fn.id: fn})

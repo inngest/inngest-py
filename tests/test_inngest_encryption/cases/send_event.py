@@ -58,10 +58,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=child_event_name),
     )
-    def child_fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> dict[str, str]:
+    def child_fn_sync(ctx: inngest.ContextSync) -> dict[str, str]:
         state.child_run_id = ctx.run_id
         state.child_event = ctx.event
 
@@ -77,13 +74,10 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
 
-        step.send_event(
+        ctx.step.send_event(
             "send",
             inngest.Event(
                 data={
@@ -102,10 +96,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=child_event_name),
     )
-    async def child_fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> dict[str, str]:
+    async def child_fn_async(ctx: inngest.Context) -> dict[str, str]:
         state.child_run_id = ctx.run_id
         state.child_event = ctx.event
 
@@ -121,13 +112,10 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
 
-        await step.send_event(
+        await ctx.step.send_event(
             "send",
             inngest.Event(
                 data={

@@ -35,10 +35,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
 
         for i in range(2):
@@ -53,7 +50,7 @@ def create(
 
                 return i
 
-            output = step.run("foo", step_fn)
+            output = ctx.step.run("foo", step_fn)
             if i == 0:
                 state.step_1_output = output
             elif i == 1:
@@ -66,10 +63,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
 
         for i in range(2):
@@ -84,7 +78,7 @@ def create(
 
                 return i
 
-            output = await step.run("foo", step_fn)
+            output = await ctx.step.run("foo", step_fn)
             if i == 0:
                 state.step_1_output = output
             elif i == 1:

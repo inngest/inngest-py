@@ -122,19 +122,16 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
 
         def _step_1() -> str:
             return "original output"
 
         state.messages.append("fn_logic: before step_1")
-        step.run("step_1", _step_1)
+        ctx.step.run("step_1", _step_1)
         state.messages.append("fn_logic: after step_1")
-        step.send_event("send", [inngest.Event(name="dummy")])
+        ctx.step.send_event("send", [inngest.Event(name="dummy")])
         state.messages.append("fn_logic: after send")
 
     @client.create_function(
@@ -143,19 +140,16 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
 
         async def _step_1() -> str:
             return "original output"
 
         state.messages.append("fn_logic: before step_1")
-        await step.run("step_1", _step_1)
+        await ctx.step.run("step_1", _step_1)
         state.messages.append("fn_logic: after step_1")
-        await step.send_event("send", [inngest.Event(name="dummy")])
+        await ctx.step.send_event("send", [inngest.Event(name="dummy")])
         state.messages.append("fn_logic: after send")
 
     async def run_test(self: base.TestClass) -> None:

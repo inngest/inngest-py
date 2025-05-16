@@ -21,10 +21,7 @@ def sync_fn_with_sync_step() -> None:
         fn_id="foo",
         trigger=inngest.TriggerEvent(event="foo"),
     )
-    def fn(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    def fn(ctx: inngest.ContextSync) -> None:
         pass
 
 
@@ -37,10 +34,7 @@ def async_fn_with_sync_step() -> None:
         fn_id="foo",
         trigger=inngest.TriggerEvent(event="foo"),
     )
-    async def fn(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    async def fn(ctx: inngest.ContextSync) -> None:
         pass
 
 
@@ -56,13 +50,10 @@ def event_data_dict() -> None:
         fn_id="foo",
         trigger=inngest.TriggerEvent(event="foo"),
     )
-    async def fn(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn(ctx: inngest.Context) -> None:
         data = {"foo": "bar"}
 
-        await step.send_event(
+        await ctx.step.send_event(
             "foo",
             inngest.Event(data=data, name="foo"),
         )
@@ -84,57 +75,48 @@ def step_callback_Args() -> None:
         fn_id="foo",
         trigger=inngest.TriggerEvent(event="foo"),
     )
-    async def async_fn(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def async_fn(ctx: inngest.Context) -> None:
         # Incorrect arg types fail type checker
-        await step.run(
+        await ctx.step.run(
             "step",
             step_callback_async,  # type: ignore[arg-type]
             "a",
             1,
         )  # type: ignore[call-arg]
 
-        output = await step.run("step", step_callback_async, 1, "a")
+        output = await ctx.step.run("step", step_callback_async, 1, "a")
         assert_type(output, bool)
 
     @client.create_function(
         fn_id="foo",
         trigger=inngest.TriggerEvent(event="foo"),
     )
-    async def async_fn_with_sync_callback(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def async_fn_with_sync_callback(ctx: inngest.Context) -> None:
         # Incorrect arg types fail type checker
-        await step.run(
+        await ctx.step.run(
             "step",
             step_callback_sync,  # type: ignore[arg-type]
             "a",
             1,
         )  # type: ignore[call-arg]
 
-        output = await step.run("step", step_callback_sync, 1, "a")
+        output = await ctx.step.run("step", step_callback_sync, 1, "a")
         assert_type(output, bool)
 
     @client.create_function(
         fn_id="foo",
         trigger=inngest.TriggerEvent(event="foo"),
     )
-    def sync_fn(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def sync_fn(ctx: inngest.ContextSync) -> None:
         # Incorrect arg types fail type checker
-        step.run(
+        ctx.step.run(
             "step",
             step_callback_sync,  # type: ignore[arg-type]
             "a",
             1,
         )
 
-        output = step.run("step", step_callback_sync, 1, "a")
+        output = ctx.step.run("step", step_callback_sync, 1, "a")
         assert_type(output, bool)
 
 
@@ -153,19 +135,16 @@ def step_callback_kwargs() -> None:
         fn_id="foo",
         trigger=inngest.TriggerEvent(event="foo"),
     )
-    async def async_fn(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def async_fn(ctx: inngest.Context) -> None:
         # Incorrect arg types fail type checker
-        await step.run(
+        await ctx.step.run(
             "step",
             step_callback_async,  # type: ignore[arg-type]
             "a",
             1,
         )  # type: ignore[call-arg]
 
-        output = await step.run(
+        output = await ctx.step.run(
             "step",
             functools.partial(step_callback_async, 1, b="a"),
         )
@@ -175,19 +154,16 @@ def step_callback_kwargs() -> None:
         fn_id="foo",
         trigger=inngest.TriggerEvent(event="foo"),
     )
-    async def async_fn_with_sync_callback(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def async_fn_with_sync_callback(ctx: inngest.Context) -> None:
         # Incorrect arg types fail type checker
-        await step.run(
+        await ctx.step.run(
             "step",
             step_callback_sync,  # type: ignore[arg-type]
             "a",
             1,
         )  # type: ignore[call-arg]
 
-        output = await step.run(
+        output = await ctx.step.run(
             "step",
             functools.partial(step_callback_sync, 1, b="a"),
         )
@@ -197,19 +173,16 @@ def step_callback_kwargs() -> None:
         fn_id="foo",
         trigger=inngest.TriggerEvent(event="foo"),
     )
-    def sync_fn(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def sync_fn(ctx: inngest.ContextSync) -> None:
         # Incorrect arg types fail type checker
-        step.run(
+        ctx.step.run(
             "step",
             step_callback_sync,  # type: ignore[arg-type]
             "a",
             1,
         )
 
-        output = step.run(
+        output = ctx.step.run(
             "step",
             functools.partial(step_callback_sync, 1, b="a"),
         )
@@ -237,19 +210,16 @@ def parallel() -> None:
         fn_id="foo",
         trigger=inngest.TriggerEvent(event="foo"),
     )
-    async def async_fn(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def async_fn(ctx: inngest.Context) -> None:
         output = await ctx.group.parallel(
             (
-                functools.partial(step.run, "step-1", fn_1_async),
+                functools.partial(ctx.step.run, "step-1", fn_1_async),
                 functools.partial(
-                    step.run,
+                    ctx.step.run,
                     "step-2",
                     functools.partial(fn_2_async, 1, b="a"),
                 ),
-                functools.partial(step.sleep, "sleep", 1),
+                functools.partial(ctx.step.sleep, "sleep", 1),
             )
         )
 
@@ -261,19 +231,16 @@ def parallel() -> None:
         fn_id="foo",
         trigger=inngest.TriggerEvent(event="foo"),
     )
-    def sync_fn(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def sync_fn(ctx: inngest.ContextSync) -> None:
         output = ctx.group.parallel(
             (
-                functools.partial(step.run, "step-1", fn_1_sync),
+                functools.partial(ctx.step.run, "step-1", fn_1_sync),
                 functools.partial(
-                    step.run,
+                    ctx.step.run,
                     "step-2",
                     functools.partial(fn_2_sync, 1, b="a"),
                 ),
-                functools.partial(step.sleep, "sleep", 1),
+                functools.partial(ctx.step.sleep, "sleep", 1),
             )
         )
 
@@ -297,17 +264,14 @@ def parallel_iterator() -> None:
         fn_id="foo",
         trigger=inngest.TriggerEvent(event="foo"),
     )
-    async def async_fn(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def async_fn(ctx: inngest.Context) -> None:
         items = [1, 2, 3]
 
         # The tuple must have an explicit type since nested functools.partial
         # calls have trouble with generics
         steps = tuple[typing.Callable[[], typing.Awaitable[bool]], ...](
             functools.partial(
-                step.run,
+                ctx.step.run,
                 "step",
                 functools.partial(step_callback_async, item, b="a"),
             )
@@ -321,17 +285,14 @@ def parallel_iterator() -> None:
         fn_id="foo",
         trigger=inngest.TriggerEvent(event="foo"),
     )
-    def sync_fn(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def sync_fn(ctx: inngest.ContextSync) -> None:
         items = [1, 2, 3]
 
         # The tuple must have an explicit type since nested functools.partial
         # calls have trouble with generics
         steps = tuple[typing.Callable[[], bool], ...](
             functools.partial(
-                step.run,
+                ctx.step.run,
                 "step",
                 functools.partial(step_callback_sync, item, b="a"),
             )
@@ -354,34 +315,31 @@ def step_return_types() -> None:
         fn_id="foo",
         trigger=inngest.TriggerEvent(event="foo"),
     )
-    async def fn(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn(ctx: inngest.Context) -> None:
         def fn_bool() -> bool:
             return True
 
-        assert_type(await step.run("fn_bool", fn_bool), bool)
+        assert_type(await ctx.step.run("fn_bool", fn_bool), bool)
 
         def fn_int() -> int:
             return 1
 
-        assert_type(await step.run("fn_int", fn_int), int)
+        assert_type(await ctx.step.run("fn_int", fn_int), int)
 
         def fn_float() -> float:
             return 1.0
 
-        assert_type(await step.run("fn_float", fn_float), float)
+        assert_type(await ctx.step.run("fn_float", fn_float), float)
 
         def fn_str() -> str:
             return "foo"
 
-        assert_type(await step.run("fn_str", fn_str), str)
+        assert_type(await ctx.step.run("fn_str", fn_str), str)
 
         def fn_dict() -> dict[str, int]:
             return {"foo": 1}
 
-        assert_type(await step.run("fn_dict", fn_dict), dict[str, int])
+        assert_type(await ctx.step.run("fn_dict", fn_dict), dict[str, int])
 
         class MyTypedDict(typing.TypedDict):
             foo: str
@@ -389,14 +347,18 @@ def step_return_types() -> None:
         def fn_typed_dict() -> MyTypedDict:
             return {"foo": "bar"}
 
-        assert_type(await step.run("fn_typed_dict", fn_typed_dict), MyTypedDict)
+        assert_type(
+            await ctx.step.run("fn_typed_dict", fn_typed_dict), MyTypedDict
+        )
 
         def fn_list() -> list[dict[str, int]]:
             return [{"foo": 1}]
 
-        assert_type(await step.run("fn_list", fn_list), list[dict[str, int]])
+        assert_type(
+            await ctx.step.run("fn_list", fn_list), list[dict[str, int]]
+        )
 
         def fn_none() -> None:
             return None
 
-        assert_type(await step.run("fn_none", fn_none), None)
+        assert_type(await ctx.step.run("fn_none", fn_none), None)

@@ -28,44 +28,38 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
 
         def step_1() -> list[dict[str, inngest.JSON]]:
             state.step_1_counter += 1
             return [{"foo": {"bar": 1}, "empty": None}]
 
-        state.step_1_output = step.run("step_1", step_1)
+        state.step_1_output = ctx.step.run("step_1", step_1)
 
         def step_2() -> None:
             state.step_2_counter += 1
 
-        step.run("step_2", step_2)
+        ctx.step.run("step_2", step_2)
 
     @client.create_function(
         fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
 
         async def step_1() -> list[dict[str, inngest.JSON]]:
             state.step_1_counter += 1
             return [{"foo": {"bar": 1}, "empty": None}]
 
-        state.step_1_output = await step.run("step_1", step_1)
+        state.step_1_output = await ctx.step.run("step_1", step_1)
 
         async def step_2() -> None:
             state.step_2_counter += 1
 
-        await step.run("step_2", step_2)
+        await ctx.step.run("step_2", step_2)
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))

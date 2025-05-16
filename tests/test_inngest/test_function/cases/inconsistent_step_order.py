@@ -34,10 +34,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
         state.request_counter += 1
 
@@ -50,8 +47,8 @@ def create(
             return 2
 
         steps: list[typing.Callable[[], int]] = [
-            lambda: step.run("step_1", step_1),
-            lambda: step.run("step_2", step_2),
+            lambda: ctx.step.run("step_1", step_1),
+            lambda: ctx.step.run("step_2", step_2),
         ]
 
         if state.request_counter % 2 == 0:
@@ -65,10 +62,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
         state.request_counter += 1
 
@@ -81,8 +75,8 @@ def create(
             return 2
 
         steps: list[typing.Callable[[], typing.Awaitable[int]]] = [
-            lambda: step.run("step_1", step_1),
-            lambda: step.run("step_2", step_2),
+            lambda: ctx.step.run("step_1", step_1),
+            lambda: ctx.step.run("step_2", step_2),
         ]
 
         if state.request_counter % 2 == 0:

@@ -139,10 +139,7 @@ class BaseTest(unittest.TestCase):
             fn_id="test",
             trigger=inngest.TriggerEvent(event="test"),
         )
-        def fn(
-            ctx: inngest.Context,
-            step: inngest.StepSync,
-        ) -> None:
+        def fn(ctx: inngest.ContextSync) -> None:
             pass
 
         return [fn]

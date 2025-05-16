@@ -37,11 +37,8 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event="never"),
     )
-    def fn_child_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> str:
-        step.sleep("sleep", datetime.timedelta(seconds=1))
+    def fn_child_sync(ctx: inngest.ContextSync) -> str:
+        ctx.step.sleep("sleep", datetime.timedelta(seconds=1))
         return "done"
 
     @client.create_function(
@@ -49,23 +46,20 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
         state.request_counter += 1
 
         steps: tuple[typing.Any, ...] = (
-            lambda: step.run("1a", lambda: None),
-            lambda: step.run("1b", lambda: None),
+            lambda: ctx.step.run("1a", lambda: None),
+            lambda: ctx.step.run("1b", lambda: None),
         )
 
         if state.request_counter == 1:
-            steps += (lambda: step.run("1c", lambda: None),)
+            steps += (lambda: ctx.step.run("1c", lambda: None),)
 
-        ctx.group.parallel_sync(steps)
-        step.run("after", lambda: None)
+        ctx.group.parallel(steps)
+        ctx.step.run("after", lambda: None)
 
     @client.create_function(
         fn_id=f"{fn_id}/child",
@@ -74,9 +68,8 @@ def create(
     )
     async def fn_child_async(
         ctx: inngest.Context,
-        step: inngest.Step,
     ) -> str:
-        await step.sleep("sleep", datetime.timedelta(seconds=1))
+        await ctx.step.sleep("sleep", datetime.timedelta(seconds=1))
         return "done"
 
     @client.create_function(
@@ -84,23 +77,20 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
         state.request_counter += 1
 
         steps: tuple[typing.Any, ...] = (
-            lambda: step.run("1a", lambda: None),
-            lambda: step.run("1b", lambda: None),
+            lambda: ctx.step.run("1a", lambda: None),
+            lambda: ctx.step.run("1b", lambda: None),
         )
 
         if state.request_counter == 1:
-            steps += (lambda: step.run("1c", lambda: None),)
+            steps += (lambda: ctx.step.run("1c", lambda: None),)
 
         await ctx.group.parallel(steps)
-        await step.run("after", lambda: None)
+        await ctx.step.run("after", lambda: None)
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))

@@ -35,10 +35,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event="never"),
     )
-    def fn_receiver_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_receiver_sync(ctx: inngest.ContextSync) -> None:
         raise MyException("oh no")
 
     @client.create_function(
@@ -46,14 +43,11 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sender_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_sender_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
 
         try:
-            step.invoke(
+            ctx.step.invoke(
                 "invoke",
                 function=fn_receiver_sync,
             )
@@ -66,10 +60,7 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event="never"),
     )
-    async def fn_receiver_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn_receiver_async(ctx: inngest.Context) -> None:
         raise MyException("oh no")
 
     @client.create_function(
@@ -77,14 +68,11 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_sender_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn_sender_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
 
         try:
-            await step.invoke(
+            await ctx.step.invoke(
                 "invoke",
                 function=fn_receiver_async,
             )

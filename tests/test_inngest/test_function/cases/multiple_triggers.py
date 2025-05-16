@@ -39,10 +39,7 @@ def create(
             inngest.TriggerEvent(event=se.event_name) for se in states_events
         ],
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_sync(ctx: inngest.ContextSync) -> None:
         for state_event in states_events:
             if ctx.event.name == state_event.event_name:
                 state_event.state.run_id = ctx.run_id
@@ -55,7 +52,7 @@ def create(
             inngest.TriggerEvent(event=se.event_name) for se in states_events
         ],
     )
-    async def fn_async(ctx: inngest.Context, step: inngest.Step) -> None:
+    async def fn_async(ctx: inngest.Context) -> None:
         for state_event in states_events:
             if ctx.event.name == state_event.event_name:
                 state_event.state.run_id = ctx.run_id

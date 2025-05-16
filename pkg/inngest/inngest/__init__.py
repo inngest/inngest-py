@@ -2,7 +2,7 @@
 
 from ._internal.client_lib import Inngest, SendEventsResult
 from ._internal.errors import NonRetriableError, RetryAfterError, StepError
-from ._internal.execution_lib import Context
+from ._internal.execution_lib import Context, ContextSync
 from ._internal.function import Function
 from ._internal.middleware_lib import (
     Middleware,
@@ -29,6 +29,7 @@ __all__ = [
     "Cancel",
     "Concurrency",
     "Context",
+    "ContextSync",
     "Debounce",
     "Event",
     "Function",

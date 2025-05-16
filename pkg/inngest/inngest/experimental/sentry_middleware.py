@@ -41,7 +41,7 @@ class SentryMiddleware(inngest.MiddlewareSync):
 
     def transform_input(  # noqa: D102
         self,
-        ctx: inngest.Context,
+        ctx: inngest.Context | inngest.ContextSync,
         function: inngest.Function,
         steps: inngest.StepMemos,
     ) -> None:

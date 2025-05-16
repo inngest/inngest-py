@@ -33,10 +33,7 @@ def create(
         retries=retries,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(
-        ctx: inngest.Context,
-        step: inngest.StepSync,
-    ) -> None:
+    def fn_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
 
         def step_1() -> None:
@@ -47,12 +44,12 @@ def create(
                 state.step_2_counter += 1
 
             try:
-                step.run("step_2", step_2)
+                ctx.step.run("step_2", step_2)
             except Exception:
                 # Can't catch this error.
                 state.step_2_catch_counter += 1
 
-        step.run("step_1", step_1)
+        ctx.step.run("step_1", step_1)
         state.after_step_counter += 1
 
     @client.create_function(
@@ -60,10 +57,7 @@ def create(
         retries=retries,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    async def fn_async(
-        ctx: inngest.Context,
-        step: inngest.Step,
-    ) -> None:
+    async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
 
         async def step_1() -> None:
@@ -74,12 +68,12 @@ def create(
                 state.step_2_counter += 1
 
             try:
-                await step.run("step_2", step_2)
+                await ctx.step.run("step_2", step_2)
             except Exception:
                 # Can't catch this error.
                 state.step_2_catch_counter += 1
 
-        await step.run("step_1", step_1)
+        await ctx.step.run("step_1", step_1)
         state.after_step_counter += 1
 
     async def run_test(self: base.TestClass) -> None:
