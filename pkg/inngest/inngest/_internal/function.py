@@ -128,14 +128,14 @@ class Function:
                 and self.is_on_failure_handler_async is False
             ):
                 raise errors.Error(
-                    "an async function cannot have a non-async on_failure handler"
+                    f"an async function cannot have a non-async on_failure handler (function {opts.local_id})"
                 )
             if (
                 self.is_handler_async is False
                 and self.is_on_failure_handler_async is True
             ):
                 raise errors.Error(
-                    "a non-async function cannot have an async on_failure handler"
+                    f"a non-async function cannot have an async on_failure handler (function {opts.local_id})"
                 )
 
             self._on_failure_fn_id = f"{opts.fully_qualified_id}-failure"

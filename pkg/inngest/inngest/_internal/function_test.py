@@ -14,7 +14,7 @@ def test_sync_fn_with_async_on_failure() -> None:
     async def on_failure(ctx: inngest.Context) -> None:
         pass
 
-    with pytest.raises(errors.Error):
+    with pytest.raises(errors.Error) as e:
 
         @client.create_function(
             fn_id="foo",
@@ -23,6 +23,11 @@ def test_sync_fn_with_async_on_failure() -> None:
         )
         def fn(ctx: inngest.ContextSync) -> None:
             pass
+
+    assert (
+        str(e.value)
+        == "a non-async function cannot have an async on_failure handler (function foo)"
+    )
 
 
 def test_async_fn_with_sync_on_failure() -> None:
@@ -35,7 +40,7 @@ def test_async_fn_with_sync_on_failure() -> None:
     def on_failure(ctx: inngest.ContextSync) -> None:
         pass
 
-    with pytest.raises(errors.Error):
+    with pytest.raises(errors.Error) as e:
 
         @client.create_function(
             fn_id="foo",
@@ -44,3 +49,8 @@ def test_async_fn_with_sync_on_failure() -> None:
         )
         async def fn(ctx: inngest.Context) -> None:
             pass
+
+    assert (
+        str(e.value)
+        == "an async function cannot have a non-async on_failure handler (function foo)"
+    )
