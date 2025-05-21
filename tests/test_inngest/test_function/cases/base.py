@@ -47,7 +47,11 @@ T = typing.TypeVar("T")
 def asyncify(
     fn: typing.Callable[P, T],
 ) -> typing.Callable[P, typing.Awaitable[T]]:
+    """
+    Convert a sync function to an async function.
+    """
+
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-        return await fn(*args, **kwargs)  # type: ignore
+        return fn(*args, **kwargs)
 
     return wrapper
