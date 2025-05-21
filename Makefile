@@ -35,6 +35,7 @@ type-check: check-venv
 	@cd pkg/inngest && make type-check
 	@cd pkg/inngest_encryption && make type-check
 	@cd pkg/test_core && make type-check
+	@mypy --config-file=mypy.ini tests
 
 utest: check-venv
 	@cd pkg/inngest && make utest

@@ -5,12 +5,16 @@ finishes, causing the assertion to fail. This is not considered a bug. The
 flakiness should be fixed when we finish parallelism improvements.
 """
 
+import typing
+
 import inngest
 import pytest
 import test_core.helper
 from inngest._internal import middleware_lib, server_lib
 
 from . import base
+
+T = typing.TypeVar("T")
 
 
 class _State(base.BaseState):
@@ -71,8 +75,12 @@ def create(
 
         await ctx.group.parallel(
             (
-                lambda: ctx.step.run("1.1", lambda: "1.1 (step)"),
-                lambda: ctx.step.run("1.2", lambda: "1.2 (step)"),
+                lambda: ctx.step.run(
+                    "1.1", base.asyncify(lambda: "1.1 (step)")
+                ),
+                lambda: ctx.step.run(
+                    "1.2", base.asyncify(lambda: "1.2 (step)")
+                ),
             )
         )
 
@@ -80,7 +88,7 @@ def create(
         # server. If a function ends with parallel steps then sometimes a
         # discovery step happens after the run is finalized (and therefore its
         # state was deleted).
-        await ctx.step.run("converge", lambda: None)
+        await ctx.step.run("converge", base.asyncify(lambda: None))
 
         return "2 (fn)"
 

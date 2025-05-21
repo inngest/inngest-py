@@ -20,10 +20,13 @@ class TestTriggerAsync(unittest.TestCase):
             trigger=inngest.TriggerEvent(event="test"),
         )
         async def fn(ctx: inngest.Context) -> tuple[str, ...]:
+            async def foo(value: str) -> str:
+                return value
+
             return await ctx.group.parallel(
                 (
-                    lambda: ctx.step.run("a", lambda: "a"),
-                    lambda: ctx.step.run("b", lambda: "b"),
+                    lambda: ctx.step.run("a", foo, "a"),
+                    lambda: ctx.step.run("b", foo, "b"),
                 )
             )
 

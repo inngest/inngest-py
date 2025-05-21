@@ -62,7 +62,7 @@ def create(
 
         state.run_id = ctx.run_id
 
-        def _step() -> str:
+        async def _step() -> str:
             raise Exception("oh no")
 
         try:

@@ -38,3 +38,20 @@ def create_fn_id(test_name: str) -> str:
         suffix += f"-{worker_id}"
 
     return test_name + suffix
+
+
+P = typing.ParamSpec("P")
+T = typing.TypeVar("T")
+
+
+def asyncify(
+    fn: typing.Callable[P, T],
+) -> typing.Callable[P, typing.Awaitable[T]]:
+    """
+    Convert a sync function to an async function.
+    """
+
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        return fn(*args, **kwargs)
+
+    return wrapper

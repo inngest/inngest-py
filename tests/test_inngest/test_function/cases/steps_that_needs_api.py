@@ -69,7 +69,10 @@ def create(
                 return "a" * 1024 * 1024
 
             step_id = f"step_{i}"
-            await ctx.step.run(step_id, functools.partial(fn, step_id))
+            await ctx.step.run(
+                step_id,
+                base.asyncify(functools.partial(fn, step_id)),
+            )
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))

@@ -33,7 +33,7 @@ def create(
     )
     async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
-        await ctx.step.run(_crazy, lambda: None)
+        await ctx.step.run(_crazy, base.asyncify(lambda: None))
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))

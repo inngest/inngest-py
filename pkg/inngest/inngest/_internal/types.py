@@ -41,9 +41,6 @@ JSON = typing_extensions.TypeAliasType(
 )
 
 
-JSONT = typing.TypeVar("JSONT", bound=JSON)
-
-
 class BaseModel(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(strict=True)
 

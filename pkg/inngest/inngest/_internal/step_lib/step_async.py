@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import inspect
 import typing
 
 import typing_extensions
@@ -137,48 +138,21 @@ class Step(base.StepBase):
 
         raise Exception("unreachable")
 
-    @typing.overload
     async def run(
         self,
         step_id: str,
         handler: typing.Callable[
-            [typing_extensions.Unpack[types.TTuple]],
-            typing.Awaitable[types.JSONT],
+            [typing_extensions.Unpack[types.TTuple]], typing.Awaitable[types.T]
         ],
         *handler_args: typing_extensions.Unpack[types.TTuple],
-    ) -> types.JSONT: ...
-
-    @typing.overload
-    async def run(
-        self,
-        step_id: str,
-        handler: typing.Callable[
-            [typing_extensions.Unpack[types.TTuple]], types.JSONT
-        ],
-        *handler_args: typing_extensions.Unpack[types.TTuple],
-    ) -> types.JSONT: ...
-
-    async def run(
-        self,
-        step_id: str,
-        handler: typing.Union[
-            typing.Callable[
-                [typing_extensions.Unpack[types.TTuple]],
-                typing.Awaitable[types.JSONT],
-            ],
-            typing.Callable[
-                [typing_extensions.Unpack[types.TTuple]], types.JSONT
-            ],
-        ],
-        *handler_args: typing_extensions.Unpack[types.TTuple],
-    ) -> types.JSONT:
+    ) -> types.T:
         """
         Run logic that should be retried on error and memoized after success.
 
         Args:
         ----
             step_id: Durable step ID. Should usually be unique within a function, but it's OK to reuse as long as your function is deterministic.
-            handler: The logic to run.
+            handler: The logic to run. This MUST return a JSON-serializable value (i.e. can be passed to `json.dumps`).
             *handler_args: Arguments to pass to the handler.
         """
 
@@ -200,7 +174,15 @@ class Step(base.StepBase):
                 return step.output  # type: ignore
 
             try:
-                output = await transforms.maybe_await(handler(*handler_args))
+                if inspect.iscoroutinefunction(handler):
+                    output = await handler(*handler_args)
+                else:
+                    # Convert the non-async handler to async. The handler type
+                    # says it must be an async function, but we should still
+                    # support non-async at runtime.
+                    output = await transforms.maybe_await(
+                        handler(*handler_args)
+                    )
 
                 raise base.ResponseInterrupt(
                     base.StepResponse(

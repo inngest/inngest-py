@@ -1,8 +1,7 @@
 """
-Tuple outputs actually become lists, since tuples are serialized as lists
+When using a sync step callback in an async function, types don't work but it
+still works at runtime.
 """
-
-import json
 
 import inngest
 import test_core.helper
@@ -12,7 +11,7 @@ from . import base
 
 
 class _State(base.BaseState):
-    step_1_output: object = None
+    step_output: object = None
 
 
 def create(
@@ -30,26 +29,12 @@ def create(
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
     )
-    def fn_sync(ctx: inngest.ContextSync) -> None:
-        state.run_id = ctx.run_id
-
-        def step_1() -> tuple[int, int]:
-            return (1, 2)
-
-        state.step_1_output = ctx.step.run("step_1", step_1)
-
-    @client.create_function(
-        fn_id=fn_id,
-        retries=0,
-        trigger=inngest.TriggerEvent(event=event_name),
-    )
     async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
-
-        async def step_1() -> tuple[int, int]:
-            return (1, 2)
-
-        state.step_1_output = await ctx.step.run("step_1", step_1)
+        state.step_output = await ctx.step.run(
+            "step_1",
+            lambda: "hi",  # type: ignore
+        )
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
@@ -59,20 +44,12 @@ def create(
             test_core.helper.RunStatus.COMPLETED,
         )
 
-        assert state.step_1_output == [1, 2]
-
-        step_1_output_in_api = json.loads(
-            await test_core.helper.client.get_step_output(
-                run_id=run_id,
-                step_id="step_1",
-            )
-        )
-        assert step_1_output_in_api == {"data": [1, 2]}
+        assert state.step_output == "hi"
 
     if is_sync:
-        fn = fn_sync
+        fn = []
     else:
-        fn = fn_async
+        fn = [fn_async]
 
     return base.Case(
         fn=fn,

@@ -96,13 +96,13 @@ def create(
     async def fn_async(ctx: inngest.Context) -> str:
         state.run_id = ctx.run_id
 
-        def _step_1() -> str:
+        async def _step_1() -> str:
             return "test string"
 
         step_1_output = await ctx.step.run("step_1", _step_1)
         assert step_1_output == "test string"
 
-        def _step_2() -> list[inngest.JSON]:
+        async def _step_2() -> list[inngest.JSON]:
             return [{"a": {"b": 1}}]
 
         step_2_output = await ctx.step.run("step_2", _step_2)

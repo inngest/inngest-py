@@ -2,6 +2,7 @@ import inngest
 from inngest._internal import server_lib
 
 from . import (
+    async_fn_with_sync_step_callback,
     batch_that_needs_api,
     cancel,
     change_step_error,
@@ -48,6 +49,7 @@ from . import (
 from .base import Case
 
 _modules = (
+    async_fn_with_sync_step_callback,
     batch_that_needs_api,
     cancel,
     change_step_error,

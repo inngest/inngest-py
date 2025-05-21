@@ -84,7 +84,7 @@ class FunctionHandlerAsync(typing.Protocol):
     def __call__(
         self,
         ctx: Context,
-    ) -> typing.Awaitable[types.JSON]: ...
+    ) -> typing.Awaitable[typing.Any]: ...
 
 
 @typing.runtime_checkable
@@ -92,7 +92,7 @@ class FunctionHandlerSync(typing.Protocol):
     def __call__(
         self,
         ctx: ContextSync,
-    ) -> types.JSON: ...
+    ) -> typing.Any: ...
 
 
 # Context variable to detect nested steps.
