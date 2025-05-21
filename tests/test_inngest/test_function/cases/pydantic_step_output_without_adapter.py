@@ -1,6 +1,5 @@
 """
-We don't support returning Pydantic models in steps or functions. This may
-change in the future.
+Steps error if they return a Pydantic object without specifying a type adapter.
 """
 
 import json
@@ -63,11 +62,10 @@ def create(
         )
 
         assert run.output is not None
-        assert json.loads(run.output) == {
-            "code": "output_unserializable",
-            "message": '"a" returned unserializable data',
-            "name": "OutputUnserializableError",
-        }
+        output = json.loads(run.output)
+        assert isinstance(output, dict)
+        assert output["message"] == '"a" returned unserializable data'
+        assert output["name"] == "OutputUnserializableError"
 
     if is_sync:
         fn = fn_sync

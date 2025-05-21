@@ -132,9 +132,22 @@ class ExecutionV0(BaseExecution):
             if isinstance(err, Exception):
                 return CallResult(err)
 
+        output_class, output_adapter, err = transforms.parse_type_adapter(
+            fn._type_adapter
+        )
+        if err:
+            raise errors.NonRetriableError(str(err))
+
         try:
             try:
                 output = await handler(ctx)
+
+                # Ensure Pydantic output is serialized to JSON.
+                output = transforms.serialize_pydantic_output(
+                    output,
+                    output_class,
+                    output_adapter,
+                )
             except Exception as user_err:
                 transforms.remove_first_traceback_frame(user_err)
                 raise UserError(user_err)
@@ -272,9 +285,22 @@ class ExecutionV0Sync(BaseExecutionSync):
             if isinstance(err, Exception):
                 return CallResult(err)
 
+        output_class, output_adapter, err = transforms.parse_type_adapter(
+            fn._type_adapter
+        )
+        if err:
+            return CallResult(errors.NonRetriableError(str(err)))
+
         try:
             try:
                 output: object = handler(ctx)
+
+                # Ensure Pydantic output is serialized to JSON.
+                output = transforms.serialize_pydantic_output(
+                    output,
+                    output_class,
+                    output_adapter,
+                )
             except Exception as user_err:
                 transforms.remove_first_traceback_frame(user_err)
                 raise UserError(user_err)
