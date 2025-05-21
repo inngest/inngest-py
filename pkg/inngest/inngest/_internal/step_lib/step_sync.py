@@ -147,10 +147,10 @@ class StepSync(base.StepBase):
         step_id: str,
         handler: typing.Callable[
             [typing_extensions.Unpack[types.TTuple]],
-            types.JSONT,
+            types.T,
         ],
         *handler_args: typing_extensions.Unpack[types.TTuple],
-    ) -> types.JSONT:
+    ) -> types.T:
         """
         Run logic that should be retried on error and memoized after success.
 

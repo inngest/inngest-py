@@ -56,7 +56,7 @@ def create(
 
         def transform_input(
             self,
-            ctx: inngest.Context,
+            ctx: inngest.Context | inngest.ContextSync,
             function: inngest.Function,
             steps: inngest.StepMemos,
         ) -> None:
@@ -102,7 +102,7 @@ def create(
 
         async def transform_input(
             self,
-            ctx: inngest.Context,
+            ctx: inngest.Context | inngest.ContextSync,
             function: inngest.Function,
             steps: inngest.StepMemos,
         ) -> None:

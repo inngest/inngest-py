@@ -45,7 +45,7 @@ def create(
         state.attempt = ctx.attempt
         state.run_id = ctx.run_id
 
-        def step_1() -> None:
+        async def step_1() -> None:
             raise inngest.NonRetriableError("foo", quiet=True)
 
         await ctx.step.run("step_1", step_1)

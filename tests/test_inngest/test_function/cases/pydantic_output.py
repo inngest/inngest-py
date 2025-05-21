@@ -40,7 +40,7 @@ def create(
         state.run_id = ctx.run_id
         state.step_output = ctx.step.run(
             "a",
-            lambda: _User(name="Alice"),  # type: ignore
+            lambda: _User(name="Alice"),
         )
 
     @client.create_function(
@@ -52,7 +52,7 @@ def create(
         state.run_id = ctx.run_id
         state.step_output = await ctx.step.run(
             "a",
-            lambda: _User(name="Alice"),  # type: ignore
+            base.asyncify(lambda: _User(name="Alice")),
         )
 
     async def run_test(self: base.TestClass) -> None:

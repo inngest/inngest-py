@@ -124,7 +124,7 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
 
             async def transform_input(
                 self,
-                ctx: inngest.Context,
+                ctx: inngest.Context | inngest.ContextSync,
                 function: inngest.Function,
                 steps: inngest.StepMemos,
             ) -> None:
@@ -216,7 +216,7 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
 
             def transform_input(
                 self,
-                ctx: inngest.Context,
+                ctx: inngest.Context | inngest.ContextSync,
                 function: inngest.Function,
                 steps: inngest.StepMemos,
             ) -> None:

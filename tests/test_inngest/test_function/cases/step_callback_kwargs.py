@@ -42,7 +42,10 @@ def create(
     )
     async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
-        await ctx.step.run("step", functools.partial(step_callback, 1, b="a"))
+        await ctx.step.run(
+            "step",
+            base.asyncify(functools.partial(step_callback, 1, b="a")),
+        )
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
