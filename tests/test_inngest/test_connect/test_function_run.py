@@ -41,7 +41,7 @@ class TestFunctionRun(BaseTest):
         async def fn(ctx: inngest.Context) -> str:
             state.run_id = ctx.run_id
 
-            def step_a() -> str:
+            async def step_a() -> str:
                 state.step_counter += 1
                 return "Alice"
 
@@ -81,7 +81,7 @@ class TestFunctionRun(BaseTest):
         async def fn(ctx: inngest.Context) -> str:
             state.run_id = ctx.run_id
 
-            def step_a() -> str:
+            async def step_a() -> str:
                 state.step_counter += 1
                 return "Alice"
 

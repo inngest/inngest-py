@@ -68,7 +68,7 @@ class TestIntrospection(base.BaseTestIntrospection):
         assert isinstance(
             net.validate_response_sig(
                 body=res.get_data(),
-                headers=res.headers,
+                headers=dict(res.headers),
                 mode=server_lib.ServerKind.CLOUD,
                 signing_key=self.signing_key,
             ),

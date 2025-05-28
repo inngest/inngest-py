@@ -50,7 +50,7 @@ def create(
     async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
 
-        def foo() -> None:
+        async def foo() -> None:
             raise ValueError("foo")
 
         try:

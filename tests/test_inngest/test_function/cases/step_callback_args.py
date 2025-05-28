@@ -21,9 +21,6 @@ def create(
     fn_id = base.create_fn_id(test_name)
     state = _State()
 
-    def step_callback(a: int, b: str) -> None:
-        state.step_args = [a, b]
-
     @client.create_function(
         fn_id=fn_id,
         retries=0,
@@ -31,6 +28,10 @@ def create(
     )
     def fn_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
+
+        def step_callback(a: int, b: str) -> None:
+            state.step_args = [a, b]
+
         ctx.step.run("step", step_callback, 1, "a")
 
     @client.create_function(
@@ -40,6 +41,10 @@ def create(
     )
     async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
+
+        async def step_callback(a: int, b: str) -> None:
+            state.step_args = [a, b]
+
         await ctx.step.run("step", step_callback, 1, "a")
 
     async def run_test(self: base.TestClass) -> None:

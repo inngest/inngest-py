@@ -82,15 +82,15 @@ def create(
         state.request_counter += 1
 
         steps: tuple[typing.Any, ...] = (
-            lambda: ctx.step.run("1a", lambda: None),
-            lambda: ctx.step.run("1b", lambda: None),
+            lambda: ctx.step.run("1a", base.asyncify(lambda: None)),
+            lambda: ctx.step.run("1b", base.asyncify(lambda: None)),
         )
 
         if state.request_counter == 1:
-            steps += (lambda: ctx.step.run("1c", lambda: None),)
+            steps += (lambda: ctx.step.run("1c", base.asyncify(lambda: None)),)
 
         await ctx.group.parallel(steps)
-        await ctx.step.run("after", lambda: None)
+        await ctx.step.run("after", base.asyncify(lambda: None))
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
