@@ -17,6 +17,7 @@ from inngest.experimental.connect.connection import (
     WorkerConnection,
     _WebSocketWorkerConnection,
 )
+from inngest.experimental.dev_server import dev_server
 
 
 @dataclasses.dataclass
@@ -38,7 +39,7 @@ class _Request:
 class BaseTest(unittest.IsolatedAsyncioTestCase):
     async def create_proxies(self) -> _Proxies:
         ws_proxy = test_core.ws_proxy.WebSocketProxy(
-            "ws://0.0.0.0:8289/v0/connect"
+            f"ws://0.0.0.0:{dev_server.server.port + 1}/v0/connect"
         )
         self.addCleanup(ws_proxy.stop)
         await ws_proxy.start()
@@ -58,14 +59,20 @@ class BaseTest(unittest.IsolatedAsyncioTestCase):
                 content=body,
                 headers={k: v[0] for k, v in headers.items()},
                 method=method,
-                url=f"http://0.0.0.0:8288{path}",
+                url=f"http://0.0.0.0:{dev_server.server.port}{path}",
             )
 
-            start_resp = connect_pb2.StartResponse()
-            start_resp.ParseFromString(resp.content)
-            start_resp.gateway_endpoint = ws_proxy.url
+            resp_body = resp.content
 
-            resp_body = start_resp.SerializeToString()
+            try:
+                # Rewrite the gateway endpoint if this is a start response.
+                start_resp = connect_pb2.StartResponse()
+                start_resp.ParseFromString(resp.content)
+                start_resp.gateway_endpoint = ws_proxy.url
+                resp_body = start_resp.SerializeToString()
+            except Exception:
+                pass
+
             resp_headers = {k: v[0] for k, v in resp.headers.items()}
             resp_headers["content-length"] = str(len(resp_body))
 
