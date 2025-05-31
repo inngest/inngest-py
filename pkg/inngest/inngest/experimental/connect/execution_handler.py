@@ -111,6 +111,8 @@ class _ExecutionHandler(_BaseHandler):
             == connect_pb2.GatewayMessageType.WORKER_REQUEST_EXTEND_LEASE_ACK
         ):
             self._handle_lease_extend_ack(msg)
+        elif msg.kind == connect_pb2.GatewayMessageType.WORKER_REPLY_ACK:
+            self._handle_worker_reply_ack(msg)
 
     def _handle_executor_request(
         self,
