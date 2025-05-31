@@ -199,9 +199,14 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 self._instance_id,
             ),
             _ExecutionHandler(
-                self._logger,
-                self._state,
-                self._comm_handlers,
+                api_origin=self._api_origin,
+                comm_handlers=self._comm_handlers,
+                http_client=self._http_client,
+                http_client_sync=self._http_client_sync,
+                logger=self._logger,
+                state=self._state,
+                signing_key=self._signing_key,
+                signing_key_fallback=self._fallback_signing_key,
             ),
             _DrainHandler(self._logger, self._state),
         ]
