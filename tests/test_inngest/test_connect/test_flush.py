@@ -3,7 +3,6 @@ import json
 
 import inngest
 import pytest
-import structlog
 import test_core
 from inngest.experimental.connect import ConnectionState, connect
 
@@ -28,9 +27,8 @@ class TestFlush(BaseTest):
 
         client = inngest.Inngest(
             api_base_url=proxies.http_proxy.origin,
-            app_id="app",
+            app_id=test_core.random_suffix("app"),
             is_production=False,
-            logger=structlog.get_logger(),
         )
         event_name = test_core.random_suffix("event")
         state = _State()
@@ -92,9 +90,8 @@ class TestFlush(BaseTest):
 
         client = inngest.Inngest(
             api_base_url=proxies.http_proxy.origin,
-            app_id="app",
+            app_id=test_core.random_suffix("app"),
             is_production=False,
-            logger=structlog.get_logger(),
         )
         event_name = test_core.random_suffix("event")
         state = test_core.BaseState()
