@@ -87,7 +87,6 @@ class _WebSocketWorkerConnection(WorkerConnection):
         apps: list[tuple[inngest.Inngest, list[inngest.Function]]],
         *,
         instance_id: typing.Optional[str] = None,
-        max_concurrency: typing.Optional[int] = None,
         rewrite_gateway_endpoint: typing.Optional[
             typing.Callable[[str], str]
         ] = None,
@@ -148,7 +147,6 @@ class _WebSocketWorkerConnection(WorkerConnection):
             instance_id = socket.gethostname()
         self._instance_id = instance_id
 
-        self._max_concurrency = max_concurrency
         self._rewrite_gateway_endpoint = rewrite_gateway_endpoint
         self._http_client = net.ThreadAwareAsyncHTTPClient().initialize()
         self._http_client_sync = httpx.Client()
