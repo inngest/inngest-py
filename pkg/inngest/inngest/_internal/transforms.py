@@ -7,6 +7,7 @@ import traceback
 import typing
 
 import jcs
+import pydantic
 
 from inngest._internal import errors, server_lib, types
 
@@ -176,3 +177,51 @@ def remove_first_traceback_frame(err: Exception) -> None:
 
     if err.__traceback__:
         err.__traceback__ = err.__traceback__.tb_next
+
+
+def serialize_pydantic_output(
+    output: object,
+    model_class: type[pydantic.BaseModel] | None,
+    type_adapter: pydantic.TypeAdapter[typing.Any] | None,
+) -> object:
+    """
+    Serialize function/step Pydantic output to JSON.
+    """
+
+    if type_adapter:
+        return type_adapter.dump_python(output, mode="json")
+
+    if model_class:
+        return model_class.model_dump(output, mode="json")  # type: ignore
+
+    return output
+
+
+def parse_type_adapter(
+    type_adapter: type[typing.Any]
+    | pydantic.TypeAdapter[typing.Any]
+    | None = None,
+) -> tuple[
+    type[pydantic.BaseModel] | None,
+    pydantic.TypeAdapter[typing.Any] | None,
+    Exception | None,
+]:
+    """
+    Parse a type adapter into a model class and a type adapter. This is used to
+    parse function/step type adapters.
+    """
+
+    if type_adapter is None:
+        return None, None, None
+
+    if isinstance(type_adapter, pydantic.TypeAdapter):
+        return None, type_adapter, None
+
+    if issubclass(type_adapter, pydantic.BaseModel):
+        return type_adapter, None, None
+
+    return (
+        None,
+        None,
+        Exception("type_adapter is neither a Pydantic model nor a TypeAdapter"),
+    )

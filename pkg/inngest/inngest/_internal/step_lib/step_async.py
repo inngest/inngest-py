@@ -4,6 +4,7 @@ import datetime
 import inspect
 import typing
 
+import pydantic
 import typing_extensions
 
 from inngest._internal import client_lib, errors, server_lib, transforms, types
@@ -145,6 +146,9 @@ class Step(base.StepBase):
             [typing_extensions.Unpack[types.TTuple]], typing.Awaitable[types.T]
         ],
         *handler_args: typing_extensions.Unpack[types.TTuple],
+        type_adapter: type[types.T]
+        | pydantic.TypeAdapter[types.T]
+        | None = None,
     ) -> types.T:
         """
         Run logic that should be retried on error and memoized after success.
@@ -154,9 +158,16 @@ class Step(base.StepBase):
             step_id: Durable step ID. Should usually be unique within a function, but it's OK to reuse as long as your function is deterministic.
             handler: The logic to run. This MUST return a JSON-serializable value (i.e. can be passed to `json.dumps`).
             *handler_args: Arguments to pass to the handler.
+            type_adapter: Adapter for Pydantic output deserialization.
         """
 
         parsed_step_id = self._parse_step_id(step_id)
+
+        output_class, output_adapter, err = transforms.parse_type_adapter(
+            type_adapter
+        )
+        if err:
+            raise errors.NonRetriableError(str(err))
 
         step_info = base.StepInfo(
             display_name=parsed_step_id.user_facing,
@@ -171,6 +182,10 @@ class Step(base.StepBase):
             if step.error is not None:
                 raise step.error
             elif not isinstance(step.output, types.EmptySentinel):
+                if output_class:
+                    return output_class.model_validate(step.output)  # type: ignore
+                if output_adapter:
+                    return output_adapter.validate_python(step.output)  # type: ignore
                 return step.output  # type: ignore
 
             try:
@@ -183,6 +198,13 @@ class Step(base.StepBase):
                     output = await transforms.maybe_await(
                         handler(*handler_args)
                     )
+
+                # Ensure Pydantic output is serialized to JSON.
+                output = transforms.serialize_pydantic_output(
+                    output,
+                    output_class,
+                    output_adapter,
+                )  # type: ignore
 
                 raise base.ResponseInterrupt(
                     base.StepResponse(

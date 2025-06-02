@@ -7,6 +7,7 @@ import typing
 import urllib.parse
 
 import httpx
+import pydantic
 
 from inngest._internal import (
     const,
@@ -210,6 +211,9 @@ class Inngest:
             server_lib.TriggerEvent,
             list[typing.Union[server_lib.TriggerCron, server_lib.TriggerEvent]],
         ],
+        type_adapter: type[pydantic.BaseModel]
+        | pydantic.TypeAdapter[typing.Any]
+        | None = None,
     ) -> typing.Callable[
         [
             typing.Union[
@@ -238,6 +242,7 @@ class Inngest:
             retries: Number of times to retry this function.
             throttle: Throttling config.
             trigger: What should trigger runs of this function.
+            type_adapter: Adapter for Pydantic output deserialization.
         """
 
         fully_qualified_fn_id = f"{self.app_id}-{fn_id}"
@@ -267,6 +272,7 @@ class Inngest:
                 ),
                 triggers,
                 func,
+                type_adapter,
                 middleware,
             )
 

@@ -142,6 +142,7 @@ class StepUnexpectedError(Error):
 
 class OutputUnserializableError(Error):
     code = server_lib.ErrorCode.OUTPUT_UNSERIALIZABLE
+    is_retriable = False
 
 
 class NonRetriableError(Error):
