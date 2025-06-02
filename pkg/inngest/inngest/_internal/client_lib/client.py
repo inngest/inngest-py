@@ -205,6 +205,7 @@ class Inngest:
         rate_limit: typing.Optional[server_lib.RateLimit] = None,
         retries: typing.Optional[int] = None,
         throttle: typing.Optional[server_lib.Throttle] = None,
+        singleton: typing.Optional[server_lib.Singleton] = None,
         trigger: typing.Union[
             server_lib.TriggerCron,
             server_lib.TriggerEvent,
@@ -238,6 +239,7 @@ class Inngest:
             retries: Number of times to retry this function.
             throttle: Throttling config.
             trigger: What should trigger runs of this function.
+            singleton: Singleton configuration ensures that only one run per key of this function is active at any given time.
         """
 
         fully_qualified_fn_id = f"{self.app_id}-{fn_id}"
@@ -264,6 +266,7 @@ class Inngest:
                     rate_limit=rate_limit,
                     retries=retries,
                     throttle=throttle,
+                    singleton=singleton,
                 ),
                 triggers,
                 func,
