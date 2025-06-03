@@ -48,6 +48,7 @@ class Test_get_function_configs(unittest.TestCase):
             throttle=inngest.Throttle(
                 limit=2, period=datetime.timedelta(minutes=1)
             ),
+            singleton=inngest.Singleton(key="false", mode="skip"),
             trigger=inngest.TriggerEvent(event="app/fn"),
         )
         def fn(ctx: inngest.ContextSync) -> int:

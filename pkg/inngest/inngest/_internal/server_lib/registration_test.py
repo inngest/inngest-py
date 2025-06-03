@@ -10,6 +10,7 @@ from .registration import (
     RateLimit,
     Retries,
     Runtime,
+    Singleton,
     Step,
     Throttle,
     TriggerCron,
@@ -65,6 +66,10 @@ def test_serialization() -> None:
             key="foo",
             limit=1,
             period=datetime.timedelta(seconds=60),
+        ),
+        singleton=Singleton(
+            key="foo",
+            mode="skip",
         ),
         triggers=[
             TriggerCron(cron="foo"),
@@ -125,6 +130,10 @@ def test_serialization() -> None:
             "limit": 1,
             "burst": 1,
             "period": "1m",
+        },
+        "singleton": {
+            "key": "foo",
+            "mode": "skip",
         },
         "triggers": [
             {"cron": "foo"},

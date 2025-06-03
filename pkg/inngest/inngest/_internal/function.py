@@ -52,6 +52,7 @@ class FunctionOpts(types.BaseModel):
     rate_limit: typing.Optional[server_lib.RateLimit]
     retries: typing.Optional[int]
     throttle: typing.Optional[server_lib.Throttle]
+    singleton: typing.Optional[server_lib.Singleton]
 
     def convert_validation_error(
         self,
@@ -275,6 +276,7 @@ class Function:
             },
             throttle=self._opts.throttle,
             triggers=self._triggers,
+            singleton=self._opts.singleton,
         )
 
         on_failure = None
@@ -318,6 +320,7 @@ class Function:
                         expression=f"event.data.function_id == '{self.id}'",
                     )
                 ],
+                singleton=None,
             )
 
         return _Config(main=main, on_failure=on_failure)
