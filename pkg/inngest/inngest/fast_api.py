@@ -25,6 +25,7 @@ def serve(
     *,
     serve_origin: typing.Optional[str] = None,
     serve_path: typing.Optional[str] = None,
+    streaming: bool = False,
 ) -> None:
     """
     Serve Inngest functions in a FastAPI app.
@@ -37,12 +38,14 @@ def serve(
 
         serve_origin: Origin to serve the functions from.
         serve_path: Path to serve the functions from.
+        streaming: Send keepalive bytes until the response is complete.
     """
 
     handler = comm_lib.CommHandler(
         client=client,
         framework=FRAMEWORK,
         functions=functions,
+        streaming=streaming,
     )
 
     @app.get(config_lib.get_serve_path(serve_path) or const.DEFAULT_SERVE_PATH)
@@ -107,6 +110,13 @@ def _to_response(
     client: client_lib.Inngest,
     comm_res: comm_lib.CommResponse,
 ) -> fastapi.responses.Response:
+    if comm_res.stream is not None:
+        return fastapi.responses.StreamingResponse(
+            comm_res.stream(),
+            headers=comm_res.headers,
+            status_code=comm_res.status_code,
+        )
+
     body = transforms.dump_json(comm_res.body)
     if isinstance(body, Exception):
         comm_res = comm_lib.CommResponse.from_error(client.logger, body)

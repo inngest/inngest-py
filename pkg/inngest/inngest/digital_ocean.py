@@ -32,10 +32,14 @@ def serve(
         serve_path: The entire function path (e.g. /api/v1/web/fn-b094417f/sample/hello).
     """
 
+    # Not supported yet.
+    streaming = False
+
     handler = comm_lib.CommHandler(
         client=client,
         framework=FRAMEWORK,
         functions=functions,
+        streaming=streaming,
     )
 
     def main(event: dict[str, object], context: _Context) -> _Response:

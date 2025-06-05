@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import http
+import json
 import typing
 
 from inngest._internal import (
@@ -33,11 +35,15 @@ class CommResponse:
         *,
         body: object = None,
         headers: typing.Optional[dict[str, str]] = None,
+        stream: typing.Optional[
+            typing.Callable[[], typing.AsyncGenerator[bytes, None]]
+        ] = None,
         status_code: int = http.HTTPStatus.OK.value,
     ) -> None:
         self.headers = headers or {}
         self.body = body
         self.status_code = status_code
+        self.stream = stream
 
     @property
     def no_retry(self) -> bool:
@@ -63,6 +69,68 @@ class CommResponse:
     @property
     def sdk_version(self) -> typing.Optional[str]:
         return self.headers.get(server_lib.HeaderKey.SDK.value)
+
+    @classmethod
+    def create_streaming(
+        cls,
+        logger: types.Logger,
+        coro: typing.Coroutine[
+            typing.Any, typing.Any, execution_lib.CallResult
+        ],
+        env: typing.Optional[str],
+        framework: server_lib.Framework,
+        server_kind: typing.Optional[server_lib.ServerKind],
+    ) -> CommResponse:
+        """
+        Create a streaming response. Sends keepalive bytes until the response is
+        complete.
+        """
+
+        async def stream() -> typing.AsyncGenerator[bytes, None]:
+            """
+            Sends keepalive bytes until the response is complete.
+            """
+
+            # Run the call coroutine in the background.
+            task = asyncio.create_task(coro)
+
+            # Send keepalives until task completes.
+            while not task.done():
+                yield b" "
+                await asyncio.sleep(3)
+
+            # Get the "actual" CommResponse.
+            comm_res = cls.from_call_result(
+                logger,
+                await task,
+                env,
+                framework,
+                server_kind,
+            )
+
+            body = transforms.dump_json(comm_res.body)
+            if isinstance(body, Exception):
+                comm_res = cls.from_error(logger, body)
+                body = json.dumps(comm_res.body)
+
+            # Send the "actual" CommResponse as the body.
+            yield json.dumps(
+                {
+                    "body": body,
+                    "headers": comm_res.headers,
+                    "status": comm_res.status_code,
+                }
+            ).encode("utf-8")
+
+        return cls(
+            headers=net.create_headers(
+                env=env,
+                framework=framework,
+                server_kind=server_kind,
+            ),
+            status_code=http.HTTPStatus.CREATED.value,
+            stream=stream,
+        )
 
     @classmethod
     def from_call_result(

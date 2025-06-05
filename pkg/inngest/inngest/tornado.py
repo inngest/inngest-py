@@ -39,10 +39,14 @@ def serve(
         serve_path: Path to serve the functions from.
     """
 
+    # Not supported yet.
+    streaming = False
+
     handler = comm_lib.CommHandler(
         client=client,
         framework=FRAMEWORK,
         functions=functions,
+        streaming=streaming,
     )
 
     class InngestHandler(tornado.web.RequestHandler):

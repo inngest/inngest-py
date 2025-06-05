@@ -43,6 +43,7 @@ class CommHandler:
         client: client_lib.Inngest,
         framework: server_lib.Framework,
         functions: list[function.Function],
+        streaming: bool,
     ) -> None:
         # In-band syncing is opt-out.
         self._allow_in_band_sync = not env_lib.is_false(
@@ -54,6 +55,7 @@ class CommHandler:
         self._api_origin = client.api_origin
         self._fns = {fn.get_id(): fn for fn in functions}
         self._framework = framework
+        self._streaming = streaming
 
         # TODO: Graduate this to a config option, rather than an env var.
         thread_pool_max_workers = env_lib.get_int(
@@ -151,7 +153,9 @@ class CommHandler:
             # batch or tell the SDK to fetch the batch
 
             return Exception("events not in request")
-        call_res = await fn.call(
+
+        # Don't await because we might need to stream the response.
+        call_res = fn.call(
             self._client,
             execution_lib.Context(
                 attempt=request.ctx.attempt,
@@ -169,9 +173,18 @@ class CommHandler:
             self._thread_pool,
         )
 
+        if self._streaming:
+            return CommResponse.create_streaming(
+                self._client.logger,
+                call_res,
+                self._client.env,
+                self._framework,
+                server_kind,
+            )
+
         return CommResponse.from_call_result(
             self._client.logger,
-            call_res,
+            await call_res,
             self._client.env,
             self._framework,
             server_kind,
