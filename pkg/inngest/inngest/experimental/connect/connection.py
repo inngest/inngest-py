@@ -142,6 +142,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 client=client,
                 framework=_framework,
                 functions=fns,
+                streaming=False,  # Probably doesn't make sense for Connect.
             )
 
         if instance_id is None:
