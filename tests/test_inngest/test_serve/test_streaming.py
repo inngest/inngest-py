@@ -84,7 +84,7 @@ class TestStreaming(unittest.IsolatedAsyncioTestCase):
                 client,
                 [fn],
                 serve_origin=proxy.origin,
-                streaming=True,
+                streaming=inngest.Streaming.ALLOW,
             )
             uvicorn.run(app, host="0.0.0.0", port=sdk_port, log_level="warning")
 

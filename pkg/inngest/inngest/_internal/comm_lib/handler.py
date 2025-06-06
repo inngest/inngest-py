@@ -43,7 +43,7 @@ class CommHandler:
         client: client_lib.Inngest,
         framework: server_lib.Framework,
         functions: list[function.Function],
-        streaming: bool,
+        streaming: typing.Optional[const.Streaming] = None,
     ) -> None:
         # In-band syncing is opt-out.
         self._allow_in_band_sync = not env_lib.is_false(
@@ -55,7 +55,10 @@ class CommHandler:
         self._api_origin = client.api_origin
         self._fns = {fn.get_id(): fn for fn in functions}
         self._framework = framework
-        self._streaming = streaming
+
+        if streaming is None:
+            streaming = env_lib.get_streaming(const.EnvKey.STREAMING)
+        self._streaming = streaming or const.Streaming.DISABLE
 
         # TODO: Graduate this to a config option, rather than an env var.
         thread_pool_max_workers = env_lib.get_int(
@@ -173,7 +176,7 @@ class CommHandler:
             self._thread_pool,
         )
 
-        if self._streaming:
+        if self._streaming is const.Streaming.FORCE:
             return CommResponse.create_streaming(
                 self._client.logger,
                 call_res,

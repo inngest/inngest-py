@@ -8,7 +8,15 @@ import json
 import typing
 import urllib.parse
 
-from ._internal import client_lib, comm_lib, errors, function, server_lib, types
+from ._internal import (
+    client_lib,
+    comm_lib,
+    const,
+    errors,
+    function,
+    server_lib,
+    types,
+)
 
 FRAMEWORK = server_lib.Framework.DIGITAL_OCEAN
 
@@ -32,14 +40,11 @@ def serve(
         serve_path: The entire function path (e.g. /api/v1/web/fn-b094417f/sample/hello).
     """
 
-    # Not supported yet.
-    streaming = False
-
     handler = comm_lib.CommHandler(
         client=client,
         framework=FRAMEWORK,
         functions=functions,
-        streaming=streaming,
+        streaming=const.Streaming.DISABLE,  # Not supported yet.
     )
 
     def main(event: dict[str, object], context: _Context) -> _Response:

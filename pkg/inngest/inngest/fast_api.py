@@ -25,7 +25,7 @@ def serve(
     *,
     serve_origin: typing.Optional[str] = None,
     serve_path: typing.Optional[str] = None,
-    streaming: bool = False,
+    streaming: typing.Optional[const.Streaming] = None,
 ) -> None:
     """
     Serve Inngest functions in a FastAPI app.
@@ -38,7 +38,8 @@ def serve(
 
         serve_origin: Origin to serve the functions from.
         serve_path: Path to serve the functions from.
-        streaming: Send keepalive bytes until the response is complete.
+        streaming: Controls whether to send keepalive bytes until the response is
+            complete.
     """
 
     handler = comm_lib.CommHandler(
