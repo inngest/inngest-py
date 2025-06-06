@@ -26,7 +26,7 @@ class EnvKey(enum.Enum):
     EVENT_KEY = "INNGEST_EVENT_KEY"
     ENV = "INNGEST_ENV"
 
-    # The ThreadPoolExecutor max_workers arg.. If set to 0, the thread pool will
+    # The ThreadPoolExecutor max_workers arg. If set to 0, the thread pool will
     # not be created. There probably isn't a use case for disabling, though we
     # should have it until we get lots of feedback on the thread pool.
     THREAD_POOL_MAX_WORKERS = "INNGEST_THREAD_POOL_MAX_WORKERS"
@@ -44,6 +44,20 @@ class EnvKey(enum.Enum):
     SIGNING_KEY = "INNGEST_SIGNING_KEY"
     SIGNING_KEY_FALLBACK = "INNGEST_SIGNING_KEY_FALLBACK"
 
+    # Controls the "streaming" feature, which sends keepalive bytes until the
+    # response is complete.
+    STREAMING = "INNGEST_STREAMING"
+
     # Vercel deployment's git branch
     # https://vercel.com/docs/concepts/projects/environment-variables/system-environment-variables#system-environment-variables
     VERCEL_GIT_BRANCH = "VERCEL_GIT_COMMIT_REF"
+
+
+class Streaming(enum.Enum):
+    """
+    Controls the "streaming" feature, which sends keepalive bytes until the
+    response is complete.
+    """
+
+    DISABLE = "disable"
+    FORCE = "force"

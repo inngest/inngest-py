@@ -9,7 +9,7 @@ import httpx
 import websockets
 
 import inngest
-from inngest._internal import comm_lib, net, server_lib, types
+from inngest._internal import comm_lib, const, net, server_lib, types
 
 from . import connect_pb2
 from .base_handler import _BaseHandler
@@ -142,6 +142,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 client=client,
                 framework=_framework,
                 functions=fns,
+                streaming=const.Streaming.DISABLE,  # Probably doesn't make sense for Connect.
             )
 
         if instance_id is None:
