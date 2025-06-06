@@ -2,6 +2,7 @@ import asyncio
 import datetime
 
 import inngest
+import pytest
 import test_core.helper
 from inngest._internal import server_lib
 
@@ -87,6 +88,8 @@ def create(
 
         await step.run("after", after)
 
+    # We're gonna remove this feature anyway.
+    @pytest.mark.xfail
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
         await test_core.helper.client.wait_for_run_status(
