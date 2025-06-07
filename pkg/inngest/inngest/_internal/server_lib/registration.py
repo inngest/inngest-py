@@ -96,6 +96,7 @@ class FunctionConfig(_BaseConfig):
     )
     steps: dict[str, Step]
     throttle: typing.Optional[Throttle]
+    singleton: typing.Optional[Singleton]
     triggers: list[typing.Union[TriggerCron, TriggerEvent]]
 
 
@@ -154,6 +155,11 @@ class Throttle(_BaseConfig):
         if isinstance(out, Exception):
             raise out
         return out
+
+
+class Singleton(_BaseConfig):
+    key: typing.Optional[str] = None
+    mode: typing.Literal["skip"]
 
 
 class TriggerCron(_BaseConfig):
