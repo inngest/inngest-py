@@ -69,14 +69,7 @@ class Step(base.StepBase):
             v=v,
         )
 
-        if (
-            self._client._serializer is not None
-            and function._output_type is not types.EmptySentinel
-        ):
-            output = self._client._serializer.deserialize(
-                output,
-                function._output_type,
-            )
+        output = self._client._deserialize(output, function._output_type)
 
         return output  # type: ignore[return-value]
 
@@ -184,15 +177,7 @@ class Step(base.StepBase):
             if step.error is not None:
                 raise step.error
             elif not isinstance(step.output, types.EmptySentinel):
-                if (
-                    self._client._serializer is not None
-                    and output_type is not types.EmptySentinel
-                ):
-                    return self._client._serializer.deserialize(
-                        step.output,
-                        output_type,
-                    )  # type: ignore[return-value]
-                return step.output  # type: ignore
+                return self._client._deserialize(step.output, output_type)  # type: ignore[return-value]
 
             try:
                 if inspect.iscoroutinefunction(handler):
@@ -205,16 +190,7 @@ class Step(base.StepBase):
                         handler(*handler_args)
                     )
 
-                # Even though output_type isn't used, we still check for it to
-                # ensure users are adding explicit types on functions that
-                # return non-JSON-serializable data (e.g. Pydantic objects). If
-                # we didn't do this, then `step.run` would not return the
-                # correct type at runtime.
-                if (
-                    self._client._serializer is not None
-                    and output_type is not types.EmptySentinel
-                ):
-                    output = self._client._serializer.serialize(output)  # type: ignore
+                output = self._client._serialize(output, output_type)  # type: ignore[assignment]
 
                 raise base.ResponseInterrupt(
                     base.StepResponse(

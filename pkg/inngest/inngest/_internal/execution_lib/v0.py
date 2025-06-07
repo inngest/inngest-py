@@ -136,17 +136,7 @@ class ExecutionV0(BaseExecution):
         try:
             try:
                 output: object = await handler(ctx)
-
-                # Even though output_type isn't used, we still check for it to
-                # ensure users are adding explicit types on functions that
-                # return non-JSON-serializable data (e.g. Pydantic objects). If
-                # we didn't do this, then `step.invoke` would not return the
-                # correct type at runtime.
-                if (
-                    client._serializer is not None
-                    and output_type is not types.EmptySentinel
-                ):
-                    output = client._serializer.serialize(output)
+                output = client._serialize(output, output_type)
             except Exception as user_err:
                 transforms.remove_first_traceback_frame(user_err)
                 raise UserError(user_err)
@@ -288,17 +278,7 @@ class ExecutionV0Sync(BaseExecutionSync):
         try:
             try:
                 output: object = handler(ctx)
-
-                # Even though output_type isn't used, we still check for it to
-                # ensure users are adding explicit types on functions that
-                # return non-JSON-serializable data (e.g. Pydantic objects). If
-                # we didn't do this, then `step.invoke` would not return the
-                # correct type at runtime.
-                if (
-                    client._serializer is not None
-                    and output_type is not types.EmptySentinel
-                ):
-                    output = client._serializer.serialize(output)
+                output = client._serialize(output, output_type)
             except Exception as user_err:
                 transforms.remove_first_traceback_frame(user_err)
                 raise UserError(user_err)
