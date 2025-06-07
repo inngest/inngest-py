@@ -132,8 +132,8 @@ class ExecutionV0(BaseExecution):
             if isinstance(err, Exception):
                 return CallResult(err)
 
-        output_class, output_adapter, err = transforms.parse_type_adapter(
-            fn._type_adapter
+        output_class, output_adapter, err = transforms.parse_serializer(
+            fn._output_serializer
         )
         if err:
             raise errors.NonRetriableError(str(err))
@@ -285,8 +285,8 @@ class ExecutionV0Sync(BaseExecutionSync):
             if isinstance(err, Exception):
                 return CallResult(err)
 
-        output_class, output_adapter, err = transforms.parse_type_adapter(
-            fn._type_adapter
+        output_class, output_adapter, err = transforms.parse_serializer(
+            fn._output_serializer
         )
         if err:
             return CallResult(errors.NonRetriableError(str(err)))

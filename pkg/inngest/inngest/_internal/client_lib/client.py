@@ -70,6 +70,9 @@ class Inngest:
         middleware: typing.Optional[
             list[middleware_lib.UninitializedMiddleware]
         ] = None,
+        serializer: type[pydantic.BaseModel]
+        | pydantic.TypeAdapter[typing.Any]
+        | None = None,
         signing_key: typing.Optional[str] = None,
     ) -> None:
         """
@@ -86,6 +89,7 @@ class Inngest:
                 request signature verification and default Inngest server URLs.
             logger: Logger to use.
             middleware: List of middleware to use.
+            serializer: Pydantic serializer.
             signing_key: Inngest signing key.
         """
 
@@ -129,6 +133,7 @@ class Inngest:
 
         self._http_client = net.ThreadAwareAsyncHTTPClient().initialize()
         self._http_client_sync = httpx.Client()
+        self._output_serializer = serializer
 
     def _build_send_request(
         self,
@@ -202,6 +207,9 @@ class Inngest:
             execution_lib.FunctionHandlerSync,
             None,
         ] = None,
+        output_serializer: type[pydantic.BaseModel]
+        | pydantic.TypeAdapter[typing.Any]
+        | None = None,
         priority: typing.Optional[server_lib.Priority] = None,
         rate_limit: typing.Optional[server_lib.RateLimit] = None,
         retries: typing.Optional[int] = None,
@@ -212,9 +220,6 @@ class Inngest:
             server_lib.TriggerEvent,
             list[typing.Union[server_lib.TriggerCron, server_lib.TriggerEvent]],
         ],
-        type_adapter: type[pydantic.BaseModel]
-        | pydantic.TypeAdapter[typing.Any]
-        | None = None,
     ) -> typing.Callable[
         [
             typing.Union[
@@ -238,13 +243,13 @@ class Inngest:
             middleware: Middleware to apply to this function.
             name: Human-readable function name. (Defaults to the function ID).
             on_failure: Function to call when this function fails.
+            output_serializer: Pydantic output serializer.
             priority: Prioritize function runs.
             rate_limit: Rate limiting config.
             retries: Number of times to retry this function.
             singleton: Singleton configuration ensures that only one run per key of this function is active at any given time.
             throttle: Throttling config.
             trigger: What should trigger runs of this function.
-            type_adapter: Adapter for Pydantic output deserialization.
         """
 
         fully_qualified_fn_id = f"{self.app_id}-{fn_id}"
@@ -275,7 +280,7 @@ class Inngest:
                 ),
                 triggers,
                 func,
-                type_adapter,
+                output_serializer or self._output_serializer,
                 middleware,
             )
 

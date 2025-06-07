@@ -114,7 +114,7 @@ class Function:
             execution_lib.FunctionHandlerAsync,
             execution_lib.FunctionHandlerSync,
         ],
-        type_adapter: type[pydantic.BaseModel]
+        output_serializer: type[pydantic.BaseModel]
         | pydantic.TypeAdapter[typing.Any]
         | None,
         middleware: typing.Optional[
@@ -124,8 +124,8 @@ class Function:
         self._handler = handler
         self._middleware = middleware or []
         self._opts = opts
+        self._output_serializer = output_serializer
         self._triggers = trigger if isinstance(trigger, list) else [trigger]
-        self._type_adapter = type_adapter
 
         if opts.on_failure is not None:
             if (

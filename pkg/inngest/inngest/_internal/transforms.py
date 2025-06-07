@@ -182,14 +182,14 @@ def remove_first_traceback_frame(err: Exception) -> None:
 def serialize_pydantic_output(
     output: object,
     model_class: type[pydantic.BaseModel] | None,
-    type_adapter: pydantic.TypeAdapter[typing.Any] | None,
+    serializer: pydantic.TypeAdapter[typing.Any] | None,
 ) -> object:
     """
     Serialize function/step Pydantic output to JSON.
     """
 
-    if type_adapter:
-        return type_adapter.dump_python(output, mode="json")
+    if serializer:
+        return serializer.dump_python(output, mode="json")
 
     if model_class:
         return model_class.model_dump(output, mode="json")  # type: ignore
@@ -197,8 +197,8 @@ def serialize_pydantic_output(
     return output
 
 
-def parse_type_adapter(
-    type_adapter: type[typing.Any]
+def parse_serializer(
+    serializer: type[typing.Any]
     | pydantic.TypeAdapter[typing.Any]
     | None = None,
 ) -> tuple[
@@ -207,21 +207,21 @@ def parse_type_adapter(
     Exception | None,
 ]:
     """
-    Parse a type adapter into a model class and a type adapter. This is used to
-    parse function/step type adapters.
+    Parse a serializer into a model class and a type adapter. This is used to
+    parse function/step serializers.
     """
 
-    if type_adapter is None:
+    if serializer is None:
         return None, None, None
 
-    if isinstance(type_adapter, pydantic.TypeAdapter):
-        return None, type_adapter, None
+    if isinstance(serializer, pydantic.TypeAdapter):
+        return None, serializer, None
 
-    if issubclass(type_adapter, pydantic.BaseModel):
-        return type_adapter, None, None
+    if issubclass(serializer, pydantic.BaseModel):
+        return serializer, None, None
 
     return (
         None,
         None,
-        Exception("type_adapter is neither a Pydantic model nor a TypeAdapter"),
+        Exception("serializer is neither a Pydantic model nor a TypeAdapter"),
     )

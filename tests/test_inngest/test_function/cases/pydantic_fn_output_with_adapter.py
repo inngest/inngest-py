@@ -34,7 +34,7 @@ def create(
         fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
-        type_adapter=pydantic.TypeAdapter(object),
+        output_serializer=pydantic.TypeAdapter(object),
     )
     def fn_sync(ctx: inngest.ContextSync) -> list[_User]:
         state.run_id = ctx.run_id
@@ -44,7 +44,7 @@ def create(
         fn_id=fn_id,
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
-        type_adapter=pydantic.TypeAdapter(object),
+        output_serializer=pydantic.TypeAdapter(object),
     )
     async def fn_async(ctx: inngest.Context) -> list[_User]:
         state.run_id = ctx.run_id

@@ -45,7 +45,7 @@ def create(
             "object",
             step_object,
             "Alice",
-            type_adapter=_User,
+            output_serializer=_User,
         )
 
         def step_none() -> _User | None:
@@ -54,7 +54,7 @@ def create(
         state.step_none_output = ctx.step.run(
             "none",
             step_none,
-            type_adapter=pydantic.TypeAdapter(_User | None),
+            output_serializer=pydantic.TypeAdapter(_User | None),
         )
 
         def step_list() -> list[_User]:
@@ -63,7 +63,7 @@ def create(
         state.step_list_output = ctx.step.run(
             "list",
             step_list,
-            type_adapter=pydantic.TypeAdapter(list[_User]),
+            output_serializer=pydantic.TypeAdapter(list[_User]),
         )
 
     @client.create_function(
@@ -81,7 +81,7 @@ def create(
             "object",
             step_object,
             "Alice",
-            type_adapter=_User,
+            output_serializer=_User,
         )
 
         async def step_none() -> _User | None:
@@ -90,7 +90,7 @@ def create(
         state.step_none_output = await ctx.step.run(
             "none",
             step_none,
-            type_adapter=pydantic.TypeAdapter(_User | None),
+            output_serializer=pydantic.TypeAdapter(_User | None),
         )
 
         async def step_list() -> list[_User]:
@@ -99,7 +99,7 @@ def create(
         state.step_list_output = await ctx.step.run(
             "list",
             step_list,
-            type_adapter=pydantic.TypeAdapter(list[_User]),
+            output_serializer=pydantic.TypeAdapter(list[_User]),
         )
 
     async def run_test(self: base.TestClass) -> None:

@@ -151,7 +151,7 @@ class StepSync(base.StepBase):
             types.T,
         ],
         *handler_args: typing_extensions.Unpack[types.TTuple],
-        type_adapter: type[types.T]
+        output_serializer: type[types.T]
         | pydantic.TypeAdapter[types.T]
         | None = None,
     ) -> types.T:
@@ -163,13 +163,13 @@ class StepSync(base.StepBase):
             step_id: Durable step ID. Should usually be unique within a function, but it's OK to reuse as long as your function is deterministic.
             handler: The logic to run.
             *handler_args: Arguments to pass to the handler.
-            type_adapter: Adapter for Pydantic output deserialization.
+            output_serializer: Pydantic output serializer.
         """
 
         parsed_step_id = self._parse_step_id(step_id)
 
-        output_class, output_adapter, err = transforms.parse_type_adapter(
-            type_adapter
+        output_class, output_adapter, err = transforms.parse_serializer(
+            output_serializer
         )
         if err:
             raise errors.NonRetriableError(str(err))
