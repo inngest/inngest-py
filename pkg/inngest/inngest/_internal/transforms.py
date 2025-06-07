@@ -7,7 +7,6 @@ import traceback
 import typing
 
 import jcs
-import pydantic
 
 from inngest._internal import errors, server_lib, types
 
