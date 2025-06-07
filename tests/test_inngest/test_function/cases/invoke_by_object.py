@@ -1,3 +1,5 @@
+import typing
+
 import inngest
 import test_core.helper
 from inngest._internal import server_lib
@@ -6,7 +8,7 @@ from . import base
 
 
 class _State(base.BaseState):
-    step_output: object = None
+    step_output: dict[str, dict[str, int]] = {}  # noqa: RUF012
 
 
 def create(
@@ -70,6 +72,7 @@ def create(
         )
         assert state.step_output == {"foo": {"bar": 1}}
 
+    fn: list[inngest.Function[typing.Any]]
     if is_sync:
         fn = [fn_receiver_sync, fn_sender_sync]
     else:

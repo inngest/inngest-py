@@ -27,6 +27,6 @@ class TestCase(unittest.TestCase):
     def serve(
         self,
         client: inngest.Inngest,
-        fns: list[inngest.Function],
+        fns: list[inngest.Function[typing.Any]],
     ) -> None:
         raise NotImplementedError()

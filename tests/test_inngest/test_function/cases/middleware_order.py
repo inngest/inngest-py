@@ -156,7 +156,7 @@ class _MwSyncBase(inngest.MiddlewareSync):
     def transform_input(
         self,
         ctx: typing.Union[inngest.Context, inngest.ContextSync],
-        function: inngest.Function,
+        function: inngest.Function[typing.Any],
         steps: inngest.StepMemos,
     ) -> None:
         self.append_message(_get_method_name())
@@ -193,7 +193,7 @@ class _MwAsyncBase(inngest.Middleware):
     async def transform_input(
         self,
         ctx: typing.Union[inngest.Context, inngest.ContextSync],
-        function: inngest.Function,
+        function: inngest.Function[typing.Any],
         steps: inngest.StepMemos,
     ) -> None:
         self.append_message(_get_method_name())

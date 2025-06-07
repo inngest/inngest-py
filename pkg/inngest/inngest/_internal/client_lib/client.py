@@ -62,6 +62,7 @@ class Inngest:
         *,
         api_base_url: typing.Optional[str] = None,
         app_id: str,
+        default_serializer: pydantic.TypeAdapter[typing.Any] | None = None,
         env: typing.Optional[str] = None,
         event_api_base_url: typing.Optional[str] = None,
         event_key: typing.Optional[str] = None,
@@ -70,9 +71,6 @@ class Inngest:
         middleware: typing.Optional[
             list[middleware_lib.UninitializedMiddleware]
         ] = None,
-        serializer: type[pydantic.BaseModel]
-        | pydantic.TypeAdapter[typing.Any]
-        | None = None,
         signing_key: typing.Optional[str] = None,
     ) -> None:
         """
@@ -81,6 +79,7 @@ class Inngest:
             api_base_url: Origin for the Inngest REST API.
             app_id: Unique Inngest ID. Changing this ID will make Inngest think
                 it's a different app.
+            default_serializer: Pydantic serializer.
             env: Branch environment to use. This is only necessary for branch
                 environments.
             event_api_base_url: Origin for the Inngest Event API.
@@ -89,7 +88,6 @@ class Inngest:
                 request signature verification and default Inngest server URLs.
             logger: Logger to use.
             middleware: List of middleware to use.
-            serializer: Pydantic serializer.
             signing_key: Inngest signing key.
         """
 
@@ -133,7 +131,7 @@ class Inngest:
 
         self._http_client = net.ThreadAwareAsyncHTTPClient().initialize()
         self._http_client_sync = httpx.Client()
-        self._output_serializer = serializer
+        self._default_serializer = default_serializer
 
     def _build_send_request(
         self,
@@ -203,8 +201,8 @@ class Inngest:
         ] = None,
         name: typing.Optional[str] = None,
         on_failure: typing.Union[
-            execution_lib.FunctionHandlerAsync,
-            execution_lib.FunctionHandlerSync,
+            execution_lib.FunctionHandlerAsync[typing.Any],
+            execution_lib.FunctionHandlerSync[typing.Any],
             None,
         ] = None,
         output_serializer: type[pydantic.BaseModel]
@@ -223,11 +221,11 @@ class Inngest:
     ) -> typing.Callable[
         [
             typing.Union[
-                execution_lib.FunctionHandlerAsync,
-                execution_lib.FunctionHandlerSync,
+                execution_lib.FunctionHandlerAsync[types.T],
+                execution_lib.FunctionHandlerSync[types.T],
             ]
         ],
-        function.Function,
+        function.Function[types.T],
     ]:
         """
         Create an Inngest function.
@@ -256,10 +254,10 @@ class Inngest:
 
         def decorator(
             func: typing.Union[
-                execution_lib.FunctionHandlerAsync,
-                execution_lib.FunctionHandlerSync,
+                execution_lib.FunctionHandlerAsync[types.T],
+                execution_lib.FunctionHandlerSync[types.T],
             ],
-        ) -> function.Function:
+        ) -> function.Function[types.T]:
             triggers = trigger if isinstance(trigger, list) else [trigger]
             return function.Function(
                 function.FunctionOpts(
@@ -280,7 +278,7 @@ class Inngest:
                 ),
                 triggers,
                 func,
-                output_serializer or self._output_serializer,
+                output_serializer,  # type: ignore[arg-type]
                 middleware,
             )
 

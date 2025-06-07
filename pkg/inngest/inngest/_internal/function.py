@@ -13,6 +13,7 @@ from inngest._internal import (
     execution_lib,
     middleware_lib,
     server_lib,
+    transforms,
     types,
 )
 
@@ -44,8 +45,8 @@ class FunctionOpts(types.BaseModel):
 
     name: str
     on_failure: typing.Union[
-        execution_lib.FunctionHandlerAsync,
-        execution_lib.FunctionHandlerSync,
+        execution_lib.FunctionHandlerAsync[typing.Any],
+        execution_lib.FunctionHandlerSync[typing.Any],
         None,
     ]
     priority: typing.Optional[server_lib.Priority]
@@ -61,12 +62,14 @@ class FunctionOpts(types.BaseModel):
         return errors.FunctionConfigInvalidError.from_validation_error(err)
 
 
-class Function:
+class Function(typing.Generic[types.T]):
     _handler: typing.Union[
-        execution_lib.FunctionHandlerAsync, execution_lib.FunctionHandlerSync
+        execution_lib.FunctionHandlerAsync[types.T],
+        execution_lib.FunctionHandlerSync[types.T],
     ]
     _on_failure_fn_id: typing.Optional[str] = None
     _opts: FunctionOpts
+    _output_serializer: pydantic.TypeAdapter[types.T] | None
     _triggers: list[
         typing.Union[server_lib.TriggerCron, server_lib.TriggerEvent]
     ]
@@ -111,12 +114,10 @@ class Function:
             list[typing.Union[server_lib.TriggerCron, server_lib.TriggerEvent]],
         ],
         handler: typing.Union[
-            execution_lib.FunctionHandlerAsync,
-            execution_lib.FunctionHandlerSync,
+            execution_lib.FunctionHandlerAsync[types.T],
+            execution_lib.FunctionHandlerSync[types.T],
         ],
-        output_serializer: type[pydantic.BaseModel]
-        | pydantic.TypeAdapter[typing.Any]
-        | None,
+        output_serializer: type[types.T] | pydantic.TypeAdapter[types.T] | None,
         middleware: typing.Optional[
             list[middleware_lib.UninitializedMiddleware]
         ] = None,
@@ -124,7 +125,8 @@ class Function:
         self._handler = handler
         self._middleware = middleware or []
         self._opts = opts
-        self._output_serializer = output_serializer
+        self._output_serializer = transforms.parse_serializer(output_serializer)
+
         self._triggers = trigger if isinstance(trigger, list) else [trigger]
 
         if opts.on_failure is not None:
@@ -157,12 +159,14 @@ class Function:
 
         if self.id == fn_id:
             handler = self._handler
+            output_serializer = self._output_serializer
         elif self.on_failure_fn_id == fn_id:
             if self._opts.on_failure is None:
                 return execution_lib.CallResult(
                     errors.FunctionNotFoundError("on_failure not defined")
                 )
             handler = self._opts.on_failure
+            output_serializer = client._default_serializer
         else:
             return execution_lib.CallResult(
                 errors.FunctionNotFoundError("function ID mismatch")
@@ -176,6 +180,7 @@ class Function:
             ctx,
             handler,
             self,
+            output_serializer,
         )
 
         err = await middleware.transform_output(call_res)
@@ -200,12 +205,14 @@ class Function:
 
         if self.id == fn_id:
             handler = self._handler
+            output_serializer = self._output_serializer
         elif self.on_failure_fn_id == fn_id:
             if self._opts.on_failure is None:
                 return execution_lib.CallResult(
                     errors.FunctionNotFoundError("on_failure not defined")
                 )
             handler = self._opts.on_failure
+            output_serializer = client._default_serializer
         else:
             return execution_lib.CallResult(
                 errors.FunctionNotFoundError("function ID mismatch")
@@ -221,6 +228,7 @@ class Function:
             ctx,
             handler,
             self,
+            output_serializer,
         )
 
         err = middleware.transform_output_sync(call_res)

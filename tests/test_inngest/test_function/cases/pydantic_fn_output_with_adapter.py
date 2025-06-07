@@ -17,7 +17,7 @@ class _User(pydantic.BaseModel):
 
 
 class _State(base.BaseState):
-    step_output: object = None
+    invoke_output: list[_User] = []  # noqa: RUF012
 
 
 def create(
@@ -31,24 +31,50 @@ def create(
     state = _State()
 
     @client.create_function(
-        fn_id=fn_id,
+        fn_id=f"{fn_id}/invokee",
+        output_serializer=pydantic.TypeAdapter(list[_User]),
         retries=0,
-        trigger=inngest.TriggerEvent(event=event_name),
-        output_serializer=pydantic.TypeAdapter(object),
+        trigger=inngest.TriggerEvent(event="never"),
     )
-    def fn_sync(ctx: inngest.ContextSync) -> list[_User]:
-        state.run_id = ctx.run_id
+    def fn_receiver_sync(ctx: inngest.ContextSync) -> list[_User]:
         return [_User(name="Alice")]
 
     @client.create_function(
         fn_id=fn_id,
+        output_serializer=pydantic.TypeAdapter(object),
         retries=0,
         trigger=inngest.TriggerEvent(event=event_name),
+    )
+    def fn_sync(ctx: inngest.ContextSync) -> list[_User]:
+        state.run_id = ctx.run_id
+        state.invoke_output = ctx.step.invoke(
+            "invoke",
+            function=fn_receiver_sync,
+        )
+        return state.invoke_output
+
+    @client.create_function(
+        fn_id=f"{fn_id}/invokee",
+        output_serializer=pydantic.TypeAdapter(list[_User]),
+        retries=0,
+        trigger=inngest.TriggerEvent(event="never"),
+    )
+    async def fn_receiver_async(ctx: inngest.Context) -> list[_User]:
+        return [_User(name="Alice")]
+
+    @client.create_function(
+        fn_id=fn_id,
         output_serializer=pydantic.TypeAdapter(object),
+        retries=0,
+        trigger=inngest.TriggerEvent(event=event_name),
     )
     async def fn_async(ctx: inngest.Context) -> list[_User]:
         state.run_id = ctx.run_id
-        return [_User(name="Alice")]
+        state.invoke_output = await ctx.step.invoke(
+            "invoke",
+            function=fn_receiver_sync,
+        )
+        return state.invoke_output
 
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
@@ -56,6 +82,8 @@ def create(
             await state.wait_for_run_id(),
             test_core.helper.RunStatus.COMPLETED,
         )
+
+        assert state.invoke_output == [_User(name="Alice")]
 
         assert run.output is not None
         assert json.loads(run.output) == [
@@ -65,9 +93,9 @@ def create(
         ]
 
     if is_sync:
-        fn = fn_sync
+        fn = [fn_sync, fn_receiver_sync]
     else:
-        fn = fn_async
+        fn = [fn_async, fn_receiver_async]
 
     return base.Case(
         fn=fn,

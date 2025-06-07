@@ -39,11 +39,11 @@ class Step(base.StepBase):
         self,
         step_id: str,
         *,
-        function: function.Function,
+        function: function.Function[types.T],
         data: typing.Optional[typing.Mapping[str, object]] = None,
         timeout: typing.Union[int, datetime.timedelta, None] = None,
         v: typing.Optional[str] = None,
-    ) -> object:
+    ) -> types.T:
         """
         Invoke an Inngest function with data. Returns the result of the returned
         value of the function or `None` if the function does not return a value.
@@ -61,7 +61,7 @@ class Step(base.StepBase):
             v: Will become `event.v` in the invoked function.
         """
 
-        return await self.invoke_by_id(
+        output = await self.invoke_by_id(
             step_id,
             app_id=self._client.app_id,
             function_id=function._opts.local_id,
@@ -69,6 +69,11 @@ class Step(base.StepBase):
             timeout=timeout,
             v=v,
         )
+
+        if function._output_serializer is not None:
+            output = function._output_serializer.validate_python(output)
+
+        return output  # type: ignore[return-value]
 
     async def invoke_by_id(
         self,
@@ -162,12 +167,7 @@ class Step(base.StepBase):
         """
 
         parsed_step_id = self._parse_step_id(step_id)
-
-        output_class, output_adapter, err = transforms.parse_serializer(
-            output_serializer
-        )
-        if err:
-            raise errors.NonRetriableError(str(err))
+        output_serializer = transforms.parse_serializer(output_serializer)
 
         step_info = base.StepInfo(
             display_name=parsed_step_id.user_facing,
@@ -182,10 +182,8 @@ class Step(base.StepBase):
             if step.error is not None:
                 raise step.error
             elif not isinstance(step.output, types.EmptySentinel):
-                if output_class:
-                    return output_class.model_validate(step.output)  # type: ignore
-                if output_adapter:
-                    return output_adapter.validate_python(step.output)  # type: ignore
+                if output_serializer is not None:
+                    return output_serializer.validate_python(step.output)
                 return step.output  # type: ignore
 
             try:
@@ -202,8 +200,7 @@ class Step(base.StepBase):
                 # Ensure Pydantic output is serialized to JSON.
                 output = transforms.serialize_pydantic_output(
                     output,
-                    output_class,
-                    output_adapter,
+                    output_serializer,
                 )  # type: ignore
 
                 raise base.ResponseInterrupt(

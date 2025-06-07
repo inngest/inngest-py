@@ -7,6 +7,8 @@ you'd like to use it, we recommend copying this file into your source code.
 
 from __future__ import annotations
 
+import typing
+
 import sentry_sdk
 
 import inngest
@@ -42,7 +44,7 @@ class SentryMiddleware(inngest.MiddlewareSync):
     def transform_input(  # noqa: D102
         self,
         ctx: inngest.Context | inngest.ContextSync,
-        function: inngest.Function,
+        function: inngest.Function[typing.Any],
         steps: inngest.StepMemos,
     ) -> None:
         sentry_sdk.set_tag("inngest.event.count", len(ctx.events))

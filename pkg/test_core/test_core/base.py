@@ -134,7 +134,7 @@ class BaseTest(unittest.TestCase):
     def create_functions(
         self,
         client: inngest.Inngest,
-    ) -> list[inngest.Function]:
+    ) -> list[inngest.Function[typing.Any]]:
         @client.create_function(
             fn_id="test",
             trigger=inngest.TriggerEvent(event="test"),

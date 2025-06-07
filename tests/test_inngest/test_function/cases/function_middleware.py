@@ -1,4 +1,5 @@
 import json
+import typing
 
 import django.core.handlers.wsgi
 import fastapi
@@ -57,7 +58,7 @@ def create(
         def transform_input(
             self,
             ctx: inngest.Context | inngest.ContextSync,
-            function: inngest.Function,
+            function: inngest.Function[typing.Any],
             steps: inngest.StepMemos,
         ) -> None:
             state.messages.append("hook:transform_input")
@@ -103,7 +104,7 @@ def create(
         async def transform_input(
             self,
             ctx: inngest.Context | inngest.ContextSync,
-            function: inngest.Function,
+            function: inngest.Function[typing.Any],
             steps: inngest.StepMemos,
         ) -> None:
             state.messages.append("hook:transform_input")

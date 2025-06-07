@@ -68,7 +68,7 @@ class Middleware:
     async def transform_input(
         self,
         ctx: typing.Union[execution_lib.Context, execution_lib.ContextSync],
-        function: function.Function,
+        function: function.Function[typing.Any],
         steps: step_lib.StepMemos,
     ) -> None:
         """
@@ -141,7 +141,7 @@ class MiddlewareSync:
     def transform_input(
         self,
         ctx: typing.Union[execution_lib.Context, execution_lib.ContextSync],
-        function: function.Function,
+        function: function.Function[typing.Any],
         steps: step_lib.StepMemos,
     ) -> None:
         """

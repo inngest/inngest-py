@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 import typing
 
+import pydantic
+
 from inngest._internal import errors, server_lib, step_lib, transforms, types
 from inngest._internal.execution_lib import BaseExecution, BaseExecutionSync
 
@@ -113,8 +115,9 @@ class ExecutionV0(BaseExecution):
         self,
         client: client_lib.Inngest,
         ctx: Context,
-        handler: FunctionHandlerAsync,
-        fn: function.Function,
+        handler: FunctionHandlerAsync[types.T],
+        fn: function.Function[types.T],
+        output_serializer: type[types.T] | pydantic.TypeAdapter[types.T] | None,
     ) -> CallResult:
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
@@ -132,21 +135,16 @@ class ExecutionV0(BaseExecution):
             if isinstance(err, Exception):
                 return CallResult(err)
 
-        output_class, output_adapter, err = transforms.parse_serializer(
-            fn._output_serializer
-        )
-        if err:
-            raise errors.NonRetriableError(str(err))
+        output_serializer = transforms.parse_serializer(output_serializer)
 
         try:
             try:
-                output = await handler(ctx)
+                output: object = await handler(ctx)
 
                 # Ensure Pydantic output is serialized to JSON.
                 output = transforms.serialize_pydantic_output(
                     output,
-                    output_class,
-                    output_adapter,
+                    output_serializer,
                 )
             except Exception as user_err:
                 transforms.remove_first_traceback_frame(user_err)
@@ -268,8 +266,9 @@ class ExecutionV0Sync(BaseExecutionSync):
         self,
         client: client_lib.Inngest,
         ctx: ContextSync,
-        handler: FunctionHandlerSync,
-        fn: function.Function,
+        handler: FunctionHandlerSync[types.T],
+        fn: function.Function[types.T],
+        output_serializer: type[types.T] | pydantic.TypeAdapter[types.T] | None,
     ) -> CallResult:
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
@@ -285,11 +284,7 @@ class ExecutionV0Sync(BaseExecutionSync):
             if isinstance(err, Exception):
                 return CallResult(err)
 
-        output_class, output_adapter, err = transforms.parse_serializer(
-            fn._output_serializer
-        )
-        if err:
-            return CallResult(errors.NonRetriableError(str(err)))
+        output_serializer = transforms.parse_serializer(output_serializer)
 
         try:
             try:
@@ -298,8 +293,7 @@ class ExecutionV0Sync(BaseExecutionSync):
                 # Ensure Pydantic output is serialized to JSON.
                 output = transforms.serialize_pydantic_output(
                     output,
-                    output_class,
-                    output_adapter,
+                    output_serializer,
                 )
             except Exception as user_err:
                 transforms.remove_first_traceback_frame(user_err)

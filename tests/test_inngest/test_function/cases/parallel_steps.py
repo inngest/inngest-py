@@ -1,4 +1,5 @@
 import datetime
+import typing
 import unittest.mock
 
 import inngest
@@ -12,7 +13,7 @@ class _State(base.BaseState):
     step_1a_counter = 0
     step_1b_counter = 0
     step_after_counter = 0
-    parallel_output: object = None
+    parallel_output: typing.Any = None
 
 
 def create(
@@ -149,6 +150,7 @@ def create(
         assert state.step_1b_counter == 1
         assert state.step_after_counter == 1
 
+    fn: list[inngest.Function[typing.Any]]
     if is_sync:
         fn = [fn_sync, fn_child_sync]
     else:

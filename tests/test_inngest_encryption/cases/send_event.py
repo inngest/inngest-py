@@ -146,6 +146,7 @@ def create(
 
         _assert_event_in_db(child_run.event)
 
+    fn: list[inngest.Function[typing.Any]]
     if is_sync:
         fn = [child_fn_sync, fn_sync]
     else:
