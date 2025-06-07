@@ -9,6 +9,7 @@ from ._internal.middleware_lib import (
     MiddlewareSync,
     TransformOutputResult,
 )
+from ._internal.serializer_lib import PydanticSerializer, Serializer
 from ._internal.server_lib import (
     Batch,
     Cancel,
@@ -40,9 +41,11 @@ __all__ = [
     "MiddlewareSync",
     "NonRetriableError",
     "Priority",
+    "PydanticSerializer",
     "RateLimit",
     "RetryAfterError",
     "SendEventsResult",
+    "Serializer",
     "Singleton",
     "Step",
     "StepError",

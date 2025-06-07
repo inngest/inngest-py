@@ -4,7 +4,6 @@ import datetime
 import inspect
 import typing
 
-import pydantic
 import typing_extensions
 
 from inngest._internal import client_lib, errors, server_lib, transforms, types
@@ -70,8 +69,14 @@ class Step(base.StepBase):
             v=v,
         )
 
-        if function._output_serializer is not None:
-            output = function._output_serializer.validate_python(output)
+        if (
+            self._client._serializer is not None
+            and function._output_type is not types.EmptySentinel
+        ):
+            output = self._client._serializer.deserialize(
+                output,
+                function._output_type,
+            )
 
         return output  # type: ignore[return-value]
 
@@ -151,9 +156,7 @@ class Step(base.StepBase):
             [typing_extensions.Unpack[types.TTuple]], typing.Awaitable[types.T]
         ],
         *handler_args: typing_extensions.Unpack[types.TTuple],
-        output_serializer: type[types.T]
-        | pydantic.TypeAdapter[types.T]
-        | None = None,
+        output_type: object = types.EmptySentinel,
     ) -> types.T:
         """
         Run logic that should be retried on error and memoized after success.
@@ -163,11 +166,10 @@ class Step(base.StepBase):
             step_id: Durable step ID. Should usually be unique within a function, but it's OK to reuse as long as your function is deterministic.
             handler: The logic to run. This MUST return a JSON-serializable value (i.e. can be passed to `json.dumps`).
             *handler_args: Arguments to pass to the handler.
-            output_serializer: Pydantic output serializer.
+            output_type: Only set if returning a non-JSON-serializable object. Related to the client's serializer argument.
         """
 
         parsed_step_id = self._parse_step_id(step_id)
-        output_serializer = transforms.parse_serializer(output_serializer)
 
         step_info = base.StepInfo(
             display_name=parsed_step_id.user_facing,
@@ -182,8 +184,14 @@ class Step(base.StepBase):
             if step.error is not None:
                 raise step.error
             elif not isinstance(step.output, types.EmptySentinel):
-                if output_serializer is not None:
-                    return output_serializer.validate_python(step.output)
+                if (
+                    self._client._serializer is not None
+                    and output_type is not types.EmptySentinel
+                ):
+                    return self._client._serializer.deserialize(
+                        step.output,
+                        output_type,
+                    )  # type: ignore[return-value]
                 return step.output  # type: ignore
 
             try:
@@ -197,11 +205,16 @@ class Step(base.StepBase):
                         handler(*handler_args)
                     )
 
-                # Ensure Pydantic output is serialized to JSON.
-                output = transforms.serialize_pydantic_output(
-                    output,
-                    output_serializer,
-                )  # type: ignore
+                # Even though output_type isn't used, we still check for it to
+                # ensure users are adding explicit types on functions that
+                # return non-JSON-serializable data (e.g. Pydantic objects). If
+                # we didn't do this, then `step.run` would not return the
+                # correct type at runtime.
+                if (
+                    self._client._serializer is not None
+                    and output_type is not types.EmptySentinel
+                ):
+                    output = self._client._serializer.serialize(output)  # type: ignore
 
                 raise base.ResponseInterrupt(
                     base.StepResponse(

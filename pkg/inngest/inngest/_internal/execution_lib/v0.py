@@ -3,8 +3,6 @@ from __future__ import annotations
 import asyncio
 import typing
 
-import pydantic
-
 from inngest._internal import errors, server_lib, step_lib, transforms, types
 from inngest._internal.execution_lib import BaseExecution, BaseExecutionSync
 
@@ -117,7 +115,7 @@ class ExecutionV0(BaseExecution):
         ctx: Context,
         handler: FunctionHandlerAsync[types.T],
         fn: function.Function[types.T],
-        output_serializer: type[types.T] | pydantic.TypeAdapter[types.T] | None,
+        output_type: object = types.EmptySentinel,
     ) -> CallResult:
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
@@ -135,17 +133,20 @@ class ExecutionV0(BaseExecution):
             if isinstance(err, Exception):
                 return CallResult(err)
 
-        output_serializer = transforms.parse_serializer(output_serializer)
-
         try:
             try:
                 output: object = await handler(ctx)
 
-                # Ensure Pydantic output is serialized to JSON.
-                output = transforms.serialize_pydantic_output(
-                    output,
-                    output_serializer,
-                )
+                # Even though output_type isn't used, we still check for it to
+                # ensure users are adding explicit types on functions that
+                # return non-JSON-serializable data (e.g. Pydantic objects). If
+                # we didn't do this, then `step.invoke` would not return the
+                # correct type at runtime.
+                if (
+                    client._serializer is not None
+                    and output_type is not types.EmptySentinel
+                ):
+                    output = client._serializer.serialize(output)
             except Exception as user_err:
                 transforms.remove_first_traceback_frame(user_err)
                 raise UserError(user_err)
@@ -268,7 +269,7 @@ class ExecutionV0Sync(BaseExecutionSync):
         ctx: ContextSync,
         handler: FunctionHandlerSync[types.T],
         fn: function.Function[types.T],
-        output_serializer: type[types.T] | pydantic.TypeAdapter[types.T] | None,
+        output_type: object = types.EmptySentinel,
     ) -> CallResult:
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
@@ -284,17 +285,20 @@ class ExecutionV0Sync(BaseExecutionSync):
             if isinstance(err, Exception):
                 return CallResult(err)
 
-        output_serializer = transforms.parse_serializer(output_serializer)
-
         try:
             try:
                 output: object = handler(ctx)
 
-                # Ensure Pydantic output is serialized to JSON.
-                output = transforms.serialize_pydantic_output(
-                    output,
-                    output_serializer,
-                )
+                # Even though output_type isn't used, we still check for it to
+                # ensure users are adding explicit types on functions that
+                # return non-JSON-serializable data (e.g. Pydantic objects). If
+                # we didn't do this, then `step.invoke` would not return the
+                # correct type at runtime.
+                if (
+                    client._serializer is not None
+                    and output_type is not types.EmptySentinel
+                ):
+                    output = client._serializer.serialize(output)
             except Exception as user_err:
                 transforms.remove_first_traceback_frame(user_err)
                 raise UserError(user_err)

@@ -13,7 +13,6 @@ from inngest._internal import (
     execution_lib,
     middleware_lib,
     server_lib,
-    transforms,
     types,
 )
 
@@ -69,7 +68,6 @@ class Function(typing.Generic[types.T]):
     ]
     _on_failure_fn_id: typing.Optional[str] = None
     _opts: FunctionOpts
-    _output_serializer: pydantic.TypeAdapter[types.T] | None
     _triggers: list[
         typing.Union[server_lib.TriggerCron, server_lib.TriggerEvent]
     ]
@@ -117,7 +115,7 @@ class Function(typing.Generic[types.T]):
             execution_lib.FunctionHandlerAsync[types.T],
             execution_lib.FunctionHandlerSync[types.T],
         ],
-        output_serializer: type[types.T] | pydantic.TypeAdapter[types.T] | None,
+        output_type: object = types.EmptySentinel,
         middleware: typing.Optional[
             list[middleware_lib.UninitializedMiddleware]
         ] = None,
@@ -125,8 +123,7 @@ class Function(typing.Generic[types.T]):
         self._handler = handler
         self._middleware = middleware or []
         self._opts = opts
-        self._output_serializer = transforms.parse_serializer(output_serializer)
-
+        self._output_type = output_type
         self._triggers = trigger if isinstance(trigger, list) else [trigger]
 
         if opts.on_failure is not None:
@@ -159,14 +156,18 @@ class Function(typing.Generic[types.T]):
 
         if self.id == fn_id:
             handler = self._handler
-            output_serializer = self._output_serializer
+            output_type = self._output_type
         elif self.on_failure_fn_id == fn_id:
             if self._opts.on_failure is None:
                 return execution_lib.CallResult(
                     errors.FunctionNotFoundError("on_failure not defined")
                 )
             handler = self._opts.on_failure
-            output_serializer = client._default_serializer
+
+            # We only need to serialize to JSON so any type is fine.
+            # Deserialization isn't necessary since on_failure handlers aren't
+            # invoked via `step.invoke`.
+            output_type = object
         else:
             return execution_lib.CallResult(
                 errors.FunctionNotFoundError("function ID mismatch")
@@ -180,7 +181,7 @@ class Function(typing.Generic[types.T]):
             ctx,
             handler,
             self,
-            output_serializer,
+            output_type,
         )
 
         err = await middleware.transform_output(call_res)
@@ -205,14 +206,18 @@ class Function(typing.Generic[types.T]):
 
         if self.id == fn_id:
             handler = self._handler
-            output_serializer = self._output_serializer
+            output_type = self._output_type
         elif self.on_failure_fn_id == fn_id:
             if self._opts.on_failure is None:
                 return execution_lib.CallResult(
                     errors.FunctionNotFoundError("on_failure not defined")
                 )
             handler = self._opts.on_failure
-            output_serializer = client._default_serializer
+
+            # We only need to serialize to JSON so any type is fine.
+            # Deserialization isn't necessary since on_failure handlers aren't
+            # invoked via `step.invoke`.
+            output_type = object
         else:
             return execution_lib.CallResult(
                 errors.FunctionNotFoundError("function ID mismatch")
@@ -228,7 +233,7 @@ class Function(typing.Generic[types.T]):
             ctx,
             handler,
             self,
-            output_serializer,
+            output_type,
         )
 
         err = middleware.transform_output_sync(call_res)

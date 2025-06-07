@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import typing
 
-import pydantic
-
 from inngest._internal import types
 
 from .models import (
@@ -32,9 +30,7 @@ class BaseExecution(typing.Protocol):
         ctx: Context,
         handler: execution_lib.FunctionHandlerAsync[typing.Any],
         fn: function.Function[typing.Any],
-        output_serializer: type[typing.Any]
-        | pydantic.TypeAdapter[typing.Any]
-        | None,
+        output_type: object = types.EmptySentinel,
     ) -> CallResult: ...
 
 
@@ -52,7 +48,5 @@ class BaseExecutionSync(typing.Protocol):
         ctx: ContextSync,
         handler: execution_lib.FunctionHandlerSync[typing.Any],
         fn: function.Function[typing.Any],
-        output_serializer: type[typing.Any]
-        | pydantic.TypeAdapter[typing.Any]
-        | None,
+        output_type: object = types.EmptySentinel,
     ) -> CallResult: ...

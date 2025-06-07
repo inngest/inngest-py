@@ -177,34 +177,3 @@ def remove_first_traceback_frame(err: Exception) -> None:
 
     if err.__traceback__:
         err.__traceback__ = err.__traceback__.tb_next
-
-
-def serialize_pydantic_output(
-    output: object,
-    serializer: pydantic.TypeAdapter[typing.Any] | None,
-) -> object:
-    """
-    Serialize function/step Pydantic output to JSON.
-    """
-
-    if serializer:
-        return serializer.dump_python(output, mode="json")
-
-    return output
-
-
-def parse_serializer(
-    serializer: type[types.T] | pydantic.TypeAdapter[types.T] | None = None,
-) -> pydantic.TypeAdapter[types.T] | None:
-    """
-    Parse a serializer into a model class and a type adapter. This is used to
-    parse function/step serializers.
-    """
-
-    if serializer is None:
-        return None
-
-    if isinstance(serializer, pydantic.TypeAdapter):
-        return serializer
-
-    return pydantic.TypeAdapter(serializer)

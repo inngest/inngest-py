@@ -7,7 +7,6 @@ import typing
 import urllib.parse
 
 import httpx
-import pydantic
 
 from inngest._internal import (
     const,
@@ -16,6 +15,7 @@ from inngest._internal import (
     function,
     middleware_lib,
     net,
+    serializer_lib,
     server_lib,
     types,
 )
@@ -62,7 +62,6 @@ class Inngest:
         *,
         api_base_url: typing.Optional[str] = None,
         app_id: str,
-        default_serializer: pydantic.TypeAdapter[typing.Any] | None = None,
         env: typing.Optional[str] = None,
         event_api_base_url: typing.Optional[str] = None,
         event_key: typing.Optional[str] = None,
@@ -71,6 +70,7 @@ class Inngest:
         middleware: typing.Optional[
             list[middleware_lib.UninitializedMiddleware]
         ] = None,
+        serializer: serializer_lib.Serializer | None = None,
         signing_key: typing.Optional[str] = None,
     ) -> None:
         """
@@ -79,7 +79,6 @@ class Inngest:
             api_base_url: Origin for the Inngest REST API.
             app_id: Unique Inngest ID. Changing this ID will make Inngest think
                 it's a different app.
-            default_serializer: Pydantic serializer.
             env: Branch environment to use. This is only necessary for branch
                 environments.
             event_api_base_url: Origin for the Inngest Event API.
@@ -88,6 +87,7 @@ class Inngest:
                 request signature verification and default Inngest server URLs.
             logger: Logger to use.
             middleware: List of middleware to use.
+            serializer: Serializes/deserializes function/step output using the output_type argument.
             signing_key: Inngest signing key.
         """
 
@@ -131,7 +131,7 @@ class Inngest:
 
         self._http_client = net.ThreadAwareAsyncHTTPClient().initialize()
         self._http_client_sync = httpx.Client()
-        self._default_serializer = default_serializer
+        self._serializer = serializer
 
     def _build_send_request(
         self,
@@ -205,9 +205,7 @@ class Inngest:
             execution_lib.FunctionHandlerSync[typing.Any],
             None,
         ] = None,
-        output_serializer: type[pydantic.BaseModel]
-        | pydantic.TypeAdapter[typing.Any]
-        | None = None,
+        output_type: object = types.EmptySentinel,
         priority: typing.Optional[server_lib.Priority] = None,
         rate_limit: typing.Optional[server_lib.RateLimit] = None,
         retries: typing.Optional[int] = None,
@@ -241,7 +239,7 @@ class Inngest:
             middleware: Middleware to apply to this function.
             name: Human-readable function name. (Defaults to the function ID).
             on_failure: Function to call when this function fails.
-            output_serializer: Pydantic output serializer.
+            output_type: Only set if returning a non-JSON-serializable object. Related to the client's serializer argument.
             priority: Prioritize function runs.
             rate_limit: Rate limiting config.
             retries: Number of times to retry this function.
@@ -278,7 +276,7 @@ class Inngest:
                 ),
                 triggers,
                 func,
-                output_serializer,  # type: ignore[arg-type]
+                output_type,
                 middleware,
             )
 
