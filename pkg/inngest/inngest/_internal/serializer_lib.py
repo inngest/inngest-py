@@ -4,7 +4,7 @@ import pydantic
 
 
 class Serializer(typing.Protocol):
-    def serialize(self, obj: object) -> object:
+    def serialize(self, obj: object, typ: object) -> object:
         """
         Serialize a Python object to a JSON object (dict, list, None, etc.).
         """
@@ -30,7 +30,7 @@ class Serializer(typing.Protocol):
 
 
 class PydanticSerializer(Serializer):
-    def serialize(self, obj: object) -> object:
+    def serialize(self, obj: object, typ: object) -> object:
         """
         Serialize a Pydantic object to a JSON object (dict, list, None, etc.).
         """

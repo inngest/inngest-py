@@ -483,11 +483,11 @@ class TestCustomSerializer(_TestBase):
                 return cls(**data)  # type: ignore
 
         class CustomSerializer(inngest.Serializer):
-            def serialize(self, obj: object) -> object:
+            def serialize(self, obj: object, typ: object) -> object:
                 return dataclasses.asdict(obj)  # type: ignore
 
-            def deserialize(self, obj: object, model: object) -> object:
-                return model.from_dict(obj)  # type: ignore
+            def deserialize(self, obj: object, typ: object) -> object:
+                return typ.from_dict(obj)  # type: ignore
 
         class _State(base.BaseState):
             invoke_output: _Animal = _Animal(name="")

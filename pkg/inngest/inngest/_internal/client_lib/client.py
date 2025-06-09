@@ -542,15 +542,10 @@ class Inngest:
         if self._serializer is None:
             return obj
 
-        # Even though output_type isn't used, we still check for it to ensure
-        # users are adding explicit types on functions that return
-        # non-JSON-serializable data (e.g. Pydantic objects). If we didn't do
-        # this, then `step.run` and `step.invoke` would not return the correct
-        # type at runtime.
         if typ is types.EmptySentinel:
             return obj
 
-        return self._serializer.serialize(obj)
+        return self._serializer.serialize(obj, typ)
 
     def _deserialize(self, obj: object, typ: object) -> object:
         """
