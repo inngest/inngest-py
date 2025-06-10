@@ -9,7 +9,7 @@ from .connection import WorkerConnection, _WebSocketWorkerConnection
 
 
 def connect(
-    apps: list[tuple[inngest.Inngest, list[inngest.Function]]],
+    apps: list[tuple[inngest.Inngest, list[inngest.Function[typing.Any]]]],
     *,
     instance_id: typing.Optional[str] = None,
     rewrite_gateway_endpoint: typing.Optional[

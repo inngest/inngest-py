@@ -32,7 +32,7 @@ from .utils import parse_query_params, wrap_handler, wrap_handler_sync
 class CommHandler:
     _base_url: str
     _client: client_lib.Inngest
-    _fns: dict[str, function.Function]
+    _fns: dict[str, function.Function[typing.Any]]
     _framework: server_lib.Framework
     _mode: server_lib.ServerKind
     _signing_key: typing.Optional[str]
@@ -43,7 +43,7 @@ class CommHandler:
         *,
         client: client_lib.Inngest,
         framework: server_lib.Framework,
-        functions: list[function.Function],
+        functions: list[function.Function[typing.Any]],
         streaming: typing.Optional[const.Streaming],
     ) -> None:
         # In-band syncing is opt-out.
@@ -338,7 +338,9 @@ class CommHandler:
             server_kind,
         )
 
-    def _get_function(self, fn_id: str) -> types.MaybeError[function.Function]:
+    def _get_function(
+        self, fn_id: str
+    ) -> types.MaybeError[function.Function[typing.Any]]:
         # Look for the function ID in the list of user functions, but also
         # look for it in the list of on_failure functions.
         for _fn in self._fns.values():
@@ -760,7 +762,7 @@ class Syncer:
 
 def get_function_configs(
     app_url: str,
-    fns: dict[str, function.Function],
+    fns: dict[str, function.Function[typing.Any]],
 ) -> types.MaybeError[list[server_lib.FunctionConfig]]:
     configs: list[server_lib.FunctionConfig] = []
     for fn in fns.values():

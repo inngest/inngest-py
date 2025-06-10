@@ -113,8 +113,9 @@ class ExecutionV0(BaseExecution):
         self,
         client: client_lib.Inngest,
         ctx: Context,
-        handler: FunctionHandlerAsync,
-        fn: function.Function,
+        handler: FunctionHandlerAsync[types.T],
+        fn: function.Function[types.T],
+        output_type: object = types.EmptySentinel,
     ) -> CallResult:
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
@@ -134,7 +135,8 @@ class ExecutionV0(BaseExecution):
 
         try:
             try:
-                output = await handler(ctx)
+                output: object = await handler(ctx)
+                output = client._serialize(output, output_type)
             except Exception as user_err:
                 transforms.remove_first_traceback_frame(user_err)
                 raise UserError(user_err)
@@ -255,8 +257,9 @@ class ExecutionV0Sync(BaseExecutionSync):
         self,
         client: client_lib.Inngest,
         ctx: ContextSync,
-        handler: FunctionHandlerSync,
-        fn: function.Function,
+        handler: FunctionHandlerSync[types.T],
+        fn: function.Function[types.T],
+        output_type: object = types.EmptySentinel,
     ) -> CallResult:
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
@@ -275,6 +278,7 @@ class ExecutionV0Sync(BaseExecutionSync):
         try:
             try:
                 output: object = handler(ctx)
+                output = client._serialize(output, output_type)
             except Exception as user_err:
                 transforms.remove_first_traceback_frame(user_err)
                 raise UserError(user_err)

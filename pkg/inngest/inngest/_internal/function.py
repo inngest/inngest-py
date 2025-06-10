@@ -44,8 +44,8 @@ class FunctionOpts(types.BaseModel):
 
     name: str
     on_failure: typing.Union[
-        execution_lib.FunctionHandlerAsync,
-        execution_lib.FunctionHandlerSync,
+        execution_lib.FunctionHandlerAsync[typing.Any],
+        execution_lib.FunctionHandlerSync[typing.Any],
         None,
     ]
     priority: typing.Optional[server_lib.Priority]
@@ -61,9 +61,10 @@ class FunctionOpts(types.BaseModel):
         return errors.FunctionConfigInvalidError.from_validation_error(err)
 
 
-class Function:
+class Function(typing.Generic[types.T]):
     _handler: typing.Union[
-        execution_lib.FunctionHandlerAsync, execution_lib.FunctionHandlerSync
+        execution_lib.FunctionHandlerAsync[types.T],
+        execution_lib.FunctionHandlerSync[types.T],
     ]
     _on_failure_fn_id: typing.Optional[str] = None
     _opts: FunctionOpts
@@ -111,9 +112,10 @@ class Function:
             list[typing.Union[server_lib.TriggerCron, server_lib.TriggerEvent]],
         ],
         handler: typing.Union[
-            execution_lib.FunctionHandlerAsync,
-            execution_lib.FunctionHandlerSync,
+            execution_lib.FunctionHandlerAsync[types.T],
+            execution_lib.FunctionHandlerSync[types.T],
         ],
+        output_type: object = types.EmptySentinel,
         middleware: typing.Optional[
             list[middleware_lib.UninitializedMiddleware]
         ] = None,
@@ -121,6 +123,7 @@ class Function:
         self._handler = handler
         self._middleware = middleware or []
         self._opts = opts
+        self._output_type = output_type
         self._triggers = trigger if isinstance(trigger, list) else [trigger]
 
         if opts.on_failure is not None:
@@ -153,12 +156,18 @@ class Function:
 
         if self.id == fn_id:
             handler = self._handler
+            output_type = self._output_type
         elif self.on_failure_fn_id == fn_id:
             if self._opts.on_failure is None:
                 return execution_lib.CallResult(
                     errors.FunctionNotFoundError("on_failure not defined")
                 )
             handler = self._opts.on_failure
+
+            # We only need to serialize to JSON so any type is fine.
+            # Deserialization isn't necessary since on_failure handlers aren't
+            # invoked via `step.invoke`.
+            output_type = object
         else:
             return execution_lib.CallResult(
                 errors.FunctionNotFoundError("function ID mismatch")
@@ -172,6 +181,7 @@ class Function:
             ctx,
             handler,
             self,
+            output_type,
         )
 
         err = await middleware.transform_output(call_res)
@@ -196,12 +206,18 @@ class Function:
 
         if self.id == fn_id:
             handler = self._handler
+            output_type = self._output_type
         elif self.on_failure_fn_id == fn_id:
             if self._opts.on_failure is None:
                 return execution_lib.CallResult(
                     errors.FunctionNotFoundError("on_failure not defined")
                 )
             handler = self._opts.on_failure
+
+            # We only need to serialize to JSON so any type is fine.
+            # Deserialization isn't necessary since on_failure handlers aren't
+            # invoked via `step.invoke`.
+            output_type = object
         else:
             return execution_lib.CallResult(
                 errors.FunctionNotFoundError("function ID mismatch")
@@ -217,6 +233,7 @@ class Function:
             ctx,
             handler,
             self,
+            output_type,
         )
 
         err = middleware.transform_output_sync(call_res)

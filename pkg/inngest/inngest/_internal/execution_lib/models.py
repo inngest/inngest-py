@@ -79,20 +79,11 @@ class ContextSync:
     step: step_lib.StepSync
 
 
-@typing.runtime_checkable
-class FunctionHandlerAsync(typing.Protocol):
-    def __call__(
-        self,
-        ctx: Context,
-    ) -> typing.Awaitable[typing.Any]: ...
+FunctionHandlerAsync: typing.TypeAlias = typing.Callable[
+    [Context], typing.Awaitable[types.T]
+]
 
-
-@typing.runtime_checkable
-class FunctionHandlerSync(typing.Protocol):
-    def __call__(
-        self,
-        ctx: ContextSync,
-    ) -> typing.Any: ...
+FunctionHandlerSync: typing.TypeAlias = typing.Callable[[ContextSync], types.T]
 
 
 # Context variable to detect nested steps.

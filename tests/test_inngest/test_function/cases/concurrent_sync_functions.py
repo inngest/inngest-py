@@ -69,13 +69,13 @@ def create(
             test_core.helper.RunStatus.COMPLETED,
         )
 
-    fn: typing.Union[inngest.Function, list[inngest.Function]]
+    fn: list[inngest.Function[typing.Any]]
     if is_sync:
         # This test is only relevant for async frameworks. Set fn to an empty
         # list cause this test to skip for sync frameworks.
         fn = []
     else:
-        fn = fn_sync
+        fn = [fn_sync]
 
     return base.Case(
         fn=fn,

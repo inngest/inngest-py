@@ -29,7 +29,7 @@ _client = inngest.Inngest(
 )
 
 _cases = cases.create_sync_cases(_client, _framework)
-_fns: list[inngest.Function] = []
+_fns: list[inngest.Function[typing.Any]] = []
 for case in _cases:
     if isinstance(case.fn, list):
         _fns.extend(case.fn)

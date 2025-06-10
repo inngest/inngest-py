@@ -4,6 +4,7 @@ can have an arbitrary number of sequential steps.
 """
 
 import datetime
+import typing
 
 import inngest
 import test_core.helper
@@ -195,6 +196,7 @@ def create(
         assert state.step_3_counter == 1
         assert state.step_after_counter == 1
 
+    fn: list[inngest.Function[typing.Any]]
     if is_sync:
         fn = [fn_sync, fn_child_sync]
     else:

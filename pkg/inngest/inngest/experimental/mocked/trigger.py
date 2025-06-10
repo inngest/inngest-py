@@ -20,7 +20,7 @@ from .errors import UnstubbedStepError
 
 
 def trigger(
-    fn: inngest.Function,
+    fn: inngest.Function[typing.Any],
     event: typing.Union[inngest.Event, list[inngest.Event]],
     client: Inngest,
     *,

@@ -17,7 +17,9 @@ class TestClass(typing.Protocol):
 
 @dataclasses.dataclass
 class Case:
-    fn: typing.Union[inngest.Function, list[inngest.Function]]
+    fn: typing.Union[
+        inngest.Function[typing.Any], list[inngest.Function[typing.Any]]
+    ]
     name: str
     run_test: typing.Callable[[TestClass], typing.Awaitable[None]]
 

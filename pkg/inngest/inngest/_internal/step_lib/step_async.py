@@ -38,11 +38,11 @@ class Step(base.StepBase):
         self,
         step_id: str,
         *,
-        function: function.Function,
+        function: function.Function[types.T],
         data: typing.Optional[typing.Mapping[str, object]] = None,
         timeout: typing.Union[int, datetime.timedelta, None] = None,
         v: typing.Optional[str] = None,
-    ) -> object:
+    ) -> types.T:
         """
         Invoke an Inngest function with data. Returns the result of the returned
         value of the function or `None` if the function does not return a value.
@@ -60,7 +60,7 @@ class Step(base.StepBase):
             v: Will become `event.v` in the invoked function.
         """
 
-        return await self.invoke_by_id(
+        output = await self.invoke_by_id(
             step_id,
             app_id=self._client.app_id,
             function_id=function._opts.local_id,
@@ -68,6 +68,10 @@ class Step(base.StepBase):
             timeout=timeout,
             v=v,
         )
+
+        output = self._client._deserialize(output, function._output_type)
+
+        return output  # type: ignore[return-value]
 
     async def invoke_by_id(
         self,
@@ -145,6 +149,7 @@ class Step(base.StepBase):
             [typing_extensions.Unpack[types.TTuple]], typing.Awaitable[types.T]
         ],
         *handler_args: typing_extensions.Unpack[types.TTuple],
+        output_type: object = types.EmptySentinel,
     ) -> types.T:
         """
         Run logic that should be retried on error and memoized after success.
@@ -154,6 +159,7 @@ class Step(base.StepBase):
             step_id: Durable step ID. Should usually be unique within a function, but it's OK to reuse as long as your function is deterministic.
             handler: The logic to run. This MUST return a JSON-serializable value (i.e. can be passed to `json.dumps`).
             *handler_args: Arguments to pass to the handler.
+            output_type: Only set if returning a non-JSON-serializable object. Related to the client's serializer argument.
         """
 
         parsed_step_id = self._parse_step_id(step_id)
@@ -171,7 +177,7 @@ class Step(base.StepBase):
             if step.error is not None:
                 raise step.error
             elif not isinstance(step.output, types.EmptySentinel):
-                return step.output  # type: ignore
+                return self._client._deserialize(step.output, output_type)  # type: ignore[return-value]
 
             try:
                 if inspect.iscoroutinefunction(handler):
@@ -183,6 +189,8 @@ class Step(base.StepBase):
                     output = await transforms.maybe_await(
                         handler(*handler_args)
                     )
+
+                output = self._client._serialize(output, output_type)  # type: ignore[assignment]
 
                 raise base.ResponseInterrupt(
                     base.StepResponse(

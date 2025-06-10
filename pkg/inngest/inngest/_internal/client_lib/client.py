@@ -15,6 +15,7 @@ from inngest._internal import (
     function,
     middleware_lib,
     net,
+    serializer_lib,
     server_lib,
     types,
 )
@@ -69,6 +70,7 @@ class Inngest:
         middleware: typing.Optional[
             list[middleware_lib.UninitializedMiddleware]
         ] = None,
+        serializer: serializer_lib.Serializer | None = None,
         signing_key: typing.Optional[str] = None,
     ) -> None:
         """
@@ -85,6 +87,7 @@ class Inngest:
                 request signature verification and default Inngest server URLs.
             logger: Logger to use.
             middleware: List of middleware to use.
+            serializer: Serializes/deserializes function/step output using the output_type argument.
             signing_key: Inngest signing key.
         """
 
@@ -128,6 +131,7 @@ class Inngest:
 
         self._http_client = net.ThreadAwareAsyncHTTPClient().initialize()
         self._http_client_sync = httpx.Client()
+        self._serializer = serializer
 
     def _build_send_request(
         self,
@@ -197,10 +201,11 @@ class Inngest:
         ] = None,
         name: typing.Optional[str] = None,
         on_failure: typing.Union[
-            execution_lib.FunctionHandlerAsync,
-            execution_lib.FunctionHandlerSync,
+            execution_lib.FunctionHandlerAsync[typing.Any],
+            execution_lib.FunctionHandlerSync[typing.Any],
             None,
         ] = None,
+        output_type: object = types.EmptySentinel,
         priority: typing.Optional[server_lib.Priority] = None,
         rate_limit: typing.Optional[server_lib.RateLimit] = None,
         retries: typing.Optional[int] = None,
@@ -214,11 +219,11 @@ class Inngest:
     ) -> typing.Callable[
         [
             typing.Union[
-                execution_lib.FunctionHandlerAsync,
-                execution_lib.FunctionHandlerSync,
+                execution_lib.FunctionHandlerAsync[types.T],
+                execution_lib.FunctionHandlerSync[types.T],
             ]
         ],
-        function.Function,
+        function.Function[types.T],
     ]:
         """
         Create an Inngest function.
@@ -234,22 +239,23 @@ class Inngest:
             middleware: Middleware to apply to this function.
             name: Human-readable function name. (Defaults to the function ID).
             on_failure: Function to call when this function fails.
+            output_type: Only set if returning a non-JSON-serializable object. Related to the client's serializer argument.
             priority: Prioritize function runs.
             rate_limit: Rate limiting config.
             retries: Number of times to retry this function.
+            singleton: Singleton configuration ensures that only one run per key of this function is active at any given time.
             throttle: Throttling config.
             trigger: What should trigger runs of this function.
-            singleton: Singleton configuration ensures that only one run per key of this function is active at any given time.
         """
 
         fully_qualified_fn_id = f"{self.app_id}-{fn_id}"
 
         def decorator(
             func: typing.Union[
-                execution_lib.FunctionHandlerAsync,
-                execution_lib.FunctionHandlerSync,
+                execution_lib.FunctionHandlerAsync[types.T],
+                execution_lib.FunctionHandlerSync[types.T],
             ],
-        ) -> function.Function:
+        ) -> function.Function[types.T]:
             triggers = trigger if isinstance(trigger, list) else [trigger]
             return function.Function(
                 function.FunctionOpts(
@@ -270,6 +276,7 @@ class Inngest:
                 ),
                 triggers,
                 func,
+                output_type,
                 middleware,
             )
 
@@ -526,6 +533,29 @@ class Inngest:
 
     def set_logger(self, logger: types.Logger) -> None:
         self.logger = logger
+
+    def _serialize(self, obj: object, typ: object) -> object:
+        """
+        Serialize a Python object using the client's serializer.
+        """
+
+        if self._serializer is None:
+            return obj
+
+        if typ is types.EmptySentinel:
+            return obj
+
+        return self._serializer.serialize(obj, typ)
+
+    def _deserialize(self, obj: object, typ: object) -> object:
+        """
+        Deserialize a Python object using the client's serializer.
+        """
+
+        if self._serializer is None:
+            return obj
+
+        return self._serializer.deserialize(obj, typ)
 
 
 def _get_mode(

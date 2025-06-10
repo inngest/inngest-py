@@ -21,7 +21,7 @@ FRAMEWORK = server_lib.Framework.FAST_API
 def serve(
     app: fastapi.FastAPI,
     client: client_lib.Inngest,
-    functions: list[function.Function],
+    functions: list[function.Function[typing.Any]],
     *,
     serve_origin: typing.Optional[str] = None,
     serve_path: typing.Optional[str] = None,

@@ -45,7 +45,7 @@ class TestRegistration(base.TestCase):
     def serve(
         self,
         client: inngest.Inngest,
-        fns: list[inngest.Function],
+        fns: list[inngest.Function[typing.Any]],
     ) -> None:
         inngest.fast_api.serve(
             self.app,

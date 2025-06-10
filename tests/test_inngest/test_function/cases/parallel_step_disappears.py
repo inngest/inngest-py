@@ -109,6 +109,7 @@ def create(
             "stack": None,
         }, run.output
 
+    fn: list[inngest.Function[typing.Any]]
     if is_sync:
         fn = [fn_sync, fn_child_sync]
     else:
