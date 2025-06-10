@@ -81,3 +81,20 @@ def get_int(env_var: const.EnvKey) -> typing.Optional[int]:
         return int(val)
     except ValueError:
         return None
+
+
+def get_streaming(env_var: const.EnvKey) -> typing.Optional[const.Streaming]:
+    val = os.getenv(env_var.value)
+    if val is None:
+        return None
+    val = val.strip().lower()
+
+    if val == "allow":
+        # Accept "allow" to improve cross-language compatibility (the TS SDK has
+        # "allow"). But treat it as the same as "force".
+        return const.Streaming.FORCE
+
+    try:
+        return const.Streaming(val)
+    except ValueError:
+        return None
