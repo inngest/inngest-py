@@ -43,6 +43,7 @@ def serve(
         client=client,
         framework=FRAMEWORK,
         functions=functions,
+        streaming=const.Streaming.DISABLE,  # Not supported yet.
     )
 
     class InngestHandler(tornado.web.RequestHandler):

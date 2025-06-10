@@ -42,6 +42,7 @@ def serve(
         client=client,
         framework=FRAMEWORK,
         functions=functions,
+        streaming=const.Streaming.DISABLE,  # Not supported yet.
     )
 
     async_mode = any(
