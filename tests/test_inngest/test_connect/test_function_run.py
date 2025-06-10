@@ -4,8 +4,8 @@ import json
 
 import inngest
 import test_core
+from inngest.connect import ConnectionState, connect
 from inngest.experimental import dev_server
-from inngest.experimental.connect import ConnectionState, connect
 
 from .base import BaseTest
 
