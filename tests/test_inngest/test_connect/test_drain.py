@@ -3,7 +3,8 @@ import asyncio
 import inngest
 import pytest
 import test_core
-from inngest.experimental.connect import ConnectionState, connect, connect_pb2
+from inngest.connect import ConnectionState, connect
+from inngest.connect._internal import connect_pb2
 
 from .base import BaseTest, collect_states
 

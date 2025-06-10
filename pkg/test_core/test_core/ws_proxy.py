@@ -3,7 +3,7 @@ import typing
 
 import websockets
 import websockets.asyncio.connection
-from inngest.experimental.connect.consts import _protocol
+from inngest.connect._internal.consts import _protocol
 
 from .net import get_available_port
 

@@ -9,11 +9,9 @@ import pytest
 import test_core
 import test_core.http_proxy
 import test_core.ws_proxy
-from inngest.experimental.connect import (
-    ConnectionState,
-    connect_pb2,
-)
-from inngest.experimental.connect.connection import (
+from inngest.connect import ConnectionState
+from inngest.connect._internal import connect_pb2
+from inngest.connect._internal.connection import (
     WorkerConnection,
     _WebSocketWorkerConnection,
 )

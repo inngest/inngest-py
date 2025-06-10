@@ -3,7 +3,7 @@ import time
 
 import inngest
 import test_core
-from inngest.experimental.connect import ConnectionState, connect
+from inngest.connect import ConnectionState, connect
 
 from .base import BaseTest
 
