@@ -52,6 +52,7 @@ class FunctionOpts(types.BaseModel):
     rate_limit: typing.Optional[server_lib.RateLimit]
     retries: typing.Optional[int]
     throttle: typing.Optional[server_lib.Throttle]
+    timeouts: typing.Optional[server_lib.Timeouts]
     singleton: typing.Optional[server_lib.Singleton]
 
     def convert_validation_error(
@@ -292,6 +293,7 @@ class Function(typing.Generic[types.T]):
                 ),
             },
             throttle=self._opts.throttle,
+            timeouts=self._opts.timeouts,
             triggers=self._triggers,
             singleton=self._opts.singleton,
         )
@@ -331,6 +333,7 @@ class Function(typing.Generic[types.T]):
                     )
                 },
                 throttle=None,
+                timeouts=None,
                 triggers=[
                     server_lib.TriggerEvent(
                         event=server_lib.InternalEvents.FUNCTION_FAILED.value,

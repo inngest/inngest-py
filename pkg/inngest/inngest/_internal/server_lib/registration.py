@@ -96,6 +96,7 @@ class FunctionConfig(_BaseConfig):
     )
     steps: dict[str, Step]
     throttle: typing.Optional[Throttle]
+    timeouts: typing.Optional[Timeouts]
     singleton: typing.Optional[Singleton]
     triggers: list[typing.Union[TriggerCron, TriggerEvent]]
 
@@ -155,6 +156,52 @@ class Throttle(_BaseConfig):
         if isinstance(out, Exception):
             raise out
         return out
+
+
+class Timeouts(_BaseConfig):
+    start: typing.Union[int, datetime.timedelta, None] = None
+    finish: typing.Union[int, datetime.timedelta, None] = None
+
+    @pydantic.field_serializer("start")
+    def serialize_start(
+        self,
+        value: typing.Union[int, datetime.timedelta, None],
+    ) -> typing.Optional[str]:
+        if value is None:
+            return None
+        out = transforms.to_duration_str(value)
+        if isinstance(out, Exception):
+            raise out
+        return out
+
+    @pydantic.field_serializer("finish")
+    def serialize_finish(
+        self,
+        value: typing.Union[int, datetime.timedelta, None],
+    ) -> typing.Optional[str]:
+        if value is None:
+            return None
+        out = transforms.to_duration_str(value)
+        if isinstance(out, Exception):
+            raise out
+        return out
+
+
+class MyModel(pydantic.BaseModel):
+    """
+    User model.
+
+    Attributes:
+        name: The user's full name
+        age: Age in years, must be positive
+    """
+
+    name: str = pydantic.Field(description="The user's full name")
+    age: int = pydantic.Field(description="Age in years, must be positive")
+
+
+bar = MyModel(name="foo", age=1)
+bar.name
 
 
 class Singleton(_BaseConfig):
