@@ -1,6 +1,7 @@
 """Public entrypoint for the Inngest SDK."""
 
 from ._internal.client_lib import Inngest, SendEventsResult
+from ._internal.const import Streaming
 from ._internal.errors import NonRetriableError, RetryAfterError, StepError
 from ._internal.execution_lib import Context, ContextSync
 from ._internal.function import Function
@@ -48,6 +49,7 @@ __all__ = [
     "StepError",
     "StepMemos",
     "StepSync",
+    "Streaming",
     "Throttle",
     "TransformOutputResult",
     "TriggerCron",

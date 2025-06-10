@@ -8,7 +8,15 @@ import json
 import typing
 import urllib.parse
 
-from ._internal import client_lib, comm_lib, errors, function, server_lib, types
+from ._internal import (
+    client_lib,
+    comm_lib,
+    const,
+    errors,
+    function,
+    server_lib,
+    types,
+)
 
 FRAMEWORK = server_lib.Framework.DIGITAL_OCEAN
 
@@ -36,6 +44,7 @@ def serve(
         client=client,
         framework=FRAMEWORK,
         functions=functions,
+        streaming=const.Streaming.DISABLE,  # Not supported yet.
     )
 
     def main(event: dict[str, object], context: _Context) -> _Response:

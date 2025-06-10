@@ -44,6 +44,7 @@ class CommHandler:
         client: client_lib.Inngest,
         framework: server_lib.Framework,
         functions: list[function.Function],
+        streaming: typing.Optional[const.Streaming],
     ) -> None:
         # In-band syncing is opt-out.
         self._allow_in_band_sync = not env_lib.is_false(
@@ -55,6 +56,10 @@ class CommHandler:
         self._api_origin = client.api_origin
         self._fns = {fn.get_id(): fn for fn in functions}
         self._framework = framework
+
+        if streaming is None:
+            streaming = env_lib.get_streaming(const.EnvKey.STREAMING)
+        self._streaming = streaming or const.Streaming.DISABLE
 
         # TODO: Graduate this to a config option, rather than an env var.
         thread_pool_max_workers = env_lib.get_int(
@@ -156,7 +161,8 @@ class CommHandler:
         memos = step_lib.StepMemos.from_raw(steps)
 
         if fn.is_handler_async:
-            call_res = await fn.call(
+            # Don't await because we might need to stream the response.
+            call_res_coro = fn.call(
                 self._client,
                 execution_lib.Context(
                     attempt=request.ctx.attempt,
@@ -181,6 +187,17 @@ class CommHandler:
                 params.fn_id,
                 middleware,
             )
+
+            if self._streaming is const.Streaming.FORCE:
+                return CommResponse.create_streaming(
+                    self._client.logger,
+                    call_res_coro,
+                    self._client.env,
+                    self._framework,
+                    server_kind,
+                )
+
+            call_res = await call_res_coro
         else:
             fn_call = functools.partial(
                 fn.call_sync,
