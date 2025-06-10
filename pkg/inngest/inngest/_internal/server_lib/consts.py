@@ -32,9 +32,10 @@ class ErrorCode(enum.Enum):
 class ExecutionVersion(enum.Enum):
     V0 = "0"
     V1 = "1"
+    V2 = "2"
 
 
-PREFERRED_EXECUTION_VERSION: typing.Final = ExecutionVersion.V1.value
+PREFERRED_EXECUTION_VERSION: typing.Final = ExecutionVersion.V2.value
 
 
 class Framework(enum.Enum):
