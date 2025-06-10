@@ -92,8 +92,6 @@ def create(
 
         return "2 (fn)"
 
-    # TODO: Delete this decorator when we implement parallelism improvements.
-    @pytest.mark.xfail
     async def run_test(self: base.TestClass) -> None:
         self.client.send_sync(inngest.Event(name=event_name))
         run_id = await state.wait_for_run_id()
@@ -129,15 +127,6 @@ def create(
                     error=None,
                     output="2 (fn)",
                     step=None,
-                ),
-                inngest.TransformOutputResult(
-                    error=None,
-                    output=None,
-                    step=middleware_lib.TransformOutputStepInfo(
-                        id="converge",
-                        op=server_lib.Opcode.PLANNED,
-                        opts=None,
-                    ),
                 ),
                 inngest.TransformOutputResult(
                     error=None,
