@@ -122,6 +122,8 @@ def _to_response(
         comm_res = comm_lib.CommResponse.from_error(client.logger, body)
         body = json.dumps(comm_res.body)
 
+    # print(json.dumps(comm_res.body, indent=2))
+
     return fastapi.responses.Response(
         content=body.encode("utf-8"),
         headers=comm_res.headers,
