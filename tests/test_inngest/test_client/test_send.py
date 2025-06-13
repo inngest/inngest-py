@@ -1,14 +1,16 @@
 import asyncio
 import dataclasses
 import json
+import time
 import typing
 import unittest
 
+import httpx
 import inngest
 import inngest.flask
 from inngest._internal import const, errors
 from inngest.experimental import dev_server
-from test_core import http_proxy
+from test_core import http_proxy, net, random_suffix
 
 
 class TestSend(unittest.IsolatedAsyncioTestCase):
@@ -129,6 +131,142 @@ class TestSend(unittest.IsolatedAsyncioTestCase):
                 ]
             )
         assert len(ctx.exception.ids) == 1
+
+    async def test_client_send_retry(self) -> None:
+        """
+        Ensure that the client retries on error when sending to event API, and
+        that retries use the same idempotency key header.
+        """
+
+        proxy_request_count = 0
+
+        # Create a proxy that mimics a request reaching the Dev Server but the
+        # client receives a 500 on the first attempt. This ensures that the Dev
+        # Server's event processing logic properly handles the idempotency key
+        # header.
+        def on_request(
+            body: typing.Optional[bytes],
+            headers: dict[str, list[str]],
+            method: str,
+            path: str,
+        ) -> http_proxy.Response:
+            nonlocal proxy_request_count
+            proxy_request_count += 1
+
+            # Always forward request to real dev server
+            resp = httpx.request(
+                method=method,
+                url=f"{dev_server.server.origin}{path}",
+                headers={k: v[0] for k, v in headers.items()},
+                content=body,
+            )
+
+            # But make client think we failed with synthetic 500 response on first try
+            if proxy_request_count == 1:
+                return http_proxy.Response(
+                    body=b"{}",
+                    headers={},
+                    status_code=500,
+                )
+            else:
+                # forward subsequent dev server responses
+                return http_proxy.Response(
+                    body=resp.content,
+                    headers=dict(resp.headers),
+                    status_code=resp.status_code,
+                )
+
+        proxy = http_proxy.Proxy(on_request)
+        proxy.start()
+        self.addCleanup(proxy.stop)
+
+        client = inngest.Inngest(
+            event_api_base_url=proxy.origin,
+            app_id=random_suffix("my-app"),
+            is_production=False,
+        )
+
+        # Send two events in one request with the same idempotency key header
+        # The returned IDs are unique.
+        event_name = random_suffix("foo")
+        send_ids = await client.send(
+            [
+                inngest.Event(name=event_name),
+                inngest.Event(name=event_name),
+            ]
+        )
+        assert len(send_ids) == 2
+        assert send_ids[0] != send_ids[1]
+
+        # Sleep long enough for the Dev Server to process the events.
+        time.sleep(5)
+
+        assert proxy_request_count == 2
+
+        list_events_resp = httpx.get(
+            f"{dev_server.server.origin}/v1/events", params={"name": event_name}
+        )
+
+        # 4 events were stored: 2 from the first attempt and 2 from the second
+        # attempt. This isn't ideal but it's the best we can do until we add
+        # first-class event idempotency (it's currently enforced when scheduling
+        # runs).
+        event_ids = [
+            event["internal_id"] for event in list_events_resp.json()["data"]
+        ]
+        assert len(event_ids) == 4
+
+        # Only 2 unique IDs (despite 4 events) because their internal IDs are
+        # deterministically generated from the same seed.
+        unique_event_ids = set(event_ids)
+        assert len(unique_event_ids) == 2
+
+        # The send IDs match the IDs returned by the REST API.
+        assert unique_event_ids == set(send_ids)
+
+    async def test_client_does_not_retry_on_400(self) -> None:
+        """
+        Ensure that the client does not retry on 400 errors when sending to event API.
+        """
+
+        proxy_request_count = 0
+
+        # Create a proxy that returns a 400
+        def on_request(
+            body: typing.Optional[bytes],
+            headers: dict[str, list[str]],
+            method: str,
+            path: str,
+        ) -> http_proxy.Response:
+            nonlocal proxy_request_count
+            proxy_request_count += 1
+
+            return http_proxy.Response(
+                body=b"{}",
+                headers={},
+                status_code=400,
+            )
+
+        proxy = http_proxy.Proxy(on_request)
+        proxy.start()
+        self.addCleanup(proxy.stop)
+
+        client = inngest.Inngest(
+            event_api_base_url=proxy.origin,
+            app_id=random_suffix("my-app"),
+            is_production=False,
+        )
+
+        event_name = random_suffix("foo")
+        await client.send(
+            [
+                inngest.Event(name=event_name),
+                inngest.Event(name=event_name),
+            ]
+        )
+
+        # client didn't retry request
+        assert proxy_request_count == 1
 
 
 if __name__ == "__main__":
