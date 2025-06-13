@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
+import random
 import time
 import typing
 import urllib.parse
@@ -27,6 +29,9 @@ if typing.TYPE_CHECKING:
 
 # Dummy value
 _DEV_SERVER_EVENT_KEY = "NO_EVENT_KEY_SET"
+
+MAX_RETRY_ATTEMPTS = 5
+RETRY_BASE_DELAY = 0.1  # 100ms in seconds
 
 
 class Inngest:
@@ -453,15 +458,30 @@ class Inngest:
         if isinstance(req, Exception):
             raise req
 
-        result = models.SendEventsResult.from_raw(
-            (
-                await net.fetch_with_thready_safety(
-                    self._http_client,
-                    self._http_client_sync,
-                    req,
-                )
-            ).json()
-        )
+        resp = None
+        for attempt in range(MAX_RETRY_ATTEMPTS):
+            resp = await net.fetch_with_thready_safety(
+                self._http_client,
+                self._http_client_sync,
+                req,
+            )
+            if resp.status_code < 400:
+                break
+
+            # Jitter between 0 and the base delay
+            jitter = random.random() * RETRY_BASE_DELAY  # noqa:S311
+
+            # Exponential backoff with jitter
+            delay = RETRY_BASE_DELAY * (2**attempt) + jitter
+
+            await asyncio.sleep(delay)
+
+        if resp is None:
+            raise errors.SendEventsError(
+                "never received response while sending events", []
+            )
+
+        result = models.SendEventsResult.from_raw(resp.json())
         if isinstance(result, Exception):
             raise result
 
