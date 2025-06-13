@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import logging
 import os
 import random
+import secrets
 import time
 import typing
 import urllib.parse
@@ -165,6 +167,7 @@ class Inngest:
             framework=framework,
             server_kind=server_kind,
         )
+        headers[server_lib.HeaderKey.EVENT_ID_SEED.value] = _seed()
 
         body = []
         for event in events:
@@ -607,3 +610,17 @@ def _get_mode(
         f"Cloud mode enabled. Set {const.EnvKey.DEV.value} to enable development mode"
     )
     return server_lib.ServerKind.CLOUD
+
+
+def _seed() -> str:
+    """
+    Create the event ID seed header value. This is used to seed a
+    deterministic event ID in the Inngest Server.
+
+    Returns:
+        str: A string in the format "{millis},{entropy_base64}"
+    """
+    current_time_millis = int(time.time() * 1000)
+    entropy = secrets.token_bytes(10)
+    entropy_base64 = base64.b64encode(entropy).decode("utf-8")
+    return f"{current_time_millis},{entropy_base64}"
