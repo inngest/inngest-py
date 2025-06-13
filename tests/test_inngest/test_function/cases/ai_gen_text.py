@@ -147,7 +147,7 @@ def create(
         )
 
         assert state.step_output == api_resp_body
-        assert state.req_path == "/v1/messages"
+        assert state.req_path == "/messages"
         assert state.req_method == "POST"
         assert state.req_headers["X-Api-Key"] == ["sk-ant-api03-000000"]
         assert state.req_headers["X-My-Header"] == ["my-value"]
