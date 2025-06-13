@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import logging
 import os
 import random
+import secrets
 import time
 import typing
 import urllib.parse
@@ -161,6 +163,7 @@ class Inngest:
             framework=framework,
             server_kind=server_kind,
         )
+        headers[server_lib.HeaderKey.EVENT_ID_SEED.value] = self._seed()
 
         body = []
         for event in events:
@@ -427,6 +430,19 @@ class Inngest:
             raise errors.BodyInvalidError("step data is not an object")
 
         return data
+
+    def _seed(self) -> str:
+        """
+        Create the event ID seed header value. This is used to seed a
+        deterministic event ID in the Inngest Server.
+
+        Returns:
+            str: A string in the format "{millis},{entropy_base64}"
+        """
+        current_time_millis = int(time.time() * 1000)
+        entropy = secrets.token_bytes(10)
+        entropy_base64 = base64.b64encode(entropy).decode("utf-8")
+        return f"{current_time_millis},{entropy_base64}"
 
     async def send(
         self,
