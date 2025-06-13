@@ -16,7 +16,7 @@ class TestClass(typing.Protocol):
 
     def addCleanup(
         self,
-        function: typing.Callable,
+        function: typing.Callable[..., typing.Any],
         /,
         *args: typing.Any,
         **kwargs: typing.Any,
