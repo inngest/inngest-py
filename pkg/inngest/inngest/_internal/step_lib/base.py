@@ -200,6 +200,15 @@ class WaitForEventOpts(types.BaseModel):
     timeout: str
 
 
+class AIInferOpts(types.BaseModel):
+    auth_key: str
+    body: dict[str, object]
+    format: str
+    headers: dict[str, str]
+    type: str = "step.ai.infer"
+    url: str | None = None
+
+
 class StepInfo(types.BaseModel):
     display_name: str = pydantic.Field(..., serialization_alias="displayName")
     id: str

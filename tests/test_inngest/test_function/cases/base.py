@@ -14,6 +14,14 @@ wait_for = base.wait_for
 class TestClass(typing.Protocol):
     client: inngest.Inngest
 
+    def addCleanup(
+        self,
+        function: typing.Callable[..., typing.Any],
+        /,
+        *args: typing.Any,
+        **kwargs: typing.Any,
+    ) -> None: ...
+
 
 @dataclasses.dataclass
 class Case:
