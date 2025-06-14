@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import asyncio
+import base64
 import logging
 import os
+import random
+import secrets
 import time
 import typing
 import urllib.parse
@@ -27,6 +31,9 @@ if typing.TYPE_CHECKING:
 
 # Dummy value
 _DEV_SERVER_EVENT_KEY = "NO_EVENT_KEY_SET"
+
+MAX_RETRY_ATTEMPTS = 5
+RETRY_BASE_DELAY = 0.1  # 100ms in seconds
 
 
 class Inngest:
@@ -156,6 +163,7 @@ class Inngest:
             framework=framework,
             server_kind=server_kind,
         )
+        headers[server_lib.HeaderKey.EVENT_ID_SEED.value] = self._seed()
 
         body = []
         for event in events:
@@ -423,6 +431,19 @@ class Inngest:
 
         return data
 
+    def _seed(self) -> str:
+        """
+        Create the event ID seed header value. This is used to seed a
+        deterministic event ID in the Inngest Server.
+
+        Returns:
+            str: A string in the format "{millis},{entropy_base64}"
+        """
+        current_time_millis = int(time.time() * 1000)
+        entropy = secrets.token_bytes(10)
+        entropy_base64 = base64.b64encode(entropy).decode("utf-8")
+        return f"{current_time_millis},{entropy_base64}"
+
     async def send(
         self,
         events: typing.Union[server_lib.Event, list[server_lib.Event]],
@@ -453,15 +474,30 @@ class Inngest:
         if isinstance(req, Exception):
             raise req
 
-        result = models.SendEventsResult.from_raw(
-            (
-                await net.fetch_with_thready_safety(
-                    self._http_client,
-                    self._http_client_sync,
-                    req,
-                )
-            ).json()
-        )
+        resp = None
+        for attempt in range(MAX_RETRY_ATTEMPTS):
+            resp = await net.fetch_with_thready_safety(
+                self._http_client,
+                self._http_client_sync,
+                req,
+            )
+            if resp.status_code < 400:
+                break
+
+            # Jitter between 0 and the base delay
+            jitter = random.random() * RETRY_BASE_DELAY  # noqa:S311
+
+            # Exponential backoff with jitter
+            delay = RETRY_BASE_DELAY * (2**attempt) + jitter
+
+            await asyncio.sleep(delay)
+
+        if resp is None:
+            raise errors.SendEventsError(
+                "never received response while sending events", []
+            )
+
+        result = models.SendEventsResult.from_raw(resp.json())
         if isinstance(result, Exception):
             raise result
 
