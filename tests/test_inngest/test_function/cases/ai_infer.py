@@ -115,7 +115,7 @@ def create(
     def fn_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
 
-        state.step_output = ctx.step.ai.gen_text(
+        state.step_output = ctx.step.ai.infer(
             "do-the-thing",
             adapter=adapter,
             body=api_req_body,
@@ -129,7 +129,7 @@ def create(
     async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
 
-        state.step_output = await ctx.step.ai.gen_text(
+        state.step_output = await ctx.step.ai.infer(
             "do-the-thing",
             adapter=adapter,
             body=api_req_body,

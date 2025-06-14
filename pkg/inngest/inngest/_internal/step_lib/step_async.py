@@ -413,7 +413,7 @@ class AI:
     def __init__(self, step: Step) -> None:
         self._step = step
 
-    async def gen_text(
+    async def infer(
         self,
         step_id: str,
         *,
@@ -421,8 +421,9 @@ class AI:
         body: dict[str, typing.Any],
     ) -> dict[str, object]:
         """
-        Generate text using an AI model. The request-sending responsibility is
-        offloaded to the Inngest server.
+        Make an AI model call using Inngest as an intermediary. The request-
+        sending responsibility is offloaded to the Inngest server, so you aren't
+        using compute while waiting for a response.
 
         Args:
         ----
