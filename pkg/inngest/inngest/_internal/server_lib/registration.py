@@ -187,23 +187,6 @@ class Timeouts(_BaseConfig):
         return out
 
 
-class MyModel(pydantic.BaseModel):
-    """
-    User model.
-
-    Attributes:
-        name: The user's full name
-        age: Age in years, must be positive
-    """
-
-    name: str = pydantic.Field(description="The user's full name")
-    age: int = pydantic.Field(description="Age in years, must be positive")
-
-
-bar = MyModel(name="foo", age=1)
-bar.name
-
-
 class Singleton(_BaseConfig):
     key: typing.Optional[str] = None
     mode: typing.Literal["skip"]
