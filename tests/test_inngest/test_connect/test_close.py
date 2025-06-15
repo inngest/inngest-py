@@ -4,7 +4,7 @@ import typing
 
 import inngest
 import test_core
-from inngest.experimental.connect import ConnectionState, connect
+from inngest.connect import ConnectionState, connect
 from test_core import http_proxy
 
 from .base import BaseTest, collect_states

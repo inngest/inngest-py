@@ -1,11 +1,7 @@
 import asyncio
 
-import inngest.experimental.connect
+from inngest.connect import connect
 from src.inngest.client import inngest_client
 from src.inngest.functions import hello
 
-asyncio.run(
-    inngest.experimental.connect.connect(
-        [(inngest_client, [hello])],
-    ).start()
-)
+asyncio.run(connect([(inngest_client, [hello])]).start())

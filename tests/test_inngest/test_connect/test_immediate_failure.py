@@ -1,5 +1,5 @@
 import inngest
-from inngest.experimental.connect import connect
+from inngest.connect import connect
 
 from .base import BaseTest
 

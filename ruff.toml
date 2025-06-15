@@ -1,7 +1,7 @@
 exclude = [
     ".venv",
-    "pkg/inngest/inngest/experimental/connect/connect_pb2.py",
-    "pkg/inngest/inngest/experimental/connect/connect_pb2.pyi",
+    "pkg/inngest/inngest/connect/_internal/connect_pb2.py",
+    "pkg/inngest/inngest/connect/_internal/connect_pb2.pyi",
 ]
 
 line-length = 80

@@ -157,7 +157,7 @@ def _start_app(
     app_code = f"""
 import asyncio
 import inngest
-from inngest.experimental.connect import connect
+from inngest.connect import connect
 import signal
 from multiprocessing.connection import Client
 
