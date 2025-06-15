@@ -40,6 +40,7 @@ from .registration import (
     Step,
     SynchronizeRequest,
     Throttle,
+    Timeouts,
     TriggerCron,
     TriggerEvent,
 )
@@ -78,6 +79,7 @@ __all__ = [
     "SyncKind",
     "SynchronizeRequest",
     "Throttle",
+    "Timeouts",
     "TriggerCron",
     "TriggerEvent",
     "UNSPECIFIED_STEP_ID",

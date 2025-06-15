@@ -96,6 +96,7 @@ class FunctionConfig(_BaseConfig):
     )
     steps: dict[str, Step]
     throttle: typing.Optional[Throttle]
+    timeouts: typing.Optional[Timeouts]
     singleton: typing.Optional[Singleton]
     triggers: list[typing.Union[TriggerCron, TriggerEvent]]
 
@@ -146,6 +147,35 @@ class Throttle(_BaseConfig):
 
     @pydantic.field_serializer("period")
     def serialize_period(
+        self,
+        value: typing.Union[int, datetime.timedelta, None],
+    ) -> typing.Optional[str]:
+        if value is None:
+            return None
+        out = transforms.to_duration_str(value)
+        if isinstance(out, Exception):
+            raise out
+        return out
+
+
+class Timeouts(_BaseConfig):
+    start: typing.Union[int, datetime.timedelta, None] = None
+    finish: typing.Union[int, datetime.timedelta, None] = None
+
+    @pydantic.field_serializer("start")
+    def serialize_start(
+        self,
+        value: typing.Union[int, datetime.timedelta, None],
+    ) -> typing.Optional[str]:
+        if value is None:
+            return None
+        out = transforms.to_duration_str(value)
+        if isinstance(out, Exception):
+            raise out
+        return out
+
+    @pydantic.field_serializer("finish")
+    def serialize_finish(
         self,
         value: typing.Union[int, datetime.timedelta, None],
     ) -> typing.Optional[str]:
