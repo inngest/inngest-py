@@ -474,16 +474,19 @@ class Inngest:
 
         resp = None
         for attempt in range(MAX_SEND_ATTEMPTS):
-            resp = await net.fetch_with_thready_safety(
-                self._http_client,
-                self._http_client_sync,
-                req,
-            )
+            try:
+                resp = await net.fetch_with_thready_safety(
+                    self._http_client,
+                    self._http_client_sync,
+                    req,
+                )
+            except httpx.ReadTimeout:
+                pass  # we will retry with delay
 
             # Don't retry if the request was successful or if there was a 4xx
             # status code. We don't want to retry on 4xx because the request is
             # malformed and retrying will just fail again.
-            if resp.status_code < 500:
+            if resp is not None and resp.status_code < 500:
                 break
 
             # Jitter between 0 and the base delay
