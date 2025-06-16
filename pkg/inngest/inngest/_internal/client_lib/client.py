@@ -33,7 +33,7 @@ if typing.TYPE_CHECKING:
 # Dummy value
 _DEV_SERVER_EVENT_KEY = "NO_EVENT_KEY_SET"
 
-MAX_RETRY_ATTEMPTS = 5
+MAX_SEND_ATTEMPTS = 5
 RETRY_BASE_DELAY = 0.1  # 100ms in seconds
 
 
@@ -473,7 +473,7 @@ class Inngest:
             raise req
 
         resp = None
-        for attempt in range(MAX_RETRY_ATTEMPTS):
+        for attempt in range(MAX_SEND_ATTEMPTS):
             resp = await net.fetch_with_thready_safety(
                 self._http_client,
                 self._http_client_sync,
