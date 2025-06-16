@@ -2,6 +2,7 @@ import inngest
 from inngest._internal import server_lib
 
 from . import (
+    ai_infer,
     async_fn_with_sync_step_callback,
     batch_that_needs_api,
     cancel,
@@ -49,6 +50,7 @@ from . import (
 from .base import Case
 
 _modules = (
+    ai_infer,
     async_fn_with_sync_step_callback,
     batch_that_needs_api,
     cancel,

@@ -7,6 +7,7 @@ import typing_extensions
 
 from inngest._internal import errors, server_lib, transforms, types
 from inngest._internal.client_lib import models as client_models
+from inngest.experimental import ai
 
 from . import base
 
@@ -36,6 +37,7 @@ class StepSync(base.StepBase):
             target_hashed_id,
         )
 
+        self.ai = AI(self)
         self._execution = exe
 
     def invoke(
@@ -391,5 +393,59 @@ class StepSync(base.StepBase):
 
                 # Fulfilled by an event
                 return server_lib.Event.model_validate(step.output)
+
+        raise Exception("unreachable")
+
+
+class AI:
+    def __init__(self, step: StepSync) -> None:
+        self._step = step
+
+    def infer(
+        self,
+        step_id: str,
+        *,
+        adapter: ai.BaseAdapter,
+        body: dict[str, typing.Any],
+    ) -> dict[str, object]:
+        """
+        Make an AI model call using Inngest as an intermediary. The request-
+        sending responsibility is offloaded to the Inngest server, so you aren't
+        using compute while waiting for a response.
+
+        Args:
+        ----
+            step_id: Durable step ID. Should usually be unique within a function, but it's OK to reuse as long as your function is deterministic.
+            adapter: AI model adapter.
+            body: Request body sent to the AI model.
+        """
+
+        parsed_step_id = self._step._parse_step_id(step_id)
+
+        opts = base.AIInferOpts(
+            auth_key=adapter.auth_key(),
+            body=body,
+            format=adapter.format(),
+            headers=adapter.headers(),
+            url=adapter.url_gen_text(),
+        ).to_dict()
+        if isinstance(opts, Exception):
+            raise opts
+
+        step_info = base.StepInfo(
+            display_name=parsed_step_id.user_facing,
+            id=parsed_step_id.hashed,
+            name=parsed_step_id.user_facing,
+            op=server_lib.Opcode.AI_GATEWAY,
+            opts=opts,
+        )
+
+        with self._step._execution.report_step(step_info) as step:
+            if step.skip:
+                raise base.SkipInterrupt(parsed_step_id.user_facing)
+            if step.error is not None:
+                raise step.error
+            elif not isinstance(step.output, types.EmptySentinel):
+                return step.output  # type: ignore[return-value]
 
         raise Exception("unreachable")

@@ -69,6 +69,7 @@ class InternalEvents(enum.Enum):
 
 
 class Opcode(enum.Enum):
+    AI_GATEWAY = "AIGateway"
     INVOKE = "InvokeFunction"
     PLANNED = "StepPlanned"
     SLEEP = "Sleep"
