@@ -137,10 +137,22 @@ class TestSend(unittest.IsolatedAsyncioTestCase):
         Ensure that the client retries on error when sending to event API, and
         that retries use the same idempotency key header.
         """
-        for proxy_request_handler_factory in [
-            create_first_request_500_handler,
-            create_first_request_timeout_handler,
-        ]:
+
+        test_options: typing.List[
+            typing.Tuple[
+                typing.Callable[
+                    [], typing.Tuple[http_proxy.OnRequest, CountGetter]
+                ],
+                bool,
+            ]
+        ] = [
+            (create_first_request_500_handler, True),
+            (create_first_request_timeout_handler, True),
+            (create_first_request_500_handler, False),
+            (create_first_request_timeout_handler, False),
+        ]
+
+        for proxy_request_handler_factory, is_sync in test_options:
             with self.subTest(proxy_request_handler_factory):
                 on_request, get_proxy_request_counter = (
                     proxy_request_handler_factory()
@@ -159,12 +171,15 @@ class TestSend(unittest.IsolatedAsyncioTestCase):
                 # Send two events in one request with the same idempotency key header
                 # The returned IDs are unique.
                 event_name = random_suffix("foo")
-                send_ids = await client.send(
-                    [
-                        inngest.Event(name=event_name),
-                        inngest.Event(name=event_name),
-                    ]
-                )
+                events = [
+                    inngest.Event(name=event_name),
+                    inngest.Event(name=event_name),
+                ]
+                if is_sync:
+                    send_ids = client.send_sync(events)
+                else:
+                    send_ids = await client.send(events)
+
                 assert len(send_ids) == 2
                 assert send_ids[0] != send_ids[1]
 
@@ -200,45 +215,48 @@ class TestSend(unittest.IsolatedAsyncioTestCase):
         """
         Ensure that the client does not retry on 400 errors when sending to event API.
         """
+        for is_sync in [True, False]:
+            with self.subTest(is_sync):
+                proxy_request_count = 0
 
-        proxy_request_count = 0
+                # Create a proxy that returns a 400
+                def on_request(
+                    body: typing.Optional[bytes],
+                    headers: dict[str, list[str]],
+                    method: str,
+                    path: str,
+                ) -> http_proxy.Response:
+                    nonlocal proxy_request_count
+                    proxy_request_count += 1
 
-        # Create a proxy that returns a 400
-        def on_request(
-            body: typing.Optional[bytes],
-            headers: dict[str, list[str]],
-            method: str,
-            path: str,
-        ) -> http_proxy.Response:
-            nonlocal proxy_request_count
-            proxy_request_count += 1
+                    return http_proxy.Response(
+                        body=b"{}",
+                        headers={},
+                        status_code=400,
+                    )
 
-            return http_proxy.Response(
-                body=b"{}",
-                headers={},
-                status_code=400,
-            )
+                proxy = http_proxy.Proxy(on_request)
+                proxy.start()
+                self.addCleanup(proxy.stop)
 
-        proxy = http_proxy.Proxy(on_request)
-        proxy.start()
-        self.addCleanup(proxy.stop)
+                client = inngest.Inngest(
+                    event_api_base_url=proxy.origin,
+                    app_id=random_suffix("my-app"),
+                    is_production=False,
+                )
 
-        client = inngest.Inngest(
-            event_api_base_url=proxy.origin,
-            app_id=random_suffix("my-app"),
-            is_production=False,
-        )
+                event_name = random_suffix("foo")
+                events = [
+                    inngest.Event(name=event_name),
+                    inngest.Event(name=event_name),
+                ]
+                if is_sync:
+                    client.send_sync(events)
+                else:
+                    await client.send(events)
 
-        event_name = random_suffix("foo")
-        await client.send(
-            [
-                inngest.Event(name=event_name),
-                inngest.Event(name=event_name),
-            ]
-        )
-
-        # client didn't retry request
-        assert proxy_request_count == 1
+                # client didn't retry request
+                assert proxy_request_count == 1
 
 
 CountGetter = typing.Callable[[], int]
