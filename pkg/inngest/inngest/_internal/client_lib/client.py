@@ -489,13 +489,7 @@ class Inngest:
             if resp is not None and resp.status_code < 500:
                 break
 
-            # Jitter between 0 and the base delay
-            jitter = random.random() * RETRY_BASE_DELAY  # noqa:S311
-
-            # Exponential backoff with jitter
-            delay = RETRY_BASE_DELAY * (2**attempt) + jitter
-
-            await asyncio.sleep(delay)
+            await asyncio.sleep(_compute_backoff_delay(attempt))
 
         if resp is None:
             raise errors.SendEventsError(
@@ -561,13 +555,7 @@ class Inngest:
             if resp is not None and resp.status_code < 500:
                 break
 
-            # Jitter between 0 and the base delay
-            jitter = random.random() * RETRY_BASE_DELAY  # noqa:S311
-
-            # Exponential backoff with jitter
-            delay = RETRY_BASE_DELAY * (2**attempt) + jitter
-
-            time.sleep(delay)
+            time.sleep(_compute_backoff_delay(attempt))
 
         if resp is None:
             raise errors.SendEventsError(
@@ -652,3 +640,12 @@ def _seed() -> str:
     entropy = secrets.token_bytes(10)
     entropy_base64 = base64.b64encode(entropy).decode("utf-8")
     return f"{current_time_millis},{entropy_base64}"
+
+
+def _compute_backoff_delay(attempt: int) -> float:
+    # Jitter between 0 and the base delay
+    jitter = random.random() * RETRY_BASE_DELAY  # noqa:S311
+
+    # Exponential backoff with jitter
+    delay: float = RETRY_BASE_DELAY * (2**attempt) + jitter
+    return delay
