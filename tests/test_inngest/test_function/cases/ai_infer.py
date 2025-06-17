@@ -103,8 +103,9 @@ def create(
 
     adapter = ai.anthropic.Adapter(
         auth_key="sk-ant-api03-000000",
+        base_url=f"{mock_llm.origin}/v1",
         headers={"x-my-header": "my-value"},
-        base_url=mock_llm.origin,
+        model="claude-3-5-sonnet-latest",
     )
 
     @client.create_function(
@@ -114,6 +115,11 @@ def create(
     )
     def fn_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
+
+        # Remove the model from the body so that we can ensure that it's
+        # automatically populated by the adapter
+        body = api_req_body.copy()
+        del body["model"]
 
         state.step_output = ctx.step.ai.infer(
             "do-the-thing",
@@ -129,10 +135,15 @@ def create(
     async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
 
+        # Remove the model from the body so that we can ensure that it's
+        # automatically populated by the adapter
+        body = api_req_body.copy()
+        del body["model"]
+
         state.step_output = await ctx.step.ai.infer(
             "do-the-thing",
             adapter=adapter,
-            body=api_req_body,
+            body=body,
         )
 
     async def run_test(self: base.TestClass) -> None:
@@ -147,7 +158,7 @@ def create(
         )
 
         assert state.step_output == api_resp_body
-        assert state.req_path == "/messages"
+        assert state.req_path == "/v1/messages"
         assert state.req_method == "POST"
         assert state.req_headers["X-Api-Key"] == ["sk-ant-api03-000000"]
         assert state.req_headers["X-My-Header"] == ["my-value"]

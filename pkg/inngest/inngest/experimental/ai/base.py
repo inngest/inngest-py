@@ -24,7 +24,13 @@ class BaseAdapter(typing.Protocol):
         """
         ...
 
-    def url_gen_text(self) -> str:
+    def on_call(self, body: dict[str, object]) -> None:
+        """
+        Modify the request body.
+        """
+        ...
+
+    def url_infer(self) -> str:
         """
         Return the URL for generating text.
         """

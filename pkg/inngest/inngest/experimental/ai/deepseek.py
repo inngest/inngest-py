@@ -19,16 +19,16 @@ class Adapter(BaseAdapter):
         """
         Args:
         ----
-            auth_key: Anthropic API key.
-            base_url: Anthropic API URL.
+            auth_key: DeepSeek API key.
+            base_url: DeepSeek API URL.
             headers: Additional headers to send with the request.
-            model: Anthropic model to use.
+            model: DeepSeek model to use.
         """
 
         self._auth_key = auth_key
-        self._headers = headers or {"anthropic-version": "2023-06-01"}
+        self._headers = headers or {}
         self._model = model
-        self._url = base_url or "https://api.anthropic.com/v1"
+        self._url = base_url or "https://api.deepseek.com/v1"
 
     def auth_key(self) -> str:
         """
@@ -42,7 +42,7 @@ class Adapter(BaseAdapter):
         Return the format for the adapter.
         """
 
-        return "anthropic"
+        return "openai-chat"
 
     def headers(self) -> dict[str, str]:
         """
@@ -64,4 +64,4 @@ class Adapter(BaseAdapter):
         Return the URL for generating text.
         """
 
-        return self._url.rstrip("/") + "/messages"
+        return self._url.rstrip("/") + "/chat/completions"
