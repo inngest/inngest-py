@@ -435,6 +435,8 @@ class AI:
 
         parsed_step_id = self._step._parse_step_id(step_id)
 
+        adapter.on_call(body)
+
         opts = base.AIInferOpts(
             auth_key=adapter.auth_key(),
             body=body,
