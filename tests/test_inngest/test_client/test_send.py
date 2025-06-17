@@ -13,6 +13,9 @@ from inngest.experimental import dev_server
 from test_core import http_proxy, net, random_suffix
 
 
+TEST_HTTPX_TIMEOUT = 1  # timeout in seconds
+
+
 class TestSend(unittest.IsolatedAsyncioTestCase):
     async def test_send_event_to_cloud_branch_env(self) -> None:
         """
@@ -166,6 +169,7 @@ class TestSend(unittest.IsolatedAsyncioTestCase):
                     event_api_base_url=proxy.origin,
                     app_id=random_suffix("my-app"),
                     is_production=False,
+                    request_timeout=TEST_HTTPX_TIMEOUT * 1000,
                 )
 
                 # Send two events in one request with the same idempotency key header
@@ -335,7 +339,7 @@ def create_first_request_timeout_handler() -> typing.Tuple[
 
         # But make client think we timed out
         if proxy_request_count == 1:
-            time.sleep(35)
+            time.sleep(TEST_HTTPX_TIMEOUT + 1)
             # dummy response only used for type checking, client will never receive it
             return http_proxy.Response(
                 body=None,

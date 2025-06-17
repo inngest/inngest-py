@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import datetime
 import logging
 import os
 import random
@@ -77,6 +78,7 @@ class Inngest:
         middleware: typing.Optional[
             list[middleware_lib.UninitializedMiddleware]
         ] = None,
+        request_timeout: int | datetime.timedelta | None = None,
         serializer: serializer_lib.Serializer | None = None,
         signing_key: typing.Optional[str] = None,
     ) -> None:
@@ -94,6 +96,8 @@ class Inngest:
                 request signature verification and default Inngest server URLs.
             logger: Logger to use.
             middleware: List of middleware to use.
+            request_timeout: Timeout configuration for internal http client. int value is in ms. Event sending requests
+                may take longer due to retries.
             serializer: Serializes/deserializes function/step output using the output_type argument.
             signing_key: Inngest signing key.
         """
@@ -115,6 +119,13 @@ class Inngest:
         self._signing_key_fallback = os.getenv(
             const.EnvKey.SIGNING_KEY_FALLBACK.value
         )
+
+        if isinstance(request_timeout, int):
+            self._httpx_timeout = request_timeout / 1000  # convert ms to s
+        elif isinstance(request_timeout, datetime.timedelta):
+            self._httpx_timeout = request_timeout.total_seconds()
+        else:
+            self._httpx_timeout = 30.0
 
         self._env = env or env_lib.get_environment_name()
         if (
@@ -182,11 +193,7 @@ class Inngest:
             body.append(d)
 
         return self._http_client_sync.build_request(
-            "POST",
-            url,
-            headers=headers,
-            json=body,
-            timeout=30,
+            "POST", url, headers=headers, json=body, timeout=self._httpx_timeout
         )
 
     def add_middleware(
