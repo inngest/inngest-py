@@ -103,8 +103,9 @@ def create(
 
     adapter = ai.anthropic.Adapter(
         auth_key="sk-ant-api03-000000",
+        base_url=f"{mock_llm.origin}/v1",
         headers={"x-my-header": "my-value"},
-        base_url=mock_llm.origin,
+        model="claude-3-5-sonnet-latest",
     )
 
     @client.create_function(
@@ -147,7 +148,7 @@ def create(
         )
 
         assert state.step_output == api_resp_body
-        assert state.req_path == "/messages"
+        assert state.req_path == "/v1/messages"
         assert state.req_method == "POST"
         assert state.req_headers["X-Api-Key"] == ["sk-ant-api03-000000"]
         assert state.req_headers["X-My-Header"] == ["my-value"]

@@ -14,6 +14,7 @@ class Adapter(BaseAdapter):
         auth_key: str,
         base_url: str | None = None,
         headers: dict[str, str] | None = None,
+        model: str,
     ) -> None:
         """
         Args:
@@ -21,10 +22,12 @@ class Adapter(BaseAdapter):
             auth_key: OpenAI API key.
             base_url: OpenAI API URL.
             headers: Additional headers to send with the request.
+            model: OpenAI model to use.
         """
 
         self._auth_key = auth_key
-        self._headers = headers or {"anthropic-version": "2023-06-01"}
+        self._headers = headers or {}
+        self._model = model
         self._url = base_url or "https://api.openai.com/v1"
 
     def auth_key(self) -> str:
@@ -48,7 +51,15 @@ class Adapter(BaseAdapter):
 
         return self._headers
 
-    def url_gen_text(self) -> str:
+    def on_call(self, body: dict[str, object]) -> None:
+        """
+        Modify the request body.
+        """
+
+        if not body.get("model"):
+            body["model"] = self._model
+
+    def url_infer(self) -> str:
         """
         Return the URL for generating text.
         """

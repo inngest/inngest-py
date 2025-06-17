@@ -421,9 +421,10 @@ class AI:
         body: dict[str, typing.Any],
     ) -> dict[str, object]:
         """
-        Make an AI model call using Inngest as an intermediary. The request-
-        sending responsibility is offloaded to the Inngest server, so you aren't
-        using compute while waiting for a response.
+        EXPERIMENTAL: This method's interface is subject to change. Make an AI
+        model call using Inngest as an intermediary. The request-sending
+        responsibility is offloaded to the Inngest server, so you aren't using
+        compute while waiting for a response.
 
         Args:
         ----
@@ -439,7 +440,7 @@ class AI:
             body=body,
             format=adapter.format(),
             headers=adapter.headers(),
-            url=adapter.url_gen_text(),
+            url=adapter.url_infer(),
         ).to_dict()
         if isinstance(opts, Exception):
             raise opts
