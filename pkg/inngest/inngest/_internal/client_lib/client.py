@@ -480,7 +480,7 @@ class Inngest:
                     self._http_client_sync,
                     req,
                 )
-            except httpx.ReadTimeout:
+            except httpx.RequestError:
                 pass  # we will retry with delay
 
             # Don't retry if the request was successful or if there was a 4xx
