@@ -548,9 +548,34 @@ class Inngest:
         if isinstance(req, Exception):
             raise req
 
-        result = models.SendEventsResult.from_raw(
-            (self._http_client_sync.send(req)).json(),
-        )
+        resp = None
+        for attempt in range(MAX_SEND_ATTEMPTS):
+            try:
+                resp = self._http_client_sync.send(req)
+            except httpx.RequestError:
+                pass  # we will retry with delay
+
+            # Don't retry if the request was successful or if there was a 4xx
+            # status code. We don't want to retry on 4xx because the request is
+            # malformed and retrying will just fail again.
+            if resp is not None and resp.status_code < 500:
+                break
+
+            # Jitter between 0 and the base delay
+            jitter = random.random() * RETRY_BASE_DELAY  # noqa:S311
+
+            # Exponential backoff with jitter
+            delay = RETRY_BASE_DELAY * (2**attempt) + jitter
+
+            time.sleep(delay)
+
+        if resp is None:
+            raise errors.SendEventsError(
+                "never received response while sending events", []
+            )
+
+        result = models.SendEventsResult.from_raw(resp.json())
+
         if isinstance(result, Exception):
             raise result
 
