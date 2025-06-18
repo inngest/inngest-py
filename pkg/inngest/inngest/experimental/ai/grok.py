@@ -5,7 +5,7 @@ from .base import BaseAdapter
 
 class Adapter(BaseAdapter):
     """
-    OpenAI adapter
+    Grok adapter
     """
 
     def __init__(
@@ -28,7 +28,7 @@ class Adapter(BaseAdapter):
         self._auth_key = auth_key
         self._headers = headers or {}
         self._model = model
-        self._url = base_url or "https://api.x.ai/v1"
+        self._url = base_url or "https://api.x.ai/v1/chat/completions"
 
     def auth_key(self) -> str:
         """
