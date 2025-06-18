@@ -50,15 +50,15 @@ def extract_openai_response(response: Dict[str, Any]) -> str:
     choices = response.get("choices", [])
     if not choices or not isinstance(choices, list):
         return str(response)
-    
+
     choice = choices[0]
     if not isinstance(choice, dict):
         return str(choice)
-    
+
     message = choice.get("message", {})
     if isinstance(message, dict):
         return str(message.get("content", ""))
-    
+
     return str(choice)
 
 
@@ -67,31 +67,39 @@ def extract_anthropic_response(response: Dict[str, Any]) -> str:
     content = response.get("content", [])
     if not content or not isinstance(content, list):
         return str(response)
-    
+
     if len(content) > 0 and isinstance(content[0], dict):
         return str(content[0].get("text", ""))
-    
+
     return str(content)
 
 
 def extract_gemini_response(response: Dict[str, Any]) -> str:
     """Extract text from Gemini format response."""
     candidates = response.get("candidates", [])
-    if not candidates or not isinstance(candidates, list) or len(candidates) == 0:
+    if (
+        not candidates
+        or not isinstance(candidates, list)
+        or len(candidates) == 0
+    ):
         return str(response)
-    
+
     candidate = candidates[0]
     if not isinstance(candidate, dict):
         return str(candidate)
-    
+
     content = candidate.get("content", {})
     if not isinstance(content, dict):
         return str(candidate)
-    
+
     parts = content.get("parts", [])
-    if isinstance(parts, list) and len(parts) > 0 and isinstance(parts[0], dict):
+    if (
+        isinstance(parts, list)
+        and len(parts) > 0
+        and isinstance(parts[0], dict)
+    ):
         return str(parts[0].get("text", ""))
-    
+
     return str(candidate)
 
 
@@ -144,7 +152,9 @@ async def test_adapters(ctx: inngest.Context) -> Dict[str, str]:
             # Prepare the request body based on provider
             if provider_name == "gemini":
                 # Gemini uses a different format
-                body: Dict[str, Any] = {"contents": [{"parts": [{"text": question}]}]}
+                body: Dict[str, Any] = {
+                    "contents": [{"parts": [{"text": question}]}]
+                }
             else:
                 # Standard OpenAI-style format for other providers
                 body = {"messages": [{"role": "user", "content": question}]}
