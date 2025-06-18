@@ -6,49 +6,122 @@ from inngest.experimental.ai.anthropic import Adapter as AnthropicAdapter
 from inngest.experimental.ai.gemini import Adapter as GeminiAdapter
 from inngest.experimental.ai.grok import Adapter as GrokAdapter
 from inngest.experimental.ai.deepseek import Adapter as DeepSeekAdapter
+from inngest.experimental.ai.base import BaseAdapter
 import os
+from typing import Any, Dict, Callable, TypedDict
+
+
+class ProviderConfig(TypedDict):
+    adapter: BaseAdapter
+    parser: Callable[[Dict[str, Any]], str]
 
 
 inngest_client = inngest.Inngest(app_id="smoke-test-model-adapters-app")
 
 # Create AI adapters
 openai_adapter = OpenAIAdapter(
-    auth_key=os.getenv("OPENAI_API_KEY"),
+    auth_key=os.getenv("OPENAI_API_KEY") or "",
     model="o4-mini-2025-04-16",
 )
 
 anthropic_adapter = AnthropicAdapter(
-    auth_key=os.getenv("ANTHROPIC_API_KEY"),
+    auth_key=os.getenv("ANTHROPIC_API_KEY") or "",
     model="claude-3-5-sonnet-latest",
 )
 
 gemini_adapter = GeminiAdapter(
-    auth_key=os.getenv("GEMINI_API_KEY"),
+    auth_key=os.getenv("GEMINI_API_KEY") or "",
     model="gemini-2.5-pro",
 )
 
 grok_adapter = GrokAdapter(
-    auth_key=os.getenv("GROK_API_KEY"),
+    auth_key=os.getenv("GROK_API_KEY") or "",
     model="grok-3-latest",
 )
 
 deepseek_adapter = DeepSeekAdapter(
-    auth_key=os.getenv("DEEPSEEK_API_KEY"),
+    auth_key=os.getenv("DEEPSEEK_API_KEY") or "",
     model="deepseek-chat",
 )
+
+
+def extract_openai_response(response: Dict[str, Any]) -> str:
+    """Extract text from OpenAI/DeepSeek/Grok format response."""
+    choices = response.get("choices", [])
+    if not choices or not isinstance(choices, list):
+        return str(response)
+    
+    choice = choices[0]
+    if not isinstance(choice, dict):
+        return str(choice)
+    
+    message = choice.get("message", {})
+    if isinstance(message, dict):
+        return str(message.get("content", ""))
+    
+    return str(choice)
+
+
+def extract_anthropic_response(response: Dict[str, Any]) -> str:
+    """Extract text from Anthropic format response."""
+    content = response.get("content", [])
+    if not content or not isinstance(content, list):
+        return str(response)
+    
+    if len(content) > 0 and isinstance(content[0], dict):
+        return str(content[0].get("text", ""))
+    
+    return str(content)
+
+
+def extract_gemini_response(response: Dict[str, Any]) -> str:
+    """Extract text from Gemini format response."""
+    candidates = response.get("candidates", [])
+    if not candidates or not isinstance(candidates, list) or len(candidates) == 0:
+        return str(response)
+    
+    candidate = candidates[0]
+    if not isinstance(candidate, dict):
+        return str(candidate)
+    
+    content = candidate.get("content", {})
+    if not isinstance(content, dict):
+        return str(candidate)
+    
+    parts = content.get("parts", [])
+    if isinstance(parts, list) and len(parts) > 0 and isinstance(parts[0], dict):
+        return str(parts[0].get("text", ""))
+    
+    return str(candidate)
 
 
 @inngest_client.create_function(
     fn_id="model-adapter-test",
     trigger=inngest.TriggerEvent(event="test-adapters"),
 )
-async def test_adapters(ctx: inngest.Context) -> dict:
-    adapters = {
-        "openai": openai_adapter,
-        "anthropic": anthropic_adapter,
-        "gemini": gemini_adapter,
-        "grok": grok_adapter,
-        "deepseek": deepseek_adapter,
+async def test_adapters(ctx: inngest.Context) -> Dict[str, str]:
+    # Map each provider to its adapter and parser
+    provider_config: Dict[str, ProviderConfig] = {
+        "openai": {
+            "adapter": openai_adapter,
+            "parser": extract_openai_response,
+        },
+        "anthropic": {
+            "adapter": anthropic_adapter,
+            "parser": extract_anthropic_response,
+        },
+        "gemini": {
+            "adapter": gemini_adapter,
+            "parser": extract_gemini_response,
+        },
+        "grok": {
+            "adapter": grok_adapter,
+            "parser": extract_openai_response,  # Uses OpenAI format
+        },
+        "deepseek": {
+            "adapter": deepseek_adapter,
+            "parser": extract_openai_response,  # Uses OpenAI format
+        },
     }
 
     # Different state capital questions for each provider
@@ -60,16 +133,18 @@ async def test_adapters(ctx: inngest.Context) -> dict:
         "deepseek": "What is the capital of Illinois?",
     }
 
-    responses = {}
+    responses: Dict[str, str] = {}
 
-    for provider_name, adapter in adapters.items():
+    for provider_name, config in provider_config.items():
         try:
             question = questions[provider_name]
+            adapter = config["adapter"]
+            parser = config["parser"]
 
             # Prepare the request body based on provider
             if provider_name == "gemini":
-                # Gemini uses a different format and model should be in URL, not body
-                body = {"contents": [{"parts": [{"text": question}]}]}
+                # Gemini uses a different format
+                body: Dict[str, Any] = {"contents": [{"parts": [{"text": question}]}]}
             else:
                 # Standard OpenAI-style format for other providers
                 body = {"messages": [{"role": "user", "content": question}]}
@@ -86,33 +161,8 @@ async def test_adapters(ctx: inngest.Context) -> dict:
 
             print(f"{provider_name} response: {ai_response}")
 
-            # Extract the text content from the AI response
-            # Different providers may have different response formats
-            if "choices" in ai_response and len(ai_response["choices"]) > 0:
-                # OpenAI/DeepSeek/Grok format
-                responses[provider_name] = ai_response["choices"][0]["message"][
-                    "content"
-                ]
-            elif "content" in ai_response and isinstance(
-                ai_response["content"], list
-            ):
-                # Anthropic format
-                responses[provider_name] = ai_response["content"][0]["text"]
-            elif (
-                "candidates" in ai_response
-                and len(ai_response["candidates"]) > 0
-            ):
-                # Gemini format
-                candidate = ai_response["candidates"][0]
-                if "content" in candidate and "parts" in candidate["content"]:
-                    responses[provider_name] = candidate["content"]["parts"][0][
-                        "text"
-                    ]
-                else:
-                    responses[provider_name] = str(candidate)
-            else:
-                # Fallback for unknown format
-                responses[provider_name] = str(ai_response)
+            # Use the specific parser for this provider
+            responses[provider_name] = parser(ai_response)
 
         except Exception as e:
             print(f"Error with {provider_name}: {str(e)}")
