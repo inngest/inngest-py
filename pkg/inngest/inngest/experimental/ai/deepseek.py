@@ -5,7 +5,7 @@ from .base import BaseAdapter
 
 class Adapter(BaseAdapter):
     """
-    Anthropic adapter
+    DeepSeek adapter
     """
 
     def __init__(
