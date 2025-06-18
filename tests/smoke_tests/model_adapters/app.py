@@ -37,6 +37,7 @@ deepseek_adapter = DeepSeekAdapter(
     model="deepseek-chat",
 )
 
+
 @inngest_client.create_function(
     fn_id="model-adapter-test",
     trigger=inngest.TriggerEvent(event="test-adapters"),
@@ -64,31 +65,14 @@ async def test_adapters(ctx: inngest.Context) -> dict:
     for provider_name, adapter in adapters.items():
         try:
             question = questions[provider_name]
-            
+
             # Prepare the request body based on provider
             if provider_name == "gemini":
                 # Gemini uses a different format and model should be in URL, not body
-                body = {
-                    "contents": [
-                        {
-                            "parts": [
-                                {
-                                    "text": question
-                                }
-                            ]
-                        }
-                    ]
-                }
+                body = {"contents": [{"parts": [{"text": question}]}]}
             else:
                 # Standard OpenAI-style format for other providers
-                body = {
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": question
-                        }
-                    ]
-                }
+                body = {"messages": [{"role": "user", "content": question}]}
 
             # Add max_tokens for Anthropic (required parameter)
             if provider_name == "anthropic":
@@ -97,9 +81,7 @@ async def test_adapters(ctx: inngest.Context) -> dict:
             print(f"Calling {provider_name} with question: {question}")
 
             ai_response = await ctx.step.ai.infer(
-                step_id=f"ai-call-{provider_name}",
-                adapter=adapter,
-                body=body
+                step_id=f"ai-call-{provider_name}", adapter=adapter, body=body
             )
 
             print(f"{provider_name} response: {ai_response}")
@@ -108,15 +90,24 @@ async def test_adapters(ctx: inngest.Context) -> dict:
             # Different providers may have different response formats
             if "choices" in ai_response and len(ai_response["choices"]) > 0:
                 # OpenAI/DeepSeek/Grok format
-                responses[provider_name] = ai_response["choices"][0]["message"]["content"]
-            elif "content" in ai_response and isinstance(ai_response["content"], list):
+                responses[provider_name] = ai_response["choices"][0]["message"][
+                    "content"
+                ]
+            elif "content" in ai_response and isinstance(
+                ai_response["content"], list
+            ):
                 # Anthropic format
                 responses[provider_name] = ai_response["content"][0]["text"]
-            elif "candidates" in ai_response and len(ai_response["candidates"]) > 0:
+            elif (
+                "candidates" in ai_response
+                and len(ai_response["candidates"]) > 0
+            ):
                 # Gemini format
                 candidate = ai_response["candidates"][0]
                 if "content" in candidate and "parts" in candidate["content"]:
-                    responses[provider_name] = candidate["content"]["parts"][0]["text"]
+                    responses[provider_name] = candidate["content"]["parts"][0][
+                        "text"
+                    ]
                 else:
                     responses[provider_name] = str(candidate)
             else:
@@ -128,6 +119,7 @@ async def test_adapters(ctx: inngest.Context) -> dict:
             responses[provider_name] = f"Error: {str(e)}"
 
     return responses
+
 
 app = fastapi.FastAPI()
 

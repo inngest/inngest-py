@@ -66,4 +66,7 @@ class Adapter(BaseAdapter):
         Return the URL for generating text with the model included in the path.
         """
 
-        return self._url.rstrip("/") + f"/models/{self._model}:generateContent?key={self._auth_key}"
+        return (
+            self._url.rstrip("/")
+            + f"/models/{self._model}:generateContent?key={self._auth_key}"
+        )
