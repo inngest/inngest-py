@@ -28,7 +28,7 @@ class Adapter(BaseAdapter):
         self._auth_key = auth_key
         self._headers = headers or {}
         self._model = model
-        self._url = base_url or "https://api.x.ai/v1/chat/completions"
+        self._url = base_url or "https://api.x.ai/v1"
 
     def auth_key(self) -> str:
         """
@@ -64,4 +64,4 @@ class Adapter(BaseAdapter):
         Return the URL for generating text.
         """
 
-        return self._url.rstrip("/")
+        return self._url.rstrip("/") + "/chat/completions"
