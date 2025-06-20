@@ -51,6 +51,7 @@ class HeaderKey(enum.Enum):
     AUTHORIZATION = "authorization"
     CONTENT_TYPE = "content-type"
     ENV = "x-inngest-env"
+    EVENT_ID_SEED = "x-inngest-event-id-seed"
     EXPECTED_SERVER_KIND = "x-inngest-expected-server-kind"
     FRAMEWORK = "x-inngest-framework"
     NO_RETRY = "x-inngest-no-retry"

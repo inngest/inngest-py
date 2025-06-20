@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import asyncio
+import base64
+import datetime
 import logging
 import os
+import random
+import secrets
 import time
 import typing
 import urllib.parse
@@ -28,6 +33,9 @@ if typing.TYPE_CHECKING:
 
 # Dummy value
 _DEV_SERVER_EVENT_KEY = "NO_EVENT_KEY_SET"
+
+MAX_SEND_ATTEMPTS = 5
+RETRY_BASE_DELAY = 0.1  # 100ms in seconds
 
 
 class Inngest:
@@ -70,6 +78,7 @@ class Inngest:
         middleware: typing.Optional[
             list[middleware_lib.UninitializedMiddleware]
         ] = None,
+        request_timeout: int | datetime.timedelta | None = None,
         serializer: serializer_lib.Serializer | None = None,
         signing_key: typing.Optional[str] = None,
     ) -> None:
@@ -87,6 +96,8 @@ class Inngest:
                 request signature verification and default Inngest server URLs.
             logger: Logger to use.
             middleware: List of middleware to use.
+            request_timeout: Timeout configuration for internal http client. int value is in ms. Event sending requests
+                may take longer due to retries.
             serializer: Serializes/deserializes function/step output using the output_type argument.
             signing_key: Inngest signing key.
         """
@@ -108,6 +119,13 @@ class Inngest:
         self._signing_key_fallback = os.getenv(
             const.EnvKey.SIGNING_KEY_FALLBACK.value
         )
+
+        if isinstance(request_timeout, int):
+            self._httpx_timeout = request_timeout / 1000  # convert ms to s
+        elif isinstance(request_timeout, datetime.timedelta):
+            self._httpx_timeout = request_timeout.total_seconds()
+        else:
+            self._httpx_timeout = 30.0
 
         self._env = env or env_lib.get_environment_name()
         if (
@@ -160,6 +178,7 @@ class Inngest:
             framework=framework,
             server_kind=server_kind,
         )
+        headers[server_lib.HeaderKey.EVENT_ID_SEED.value] = _seed()
 
         body = []
         for event in events:
@@ -174,11 +193,7 @@ class Inngest:
             body.append(d)
 
         return self._http_client_sync.build_request(
-            "POST",
-            url,
-            headers=headers,
-            json=body,
-            timeout=30,
+            "POST", url, headers=headers, json=body, timeout=self._httpx_timeout
         )
 
     def add_middleware(
@@ -464,15 +479,31 @@ class Inngest:
         if isinstance(req, Exception):
             raise req
 
-        result = models.SendEventsResult.from_raw(
-            (
-                await net.fetch_with_thready_safety(
+        resp = None
+        for attempt in range(MAX_SEND_ATTEMPTS):
+            try:
+                resp = await net.fetch_with_thready_safety(
                     self._http_client,
                     self._http_client_sync,
                     req,
                 )
-            ).json()
-        )
+            except httpx.RequestError:
+                pass  # we will retry with delay
+
+            # Don't retry if the request was successful or if there was a 4xx
+            # status code. We don't want to retry on 4xx because the request is
+            # malformed and retrying will just fail again.
+            if resp is not None and resp.status_code < 500:
+                break
+
+            await asyncio.sleep(_compute_backoff_delay(attempt))
+
+        if resp is None:
+            raise errors.SendEventsError(
+                "never received response while sending events", []
+            )
+
+        result = models.SendEventsResult.from_raw(resp.json())
         if isinstance(result, Exception):
             raise result
 
@@ -518,9 +549,28 @@ class Inngest:
         if isinstance(req, Exception):
             raise req
 
-        result = models.SendEventsResult.from_raw(
-            (self._http_client_sync.send(req)).json(),
-        )
+        resp = None
+        for attempt in range(MAX_SEND_ATTEMPTS):
+            try:
+                resp = self._http_client_sync.send(req)
+            except httpx.RequestError:
+                pass  # we will retry with delay
+
+            # Don't retry if the request was successful or if there was a 4xx
+            # status code. We don't want to retry on 4xx because the request is
+            # malformed and retrying will just fail again.
+            if resp is not None and resp.status_code < 500:
+                break
+
+            time.sleep(_compute_backoff_delay(attempt))
+
+        if resp is None:
+            raise errors.SendEventsError(
+                "never received response while sending events", []
+            )
+
+        result = models.SendEventsResult.from_raw(resp.json())
+
         if isinstance(result, Exception):
             raise result
 
@@ -583,3 +633,26 @@ def _get_mode(
         f"Cloud mode enabled. Set {const.EnvKey.DEV.value} to enable development mode"
     )
     return server_lib.ServerKind.CLOUD
+
+
+def _seed() -> str:
+    """
+    Create the event ID seed header value. This is used to seed a
+    deterministic event ID in the Inngest Server.
+
+    Returns:
+        str: A string in the format "{millis},{entropy_base64}"
+    """
+    current_time_millis = int(time.time() * 1000)
+    entropy = secrets.token_bytes(10)
+    entropy_base64 = base64.b64encode(entropy).decode("utf-8")
+    return f"{current_time_millis},{entropy_base64}"
+
+
+def _compute_backoff_delay(attempt: int) -> float:
+    # Jitter between 0 and the base delay
+    jitter = random.random() * RETRY_BASE_DELAY  # noqa:S311
+
+    # Exponential backoff with jitter
+    delay: float = RETRY_BASE_DELAY * (2**attempt) + jitter
+    return delay
