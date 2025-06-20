@@ -189,7 +189,7 @@ class Timeouts(_BaseConfig):
 
 class Singleton(_BaseConfig):
     key: typing.Optional[str] = None
-    mode: typing.Literal["skip"]
+    mode: typing.Literal["skip", "cancel"]
 
 
 class TriggerCron(_BaseConfig):
