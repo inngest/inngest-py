@@ -5,7 +5,7 @@ from .base import BaseAdapter
 
 class Adapter(BaseAdapter):
     """
-    Anthropic adapter
+    Gemini adapter
     """
 
     def __init__(
@@ -63,7 +63,10 @@ class Adapter(BaseAdapter):
 
     def url_infer(self) -> str:
         """
-        Return the URL for generating text.
+        Return the URL for generating text with the model included in the path.
         """
 
-        return self._url.rstrip("/") + f":generateContent?key={self._auth_key}"
+        return (
+            self._url.rstrip("/")
+            + f"/models/{self._model}:generateContent?key={self._auth_key}"
+        )

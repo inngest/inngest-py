@@ -5,7 +5,7 @@ from .base import BaseAdapter
 
 class Adapter(BaseAdapter):
     """
-    OpenAI adapter
+    Grok adapter
     """
 
     def __init__(
@@ -64,4 +64,4 @@ class Adapter(BaseAdapter):
         Return the URL for generating text.
         """
 
-        return self._url.rstrip("/")
+        return self._url.rstrip("/") + "/chat/completions"
