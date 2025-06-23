@@ -66,12 +66,9 @@ inngest_client = inngest.Inngest(
     fn_id="find_person",
     trigger=inngest.TriggerEvent(event="app/person.find"),
 )
-def fetch_person(
-    ctx: inngest.Context,
-    step: inngest.StepSync,
-) -> dict:
+def fetch_person(ctx: inngest.ContextSync) -> dict:
     person_id = ctx.event.data["person_id"]
-    res = requests.get(f"https://swapi.dev/api/people/{person_id}")
+    res = requests.get(f"https://swapi.dev/api/people/{person_id}", verify=False)
     return res.json()
 
 app = flask.Flask(__name__)
@@ -114,10 +111,7 @@ The following example registers a function that will:
     fn_id="find_ships",
     trigger=inngest.TriggerEvent(event="app/ships.find"),
 )
-def fetch_ships(
-    ctx: inngest.Context,
-    step: inngest.StepSync,
-) -> dict:
+def fetch_ships(ctx: inngest.ContextSync) -> dict:
     """
     Find all the ships a person has.
     """
@@ -125,7 +119,7 @@ def fetch_ships(
     person_id = ctx.event.data["person_id"]
 
     def _fetch_person() -> dict:
-        res = requests.get(f"https://swapi.dev/api/people/{person_id}")
+        res = requests.get(f"https://swapi.dev/api/people/{person_id}", verify=False)
         return res.json()
 
     # Wrap the function with step.run to enable retries
@@ -166,12 +160,9 @@ Send the following event in the Dev Server UI and the `fetch_person` function wi
     fn_id="find_person",
     trigger=inngest.TriggerEvent(event="app/person.find"),
 )
-async def fetch_person(
-    ctx: inngest.Context,
-    step: inngest.Step,
-) -> dict:
+async def fetch_person(ctx: inngest.Context) -> dict:
     person_id = ctx.event.data["person_id"]
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(verify=False) as client:
         res = await client.get(f"https://swapi.dev/api/people/{person_id}")
         return res.json()
 ```
