@@ -25,6 +25,7 @@ def serve(
     client: client_lib.Inngest,
     functions: list[function.Function],
     *,
+    public_path: typing.Optional[str] = None,
     serve_origin: typing.Optional[str] = None,
     serve_path: typing.Optional[str] = None,
 ) -> typing.Callable[[dict[str, object], _Context], _Response]:
@@ -35,9 +36,9 @@ def serve(
     ----
         client: Inngest client.
         functions: List of functions to serve.
-
-        serve_origin: Origin to serve the functions from.
-        serve_path: The entire function path (e.g. /api/v1/web/fn-b094417f/sample/hello).
+        public_path: Path that the Inngest server sends requests to. This is only necessary if the SDK is behind a proxy that rewrites the path.
+        serve_origin: Origin for serving Inngest functions.
+        serve_path: Path for hosting Inngest functions.
     """
 
     handler = comm_lib.CommHandler(
@@ -82,6 +83,7 @@ def serve(
             comm_req = comm_lib.CommRequest(
                 body=_to_body_bytes(http.body),
                 headers=http.headers,
+                public_path=public_path,
                 query_params=query_params,
                 raw_request={
                     "context": context,

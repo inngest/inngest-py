@@ -23,6 +23,7 @@ class Test_create_serve_url(unittest.TestCase):
 
     def test_only_request_url(self) -> None:
         actual = net.create_serve_url(
+            public_path=None,
             request_url="https://foo.test/api/inngest",
             serve_origin=None,
             serve_path=None,
@@ -32,6 +33,7 @@ class Test_create_serve_url(unittest.TestCase):
 
     def test_serve_origin(self) -> None:
         actual = net.create_serve_url(
+            public_path=None,
             request_url="https://foo.test/api/inngest",
             serve_origin="https://bar.test",
             serve_path=None,
@@ -43,6 +45,7 @@ class Test_create_serve_url(unittest.TestCase):
         os.environ[const.EnvKey.SERVE_ORIGIN.value] = "https://bar-env.test"
 
         actual = net.create_serve_url(
+            public_path=None,
             request_url="https://foo.test/api/inngest",
             serve_origin="https://bar.test",
             serve_path=None,
@@ -52,6 +55,7 @@ class Test_create_serve_url(unittest.TestCase):
 
     def test_serve_origin_missing_scheme(self) -> None:
         actual = net.create_serve_url(
+            public_path=None,
             request_url="https://foo.test/api/inngest",
             serve_origin="bar.test",
             serve_path=None,
@@ -61,6 +65,7 @@ class Test_create_serve_url(unittest.TestCase):
 
     def test_serve_origin_port(self) -> None:
         actual = net.create_serve_url(
+            public_path=None,
             request_url="https://foo.test/api/inngest",
             serve_origin="https://bar.test:8080",
             serve_path=None,
@@ -70,6 +75,7 @@ class Test_create_serve_url(unittest.TestCase):
 
     def test_serve_path(self) -> None:
         actual = net.create_serve_url(
+            public_path=None,
             request_url="https://foo.test/api/inngest",
             serve_origin=None,
             serve_path="/custom/path",
@@ -81,6 +87,7 @@ class Test_create_serve_url(unittest.TestCase):
         os.environ[const.EnvKey.SERVE_PATH.value] = "/env/path"
 
         actual = net.create_serve_url(
+            public_path=None,
             request_url="https://foo.test/api/inngest",
             serve_origin=None,
             serve_path="/custom/path",
@@ -90,11 +97,22 @@ class Test_create_serve_url(unittest.TestCase):
 
     def test_serve_origin_and_path(self) -> None:
         actual = net.create_serve_url(
+            public_path=None,
             request_url="https://foo.test/api/inngest",
             serve_origin="https://bar.test",
             serve_path="/custom/path",
         )
         expected = "https://bar.test/custom/path"
+        assert actual == expected
+
+    def test_public_path(self) -> None:
+        actual = net.create_serve_url(
+            public_path="/public/path",
+            request_url="https://foo.test/api/inngest",
+            serve_origin=None,
+            serve_path="/serve/path",
+        )
+        expected = "https://foo.test/public/path"
         assert actual == expected
 
 

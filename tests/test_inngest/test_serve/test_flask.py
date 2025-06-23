@@ -1,3 +1,4 @@
+import os
 import unittest
 
 import flask
@@ -34,6 +35,28 @@ class TestServe(unittest.TestCase):
         with pytest.raises(Exception) as err:
             inngest.flask.serve(app, client, [fn])
         assert isinstance(err.value, errors.SigningKeyMissingError)
+
+    def test_handler_path(self) -> None:
+        """
+        When a handler path is provided, it should be used to serve the functions.
+        """
+
+        os.environ["INNGEST_HANDLER_PATH"] = "/my/handler/path"
+        self.addCleanup(os.environ.pop, "INNGEST_HANDLER_PATH")
+
+        app = flask.Flask(__name__)
+        client = inngest.Inngest(app_id=_app_id)
+
+        @client.create_function(
+            fn_id="fn",
+            trigger=inngest.TriggerEvent(event="event"),
+        )
+        def fn(ctx: inngest.Context, step: inngest.StepSync) -> None:
+            pass
+
+        inngest.flask.serve(app, client, [fn], serve_path="/my/serve/path")
+
+        res = requests.put("http://localhost:5000/my/handler/path")
 
 
 if __name__ == "__main__":

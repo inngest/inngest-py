@@ -24,12 +24,13 @@ class TestRegistration(base.TestCase):
         *,
         body: typing.Union[dict[str, object], bytes],
         headers: typing.Optional[dict[str, str]] = None,
+        path: str = "/api/inngest",
     ) -> base.RegistrationResponse:
         if headers is None:
             headers = {}
 
         res = self.app_client.put(
-            "/api/inngest",
+            path,
             data=body,
             headers=headers,
         )

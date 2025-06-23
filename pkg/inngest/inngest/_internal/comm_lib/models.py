@@ -23,6 +23,7 @@ class CommRequest(types.BaseModel):
     is_connect: bool = False
 
     query_params: typing.Union[dict[str, str], dict[str, list[str]]]
+    public_path: typing.Optional[str]
     raw_request: object
     request_url: str
     serve_origin: typing.Optional[str]
