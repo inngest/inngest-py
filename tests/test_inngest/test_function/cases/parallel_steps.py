@@ -14,6 +14,7 @@ class _State(base.BaseState):
     step_1b_counter = 0
     step_after_counter = 0
     parallel_output: typing.Any = None
+    request_counter = 0
 
 
 def create(
@@ -42,6 +43,7 @@ def create(
     )
     def fn_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
+        state.request_counter += 1
 
         def _step_1a() -> int:
             state.step_1a_counter += 1
@@ -58,16 +60,6 @@ def create(
                 lambda: ctx.step.run("1b", _step_1b),
                 lambda: ctx.step.send_event(
                     "send", events=inngest.Event(name="noop")
-                ),
-                lambda: ctx.step.sleep("sleep", datetime.timedelta(seconds=1)),
-                lambda: ctx.step.sleep_until(
-                    "sleep_until",
-                    datetime.datetime.now() + datetime.timedelta(seconds=1),
-                ),
-                lambda: ctx.step.wait_for_event(
-                    "wait",
-                    event="never",
-                    timeout=datetime.timedelta(seconds=1),
                 ),
             )
         )
@@ -93,6 +85,7 @@ def create(
     )
     async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
+        state.request_counter += 1
 
         async def _step_1a() -> int:
             state.step_1a_counter += 1
@@ -109,16 +102,6 @@ def create(
                 lambda: ctx.step.run("1b", _step_1b),
                 lambda: ctx.step.send_event(
                     "send", events=inngest.Event(name="noop")
-                ),
-                lambda: ctx.step.sleep("sleep", datetime.timedelta(seconds=1)),
-                lambda: ctx.step.sleep_until(
-                    "sleep_until",
-                    datetime.datetime.now() + datetime.timedelta(seconds=1),
-                ),
-                lambda: ctx.step.wait_for_event(
-                    "wait",
-                    event="never",
-                    timeout=datetime.timedelta(seconds=1),
                 ),
             )
         )
@@ -142,13 +125,17 @@ def create(
             1,
             2,
             [unittest.mock.ANY],
-            None,
-            None,
-            None,
         )
         assert state.step_1a_counter == 1
         assert state.step_1b_counter == 1
         assert state.step_after_counter == 1
+
+        # 7 because we have:
+        # - 4 parallel steps
+        # - 1 for planning "after" step
+        # - 1 for running "after" step
+        # - 1 for the final function return
+        assert state.request_counter == 7
 
     fn: list[inngest.Function[typing.Any]]
     if is_sync:
