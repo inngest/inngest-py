@@ -160,23 +160,25 @@ class CommHandler:
             return Exception("events not in request")
 
         # Don't await because we might need to stream the response.
-        call_res = asyncio.create_task(fn.call(
-            self._client,
-            execution_lib.Context(
-                attempt=request.ctx.attempt,
-                event=request.event,
-                events=events,
-                group=step_lib.Group(),
-                logger=self._client.logger,
-                run_id=request.ctx.run_id,
-            ),
-            params.fn_id,
-            middleware,
-            request,
-            step_lib.StepMemos.from_raw(steps),
-            params.step_id,
-            self._thread_pool,
-        ))
+        call_res = asyncio.create_task(
+            fn.call(
+                self._client,
+                execution_lib.Context(
+                    attempt=request.ctx.attempt,
+                    event=request.event,
+                    events=events,
+                    group=step_lib.Group(),
+                    logger=self._client.logger,
+                    run_id=request.ctx.run_id,
+                ),
+                params.fn_id,
+                middleware,
+                request,
+                step_lib.StepMemos.from_raw(steps),
+                params.step_id,
+                self._thread_pool,
+            )
+        )
 
         if self._streaming is const.Streaming.FORCE:
             return CommResponse.create_streaming(
