@@ -22,6 +22,7 @@ def serve(
     client: client_lib.Inngest,
     functions: list[function.Function],
     *,
+    public_path: typing.Optional[str] = None,
     serve_origin: typing.Optional[str] = None,
     serve_path: typing.Optional[str] = None,
 ) -> None:
@@ -33,9 +34,9 @@ def serve(
         app: Flask app.
         client: Inngest client.
         functions: List of functions to serve.
-
-        serve_origin: Origin to serve the functions from.
-        serve_path: Path to serve the functions from.
+        public_path: Path that the Inngest server sends requests to. This is only necessary if the SDK is behind a proxy that rewrites the path.
+        serve_origin: Origin for serving Inngest functions. This is typically only useful during Docker-based development.
+        serve_path: Path for serving Inngest functions. This is only useful if you don't want serve Inngest at the /api/inngest path.
     """
 
     handler = comm_lib.CommHandler(
@@ -54,6 +55,7 @@ def serve(
             app,
             client,
             handler,
+            public_path=public_path,
             serve_origin=serve_origin,
             serve_path=serve_path,
         )
@@ -62,6 +64,7 @@ def serve(
             app,
             client,
             handler,
+            public_path=public_path,
             serve_origin=serve_origin,
             serve_path=serve_path,
         )
@@ -72,6 +75,7 @@ def _create_handler_async(
     client: client_lib.Inngest,
     handler: comm_lib.CommHandler,
     *,
+    public_path: typing.Optional[str],
     serve_origin: typing.Optional[str],
     serve_path: typing.Optional[str],
 ) -> None:
@@ -83,6 +87,7 @@ def _create_handler_async(
         comm_req = comm_lib.CommRequest(
             body=_get_body_bytes(),
             headers=dict(flask.request.headers.items()),
+            public_path=public_path,
             query_params=flask.request.args,
             raw_request=flask.request,
             request_url=flask.request.url,
@@ -117,6 +122,7 @@ def _create_handler_sync(
     client: client_lib.Inngest,
     handler: comm_lib.CommHandler,
     *,
+    public_path: typing.Optional[str],
     serve_origin: typing.Optional[str],
     serve_path: typing.Optional[str],
 ) -> None:
@@ -128,6 +134,7 @@ def _create_handler_sync(
         comm_req = comm_lib.CommRequest(
             body=_get_body_bytes(),
             headers=dict(flask.request.headers.items()),
+            public_path=public_path,
             query_params=flask.request.args,
             raw_request=flask.request,
             request_url=flask.request.url,

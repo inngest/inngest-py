@@ -23,6 +23,7 @@ def serve(
     client: client_lib.Inngest,
     functions: list[function.Function],
     *,
+    public_path: typing.Optional[str] = None,
     serve_origin: typing.Optional[str] = None,
     serve_path: typing.Optional[str] = None,
 ) -> None:
@@ -34,9 +35,9 @@ def serve(
         app: Tornado app.
         client: Inngest client.
         functions: List of functions to serve.
-
-        serve_origin: Origin to serve the functions from.
-        serve_path: Path to serve the functions from.
+        public_path: Path that the Inngest server sends requests to. This is only necessary if the SDK is behind a proxy that rewrites the path.
+        serve_origin: Origin for serving Inngest functions. This is typically only useful during Docker-based development.
+        serve_path: Path for serving Inngest functions. This is only useful if you don't want serve Inngest at the /api/inngest path.
     """
 
     handler = comm_lib.CommHandler(
@@ -57,6 +58,7 @@ def serve(
                 comm_lib.CommRequest(
                     body=self.request.body,
                     headers=dict(self.request.headers.items()),
+                    public_path=public_path,
                     query_params=_parse_query_params(
                         self.request.query_arguments
                     ),
@@ -74,6 +76,7 @@ def serve(
                 comm_lib.CommRequest(
                     body=self.request.body,
                     headers=dict(self.request.headers.items()),
+                    public_path=public_path,
                     query_params=_parse_query_params(
                         self.request.query_arguments
                     ),
@@ -91,6 +94,7 @@ def serve(
                 comm_lib.CommRequest(
                     body=self.request.body,
                     headers=dict(self.request.headers.items()),
+                    public_path=public_path,
                     query_params=_parse_query_params(
                         self.request.query_arguments
                     ),

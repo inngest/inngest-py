@@ -28,6 +28,7 @@ def serve(
     client: client_lib.Inngest,
     functions: list[function.Function],
     *,
+    public_path: typing.Optional[str] = None,
     serve_origin: typing.Optional[str] = None,
     serve_path: typing.Optional[str] = None,
 ) -> django.urls.URLPattern:
@@ -38,10 +39,9 @@ def serve(
     ----
         client: Inngest client.
         functions: List of functions to serve.
-
-        async_mode: [DEPRECATED] Whether to serve functions asynchronously.
-        serve_origin: Origin to serve Inngest from.
-        serve_path: Path to serve Inngest from.
+        public_path: Path that the Inngest server sends requests to. This is only necessary if the SDK is behind a proxy that rewrites the path.
+        serve_origin: Origin for serving Inngest functions. This is typically only useful during Docker-based development.
+        serve_path: Path for serving Inngest functions. This is only useful if you don't want serve Inngest at the /api/inngest path.
     """
 
     handler = comm_lib.CommHandler(
@@ -60,6 +60,7 @@ def serve(
         return _create_handler_async(
             client,
             handler,
+            public_path=public_path,
             serve_origin=serve_origin,
             serve_path=serve_path,
         )
@@ -67,6 +68,7 @@ def serve(
         return _create_handler_sync(
             client,
             handler,
+            public_path=public_path,
             serve_origin=serve_origin,
             serve_path=serve_path,
         )
@@ -76,6 +78,7 @@ def _create_handler_sync(
     client: client_lib.Inngest,
     handler: comm_lib.CommHandler,
     *,
+    public_path: typing.Optional[str],
     serve_origin: typing.Optional[str],
     serve_path: typing.Optional[str],
 ) -> django.urls.URLPattern:
@@ -85,6 +88,7 @@ def _create_handler_sync(
         comm_req = comm_lib.CommRequest(
             body=request.body,
             headers=dict(request.headers.items()),
+            public_path=public_path,
             query_params=dict(request.GET.items()),
             raw_request=request,
             request_url=request.build_absolute_uri(),
@@ -127,6 +131,7 @@ def _create_handler_async(
     client: client_lib.Inngest,
     handler: comm_lib.CommHandler,
     *,
+    public_path: typing.Optional[str],
     serve_origin: typing.Optional[str],
     serve_path: typing.Optional[str],
 ) -> django.urls.URLPattern:
@@ -146,6 +151,7 @@ def _create_handler_async(
         comm_req = comm_lib.CommRequest(
             body=request.body,
             headers=dict(request.headers.items()),
+            public_path=public_path,
             query_params=dict(request.GET.items()),
             raw_request=request,
             request_url=request.build_absolute_uri(),
