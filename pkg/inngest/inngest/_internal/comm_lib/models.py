@@ -75,9 +75,6 @@ class CommResponse:
     def create_streaming(
         cls,
         logger: types.Logger,
-        # coro: typing.Coroutine[
-        #     typing.Any, typing.Any, execution_lib.CallResult
-        # ],
         task: asyncio.Task[execution_lib.CallResult],
         env: typing.Optional[str],
         framework: server_lib.Framework,
@@ -92,9 +89,6 @@ class CommResponse:
             """
             Sends keepalive bytes until the response is complete.
             """
-
-            # Run the call coroutine in the background.
-            # task = asyncio.create_task(coro)
 
             # Send keepalives until task completes.
             while not task.done():
