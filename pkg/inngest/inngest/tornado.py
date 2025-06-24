@@ -36,8 +36,8 @@ def serve(
         client: Inngest client.
         functions: List of functions to serve.
         public_path: Path that the Inngest server sends requests to. This is only necessary if the SDK is behind a proxy that rewrites the path.
-        serve_origin: Origin for serving Inngest functions.
-        serve_path: Path for hosting Inngest functions.
+        serve_origin: Origin for serving Inngest functions. This is typically only useful during Docker-based development.
+        serve_path: Path for serving Inngest functions. This is only useful if you don't want serve Inngest at the /api/inngest path.
     """
 
     handler = comm_lib.CommHandler(
