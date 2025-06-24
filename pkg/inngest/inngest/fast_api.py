@@ -23,6 +23,7 @@ def serve(
     client: client_lib.Inngest,
     functions: list[function.Function[typing.Any]],
     *,
+    public_path: typing.Optional[str] = None,
     serve_origin: typing.Optional[str] = None,
     serve_path: typing.Optional[str] = None,
     streaming: const.Streaming | None = None,
@@ -35,9 +36,9 @@ def serve(
         app: FastAPI app.
         client: Inngest client.
         functions: List of functions to serve.
-
-        serve_origin: Origin to serve the functions from.
-        serve_path: Path to serve the functions from.
+        public_path: Path that the Inngest server sends requests to. This is only necessary if the SDK is behind a proxy that rewrites the path.
+        serve_origin: Origin for serving Inngest functions. This is typically only useful during Docker-based development.
+        serve_path: Path for serving Inngest functions. This is only useful if you don't want serve Inngest at the /api/inngest path.
         streaming: Controls whether to send keepalive bytes until the response is complete.
     """
 
@@ -58,6 +59,7 @@ def serve(
                 comm_lib.CommRequest(
                     body=await request.body(),
                     headers=dict(request.headers.items()),
+                    public_path=public_path,
                     query_params=dict(request.query_params.items()),
                     raw_request=request,
                     request_url=str(request.url),
@@ -77,6 +79,7 @@ def serve(
                 comm_lib.CommRequest(
                     body=await request.body(),
                     headers=dict(request.headers.items()),
+                    public_path=public_path,
                     query_params=dict(request.query_params.items()),
                     raw_request=request,
                     request_url=str(request.url),
@@ -96,6 +99,7 @@ def serve(
                 comm_lib.CommRequest(
                     body=await request.body(),
                     headers=dict(request.headers.items()),
+                    public_path=public_path,
                     query_params=dict(request.query_params.items()),
                     raw_request=request,
                     request_url=str(request.url),

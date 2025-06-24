@@ -22,6 +22,7 @@ class CommRequest(types.BaseModel):
     # Is this a Connect request? (As opposed to our HTTP execution model)
     is_connect: bool = False
 
+    public_path: typing.Optional[str]
     query_params: typing.Union[dict[str, str], dict[str, list[str]]]
     raw_request: object
     request_url: str

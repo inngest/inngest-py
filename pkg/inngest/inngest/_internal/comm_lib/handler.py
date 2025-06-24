@@ -553,6 +553,7 @@ class Syncer:
             return req_body
 
         app_url = net.create_serve_url(
+            public_path=req.public_path,
             request_url=req_body.url,
             serve_origin=req.serve_origin,
             serve_path=req.serve_path,
@@ -605,6 +606,7 @@ class Syncer:
         req: CommRequest,
     ) -> types.MaybeError[typing.Union[CommResponse, httpx.Request]]:
         app_url = net.create_serve_url(
+            public_path=req.public_path,
             request_url=req.request_url,
             serve_origin=req.serve_origin,
             serve_path=req.serve_path,
