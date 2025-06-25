@@ -5,9 +5,9 @@ authors = [{ name = "Inngest Inc.", email = "hello@inngest.com" }]
 description = "Test utilities for Inngest Python SDK"
 requires-python = ">=3.10"
 dependencies = [
-    "httpx",
-    "fastapi",
-    "flask",
+    "httpx>=0.26.0",
+    "fastapi>=0.110.0",
+    "flask>=3.0.0",
     "inngest",
 ]
 

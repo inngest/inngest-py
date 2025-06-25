@@ -621,6 +621,7 @@ dev = [
     { name = "django-types" },
     { name = "fastapi" },
     { name = "flask" },
+    { name = "inngest", extra = ["connect"] },
     { name = "moto", extra = ["s3", "server"] },
     { name = "mypy" },
     { name = "pynacl" },
@@ -651,6 +652,7 @@ requires-dist = [
     { name = "django-types", marker = "extra == 'dev'", specifier = "==0.19.1" },
     { name = "fastapi", marker = "extra == 'dev'", specifier = "==0.110.0" },
     { name = "flask", marker = "extra == 'dev'", specifier = "==3.0.0" },
+    { name = "inngest", extras = ["connect"], marker = "extra == 'dev'", editable = "pkg/inngest" },
     { name = "moto", extras = ["s3", "server"], marker = "extra == 'dev'", specifier = "==5.0.18" },
     { name = "mypy", marker = "extra == 'dev'", specifier = "==1.10.0" },
     { name = "pynacl", marker = "extra == 'dev'", specifier = "==1.5.0" },
@@ -1741,9 +1743,9 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastapi" },
-    { name = "flask" },
-    { name = "httpx" },
+    { name = "fastapi", specifier = ">=0.110.0" },
+    { name = "flask", specifier = ">=3.0.0" },
+    { name = "httpx", specifier = ">=0.26.0" },
     { name = "inngest", editable = "pkg/inngest" },
 ]
 
