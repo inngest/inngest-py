@@ -11,10 +11,10 @@ on:
       - "**/*.py"
       - ".github/**"
       - "Makefile"
-      - "constraints.txt"
       - "pyproject.toml"
       - "pytest.ini"
       - "ruff.toml"
+      - "uv.lock"
 
 jobs:
   format-check:
@@ -23,11 +23,9 @@ jobs:
       matrix:
         python-version: ["3.10"]
     steps:
-      - uses: "actions/checkout@v2"
-      - name: "Set up Python ${{ matrix.python-version }}"
-        uses: "actions/setup-python@v2"
-        with:
-          python-version: "${{ matrix.python-version }}"
+      - uses: "actions/checkout@v4"
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@v4
       - name: "Install"
         run: "make install"
       - name: "Format check"
@@ -39,11 +37,9 @@ jobs:
       matrix:
         python-version: ["3.10"]
     steps:
-      - uses: "actions/checkout@v2"
-      - name: "Set up Python ${{ matrix.python-version }}"
-        uses: "actions/setup-python@v2"
-        with:
-          python-version: "${{ matrix.python-version }}"
+      - uses: "actions/checkout@v4"
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@v4
       - name: "Install"
         run: "make install"
       - name: "Lint"
@@ -55,11 +51,9 @@ jobs:
       matrix:
         python-version: ["3.10"]
     steps:
-      - uses: "actions/checkout@v2"
-      - name: "Set up Python ${{ matrix.python-version }}"
-        uses: "actions/setup-python@v2"
-        with:
-          python-version: "${{ matrix.python-version }}"
+      - uses: "actions/checkout@v4"
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@v4
       - name: "Install"
         run: "make install"
       - name: "Type check"
