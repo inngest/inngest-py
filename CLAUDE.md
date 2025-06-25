@@ -4,6 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
+This project uses uv as the package manager. uv manages the workspace and all dependencies.
+
 To run a command in a specific package, `cd` into it first (e.g. `cd pkg/inngest && make utest`).
 
 **Setup:**

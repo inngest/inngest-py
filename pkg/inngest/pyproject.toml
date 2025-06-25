@@ -31,6 +31,10 @@ connect = ["protobuf>=5.29.4", "psutil>=6.0.0", "websockets>=15.0.0"]
 "Homepage" = "https://github.com/inngest/inngest-py"
 "Bug Tracker" = "https://github.com/inngest/inngest-py/issues"
 
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [tool.setuptools.package-data]
 # Makes py.typed appear when users install the inngest package.
 inngest = ["py.typed"]
