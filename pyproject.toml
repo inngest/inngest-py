@@ -20,6 +20,7 @@ dev = [
     "django-types==0.19.1",
     "fastapi==0.110.0",
     "inngest[connect]",
+    "inngest_encryption",
     "moto[s3,server]==5.0.18",
     "mypy==1.10.0",
     "pynacl==1.5.0",
@@ -43,6 +44,7 @@ dev = [
 [tool.uv.sources]
 test_core = { workspace = true }
 inngest = { workspace = true }
+inngest_encryption = { workspace = true }
 
 [project.urls]
 "Homepage" = "https://github.com/inngest/inngest-py"
