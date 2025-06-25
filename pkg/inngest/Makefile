@@ -1,7 +1,7 @@
 .PHONY: build
 build:
 	@if [ -d "dist" ]; then rm -rf dist; fi
-	@uv build
+	@uv build --out-dir dist
 
 .PHONY: itest
 itest:
