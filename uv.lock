@@ -12,7 +12,7 @@ members = [
     "inngest",
     "inngest-encryption",
     "inngest-py",
-    "test-utils",
+    "test-core",
 ]
 constraints = [
     { name = "httpx", specifier = "==0.26.0" },
@@ -631,6 +631,7 @@ dev = [
     { name = "ruff" },
     { name = "sentry-sdk" },
     { name = "structlog" },
+    { name = "test-core" },
     { name = "toml" },
     { name = "tornado" },
     { name = "types-protobuf" },
@@ -660,6 +661,7 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = "==0.9.5" },
     { name = "sentry-sdk", marker = "extra == 'dev'", specifier = "==2.1.1" },
     { name = "structlog", marker = "extra == 'dev'", specifier = "==25.2.0" },
+    { name = "test-core", marker = "extra == 'dev'", editable = "pkg/test_core" },
     { name = "toml", marker = "extra == 'dev'", specifier = "==0.10.2" },
     { name = "tornado", marker = "extra == 'dev'", specifier = "==6.4" },
     { name = "types-protobuf", marker = "extra == 'dev'", specifier = "==5.29.1.20250315" },
@@ -1727,9 +1729,23 @@ wheels = [
 ]
 
 [[package]]
-name = "test-utils"
+name = "test-core"
 version = "0.0.0"
 source = { editable = "pkg/test_core" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "flask" },
+    { name = "httpx" },
+    { name = "inngest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi" },
+    { name = "flask" },
+    { name = "httpx" },
+    { name = "inngest", editable = "pkg/inngest" },
+]
 
 [[package]]
 name = "toml"

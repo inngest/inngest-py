@@ -29,6 +29,7 @@ dev = [
     "ruff==0.9.5",
     "sentry-sdk==2.1.1",
     "structlog==25.2.0",
+    "test_core",
     "toml==0.10.2",
     "tornado==6.4",
     "types-protobuf==5.29.1.20250315",
@@ -37,6 +38,9 @@ dev = [
     "types-tornado==5.1.1",
     "uvicorn==0.23.2",
 ]
+
+[tool.uv.sources]
+test_core = { workspace = true }
 
 [project.urls]
 "Homepage" = "https://github.com/inngest/inngest-py"
