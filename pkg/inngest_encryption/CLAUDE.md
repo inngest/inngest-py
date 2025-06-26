@@ -17,7 +17,6 @@ This package provides encryption middleware for the Inngest Python SDK. It enabl
 **Prerequisites:**
 
 - Python 3.10+ (minimum supported version)
-- Must activate the virtual environment in the monorepo root (`source .venv/bin/activate`) before running any commands
 - Dependencies installed from monorepo root: `make install`
 
 **Package Structure:**

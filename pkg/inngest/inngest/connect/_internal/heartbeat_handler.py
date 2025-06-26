@@ -57,12 +57,17 @@ class _HeartbeatHandler(_BaseHandler):
     async def _heartbeat_sender(
         self,
     ) -> None:
-        ws = await self._state.ws.wait_for_not_none()
+        # Don't start heartbeats until the connection is established
+        await self._state.ws.wait_for_not_none()
 
         while self.closed_event.is_set() is False:
             # Only send heartbeats when the connection is active.
             if self._state.conn_state.value != ConnectionState.ACTIVE:
                 await self._state.conn_state.wait_for(ConnectionState.ACTIVE)
+
+            # IMPORTANT: We need to get the WS conn each loop iteration because
+            # it may have changed (e.g. due to a reconnect)
+            ws = await self._state.ws.wait_for_not_none()
 
             self._logger.debug("Sending heartbeat")
             await ws.send(
