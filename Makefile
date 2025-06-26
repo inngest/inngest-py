@@ -1,42 +1,31 @@
-check-venv:
-	@if [ -z "$${CI}" ] && [ -z "$${VIRTUAL_ENV}" ]; then \
-		echo "virtual environment is not activated"; \
-		exit 1; \
-	fi
+format:
+	@uv run ruff format .
 
-format: check-venv
-	@ruff format .
+format-check:
+	@uv run ruff format --check .
 
-format-check: check-venv
-	@ruff format --check .
+install:
+	@uv sync --all-extras
 
-install: check-venv
-	@pip install \
-		-e '.[extra]' \
-		-e ./pkg/inngest[connect] \
-		-e ./pkg/inngest_encryption \
-		-e ./pkg/test_core \
-		-c constraints.txt
-
-itest: check-venv
+itest:
 	@cd pkg/inngest && make itest
 	@cd pkg/inngest_encryption && make itest
 
 pre-commit: format-check lint type-check utest
 
-lint: check-venv
+lint:
 	@cd examples && make lint
 	@cd pkg/inngest && make lint
 	@cd pkg/inngest_encryption && make lint
 	@cd pkg/test_core && make lint
 
-type-check: check-venv
+type-check:
 	@cd examples && make type-check
 	@cd pkg/inngest && make type-check
 	@cd pkg/inngest_encryption && make type-check
 	@cd pkg/test_core && make type-check
-	@mypy --config-file=mypy.ini tests
+	@uv run mypy --config-file=mypy.ini tests
 
-utest: check-venv
+utest:
 	@cd pkg/inngest && make utest
 	@cd pkg/inngest_encryption && make utest

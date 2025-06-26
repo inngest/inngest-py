@@ -1,13 +1,16 @@
+[tool.uv.workspace]
+members = ["pkg/inngest", "pkg/inngest_encryption", "pkg/test_core"]
+
 [project]
 name = "inngest-py"
 version = "0.0.0"
 authors = [{ name = "Inngest Inc.", email = "hello@inngest.com" }]
-description = "Python SDK for Inngest"
+description = "Python SDK for Inngest - workspace root"
 readme = "README.md"
 requires-python = ">=3.10"
 
 [project.optional-dependencies]
-extra = [
+dev = [
     "Django==5.0",
     "Flask==3.0.0",
     "boto3-stubs[s3]==1.35.46",
@@ -16,6 +19,8 @@ extra = [
     "cryptography==42.0.5",
     "django-types==0.19.1",
     "fastapi==0.110.0",
+    "inngest[connect]",
+    "inngest_encryption",
     "moto[s3,server]==5.0.18",
     "mypy==1.10.0",
     "pynacl==1.5.0",
@@ -26,6 +31,7 @@ extra = [
     "ruff==0.9.5",
     "sentry-sdk==2.1.1",
     "structlog==25.2.0",
+    "test_core",
     "toml==0.10.2",
     "tornado==6.4",
     "types-protobuf==5.29.1.20250315",
@@ -33,13 +39,28 @@ extra = [
     "types-toml==0.10.8.7",
     "types-tornado==5.1.1",
     "uvicorn==0.23.2",
-
-    # Werkzeug v3.1 deleted something that breaks our minimum Flask version
-    # (v2.3.0). So for now, only allow Werkzeug versions below v3.1. See this PR
-    # for the deleted thing: https://github.com/pallets/werkzeug/pull/2967
-    # "werkzeug<3.1",
 ]
+
+[tool.uv.sources]
+test_core = { workspace = true }
+inngest = { workspace = true }
+inngest_encryption = { workspace = true }
 
 [project.urls]
 "Homepage" = "https://github.com/inngest/inngest-py"
 "Bug Tracker" = "https://github.com/inngest/inngest-py/issues"
+
+[tool.uv]
+constraint-dependencies = [
+    # Constrain to the lowest version for each range in pyproject.toml. This
+    # ensures that our code won't rely on features in newer versions of
+    # dependencies. These constraints won't affect installed versions by
+    # consumers
+    "httpx==0.26.0",
+    "jcs==0.2.1",
+    "protobuf==5.29.4",
+    "psutil==6.0.0",
+    "pydantic==2.11.0",
+    "typing-extensions==4.13.0",
+    "websockets==15.0.0",
+]

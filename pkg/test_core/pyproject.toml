@@ -1,4 +1,19 @@
 [project]
-name = "test_utils"
+name = "test_core"
 version = "0.0.0"
 authors = [{ name = "Inngest Inc.", email = "hello@inngest.com" }]
+description = "Test utilities for Inngest Python SDK"
+requires-python = ">=3.10"
+dependencies = [
+    "httpx>=0.26.0",
+    "fastapi>=0.110.0",
+    "flask>=3.0.0",
+    "inngest",
+]
+
+[tool.uv.sources]
+inngest = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
