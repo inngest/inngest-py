@@ -59,6 +59,8 @@ class CommHandler:
         if streaming is None:
             streaming = env_lib.get_streaming(const.EnvKey.STREAMING)
         self._streaming = streaming or const.Streaming.DISABLE
+        if self._streaming is const.Streaming.FORCE:
+            self._client.logger.debug("Streaming is enabled")
 
         # TODO: Graduate this to a config option, rather than an env var.
         thread_pool_max_workers = env_lib.get_int(
@@ -158,22 +160,24 @@ class CommHandler:
             return Exception("events not in request")
 
         # Don't await because we might need to stream the response.
-        call_res = fn.call(
-            self._client,
-            execution_lib.Context(
-                attempt=request.ctx.attempt,
-                event=request.event,
-                events=events,
-                group=step_lib.Group(),
-                logger=self._client.logger,
-                run_id=request.ctx.run_id,
-            ),
-            params.fn_id,
-            middleware,
-            request,
-            step_lib.StepMemos.from_raw(steps),
-            params.step_id,
-            self._thread_pool,
+        call_res = asyncio.create_task(
+            fn.call(
+                self._client,
+                execution_lib.Context(
+                    attempt=request.ctx.attempt,
+                    event=request.event,
+                    events=events,
+                    group=step_lib.Group(),
+                    logger=self._client.logger,
+                    run_id=request.ctx.run_id,
+                ),
+                params.fn_id,
+                middleware,
+                request,
+                step_lib.StepMemos.from_raw(steps),
+                params.step_id,
+                self._thread_pool,
+            )
         )
 
         if self._streaming is const.Streaming.FORCE:
