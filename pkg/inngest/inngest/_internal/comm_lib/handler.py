@@ -60,6 +60,8 @@ class CommHandler:
         if streaming is None:
             streaming = env_lib.get_streaming(const.EnvKey.STREAMING)
         self._streaming = streaming or const.Streaming.DISABLE
+        if self._streaming == const.Streaming.FORCE:
+            self._client.logger.warning("Streaming responses are enabled")
 
         # TODO: Graduate this to a config option, rather than an env var.
         thread_pool_max_workers = env_lib.get_int(
@@ -162,7 +164,7 @@ class CommHandler:
 
         if fn.is_handler_async:
             # Don't await because we might need to stream the response.
-            call_res_coro = fn.call(
+            call_res_task = asyncio.create_task(fn.call(
                 self._client,
                 execution_lib.Context(
                     attempt=request.ctx.attempt,
@@ -186,18 +188,18 @@ class CommHandler:
                 ),
                 params.fn_id,
                 middleware,
-            )
+            ))
 
             if self._streaming is const.Streaming.FORCE:
                 return CommResponse.create_streaming(
                     self._client.logger,
-                    call_res_coro,
+                    call_res_task,
                     self._client.env,
                     self._framework,
                     server_kind,
                 )
 
-            call_res = await call_res_coro
+            call_res = await call_res_task
         else:
             fn_call = functools.partial(
                 fn.call_sync,
