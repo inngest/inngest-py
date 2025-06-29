@@ -164,31 +164,33 @@ class CommHandler:
 
         if fn.is_handler_async:
             # Don't await because we might need to stream the response.
-            call_res_task = asyncio.create_task(fn.call(
-                self._client,
-                execution_lib.Context(
-                    attempt=request.ctx.attempt,
-                    event=request.event,
-                    events=events,
-                    group=step_lib.Group(),
-                    logger=self._client.logger,
-                    run_id=request.ctx.run_id,
-                    step=step_lib.Step(
-                        self._client,
-                        execution_lib.ExecutionV0(
-                            memos,
+            call_res_task = asyncio.create_task(
+                fn.call(
+                    self._client,
+                    execution_lib.Context(
+                        attempt=request.ctx.attempt,
+                        event=request.event,
+                        events=events,
+                        group=step_lib.Group(),
+                        logger=self._client.logger,
+                        run_id=request.ctx.run_id,
+                        step=step_lib.Step(
+                            self._client,
+                            execution_lib.ExecutionV0(
+                                memos,
+                                middleware,
+                                request,
+                                params.step_id,
+                            ),
                             middleware,
-                            request,
+                            step_lib.StepIDCounter(),
                             params.step_id,
                         ),
-                        middleware,
-                        step_lib.StepIDCounter(),
-                        params.step_id,
                     ),
-                ),
-                params.fn_id,
-                middleware,
-            ))
+                    params.fn_id,
+                    middleware,
+                )
+            )
 
             if self._streaming is const.Streaming.FORCE:
                 return CommResponse.create_streaming(
