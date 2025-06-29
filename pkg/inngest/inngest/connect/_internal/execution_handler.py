@@ -155,6 +155,7 @@ class _ExecutionHandler(_BaseHandler):
                         body=req_data.request_payload,
                         headers={},
                         is_connect=True,
+                        public_path=None,
                         query_params={
                             server_lib.QueryParamKey.FUNCTION_ID.value: req_data.function_slug,
                         },

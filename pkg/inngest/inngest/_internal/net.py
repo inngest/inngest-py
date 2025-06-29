@@ -74,6 +74,7 @@ def create_headers(
 
 def create_serve_url(
     *,
+    public_path: typing.Optional[str],
     request_url: str,
     serve_origin: typing.Optional[str],
     serve_path: typing.Optional[str],
@@ -84,6 +85,7 @@ def create_serve_url(
 
     Args:
     ----
+        public_path: User-specified override for the public path.
         request_url: The URL that the Executor is using to reach the SDK.
         serve_origin: User-specified override for the serve origin.
         serve_path: User-specified override for the serve path.
@@ -110,6 +112,13 @@ def create_serve_url(
 
     if serve_path is not None:
         new_path = serve_path
+
+    # public_path takes precedence over serve_path because it allows users to
+    # decouple their publicly-reachable path (that the Inngest server sends
+    # requests to) and the path that our SDK is hosted on. This is useful when
+    # the SDK is behind a proxy that rewrites the path
+    if public_path is not None:
+        new_path = public_path
 
     return urllib.parse.urlunparse(
         (new_scheme, new_netloc, new_path, "", "", "")
