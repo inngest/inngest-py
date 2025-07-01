@@ -8,4 +8,4 @@ if [ -n "${ENV_VARS}" ]; then
     export $(echo ${ENV_VARS} | xargs)
 fi
 
-python manage.py runserver
+uv run --project ../.. python manage.py runserver

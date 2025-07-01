@@ -6,7 +6,9 @@ lint:
 
 .PHONY: type-check
 type-check:
+	@uv run mypy --config-file=../mypy.ini ./connect
 	@uv run mypy --config-file=../mypy.ini ./digital_ocean
+	@uv run mypy --config-file=../mypy.ini ./django
 	@uv run mypy --config-file=../mypy.ini ./fast_api
 	@uv run mypy --config-file=../mypy.ini ./flask
 	@uv run mypy --config-file=../mypy.ini ./tornado
