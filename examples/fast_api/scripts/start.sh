@@ -8,4 +8,4 @@ if [ -n "${ENV_VARS}" ]; then
     export $(echo ${ENV_VARS} | xargs)
 fi
 
-uvicorn app:app --reload
+uv run --project ../.. uvicorn app:app --reload

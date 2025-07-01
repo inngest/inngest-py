@@ -8,4 +8,4 @@ if [ -n "${ENV_VARS}" ]; then
     export $(echo ${ENV_VARS} | xargs)
 fi
 
-python app.py
+uv run --project ../.. python app.py
