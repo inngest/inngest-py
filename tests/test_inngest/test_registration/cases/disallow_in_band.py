@@ -4,7 +4,6 @@ import os
 import typing
 
 import inngest
-import inngest.fast_api
 from inngest._internal import const, net, server_lib
 from test_core import http_proxy
 
@@ -107,6 +106,8 @@ def create(framework: server_lib.Framework) -> base.Case:
             host = "http://testserver"
         elif framework == server_lib.Framework.FLASK:
             host = "http://localhost"
+        else:
+            raise ValueError(f"unknown framework: {framework}")
 
         assert state.body is not None
         assert json.loads(state.body.decode("utf-8")) == {

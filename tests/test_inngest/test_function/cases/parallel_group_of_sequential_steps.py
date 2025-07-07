@@ -61,7 +61,7 @@ def create(
                 state.step_1b_counter += 1
                 return "1b"
 
-            out = []
+            out: list[str] = []
             out.append(ctx.step.run("1a", _step_1a))
             out.append(ctx.step.run("1b", _step_1b))
             return out
@@ -80,7 +80,7 @@ def create(
                 state.step_2c_counter += 1
                 return "2c"
 
-            out = []
+            out: list[str] = []
             out.append(ctx.step.run("2a", _step_2a))
             out.append(ctx.step.run("2b", _step_2b))
             out.append(ctx.step.run("2c", _step_2c))
@@ -132,7 +132,7 @@ def create(
                 state.step_1b_counter += 1
                 return "1b"
 
-            out = []
+            out: list[str] = []
             out.append(await ctx.step.run("1a", _step_1a))
             out.append(await ctx.step.run("1b", _step_1b))
             return out
@@ -151,7 +151,7 @@ def create(
                 state.step_2c_counter += 1
                 return "2c"
 
-            out = []
+            out: list[str] = []
             out.append(await ctx.step.run("2a", _step_2a))
             out.append(await ctx.step.run("2b", _step_2b))
             out.append(await ctx.step.run("2c", _step_2c))

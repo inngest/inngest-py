@@ -60,7 +60,7 @@ def create(
     async def run_test(self: base.TestClass) -> None:
         # Send a large (in terms of bytes, not event count) enough batch to
         # ensure that the SDK needs to fetch the batch from the API
-        events = []
+        events: list[inngest.Event] = []
         for _ in range(8):
             events.append(
                 inngest.Event(

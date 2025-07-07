@@ -87,3 +87,11 @@ class BaseModel(pydantic.BaseModel):
 BaseModelT = typing.TypeVar("BaseModelT", bound=BaseModel)
 
 MaybeError: typing_extensions.TypeAlias = typing.Union[T, Exception]
+
+
+def is_dict(v: object) -> typing.TypeGuard[dict[object, object]]:
+    return isinstance(v, dict)
+
+
+def is_list(v: object) -> typing.TypeGuard[list[object]]:
+    return isinstance(v, list)

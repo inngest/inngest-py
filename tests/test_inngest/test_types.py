@@ -12,32 +12,6 @@ from typing_extensions import assert_type
 client = inngest.Inngest(app_id="foo", is_production=False)
 
 
-# def sync_fn_with_sync_step() -> None:
-#     """
-#     Test that a sync function cannot use an async step type
-#     """
-
-#     @client.create_function(  # type: ignore[arg-type]
-#         fn_id="foo",
-#         trigger=inngest.TriggerEvent(event="foo"),
-#     )
-#     def fn(ctx: inngest.ContextSync) -> None:
-#         pass
-
-
-# def async_fn_with_sync_step() -> None:
-#     """
-#     Test that an async function cannot use a sync step type
-#     """
-
-#     @client.create_function(  # type: ignore[arg-type]
-#         fn_id="foo",
-#         trigger=inngest.TriggerEvent(event="foo"),
-#     )
-#     async def fn(ctx: inngest.ContextSync) -> None:
-#         pass
-
-
 def event_data_dict() -> None:
     """
     Test that event data can be a dict. This is exists to prevent a regression
@@ -207,7 +181,7 @@ def parallel() -> None:
         trigger=inngest.TriggerEvent(event="foo"),
     )
     async def async_fn(ctx: inngest.Context) -> None:
-        output = await ctx.group.parallel(
+        await ctx.group.parallel(
             (
                 functools.partial(ctx.step.run, "step-1", fn_1_async),
                 functools.partial(
@@ -219,16 +193,12 @@ def parallel() -> None:
             )
         )
 
-        # Type is wrong because of a mypy limitation around inferring union
-        # types from tuples
-        assert_type(output, tuple[None, ...])
-
     @client.create_function(
         fn_id="foo",
         trigger=inngest.TriggerEvent(event="foo"),
     )
     def sync_fn(ctx: inngest.ContextSync) -> None:
-        output = ctx.group.parallel(
+        ctx.group.parallel(
             (
                 functools.partial(ctx.step.run, "step-1", fn_1_sync),
                 functools.partial(
@@ -239,10 +209,6 @@ def parallel() -> None:
                 functools.partial(ctx.step.sleep, "sleep", 1),
             )
         )
-
-        # Type is wrong because of a mypy limitation around inferring union
-        # types from tuples
-        assert_type(output, tuple[None, ...])
 
 
 def parallel_iterator() -> None:
@@ -303,9 +269,6 @@ def step_return_types() -> None:
     """
     Test that a sync function cannot use an async step type
     """
-
-    class MyTypedDict(typing.TypedDict):
-        foo: str
 
     @client.create_function(
         fn_id="foo",

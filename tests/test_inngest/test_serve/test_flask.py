@@ -1,8 +1,6 @@
 import unittest
 
 import flask
-import flask.logging
-import flask.testing
 import inngest
 import inngest.flask
 import pytest

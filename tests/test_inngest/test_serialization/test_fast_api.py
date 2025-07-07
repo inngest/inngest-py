@@ -29,7 +29,7 @@ class _TestBase(unittest.IsolatedAsyncioTestCase):
         def start_app() -> None:
             app = fastapi.FastAPI()
             serve(app)
-            uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")
+            uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")  # pyright: ignore[reportUnknownMemberType]
 
         app_thread = threading.Thread(daemon=True, target=start_app)
         app_thread.start()

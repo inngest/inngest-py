@@ -8,8 +8,6 @@ import inngest
 import pytest
 import test_core
 import test_core.http_proxy
-import test_core.net
-import test_core.ws_proxy
 from inngest.connect import connect
 
 from .base import BaseTest

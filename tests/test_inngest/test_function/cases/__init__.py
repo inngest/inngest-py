@@ -112,10 +112,10 @@ def create_sync_cases(
     client: inngest.Inngest,
     framework: server_lib.Framework,
 ) -> list[Case]:
-    cases = []
+    cases: list[Case] = []
     for module in _modules:
         case = module.create(client, framework, is_sync=True)
-        if isinstance(case.fn, list) and len(case.fn) == 0:
+        if not isinstance(case.fn, inngest.Function) and len(case.fn) == 0:
             continue
         cases.append(case)
 

@@ -13,7 +13,7 @@ from inngest.connect import ConnectionState
 from inngest.connect._internal import connect_pb2
 from inngest.connect._internal.connection import (
     WorkerConnection,
-    _WebSocketWorkerConnection,
+    _WebSocketWorkerConnection,  # pyright: ignore[reportPrivateUsage]
 )
 from inngest.experimental.dev_server import dev_server
 
@@ -93,6 +93,6 @@ class BaseTest(unittest.IsolatedAsyncioTestCase):
 def collect_states(conn: WorkerConnection) -> list[ConnectionState]:
     states: list[ConnectionState] = []
     if isinstance(conn, _WebSocketWorkerConnection):
-        conn._state.conn_state.on_change(lambda _, state: states.append(state))
+        conn._state.conn_state.on_change(lambda _, state: states.append(state))  # pyright: ignore[reportPrivateUsage]
     states.append(conn.get_state())
     return states

@@ -6,7 +6,7 @@ import json
 
 import inngest
 import test_core.helper
-from inngest._internal import server_lib
+from inngest._internal import server_lib, types
 from inngest.experimental import remote_state_middleware
 
 from . import base
@@ -88,13 +88,13 @@ def create(
                 step_id="step_1",
             )
         )
-        assert isinstance(output, dict)
+        assert types.is_dict(output)
         assert output.get("data") is None
         error = output.get("error")
-        assert isinstance(error, dict)
+        assert types.is_dict(error)
 
         # Ensure that the error data was not remotely stored.
-        assert driver._marker not in error
+        assert driver._marker not in error  # pyright: ignore[reportPrivateUsage]
         assert error.get("message") == "oh no"
 
         assert run.output is not None

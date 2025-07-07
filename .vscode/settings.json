@@ -13,7 +13,7 @@
     "pkg/inngest_encryption",
     "pkg/test_core"
   ],
-  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.typeCheckingMode": "strict",
   "python.languageServer": "Pylance",
   "ruff.fixAll": true
 }

@@ -10,7 +10,7 @@ import inngest
 import moto
 import moto.server
 import test_core.helper
-from inngest._internal import server_lib
+from inngest._internal import server_lib, types
 from inngest.experimental import remote_state_middleware
 from test_core import net
 
@@ -39,7 +39,7 @@ def create(
     aws_region = "us-east-1"
     s3_bucket = "inngest"
 
-    s3_client = boto3.client(
+    s3_client = boto3.client(  # pyright: ignore[reportUnknownMemberType]
         "s3",
         endpoint_url=aws_url,
         region_name=aws_region,
@@ -138,12 +138,12 @@ def create(
             )
         )
 
-        assert isinstance(output, dict)
+        assert types.is_dict(output)
         data = output.get("data")
-        assert isinstance(data, dict)
+        assert types.is_dict(data)
 
         # Ensure the step output is remotely stored.
-        assert driver._marker in data
+        assert driver._marker in data  # pyright: ignore[reportPrivateUsage]
 
         output = json.loads(
             await test_core.helper.client.get_step_output(
@@ -151,12 +151,12 @@ def create(
                 step_id="step_2",
             )
         )
-        assert isinstance(output, dict)
+        assert types.is_dict(output)
         data = output.get("data")
-        assert isinstance(data, dict)
+        assert types.is_dict(data)
 
         # Ensure the step output is remotely stored.
-        assert driver._marker in data
+        assert driver._marker in data  # pyright: ignore[reportPrivateUsage]
 
         assert run.output is not None
         assert json.loads(run.output) == "function output"

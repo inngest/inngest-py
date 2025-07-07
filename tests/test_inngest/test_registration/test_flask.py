@@ -2,8 +2,6 @@ import typing
 import unittest
 
 import flask
-import flask.logging
-import flask.testing
 import inngest
 import inngest.flask
 from inngest._internal import server_lib

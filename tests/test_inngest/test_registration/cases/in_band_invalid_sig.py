@@ -1,7 +1,6 @@
 import json
 
 import inngest
-import inngest.fast_api
 from inngest._internal import net, server_lib
 
 from . import base

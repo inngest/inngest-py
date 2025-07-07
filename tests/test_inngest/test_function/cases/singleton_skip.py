@@ -18,7 +18,7 @@ def create(
     state = base.BaseState()
 
     # Used to know how many runs started.
-    run_ids = set()
+    run_ids: set[str] = set()
 
     @client.create_function(
         fn_id=fn_id,
