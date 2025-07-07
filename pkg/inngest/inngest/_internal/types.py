@@ -89,9 +89,13 @@ BaseModelT = typing.TypeVar("BaseModelT", bound=BaseModel)
 MaybeError: typing_extensions.TypeAlias = typing.Union[T, Exception]
 
 
-def is_dict(
+def is_dict(v: object) -> typing.TypeGuard[dict[object, object]]:
+    return isinstance(v, dict)
+
+
+def is_dict_keys(
     v: object,
-    key_type: type[T] = object,  # type: ignore[assignment]
+    key_type: type[T],
 ) -> typing.TypeGuard[dict[T, object]]:
     if not isinstance(v, dict):
         return False
@@ -104,9 +108,13 @@ def is_dict(
     return True
 
 
-def is_list(
+def is_list(v: object) -> typing.TypeGuard[list[object]]:
+    return isinstance(v, list)
+
+
+def is_list_items(
     v: object,
-    item_type: type[T] = object,
+    item_type: type[T],
 ) -> typing.TypeGuard[list[T]]:
     if not isinstance(v, list):
         return False
