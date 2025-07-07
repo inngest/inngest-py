@@ -19,12 +19,12 @@ class Test_is_dict:
 
 
 class Test_is_dict_keys:
-    def test_dict_with_key_type(self) -> None:
+    def test_key_type(self) -> None:
         v: dict[object, object] = {"a": 1}
         assert types.is_dict_keys(v, str)
         assert_type(v, dict[str, object])
 
-    def test_dict_with_key_type_invalid(self) -> None:
+    def test_key_type_invalid(self) -> None:
         v: dict[object, object] = {1: "a"}
         assert types.is_dict_keys(v, str) is False
 
@@ -45,12 +45,12 @@ class Test_is_list:
 
 
 class Test_is_list_items:
-    def test_list_with_item_type_primitive(self) -> None:
+    def test_item_type_primitive(self) -> None:
         v: list[object] = ["a"]
         assert types.is_list_items(v, str)
         assert_type(v, list[str])
 
-    def test_list_with_item_type_object(self) -> None:
+    def test_item_type_object(self) -> None:
         class Foo:
             pass
 
@@ -58,6 +58,6 @@ class Test_is_list_items:
         assert types.is_list_items(v, Foo)
         assert_type(v, list[Foo])
 
-    def test_list_with_item_type_invalid(self) -> None:
+    def test_item_type_invalid(self) -> None:
         v: list[object] = [1]
         assert types.is_list_items(v, str) is False
