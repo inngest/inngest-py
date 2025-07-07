@@ -6,12 +6,10 @@ anything
 import json
 
 import inngest
-import nacl.encoding
 import nacl.hash
 import nacl.secret
-import nacl.utils
 import test_core.helper
-from inngest._internal import server_lib
+from inngest._internal import server_lib, types
 from inngest_encryption import EncryptionMiddleware
 
 from . import base
@@ -135,7 +133,7 @@ def create(
                 step_id="step_1",
             )
         )
-        assert isinstance(output, dict)
+        assert types.is_dict(output)
         assert output.get("data") == "test string"
 
         # Ensure that step_2 output is encrypted and its value is correct
@@ -145,7 +143,7 @@ def create(
                 step_id="step_2",
             )
         )
-        assert isinstance(output, dict)
+        assert types.is_dict(output)
         assert output.get("data") == [{"a": {"b": 1}}]
 
         assert run.output is not None

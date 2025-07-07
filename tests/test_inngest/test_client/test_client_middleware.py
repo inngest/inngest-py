@@ -12,8 +12,6 @@ import unittest
 import fastapi
 import fastapi.testclient
 import flask
-import flask.logging
-import flask.testing
 import inngest
 import inngest.fast_api
 import inngest.flask

@@ -48,7 +48,7 @@ class TestEncryptionMiddleware(unittest.IsolatedAsyncioTestCase):
                 _client,
                 _fns,
             )
-            uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")
+            uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")  # pyright: ignore[reportUnknownMemberType]
 
         # Start FastAPI in a thread instead of using their test client, since
         # their test client doesn't seem to actually run requests in parallel

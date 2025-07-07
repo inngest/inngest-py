@@ -8,7 +8,6 @@ flakiness should be fixed when we finish parallelism improvements.
 import typing
 
 import inngest
-import pytest
 import test_core.helper
 from inngest._internal import middleware_lib, server_lib
 

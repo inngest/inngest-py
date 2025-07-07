@@ -5,7 +5,6 @@ import flask
 import flask.testing
 import inngest
 import inngest.digital_ocean
-import inngest.fast_api
 from inngest._internal import server_lib
 from inngest.experimental import dev_server, digital_ocean_simulator
 from test_core import base, http_proxy

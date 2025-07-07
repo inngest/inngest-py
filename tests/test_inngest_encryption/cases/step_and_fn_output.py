@@ -5,23 +5,22 @@ Ensure step and function output is encrypted and decrypted correctly
 import json
 
 import inngest
-import nacl.encoding
 import nacl.hash
 import nacl.secret
-import nacl.utils
 import test_core.helper
-from inngest._internal import server_lib
+from inngest._internal import server_lib, types
 from inngest_encryption import EncryptionMiddleware
 
 from . import base
 
 _secret_key = "my-secret-key"
 
+digest_size = nacl.secret.SecretBox.KEY_SIZE
 
 enc = base.Encryptor(
     nacl.hash.blake2b(
         _secret_key.encode("utf-8"),
-        digest_size=nacl.secret.SecretBox.KEY_SIZE,
+        digest_size=digest_size,
     )
 )
 
@@ -103,10 +102,12 @@ def create(
                 step_id="step_1",
             )
         )
-        assert isinstance(output, dict)
+        assert types.is_dict(output)
         data = output.get("data")
-        assert isinstance(data, dict)
-        assert enc.decrypt(data["data"]) == "test string"
+        assert types.is_dict(data)
+        encrypted_data = data["data"]
+        assert isinstance(encrypted_data, str)
+        assert enc.decrypt(encrypted_data.encode("utf-8")) == "test string"
 
         # Ensure that step_2 output is encrypted and its value is correct
         output = json.loads(
@@ -115,15 +116,16 @@ def create(
                 step_id="step_2",
             )
         )
-        assert isinstance(output, dict)
-        data = output.get("data")
-        assert isinstance(data, dict)
-        assert enc.decrypt(data["data"]) == [{"a": {"b": 1}}]
+        assert types.is_dict(output)
+        encrypted_data = test_core.get_nested(output, "data.data")
+        assert isinstance(encrypted_data, str)
+        assert enc.decrypt(encrypted_data.encode("utf-8")) == [{"a": {"b": 1}}]
 
         assert run.output is not None
         run_output = json.loads(run.output)
-        assert isinstance(run_output, dict)
-        assert enc.decrypt(run_output["data"]) == "function output"
+        encrypted_data = test_core.get_nested(run_output, "data")
+        assert isinstance(encrypted_data, str)
+        assert enc.decrypt(encrypted_data.encode("utf-8")) == "function output"
 
     if is_sync:
         fn = fn_sync

@@ -10,6 +10,7 @@ import httpx
 import inngest
 import pytest
 import test_core
+from inngest._internal import types
 
 from .base import BaseTest
 
@@ -206,15 +207,15 @@ async def _wait_for_app(app_id: str, should_exist: bool) -> None:
                 raise Exception(f"unexpected status code: {res.status_code}")
 
             body = res.json()
-            if not isinstance(body, dict):
+            if not types.is_dict(body):
                 raise Exception("unexpected response")
             data = body["data"]
-            if not isinstance(data, list):
+            if not types.is_list(data):
                 raise Exception("unexpected response")
 
             exists = False
             for app in data:
-                if not isinstance(app, dict):
+                if not types.is_dict(app):
                     raise Exception("unexpected response")
 
                 exists = app["instance_id"] == app_id

@@ -7,11 +7,9 @@ import unittest
 
 import httpx
 import inngest
-import inngest.flask
 from inngest._internal import const, errors
 from inngest.experimental import dev_server
-from test_core import http_proxy, net, random_suffix
-
+from test_core import http_proxy, random_suffix
 
 TEST_HTTPX_TIMEOUT = 1  # timeout in seconds
 
@@ -92,7 +90,7 @@ class TestSend(unittest.IsolatedAsyncioTestCase):
             is_production=False,
         )
 
-        sends = []
+        sends: list[typing.Coroutine[typing.Any, typing.Any, list[str]]] = []
         for _ in range(500):
             sends.append(
                 client.send(inngest.Event(name=f"{class_name}-{method_name}"))
@@ -141,11 +139,9 @@ class TestSend(unittest.IsolatedAsyncioTestCase):
         that retries use the same idempotency key header.
         """
 
-        test_options: typing.List[
-            typing.Tuple[
-                typing.Callable[
-                    [], typing.Tuple[http_proxy.OnRequest, CountGetter]
-                ],
+        test_options: list[
+            tuple[
+                typing.Callable[[], tuple[http_proxy.OnRequest, CountGetter]],
                 bool,
             ]
         ] = [
@@ -188,11 +184,11 @@ class TestSend(unittest.IsolatedAsyncioTestCase):
                 assert send_ids[0] != send_ids[1]
 
                 # Sleep long enough for the Dev Server to process the events.
-                time.sleep(5)
+                time.sleep(5)  # noqa: ASYNC251
 
                 assert get_proxy_request_counter() == 2
 
-                list_events_resp = httpx.get(
+                list_events_resp = httpx.get(  # noqa: ASYNC210
                     f"{dev_server.server.origin}/v1/events",
                     params={"name": event_name},
                 )
@@ -270,7 +266,7 @@ CountGetter = typing.Callable[[], int]
 # client receives a 500 on the first attempt. This ensures that the Dev
 # Server's event processing logic properly handles the idempotency key
 # header.
-def create_first_request_500_handler() -> typing.Tuple[
+def create_first_request_500_handler() -> tuple[
     http_proxy.OnRequest, CountGetter
 ]:
     proxy_request_count = 0
@@ -315,7 +311,7 @@ def create_first_request_500_handler() -> typing.Tuple[
 
 # Create a proxy that mimics a request reaching the Dev Server but the
 # client times out on the first attempt.
-def create_first_request_timeout_handler() -> typing.Tuple[
+def create_first_request_timeout_handler() -> tuple[
     http_proxy.OnRequest, CountGetter
 ]:
     proxy_request_count = 0

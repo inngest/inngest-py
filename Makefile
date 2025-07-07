@@ -18,13 +18,17 @@ lint:
 	@cd pkg/inngest && make lint
 	@cd pkg/inngest_encryption && make lint
 	@cd pkg/test_core && make lint
+	@cd tests && make lint
 
 type-check:
 	@cd examples && make type-check
 	@cd pkg/inngest && make type-check
 	@cd pkg/inngest_encryption && make type-check
 	@cd pkg/test_core && make type-check
-	@uv run mypy --config-file=mypy.ini tests
+	@cd tests && make type-check
+
+type-check-pyright:
+	@cd tests && make type-check-pyright
 
 utest:
 	@cd pkg/inngest && make utest

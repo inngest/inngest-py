@@ -10,6 +10,7 @@ import inngest
 import inngest.fast_api
 import test_core
 import uvicorn
+from inngest._internal import types
 from test_core import base, http_proxy, net
 
 
@@ -86,7 +87,7 @@ class TestStreaming(unittest.IsolatedAsyncioTestCase):
                 serve_origin=proxy.origin,
                 streaming=inngest.Streaming.FORCE,
             )
-            uvicorn.run(app, host="0.0.0.0", port=sdk_port, log_level="warning")
+            uvicorn.run(app, host="0.0.0.0", port=sdk_port, log_level="warning")  # pyright: ignore[reportUnknownMemberType]
 
         app_thread = threading.Thread(daemon=True, target=start_app)
         app_thread.start()
@@ -110,7 +111,7 @@ class TestStreaming(unittest.IsolatedAsyncioTestCase):
 
         # The final chunk is the wrapped response.
         wrapped_resp = json.loads(res_chunks[len(res_chunks) - 1])
-        assert isinstance(wrapped_resp, dict)
+        assert types.is_dict(wrapped_resp)
 
         # Body we would've gotten if we weren't streaming.
         assert wrapped_resp["body"] == '"Hi"'
@@ -119,7 +120,9 @@ class TestStreaming(unittest.IsolatedAsyncioTestCase):
         assert wrapped_resp["status"] == 200
 
         # Headers we would've gotten if we weren't streaming.
-        assert wrapped_resp["headers"].get("x-inngest-sdk") is not None
+        headers = wrapped_resp["headers"]
+        assert types.is_dict(headers)
+        assert headers.get("x-inngest-sdk") is not None
 
     async def test_streaming_disabled(self) -> None:
         """
@@ -191,7 +194,7 @@ class TestStreaming(unittest.IsolatedAsyncioTestCase):
                 [fn],
                 serve_origin=proxy.origin,
             )
-            uvicorn.run(app, host="0.0.0.0", port=sdk_port, log_level="warning")
+            uvicorn.run(app, host="0.0.0.0", port=sdk_port, log_level="warning")  # pyright: ignore[reportUnknownMemberType]
 
         app_thread = threading.Thread(daemon=True, target=start_app)
         app_thread.start()

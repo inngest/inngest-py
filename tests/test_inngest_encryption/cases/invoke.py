@@ -6,10 +6,8 @@ decrypted data.
 import typing
 
 import inngest
-import nacl.encoding
 import nacl.hash
 import nacl.secret
-import nacl.utils
 import test_core
 from inngest._internal import server_lib
 from inngest_encryption import EncryptionMiddleware

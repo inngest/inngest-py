@@ -3,7 +3,6 @@ import typing
 import unittest
 
 import fastapi
-import fastapi.testclient
 import inngest
 import inngest.fast_api
 import uvicorn
@@ -49,7 +48,7 @@ class TestRemoteStateMiddleware(unittest.IsolatedAsyncioTestCase):
                 _client,
                 _fns,
             )
-            uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")
+            uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")  # pyright: ignore[reportUnknownMemberType]
 
         # Start FastAPI in a thread instead of using their test client, since
         # their test client doesn't seem to actually run requests in parallel

@@ -48,7 +48,7 @@ def create(
         def unexpected() -> None:
             state.step_unexpected_counter += 1
 
-        is_targeting_enabled = ctx.step._target_hashed_id is not None
+        is_targeting_enabled = ctx.step._target_hashed_id is not None  # pyright: ignore[reportPrivateUsage]
         if is_targeting_enabled:
             ctx.step.run("unexpected", unexpected)
 
@@ -77,7 +77,7 @@ def create(
         async def unexpected() -> None:
             state.step_unexpected_counter += 1
 
-        is_targeting_enabled = ctx.step._target_hashed_id is not None
+        is_targeting_enabled = ctx.step._target_hashed_id is not None  # pyright: ignore[reportPrivateUsage]
         if is_targeting_enabled:
             await ctx.step.run("unexpected", unexpected)
 
