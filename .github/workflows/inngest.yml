@@ -16,6 +16,8 @@ on:
       - "**/pyproject.toml"
       - ".github/**"
       - "Makefile"
+      - "mypy.ini"
+      - "pyrightconfig.json"
       - "pytest.ini"
       - "ruff.toml"
       - "uv.lock"
