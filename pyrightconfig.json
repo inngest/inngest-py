@@ -1,4 +1,3 @@
 {
-  "typeCheckingMode": "strict",
-  "reportUnusedFunction": false
+  "typeCheckingMode": "strict"
 }

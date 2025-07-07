@@ -1,3 +1,5 @@
+# pyright: reportUnusedFunction=false
+
 """
 Even though this file has test functions, they don't actually need to run. This
 file is purely for static type analysis
