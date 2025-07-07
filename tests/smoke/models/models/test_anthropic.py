@@ -1,7 +1,6 @@
 import os
 from typing import Any
 
-import inngest
 from inngest.experimental.ai.anthropic import Adapter as AnthropicAdapter
 from utils import extract_anthropic_response
 
@@ -11,19 +10,21 @@ anthropic_adapter = AnthropicAdapter(
     model="claude-3-5-sonnet-latest",
 )
 
+
 def prepare_test_anthropic() -> tuple[AnthropicAdapter, dict[str, Any]]:
     """Prepare the request for the Anthropic adapter test."""
     question = "What is the capital of Texas?"
     body = {
         "messages": [{"role": "user", "content": question}],
-        "max_tokens": 1024
+        "max_tokens": 1024,
     }
     return (anthropic_adapter, body)
+
 
 def handle_test_anthropic_response(response: dict[str, Any]) -> dict[str, str]:
     """Handle the response from the Anthropic adapter test."""
     return {
         "success": True,
         "response": extract_anthropic_response(response),
-        "raw_response": str(response)
-    } 
+        "raw_response": str(response),
+    }

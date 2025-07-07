@@ -1,4 +1,5 @@
 from typing import Any
+
 from inngest._internal import types
 
 
@@ -72,7 +73,7 @@ def extract_gemini_thinking_response(response: dict[str, Any]) -> str:
 
     thoughts = []
     final_answers = []
-    
+
     for part in parts:
         if types.is_dict(part) and "text" in part:
             text = str(part.get("text", ""))
@@ -80,11 +81,11 @@ def extract_gemini_thinking_response(response: dict[str, Any]) -> str:
                 thoughts.append(f"🧠 Reasoning: {text}")
             else:
                 final_answers.append(f"💡 Answer: {text}")
-    
+
     result_parts = []
     if thoughts:
         result_parts.append("\n".join(thoughts))
     if final_answers:
         result_parts.append("\n".join(final_answers))
-    
-    return "\n\n".join(result_parts) if result_parts else str(candidate) 
+
+    return "\n\n".join(result_parts) if result_parts else str(candidate)
