@@ -71,8 +71,8 @@ def extract_gemini_thinking_response(response: dict[str, Any]) -> str:
     if not types.is_list(parts):
         return str(candidate)
 
-    thoughts = []
-    final_answers = []
+    thoughts: list[str] = []
+    final_answers: list[str] = []
 
     for part in parts:
         if types.is_dict(part) and "text" in part:
@@ -82,7 +82,7 @@ def extract_gemini_thinking_response(response: dict[str, Any]) -> str:
             else:
                 final_answers.append(f"💡 Answer: {text}")
 
-    result_parts = []
+    result_parts: list[str] = []
     if thoughts:
         result_parts.append("\n".join(thoughts))
     if final_answers:
