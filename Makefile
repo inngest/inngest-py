@@ -11,7 +11,7 @@ itest:
 	@cd pkg/inngest && make itest
 	@cd pkg/inngest_encryption && make itest
 
-pre-commit: format-check lint type-check utest
+pre-commit: format-check lint type-check type-check-pyright utest
 
 lint:
 	@cd examples && make lint
@@ -19,6 +19,13 @@ lint:
 	@cd pkg/inngest_encryption && make lint
 	@cd pkg/test_core && make lint
 	@cd tests && make lint
+
+lint-fix:
+	@cd examples && make lint-fix
+	@cd pkg/inngest && make lint-fix
+	@cd pkg/inngest_encryption && make lint-fix
+	@cd pkg/test_core && make lint-fix
+	@cd tests && make lint-fix
 
 type-check:
 	@cd examples && make type-check

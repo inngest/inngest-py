@@ -6,7 +6,14 @@ you'd like to depend on it, we recommend copying this directory into your source
 code.
 """
 
-from . import anthropic, openai
+from . import anthropic, deepseek, gemini, grok, openai
 from .base import BaseAdapter
 
-__all__ = ["BaseAdapter", "anthropic", "openai"]
+__all__ = [
+    "BaseAdapter",
+    "anthropic",
+    "deepseek",
+    "gemini",
+    "grok",
+    "openai",
+]

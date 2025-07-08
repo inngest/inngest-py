@@ -11,6 +11,10 @@ itest:
 lint:
 	@uv run ruff check .
 
+.PHONY: lint-fix
+lint-fix:
+	@uv run ruff check . --fix
+
 .PHONY: proto
 proto:
 	@uv run protoc --proto_path=./inngest/experimental/connect/ --python_out=./inngest/experimental/connect/ ./inngest/experimental/connect/connect.proto --pyi_out=./inngest/experimental/connect/

@@ -13,6 +13,10 @@ itest:
 lint:
 	@uv run ruff check .
 
+.PHONY: lint-fix
+lint-fix:
+	@uv run ruff check . --fix
+
 release:
 	@grep "version = \"$${VERSION}\"" pyproject.toml && git tag inngest_encryption@$${VERSION} && git push origin inngest_encryption@$${VERSION} || echo "pyproject.toml version does not match"
 

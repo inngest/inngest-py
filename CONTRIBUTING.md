@@ -37,10 +37,12 @@ Run things individually:
 make format-check
 make lint
 make type-check
+make type-check-pyright
 make utest
 
 # Changes code
 make format
+make lint-fix
 
 # Unit tests
 make utest
