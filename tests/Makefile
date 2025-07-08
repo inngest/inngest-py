@@ -10,4 +10,4 @@ type-check:
 
 .PHONY: type-check-pyright
 type-check-pyright:
-	@uv run pyright --project=../pyrightconfig.json .
+	@uv run pyright --project=../pyrightconfig.make-only.json .
