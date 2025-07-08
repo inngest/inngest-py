@@ -4,6 +4,10 @@ export MYPYPATH=../pkg/inngest:../pkg/inngest_encryption:../pkg/test_core
 lint:
 	@uv run ruff check .
 
+.PHONY: lint-fix
+lint-fix:
+	@uv run ruff check . --fix
+
 .PHONY: type-check
 type-check:
 	@uv run mypy --config-file=../mypy.ini .
