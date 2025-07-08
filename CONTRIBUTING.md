@@ -41,6 +41,7 @@ make utest
 
 # Changes code
 make format
+make lint-fix
 
 # Unit tests
 make utest
