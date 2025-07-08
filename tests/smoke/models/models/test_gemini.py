@@ -10,14 +10,16 @@ from inngest.experimental.ai.gemini import (
 )
 from utils import extract_gemini_response, extract_gemini_thinking_response
 
+api_key = os.getenv("GEMINI_API_KEY") or ""
+
 # Create Gemini adapters
 gemini_adapter = GeminiAdapter(
-    auth_key=os.getenv("GEMINI_API_KEY") or "",
+    auth_key=api_key,
     model="gemini-2.0-flash-exp",
 )
 
 gemini_enhanced_adapter = GeminiAdapter(
-    auth_key=os.getenv("GEMINI_API_KEY") or "",
+    auth_key=api_key,
     model="gemini-2.0-flash-thinking-exp",
     generation_config=GenerationConfig(
         temperature=0.7,
@@ -29,7 +31,7 @@ gemini_enhanced_adapter = GeminiAdapter(
 )
 
 gemini_structured_adapter = GeminiAdapter(
-    auth_key=os.getenv("GEMINI_API_KEY") or "",
+    auth_key=api_key,
     model="gemini-2.0-flash-exp",
     generation_config=GenerationConfig(
         temperature=0.3,
@@ -58,7 +60,8 @@ def prepare_gemini_basic_test() -> tuple[GeminiAdapter, dict[str, Any]]:
     return (gemini_adapter, body)
 
 
-def handle_gemini_basic_test(response: dict[str, Any]) -> dict[str, str]:
+def handle_gemini_basic_test(response: dict[str, Any]) -> dict[str, Any]:
+    """Handle the response from the Gemini adapter test."""
     return {
         "success": True,
         "response": extract_gemini_response(response),
@@ -109,10 +112,11 @@ def prepare_gemini_workflow_test() -> tuple[GeminiAdapter, dict[str, Any]]:
 
 
 def handle_gemini_thinking_response(response: dict[str, Any]) -> dict[str, Any]:
+    """Handle the structured response from the Gemini adapter test."""
     return {
         "success": True,
         "response": extract_gemini_thinking_response(response),
-        "raw_response": response,
+        "raw_response": str(response),
     }
 
 
@@ -143,10 +147,11 @@ def prepare_gemini_structured_test() -> tuple[GeminiAdapter, dict[str, Any]]:
 def handle_gemini_structured_response(
     response: dict[str, Any],
 ) -> dict[str, Any]:
+    """Handle the structured response from the Gemini adapter test."""
     return {
         "success": True,
         "response": extract_gemini_response(response),
-        "raw_response": response,
+        "raw_response": str(response),
     }
 
 
@@ -168,17 +173,16 @@ def prepare_gemini_stop_sequences_test() -> tuple[
 def handle_gemini_stop_sequences_response(
     response: dict[str, Any],
 ) -> dict[str, Any]:
+    """Handle the structured response from the Gemini adapter test."""
     return {
         "success": True,
         "response": extract_gemini_response(response),
-        "raw_response": response,
+        "raw_response": str(response),
     }
 
 
 def prepare_gemini_conversion_test() -> tuple[GeminiAdapter, dict[str, Any]]:
-    adapter = GeminiAdapter(
-        auth_key=os.getenv("GEMINI_API_KEY") or "", model="gemini-2.0-flash-exp"
-    )
+    adapter = GeminiAdapter(auth_key=api_key, model="gemini-2.0-flash-exp")
     body = {
         "messages": [
             {"role": "user", "content": "Hello, how are you?"},
@@ -192,10 +196,11 @@ def prepare_gemini_conversion_test() -> tuple[GeminiAdapter, dict[str, Any]]:
 def handle_gemini_conversion_response(
     response: dict[str, Any],
 ) -> dict[str, Any]:
+    """Handle the structured response from the Gemini adapter test."""
     return {
         "success": True,
         "response": extract_gemini_response(response),
-        "raw_response": response,
+        "raw_response": str(response),
     }
 
 
@@ -216,7 +221,7 @@ def prepare_gemini_error_handling_test() -> tuple[
 def handle_gemini_error_handling_response(
     response: dict[str, Any],
 ) -> dict[str, Any]:
-    # This should not be called if an error is thrown, but is here for completeness
+    """Handle the structured response from the Gemini adapter test."""
     return {
         "success": False,
         "error": "Expected error not thrown",

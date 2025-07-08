@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import logging
 from typing import Any, Optional
 
 from .base import BaseAdapter
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 class ThinkingConfig:
@@ -29,7 +33,7 @@ class ThinkingConfig:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for API request."""
-        result = {}
+        result: dict[str, Any] = {}
         if self.thinking_budget is not None:
             result["thinkingBudget"] = self.thinking_budget
         if self.include_thoughts is not None:
@@ -123,7 +127,7 @@ class GenerationConfig:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for API request."""
-        result = {}
+        result: dict[str, Any] = {}
         if self.temperature is not None:
             result["temperature"] = self.temperature
         if self.top_p is not None:
@@ -153,7 +157,9 @@ class GenerationConfig:
         if self.logprobs is not None:
             result["logprobs"] = self.logprobs
         if self.enable_enhanced_civic_answers is not None:
-            result["enableEnhancedCivicAnswers"] = self.enable_enhanced_civic_answers
+            result["enableEnhancedCivicAnswers"] = (
+                self.enable_enhanced_civic_answers
+            )
         if self.speech_config is not None:
             result["speechConfig"] = self.speech_config
         if self.thinking_config is not None:
@@ -183,7 +189,9 @@ class Adapter(BaseAdapter):
         """Initializes the Adapter."""
         self._auth_key = auth_key
         self._model = model
-        self._base_url = base_url or "https://generativelanguage.googleapis.com/v1beta"
+        self._base_url = (
+            base_url or "https://generativelanguage.googleapis.com/v1beta"
+        )
         self._headers = headers or {}
         self._generation_config = generation_config
         self._tools = tools
@@ -192,9 +200,31 @@ class Adapter(BaseAdapter):
         self._system_instruction = system_instruction
         self._cached_content = cached_content
 
+        # Debug logging
+        masked_key = (
+            f"{auth_key[:10]}...{auth_key[-4:]}"
+            if len(auth_key) > 14
+            else "EMPTY_OR_SHORT_KEY"
+        )
+        logger.info(f"Gemini adapter initialized with model: {model}")
+        logger.info(f"Gemini API key (masked): {masked_key}")
+        logger.info(f"Gemini base URL: {self._base_url}")
+
     @property
     def provider(self) -> str:
         """Returns the provider name."""
+        return "gemini"
+
+    def auth_key(self) -> str:
+        """
+        Return the authentication key for the adapter.
+        """
+        return self._auth_key
+
+    def format(self) -> str:
+        """
+        Return the format for the adapter.
+        """
         return "gemini"
 
     def headers(self) -> dict[str, str]:
@@ -209,12 +239,14 @@ class Adapter(BaseAdapter):
         """
         # Convert OpenAI-style 'messages' to Gemini's 'contents' format if necessary
         if "messages" in body and "contents" not in body:
-            body["contents"] = self._convert_messages_to_contents(body.pop("messages"))
+            messages = body.pop("messages")
+            if isinstance(messages, list):
+                body["contents"] = self._convert_messages_to_contents(messages)
 
         # Add all generation config parameters
         if self._generation_config:
             body["generationConfig"] = self._generation_config.to_dict()
-        
+
         # Add other Gemini-specific parameters
         if self._tools:
             body["tools"] = self._tools
@@ -227,11 +259,18 @@ class Adapter(BaseAdapter):
         if self._cached_content:
             body["cachedContent"] = self._cached_content
 
-    def url(self) -> str:
+    def url_infer(self) -> str:
         """Returns the full URL for the API request."""
-        return f"{self._base_url}/models/{self._model}:generateContent?key={self._auth_key}"
+        # For Gemini, the API key is passed as a query parameter
+        url = f"{self._base_url}/models/{self._model}:generateContent?key={self._auth_key}"
+        logger.info(
+            f"Gemini URL for inference: {url[: url.find('key=') + 4]}{self._auth_key[:10]}...{self._auth_key[-4:]}"
+        )
+        return url
 
-    def _convert_messages_to_contents(self, messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _convert_messages_to_contents(
+        self, messages: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """
         Convert a list of OpenAI-style messages to Gemini's 'contents' format.
         """
@@ -239,12 +278,12 @@ class Adapter(BaseAdapter):
         for message in messages:
             role = message.get("role")
             content = message.get("content")
-            
+
             # Map 'assistant' role to 'model' for Gemini
             if role == "assistant":
                 role = "model"
-            
+
             if role in ["user", "model"]:
                 contents.append({"role": role, "parts": [{"text": content}]})
-        
+
         return contents

@@ -18,7 +18,7 @@ def prepare_test_grok() -> tuple[GrokAdapter, dict[str, Any]]:
     return (grok_adapter, body)
 
 
-def handle_test_grok_response(response: dict[str, Any]) -> dict[str, str]:
+def handle_test_grok_response(response: dict[str, Any]) -> dict[str, Any]:
     """Handle the response from the Grok adapter test."""
     return {
         "success": True,

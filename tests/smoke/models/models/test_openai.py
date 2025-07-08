@@ -18,7 +18,7 @@ def prepare_test_openai() -> tuple[OpenAIAdapter, dict[str, Any]]:
     return (openai_adapter, body)
 
 
-def handle_test_openai_response(response: dict[str, Any]) -> dict[str, str]:
+def handle_test_openai_response(response: dict[str, Any]) -> dict[str, Any]:
     """Handle the response from the OpenAI adapter test."""
     return {
         "success": True,

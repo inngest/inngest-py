@@ -18,7 +18,7 @@ def prepare_test_deepseek() -> tuple[DeepSeekAdapter, dict[str, Any]]:
     return (deepseek_adapter, body)
 
 
-def handle_test_deepseek_response(response: dict[str, Any]) -> dict[str, str]:
+def handle_test_deepseek_response(response: dict[str, Any]) -> dict[str, Any]:
     """Handle the response from the DeepSeek adapter test."""
     return {
         "success": True,

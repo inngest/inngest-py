@@ -21,7 +21,7 @@ def prepare_test_anthropic() -> tuple[AnthropicAdapter, dict[str, Any]]:
     return (anthropic_adapter, body)
 
 
-def handle_test_anthropic_response(response: dict[str, Any]) -> dict[str, str]:
+def handle_test_anthropic_response(response: dict[str, Any]) -> dict[str, Any]:
     """Handle the response from the Anthropic adapter test."""
     return {
         "success": True,

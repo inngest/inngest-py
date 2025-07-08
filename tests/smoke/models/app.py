@@ -1,6 +1,9 @@
+from typing import Any
+
 import fastapi
 import inngest
 import inngest.fast_api
+from inngest.experimental.ai.base import BaseAdapter
 
 # Import all the individual model test helpers
 from models.test_anthropic import (
@@ -38,11 +41,12 @@ inngest_client = inngest.Inngest(app_id="smoke-test-model-adapters-app")
     trigger=inngest.TriggerEvent(event="test-all-adapters"),
     retries=0,
 )
-async def test_all_adapters(ctx: inngest.Context) -> dict[str, dict]:
+async def test_all_adapters(ctx: inngest.Context) -> dict[str, Any]:
     """
     Orchestrates all model adapter tests sequentially.
     """
-    results = {}
+    results: dict[str, Any] = {}
+    adapter: BaseAdapter
 
     # OpenAI
     try:
