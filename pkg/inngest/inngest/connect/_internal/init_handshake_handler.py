@@ -16,7 +16,6 @@ from .models import ConnectionState, _State
 
 class _InitHandshakeHandler(_BaseHandler):
     _closed_event: typing.Optional[asyncio.Event] = None
-    _drain_task: typing.Optional[asyncio.Task[None]] = None
     _send_data_task: typing.Optional[asyncio.Task[None]] = None
     _reconnect_task: typing.Optional[asyncio.Task[None]] = None
 
@@ -40,11 +39,6 @@ class _InitHandshakeHandler(_BaseHandler):
         if err is not None:
             return err
 
-        if self._drain_task is None:
-            self._drain_task = asyncio.create_task(
-                self._drain_watcher(self.closed_event)
-            )
-
         if self._reconnect_task is None:
             self._reconnect_task = asyncio.create_task(
                 self._reconnect_watcher(self.closed_event)
@@ -67,19 +61,9 @@ class _InitHandshakeHandler(_BaseHandler):
                 # Expected.
                 pass
 
-    async def _drain_watcher(self, closed_event: asyncio.Event) -> None:
-        while closed_event.is_set() is False:
-            await self._state.draining.wait_for(True, immediate=False)
-
-            # Reset the kind state so that we redo initialization.
-            self._kind_state = _KindState()
-
     async def _reconnect_watcher(self, closed_event: asyncio.Event) -> None:
         while closed_event.is_set() is False:
-            await self._state.conn_state.wait_for(
-                ConnectionState.RECONNECTING,
-                immediate=False,
-            )
+            await self._state.conn_init.wait_for(None, immediate=False)
 
             # Reset the kind state so that we redo initialization.
             self._kind_state = _KindState()

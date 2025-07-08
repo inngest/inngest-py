@@ -171,7 +171,6 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 ConnectionState.CONNECTING,
                 on_change=on_conn_state_change,
             ),
-            draining=_ValueWatcher(False),
             exclude_gateways=[],
             extend_lease_interval=_ValueWatcher(None),
             fatal_error=_ValueWatcher(None),
