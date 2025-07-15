@@ -4,44 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
-This project uses uv as the package manager. uv manages the workspace and all dependencies.
-
-To run a command in a specific package, `cd` into it first (e.g. `cd pkg/inngest && make utest`).
-
-**Setup:**
-
-```bash
-make install  # Install dependencies
-```
-
-**Code Quality:**
-
-```bash
-make format         # Auto-format
-make lint           # Lint all packages
-make type-check     # Type check all packages
-cd pkg/inngest && make lint  # Lint a specific package
-```
-
-**Testing:**
-
-```bash
-make itest  # Run integration tests
-make utest  # Run unit tests
-cd pkg/inngest && make itest  # Run integration tests for a specific package
-pytest tests/test_inngest/test_function/test_fast_api.py -v  # Run a specific test file
-```
+Refer to `CONTRIBUTING.md`.
 
 ## Architecture
 
-**Monorepo Structure:**
-
-- `examples/` - Framework integration examples
-- `pkg/` - Packages. Subdirectories are for each package
-  - `inngest/` - Core SDK (published to PyPI)
-  - `inngest_encryption/` - Encryption middleware (published to PyPI)
-  - `test_core/` - Test utilities (not published to PyPI)
-- `tests/` - Integration tests using case-based organization. Subdirectories are for each package
+Refer to `CONTRIBUTING.md`.
 
 ## Testing Patterns
 

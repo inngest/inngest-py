@@ -1,93 +1,65 @@
-## Setup
+## Development Commands
 
-```sh
-make install
+Common commands are saved in `Makefile`s:
+
+- The top-level `Makefile` is used for "whole monorepo" commands (e.g. linting the entire monorepo).
+- Each package has its own `Makefile` for package-specific commands. To run a command in a specific package, `cd` into it first (e.g. `cd pkg/inngest && make lint`).
+
+If running a custom command (i.e. not using `make`), use `uv`.
+
+**Setup:**
+
+```bash
+make install  # Install dependencies
 ```
 
-## Start example servers
+**Code Quality:**
 
-```sh
-# DigitalOcean
-(cd examples/digital_ocean && make dev)
-
-# Django
-(cd examples/django && make dev)
-
-# FastAPI
-(cd examples/fast_api && make dev)
-
-# Flask
-(cd examples/flask && make dev)
-
-# Tornado
-(cd examples/tornado && make dev)
-```
-
-## Test
-
-Run before committing:
-
-```sh
-make pre-commit
-```
-
-Run things individually:
-
-```sh
-make format-check
-make lint
-make type-check
-make utest
-
-# Changes code
+```bash
+# Auto-format all packages
 make format
 
-# Unit tests
+# Lint all packages
+make lint
+
+# Type check all packages
+make type-check
+
+# Lint a specific package
+cd pkg/inngest && make lint
+```
+
+**Testing:**
+
+```bash
+# Run integration tests for all packages
+make itest
+
+# Run unit tests for all packages
 make utest
 
-# Integration tests
-make itest
+# Run integration tests for a specific package
+cd pkg/inngest && make itest
+
+# Run a specific test
+uv run pytest tests/test_inngest/test_function/test_fast_api.py::TestFunctions::test_crazy_ids -v
 ```
 
-When running `make itest`, there are some optional env vars:
+## Architecture
 
-```sh
-# Disable (when you want to use an already-running Dev Server)
-DEV_SERVER_ENABLED=0
+**Monorepo Structure:**
 
-# Specify port (uses a random available port by default)
-DEV_SERVER_PORT=9000
+- `examples/` - Framework examples
+- `pkg/` - Packages. Subdirectories are for each package
+  - `inngest/` - Core SDK (published to PyPI)
+  - `inngest_encryption/` - Encryption middleware (published to PyPI)
+  - `test_core/` - Test utilities (not published to PyPI)
+- `tests/` - Integration tests using case-based organization. Subdirectories are for each package
 
-# Show Dev Server stdout and stderr
-DEV_SERVER_VERBOSE=1
-```
+**Testing:**
 
-# Publish
-
-Change the package version in the package's `pyproject.toml` (e.g. `pkg/inngest/pyproject.toml`).
-
-Set the `VERSION` env var and run the `release` make target for the package. For example, the following command releases version `1.2.3` of the `inngest` package:
-
-```sh
-(cd pkg/inngest && export VERSION=1.2.3 && make release)
-```
-
-This will start CI for the tag, including publishing to PyPI.
-
-# Architecture
-
-## Internal modules
-
-> ℹ️ Some modules have a `_lib` suffix. The only purpose of this suffix is to avoid collisions with common variable names.
-
-- `client_lib`: Inngest client, which users can use to send events.
-- `comm`: Framework agnostic communication layer between the Executor and functions.
-- `env`: Stuff related to the runtime environment.
-- `function`: Data structure for the user's functions.
-- `net`: General networking stuff. Should not have business logic.
-- `result`: Wrapper types for writing Rust-like errors-as-values code. Will probably expand its use.
-- `types`: Low-level primitives for type annotations. Should not have business logic.
-
-# Troubleshooting
-
-Kill orphaned Dev Servers using `kill -9 $(pgrep inngest-cli)`.
+- Strive to make tests as "real" as possible.
+  - In other words, it's usually better for tests to look like userland code.
+  - This often means testing via an Inngest functions.
+- Unit tests are usually discouraged but can be valuable.
+  - For example, testing myriad edge cases in a pure function.
