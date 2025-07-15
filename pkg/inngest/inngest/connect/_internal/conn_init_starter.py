@@ -12,7 +12,7 @@ from .base_handler import _BaseHandler
 from .errors import _NonRetryableError
 from .models import ConnectionState, _State
 
-_max_attempts = 1
+_max_attempts = 5
 _reconnect_interval = datetime.timedelta(seconds=5)
 
 
@@ -22,7 +22,6 @@ class _ConnInitHandler(_BaseHandler):
     """
 
     _closed_event: typing.Optional[asyncio.Event] = None
-    _drain_watcher_task: typing.Optional[asyncio.Task[None]] = None
     _initial_request_task: typing.Optional[asyncio.Task[None]] = None
     _reconnect_watcher_task: typing.Optional[asyncio.Task[None]] = None
 
@@ -61,11 +60,6 @@ class _ConnInitHandler(_BaseHandler):
                 self._send_start_request()
             )
 
-        if self._drain_watcher_task is None:
-            self._drain_watcher_task = asyncio.create_task(
-                self._drain_watcher(self._closed_event)
-            )
-
         if self._reconnect_watcher_task is None:
             self._reconnect_watcher_task = asyncio.create_task(
                 self._reconnect_watcher(self._closed_event)
@@ -76,21 +70,11 @@ class _ConnInitHandler(_BaseHandler):
     def close(self) -> None:
         self.closed_event.set()
 
-        if self._drain_watcher_task is not None:
-            self._drain_watcher_task.cancel()
-
         if self._reconnect_watcher_task is not None:
             self._reconnect_watcher_task.cancel()
 
     async def closed(self) -> None:
         await self.closed_event.wait()
-
-        if self._drain_watcher_task is not None:
-            try:
-                await self._drain_watcher_task
-            except asyncio.CancelledError:
-                # Expected.
-                pass
 
         if self._reconnect_watcher_task is not None:
             try:
@@ -205,11 +189,6 @@ class _ConnInitHandler(_BaseHandler):
                     "ConnectionStart request failed",
                     extra={"error": str(err)},
                 )
-
-    async def _drain_watcher(self, closed_event: asyncio.Event) -> None:
-        while closed_event.is_set() is False:
-            await self._state.draining.wait_for(True, immediate=False)
-            self._state.conn_init.value = None
 
     async def _reconnect_watcher(self, closed_event: asyncio.Event) -> None:
         while closed_event.is_set() is False:
