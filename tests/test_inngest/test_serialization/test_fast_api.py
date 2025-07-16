@@ -105,8 +105,7 @@ class TestFnOutput(_TestBase):
     async def test_invoke_without_type(self) -> None:
         """
         Invoke a function that returns a Pydantic object without specifying
-        the output type. This makes the step return a dict at runtime, even
-        though the static type is a Pydantic object.
+        the output type. This fails the run.
         """
 
         class _State(base.BaseState):
@@ -151,13 +150,16 @@ class TestFnOutput(_TestBase):
 
         await client.send(inngest.Event(name=event_name))
 
-        await test_core.helper.client.wait_for_run_status(
+        run = await test_core.helper.client.wait_for_run_status(
             await state.wait_for_run_id(),
-            test_core.helper.RunStatus.COMPLETED,
+            test_core.helper.RunStatus.FAILED,
         )
 
-        # Not actually a Pydantic object at runtime
-        assert isinstance(state.invoke_output[0], dict)  # type: ignore
+        assert run.output is not None
+        output = json.loads(run.output)
+        assert isinstance(output, dict)
+        assert output["message"] == "returned unserializable data"
+        assert output["name"] == "OutputUnserializableError"
 
     async def test_fn_output_without_serializer(self) -> None:
         """
@@ -334,9 +336,8 @@ class TestStepOutput(_TestBase):
 
     async def test_without_type(self) -> None:
         """
-        Return a Pydantic object without specifying the output type. This makes
-        the step return a dict at runtime, even though the static type is a
-        Pydantic object
+        Return a Pydantic object without specifying the output type. This fails
+        the run.
         """
 
         class _State(base.BaseState):
@@ -369,19 +370,23 @@ class TestStepOutput(_TestBase):
 
         await client.send(inngest.Event(name=event_name))
 
-        await test_core.helper.client.wait_for_run_status(
+        run = await test_core.helper.client.wait_for_run_status(
             await state.wait_for_run_id(),
-            test_core.helper.RunStatus.COMPLETED,
+            test_core.helper.RunStatus.FAILED,
         )
 
-        # Not actually a Pydantic object at runtime
-        assert isinstance(state.step_output, dict)
+        assert run.output is not None
+        output = json.loads(run.output)
+        assert isinstance(output, dict)
+        assert output["message"] == '"a" returned unserializable data'
+        assert output["name"] == "OutputUnserializableError"
 
 
 class TestStepSendEvent(_TestBase):
     async def test(self) -> None:
         """
-        Ensure a variety of return types work.
+        Ensure that step.send_event works. This is a regression test created
+        because of a deserialization bug
         """
 
         state = base.BaseState()

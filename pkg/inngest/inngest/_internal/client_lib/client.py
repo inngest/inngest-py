@@ -220,7 +220,7 @@ class Inngest:
             execution_lib.FunctionHandlerSync[typing.Any],
             None,
         ] = None,
-        output_type: object = object,
+        output_type: object = types.EmptySentinel,
         priority: typing.Optional[server_lib.Priority] = None,
         rate_limit: typing.Optional[server_lib.RateLimit] = None,
         retries: typing.Optional[int] = None,
