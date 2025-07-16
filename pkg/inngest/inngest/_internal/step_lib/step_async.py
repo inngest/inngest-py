@@ -157,7 +157,7 @@ class Step(base.StepBase):
             [typing_extensions.Unpack[types.TTuple]], typing.Awaitable[types.T]
         ],
         *handler_args: typing_extensions.Unpack[types.TTuple],
-        output_type: object = types.EmptySentinel,
+        output_type: object = object,
     ) -> types.T:
         """
         Run logic that should be retried on error and memoized after success.

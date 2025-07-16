@@ -116,7 +116,7 @@ class Function(typing.Generic[types.T]):
             execution_lib.FunctionHandlerAsync[types.T],
             execution_lib.FunctionHandlerSync[types.T],
         ],
-        output_type: object = types.EmptySentinel,
+        output_type: object = object,
         middleware: typing.Optional[
             list[middleware_lib.UninitializedMiddleware]
         ] = None,

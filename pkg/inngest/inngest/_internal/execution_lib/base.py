@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import typing
 
-from inngest._internal import types
-
 from .models import (
     CallResult,
     Context,
@@ -30,7 +28,7 @@ class BaseExecution(typing.Protocol):
         ctx: Context,
         handler: execution_lib.FunctionHandlerAsync[typing.Any],
         fn: function.Function[typing.Any],
-        output_type: object = types.EmptySentinel,
+        output_type: object = object,
     ) -> CallResult: ...
 
 
@@ -48,5 +46,5 @@ class BaseExecutionSync(typing.Protocol):
         ctx: ContextSync,
         handler: execution_lib.FunctionHandlerSync[typing.Any],
         fn: function.Function[typing.Any],
-        output_type: object = types.EmptySentinel,
+        output_type: object = object,
     ) -> CallResult: ...

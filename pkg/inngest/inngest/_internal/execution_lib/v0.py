@@ -115,7 +115,7 @@ class ExecutionV0(BaseExecution):
         ctx: Context,
         handler: FunctionHandlerAsync[types.T],
         fn: function.Function[types.T],
-        output_type: object = types.EmptySentinel,
+        output_type: object = object,
     ) -> CallResult:
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
@@ -259,7 +259,7 @@ class ExecutionV0Sync(BaseExecutionSync):
         ctx: ContextSync,
         handler: FunctionHandlerSync[types.T],
         fn: function.Function[types.T],
-        output_type: object = types.EmptySentinel,
+        output_type: object = object,
     ) -> CallResult:
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.

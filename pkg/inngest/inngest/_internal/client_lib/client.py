@@ -220,7 +220,7 @@ class Inngest:
             execution_lib.FunctionHandlerSync[typing.Any],
             None,
         ] = None,
-        output_type: object = types.EmptySentinel,
+        output_type: object = object,
         priority: typing.Optional[server_lib.Priority] = None,
         rate_limit: typing.Optional[server_lib.RateLimit] = None,
         retries: typing.Optional[int] = None,
@@ -606,6 +606,9 @@ class Inngest:
         """
 
         if self._serializer is None:
+            return obj
+
+        if typ is types.EmptySentinel:
             return obj
 
         return self._serializer.deserialize(obj, typ)
