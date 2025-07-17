@@ -147,7 +147,6 @@ class TestFnOutput(_TestBase):
                 "invoke",
                 function=fn_child,
             )
-            print(state.invoke_output)
             return state.invoke_output
 
         self._sync(
@@ -217,6 +216,7 @@ class TestStepOutput(_TestBase):
             step_object_output: _User | None = None
             step_none_output: _User | None = None
             step_list_output: list[_User] | None = None
+            step_primitive_output: int | None = None
 
         state = _State()
 
@@ -265,6 +265,14 @@ class TestStepOutput(_TestBase):
                 output_type=list[_User],
             )
 
+            def step_primitive() -> int:
+                return 1
+
+            state.step_primitive_output = ctx.step.run(
+                "primitive",
+                step_primitive,
+            )
+
         self._sync(lambda app: inngest.flask.serve(app, client, [fn]))
 
         await client.send(inngest.Event(name=event_name))
@@ -283,6 +291,7 @@ class TestStepOutput(_TestBase):
         assert len(state.step_list_output) == 1
         assert isinstance(state.step_list_output[0], _User)
         assert state.step_list_output[0].name == "Alice"
+        assert state.step_primitive_output == 1
 
     async def test_without_serializer(self) -> None:
         """
@@ -337,7 +346,7 @@ class TestStepOutput(_TestBase):
         """
 
         class _State(base.BaseState):
-            step_output: object = None
+            step_output: _User | None = None
 
         state = _State()
 
@@ -376,6 +385,51 @@ class TestStepOutput(_TestBase):
         assert isinstance(output, dict)
         assert output["message"] == '"a" returned unserializable data'
         assert output["name"] == "OutputUnserializableError"
+
+
+class TestStepSendEvent(_TestBase):
+    async def test(self) -> None:
+        """
+        Ensure that step.send_event works. This is a regression test created
+        because of a deserialization bug
+        """
+
+        state = base.BaseState()
+
+        client = inngest.Inngest(
+            app_id=test_core.random_suffix("app"),
+            is_production=False,
+            serializer=inngest.PydanticSerializer(),
+        )
+
+        event_name = test_core.random_suffix("event")
+
+        @client.create_function(
+            fn_id="fn",
+            retries=0,
+            trigger=inngest.TriggerEvent(event=event_name),
+        )
+        def fn(ctx: inngest.ContextSync) -> None:
+            state.run_id = ctx.run_id
+
+            ctx.step.send_event(
+                "send",
+                events=[
+                    inngest.Event(
+                        name=test_core.random_suffix("event-2"),
+                        data={"name": "Alice"},
+                    )
+                ],
+            )
+
+        self._sync(lambda app: inngest.flask.serve(app, client, [fn]))
+
+        await client.send(inngest.Event(name=event_name))
+
+        await test_core.helper.client.wait_for_run_status(
+            await state.wait_for_run_id(),
+            test_core.helper.RunStatus.COMPLETED,
+        )
 
 
 class TestOnFailure(_TestBase):

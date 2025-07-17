@@ -608,6 +608,9 @@ class Inngest:
         if self._serializer is None:
             return obj
 
+        if typ is types.EmptySentinel:
+            return obj
+
         return self._serializer.deserialize(obj, typ)
 
 
