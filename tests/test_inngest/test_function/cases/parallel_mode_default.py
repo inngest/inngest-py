@@ -132,6 +132,13 @@ def create(
     else:
         fn = [fn_async, fn_child_async]
 
+    # Skip these frameworks because their tests don't run in multi-threaded mode
+    if framework in [
+        server_lib.Framework.DIGITAL_OCEAN,
+        server_lib.Framework.DJANGO,
+    ]:
+        fn = []
+
     return base.Case(
         fn=fn,
         run_test=run_test,
