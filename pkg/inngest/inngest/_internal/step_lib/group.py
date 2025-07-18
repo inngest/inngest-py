@@ -1,7 +1,7 @@
 import contextvars
 import typing
 
-from inngest._internal import types
+from inngest._internal import server_lib, types
 
 from .base import ResponseInterrupt, SkipInterrupt, StepResponse
 
@@ -13,6 +13,7 @@ class Group:
     async def parallel(
         self,
         callables: tuple[typing.Callable[[], typing.Awaitable[types.T]], ...],
+        parallel_mode: server_lib.ParallelMode = server_lib.ParallelMode.WAIT,
     ) -> tuple[types.T, ...]:
         """
         Run multiple steps in parallel.
@@ -20,6 +21,7 @@ class Group:
         Args:
         ----
             callables: An arbitrary number of step callbacks to run. These are callables that contain the step (e.g. `lambda: step.run("my_step", my_step_fn)`.
+            parallel_mode: Execution mode. Defaults to `ParallelMode.WAIT`
         """
 
         token = in_parallel.set(True)
@@ -39,6 +41,8 @@ class Group:
                     pass
 
             if len(responses) > 0:
+                for r in responses:
+                    r.step.set_parallel_mode(parallel_mode)
                 raise ResponseInterrupt(responses)
 
             return outputs
@@ -51,6 +55,7 @@ class GroupSync:
     def parallel(
         self,
         callables: tuple[typing.Callable[[], types.T], ...],
+        parallel_mode: server_lib.ParallelMode = server_lib.ParallelMode.WAIT,
     ) -> tuple[types.T, ...]:
         """
         Run multiple steps in parallel in a synchronous context (e.g. not asyncio).
@@ -58,6 +63,7 @@ class GroupSync:
         Args:
         ----
             callables: An arbitrary number of step callbacks to run. These are callables that contain the step (e.g. `lambda: step.run("my_step", my_step_fn)`.
+            parallel_mode: Execution mode. Defaults to `ParallelMode.WAIT`
         """
 
         # Tell steps that they're running in parallel.
@@ -78,6 +84,8 @@ class GroupSync:
                     pass
 
             if len(responses) > 0:
+                for r in responses:
+                    r.step.set_parallel_mode(parallel_mode)
                 raise ResponseInterrupt(responses)
 
             return outputs

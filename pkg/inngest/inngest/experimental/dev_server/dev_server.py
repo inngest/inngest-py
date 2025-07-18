@@ -54,6 +54,23 @@ class _Server:
 
         print("Dev Server: starting")
 
+        # Print inngest-cli version
+        try:
+            result = subprocess.run(
+                ["npx", "--yes", "inngest-cli@latest", "version"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if result.returncode == 0:
+                print(f"inngest-cli version: {result.stdout.strip()}")
+            else:
+                print(
+                    f"Failed to get inngest-cli version: {result.stderr.strip()}"
+                )
+        except Exception as e:
+            print(f"Error getting inngest-cli version: {e}")
+
         if self._runner.is_running():
             raise Exception("Dev Server is already running")
 
