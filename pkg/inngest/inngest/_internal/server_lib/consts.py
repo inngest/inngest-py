@@ -79,6 +79,10 @@ class Opcode(enum.Enum):
     WAIT_FOR_EVENT = "WaitForEvent"
 
 
+class OptKey(enum.Enum):
+    PARALLEL_MODE = "parallelMode"
+
+
 class QueryParamKey(enum.Enum):
     FUNCTION_ID = "fnId"
     PROBE = "probe"
@@ -104,3 +108,23 @@ class SyncKind(enum.Enum):
 UNSPECIFIED_STEP_ID: typing.Final = "step"
 
 ROOT_STEP_ID: typing.Final = "step"
+
+
+class ParallelMode(enum.Enum):
+    """
+    Parallel step execution mode
+    """
+
+    # Race parallel groups by scheduling a "discovery request" immediately after
+    # each parallel step ends. This allows "sequential steps" (i.e. more than 1
+    # step) in parallel groups to run independently. However, it can
+    # significantly increase the number of requests sent to your SDK. Only use
+    # this if you have more than 1 step in a parallel group and you want it to
+    # run independently of the other parallel groups
+    RACE = "race"
+
+    # Wait for all parallel steps to end before scheduling a "discovery
+    # request". This can significantly reduce the number of requests sent to
+    # your SDK. However, it doesn't allow "sequential steps" (i.e. more than 1
+    # step) in parallel groups to run independently
+    WAIT = "wait"
