@@ -61,22 +61,33 @@ class _HeartbeatHandler(_BaseHandler):
         await self._state.ws.wait_for_not_none()
 
         while self.closed_event.is_set() is False:
-            # Only send heartbeats when the connection is active.
-            if self._state.conn_state.value != ConnectionState.ACTIVE:
-                await self._state.conn_state.wait_for(ConnectionState.ACTIVE)
+            # Use try/except to ensure that we don't stop sending heartbeats if
+            # one errors
+            try:
+                # Only send heartbeats when the connection is active.
+                if self._state.conn_state.value != ConnectionState.ACTIVE:
+                    await self._state.conn_state.wait_for(
+                        ConnectionState.ACTIVE
+                    )
 
-            # IMPORTANT: We need to get the WS conn each loop iteration because
-            # it may have changed (e.g. due to a reconnect)
-            ws = await self._state.ws.wait_for_not_none()
+                # IMPORTANT: We need to get the WS conn each loop iteration because
+                # it may have changed (e.g. due to a reconnect)
+                ws = await self._state.ws.wait_for_not_none()
 
-            self._logger.debug("Sending heartbeat")
-            await ws.send(
-                connect_pb2.ConnectMessage(
-                    kind=connect_pb2.GatewayMessageType.WORKER_HEARTBEAT,
-                ).SerializeToString()
-            )
+                self._logger.debug("Sending heartbeat")
+                await ws.send(
+                    connect_pb2.ConnectMessage(
+                        kind=connect_pb2.GatewayMessageType.WORKER_HEARTBEAT,
+                    ).SerializeToString()
+                )
 
-            await asyncio.sleep(_heartbeat_interval_sec)
+                await asyncio.sleep(_heartbeat_interval_sec)
+            except Exception as e:
+                self._logger.error(
+                    "Error sending heartbeat", extra={"error": str(e)}
+                )
+            finally:
+                await asyncio.sleep(_heartbeat_interval_sec)
 
     def handle_msg(
         self,
