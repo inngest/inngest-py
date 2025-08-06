@@ -4,7 +4,8 @@ import unittest.mock
 import test_core
 
 from .heartbeat_handler import _HeartbeatHandler
-from .models import ConnectionState, _State, _ValueWatcher
+from .models import ConnectionState, _State
+from .value_watcher import _ValueWatcher
 
 
 class TestHeartbeatHandle(unittest.IsolatedAsyncioTestCase):
