@@ -80,8 +80,6 @@ class _HeartbeatHandler(_BaseHandler):
                         kind=connect_pb2.GatewayMessageType.WORKER_HEARTBEAT,
                     ).SerializeToString()
                 )
-
-                await asyncio.sleep(_heartbeat_interval_sec)
             except Exception as e:
                 self._logger.error(
                     "Error sending heartbeat", extra={"error": str(e)}
