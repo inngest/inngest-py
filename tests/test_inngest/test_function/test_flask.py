@@ -1,3 +1,4 @@
+import threading
 import typing
 import unittest
 
@@ -7,7 +8,7 @@ import inngest
 import inngest.flask
 from inngest._internal import server_lib
 from inngest.experimental import dev_server
-from test_core import base, http_proxy
+from test_core import base, net
 
 from . import cases
 
@@ -34,7 +35,7 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
     app: flask.testing.FlaskClient
     client: inngest.Inngest
     dev_server_port: int
-    proxy: http_proxy.Proxy
+    server_thread: threading.Thread
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -47,31 +48,21 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
             cls.client,
             _fns,
         )
-        cls.app = app.test_client()
-        cls.proxy = http_proxy.Proxy(cls.on_proxy_request).start()
-        base.register(cls.proxy.port)
+
+        port = net.get_available_port()
+
+        def run_server() -> None:
+            app.run(threaded=True, port=port)
+
+        cls.server_thread = threading.Thread(target=run_server)
+        cls.server_thread.daemon = True
+        cls.server_thread.start()
+        base.register(port)
 
     @classmethod
     def tearDownClass(cls) -> None:
         super().tearDownClass()
-        cls.proxy.stop()
-
-    @classmethod
-    def on_proxy_request(
-        cls,
-        *,
-        body: typing.Optional[bytes],
-        headers: dict[str, list[str]],
-        method: str,
-        path: str,
-    ) -> http_proxy.Response:
-        return http_proxy.on_proxy_flask_request(
-            cls.app,
-            body=body,
-            headers=headers,
-            method=method,
-            path=path,
-        )
+        cls.server_thread.join(timeout=1)
 
 
 for case in _cases:

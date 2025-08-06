@@ -219,6 +219,15 @@ class StepInfo(types.BaseModel):
     op: server_lib.Opcode
     opts: typing.Optional[dict[str, object]] = None
 
+    def set_parallel_mode(self, parallel_mode: server_lib.ParallelMode) -> None:
+        if parallel_mode != server_lib.ParallelMode.RACE:
+            # Nothing to do because race mode is opt-in
+            return
+
+        if self.opts is None:
+            self.opts = {}
+        self.opts[server_lib.OptKey.PARALLEL_MODE.value] = parallel_mode.value
+
 
 class StepResponse(types.BaseModel):
     output: object = None
