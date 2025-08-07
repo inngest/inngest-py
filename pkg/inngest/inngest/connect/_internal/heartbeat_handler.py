@@ -81,11 +81,13 @@ class _HeartbeatHandler(_BaseHandler):
                     ).SerializeToString()
                 )
             except Exception as e:
+                # Don't raise the error because we want to continue heartbeating
                 self._logger.error(
                     "Error sending heartbeat", extra={"error": str(e)}
                 )
-            finally:
-                await asyncio.sleep(_heartbeat_interval_sec)
+            await asyncio.sleep(_heartbeat_interval_sec)
+
+        self._logger.debug("Heartbeater task stopped")
 
     def handle_msg(
         self,
