@@ -564,7 +564,7 @@ wheels = [
 
 [[package]]
 name = "inngest"
-version = "0.5.5rc0"
+version = "0.5.5"
 source = { editable = "pkg/inngest" }
 dependencies = [
     { name = "httpx" },
