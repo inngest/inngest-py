@@ -25,6 +25,7 @@ def test_serialization() -> None:
             max_size=10,
             timeout=datetime.timedelta(seconds=60),
             key="foo",
+            if_exp="bar",
         ),
         cancel=[
             Cancel(
@@ -89,6 +90,7 @@ def test_serialization() -> None:
             "maxSize": 10,
             "timeout": "1m",
             "key": "foo",
+            "if": "bar",
         },
         "cancel": [
             {
