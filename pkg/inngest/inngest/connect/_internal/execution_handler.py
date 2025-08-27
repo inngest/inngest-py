@@ -253,12 +253,9 @@ class _ExecutionHandler(_BaseHandler):
                 "Unable to extend lease",
                 extra={"request_id": req_data.request_id},
             )
-            pending_req = self._pending_requests.get(req_data.request_id, None)
-            if pending_req is not None:
-                _, task = pending_req
-                # Cancelling the task will also trigger the done callback to remove it from
-                # the pending requests.
-                task.cancel()
+            # Cancelling the task will trigger the done callback to remove it from
+            # the pending requests.
+            pending_req[1].cancel()
 
     def _handle_worker_reply_ack(
         self,

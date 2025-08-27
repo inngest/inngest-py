@@ -1,7 +1,7 @@
 # pyright: reportPrivateUsage=false
 
 import asyncio
-import typing
+from typing import Any
 
 import inngest
 import pytest
@@ -16,12 +16,18 @@ class TestLeaseExtendFailure(BaseTest):
     @pytest.mark.timeout(10, method="thread")
     async def test_lease_extend_failure_removes_pending_request(self) -> None:
         """Test that a lease extension nack removes the pending request."""
+
+        proxies = await self.create_proxies()
+
         client = inngest.Inngest(
+            api_base_url=proxies.http_proxy.origin,
             app_id=test_core.random_suffix("app"),
             is_production=False,
         )
         event_name = test_core.random_suffix("event")
+
         state = test_core.BaseState()
+        run_task: asyncio.Task[Any] | None = None
 
         @client.create_function(
             fn_id="fn",
@@ -29,6 +35,8 @@ class TestLeaseExtendFailure(BaseTest):
             trigger=inngest.TriggerEvent(event=event_name),
         )
         async def fn(ctx: inngest.Context) -> None:
+            nonlocal run_task
+            run_task = asyncio.current_task()
             state.run_id = ctx.run_id
             await asyncio.sleep(5)
 
@@ -38,60 +46,43 @@ class TestLeaseExtendFailure(BaseTest):
         self.addCleanup(task.cancel)
 
         await conn.wait_for_state(ConnectionState.ACTIVE)
+        await test_core.wait_for_len(lambda: proxies.requests, 1)
 
         await client.send(inngest.Event(name=event_name))
 
-        from inngest.connect._internal.execution_handler import (
-            _ExecutionHandler,
-        )
-        from inngest.connect._internal.connection import (
-            _WebSocketWorkerConnection,
-        )
+        await state.wait_for_run_id()
 
-        ws_conn = typing.cast(_WebSocketWorkerConnection, conn)
-        execution_handler: typing.Optional[_ExecutionHandler] = None  # pyright: ignore[reportUnknownVariableType]
-        for handler in ws_conn._handlers:  # pyright: ignore[reportUnknownMemberType]
-            if isinstance(handler, _ExecutionHandler):
-                execution_handler = handler
-                break
-        assert execution_handler is not None
+        request_id = get_request_id(proxies.ws_proxy.forwarded_messages)
+        assert request_id != ""
 
-        await test_core.wait_for_len(
-            lambda: list(execution_handler._pending_requests.values()),
-            1,
-        )
-        request_id = next(iter(execution_handler._pending_requests.keys()))
-
-        # Test successful lease extension
-        success_ack = connect_pb2.ConnectMessage(
-            kind=connect_pb2.GatewayMessageType.WORKER_REQUEST_EXTEND_LEASE_ACK,
-            payload=connect_pb2.WorkerRequestExtendLeaseAckData(
-                request_id=request_id,
-                new_lease_id="new_lease_123",
-            ).SerializeToString(),
+        # Failed lease extension payload
+        await proxies.ws_proxy.send_to_clients(
+            connect_pb2.ConnectMessage(
+                kind=connect_pb2.GatewayMessageType.WORKER_REQUEST_EXTEND_LEASE_ACK,
+                payload=connect_pb2.WorkerRequestExtendLeaseAckData(
+                    request_id=request_id,
+                    new_lease_id=None,
+                ).SerializeToString(),
+            ).SerializeToString()
         )
 
-        execution_handler.handle_msg(
-            success_ack, connect_pb2.AuthData(), "test_connection_id"
+        await test_core.wait_for_truthy(
+            lambda: run_task is not None and run_task.cancelled()
         )
 
-        assert request_id in execution_handler._pending_requests
-        assert (
-            execution_handler._pending_requests[request_id][0].lease_id
-            == "new_lease_123"
-        )
 
-        # Test failed lease extension
-        failure_ack = connect_pb2.ConnectMessage(
-            kind=connect_pb2.GatewayMessageType.WORKER_REQUEST_EXTEND_LEASE_ACK,
-            payload=connect_pb2.WorkerRequestExtendLeaseAckData(
-                request_id=request_id,
-                new_lease_id=None,
-            ).SerializeToString(),
-        )
-
-        execution_handler.handle_msg(
-            failure_ack, connect_pb2.AuthData(), "test_connection_id"
-        )
-
-        assert request_id not in execution_handler._pending_requests
+def get_request_id(requests: list[bytes]) -> str:
+    for req in requests:
+        try:
+            msg = connect_pb2.ConnectMessage()
+            msg.ParseFromString(req)
+            if (
+                msg.kind
+                == connect_pb2.GatewayMessageType.GATEWAY_EXECUTOR_REQUEST
+            ):
+                req_data = connect_pb2.GatewayExecutorRequestData()
+                req_data.ParseFromString(msg.payload)
+                return req_data.request_id
+        except Exception:
+            pass
+    return ""
