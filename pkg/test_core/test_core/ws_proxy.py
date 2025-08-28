@@ -21,6 +21,7 @@ class WebSocketProxy:
         self._server_uri = server_uri
         self._server: typing.Optional[websockets.Server] = None
         self._tasks = set[asyncio.Task[None]]()
+        self.forwarded_messages: list[bytes] = []
 
     @property
     def url(self) -> str:
@@ -96,6 +97,9 @@ class WebSocketProxy:
     ) -> None:
         async for message in source:
             try:
+                bmsg = message.encode() if isinstance(message, str) else message
+                self.forwarded_messages.append(bmsg)
+
                 await destination.send(message)
             except Exception as e:
                 print("error sending message", e)

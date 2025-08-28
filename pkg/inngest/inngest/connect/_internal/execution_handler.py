@@ -241,9 +241,21 @@ class _ExecutionHandler(_BaseHandler):
             )
             return
 
-        # Each lease extension ack includes a new lease ID. If we don't use the
-        # new lease ID the next time we extend, we'll have a bad time.
-        pending_req[0].lease_id = req_data.new_lease_id
+        if req_data.new_lease_id:
+            # Each lease extension ack includes a new lease ID. If we don't use the
+            # new lease ID the next time we extend, we'll have a bad time.
+            pending_req[0].lease_id = req_data.new_lease_id
+        else:
+            # A null new_lease_id indicates that the lease extension failed. This can happen
+            # if the lease was expired, deleted, or taken over by another worker, so we should
+            # stop trying to extend it.
+            self._logger.debug(
+                "Unable to extend lease",
+                extra={"request_id": req_data.request_id},
+            )
+            # Cancelling the task will trigger the done callback to remove it from
+            # the pending requests.
+            pending_req[1].cancel()
 
     def _handle_worker_reply_ack(
         self,
