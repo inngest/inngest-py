@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import signal
 import socket
+import threading
 import typing
 
 import httpx
@@ -95,17 +96,26 @@ class _WebSocketWorkerConnection(WorkerConnection):
         # Used to ensure that no messages are being handled when we fully close.
         self._handling_message_count = _ValueWatcher(0)
 
-        if shutdown_signals is None:
-            shutdown_signals = _default_shutdown_signals
-        for sig in shutdown_signals:
-            signal.signal(sig, lambda _, __: self._close())
-
         if len(apps) == 0:
             raise Exception("no apps provided")
         default_client = apps[0][0]
         self._logger = default_client.logger
         self._api_origin = default_client.api_origin
         self._signing_key = None
+
+        if shutdown_signals is None:
+            shutdown_signals = _default_shutdown_signals
+
+        # Only set up signal handlers if we're in the main thread. Otherwise,
+        # we'll get a "signal only works in main thread" error when outside the
+        # main thread
+        if threading.current_thread() is threading.main_thread():
+            for sig in shutdown_signals:
+                signal.signal(sig, lambda _, __: self._close())
+        else:
+            self._logger.debug(
+                "Skipping signal handlers because this isn't the main thread"
+            )
 
         self._fallback_signing_key = None
         if default_client._mode == server_lib.ServerKind.CLOUD:
