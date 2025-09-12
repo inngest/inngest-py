@@ -5,7 +5,7 @@ import urllib.parse
 
 import httpx
 
-from inngest._internal import net, types
+from inngest._internal import net, server_lib, types
 
 from . import connect_pb2
 from .base_handler import _BaseHandler
@@ -33,7 +33,9 @@ class _ConnInitHandler(_BaseHandler):
 
     def __init__(
         self,
+        *,
         api_origin: str,
+        env: typing.Optional[str],
         http_client: net.ThreadAwareAsyncHTTPClient,
         http_client_sync: httpx.Client,
         logger: types.Logger,
@@ -43,6 +45,7 @@ class _ConnInitHandler(_BaseHandler):
         state: _State,
     ):
         self._api_origin = api_origin
+        self._env = env
         self._http_client = http_client
         self._http_client_sync = http_client_sync
         self._logger = logger
@@ -124,6 +127,12 @@ class _ConnInitHandler(_BaseHandler):
                         extra={"url": url},
                     )
 
+                headers = {
+                    "content-type": "application/protobuf",
+                }
+                if self._env:
+                    headers[server_lib.HeaderKey.ENV.value] = self._env
+
                 try:
                     res = await net.fetch_with_auth_fallback(
                         self._http_client,
@@ -133,9 +142,7 @@ class _ConnInitHandler(_BaseHandler):
                             extensions={
                                 "timeout": httpx.Timeout(5).as_dict(),
                             },
-                            headers={
-                                "content-type": "application/protobuf",
-                            },
+                            headers=headers,
                             method="POST",
                             url=url,
                         ),
