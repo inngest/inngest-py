@@ -6,6 +6,7 @@ from inngest._internal import errors, step_lib
 
 
 # Q - Should this be step_publish or realtime publish or otherwise to compare to publish within a step?
+# TODO - Support streams
 async def publish(
     step: step_lib.Step,
     channel: str,
