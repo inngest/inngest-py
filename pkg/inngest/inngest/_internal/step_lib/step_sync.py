@@ -29,12 +29,14 @@ class StepSync(base.StepBase):
         middleware: middleware_lib.MiddlewareManager,
         step_id_counter: base.StepIDCounter,
         target_hashed_id: typing.Optional[str],
+        run_id: str,
     ) -> None:
         super().__init__(
             client,
             middleware,
             step_id_counter,
             target_hashed_id,
+            run_id,
         )
 
         self.ai = AI(self)
