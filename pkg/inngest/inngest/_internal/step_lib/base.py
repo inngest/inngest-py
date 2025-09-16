@@ -87,11 +87,13 @@ class StepBase:
         middleware: middleware_lib.MiddlewareManager,
         step_id_counter: StepIDCounter,
         target_hashed_id: typing.Optional[str],
+        run_id: str,
     ) -> None:
         self._client = client
         self._middleware = middleware
         self._step_id_counter = step_id_counter
         self._target_hashed_id = target_hashed_id
+        self._run_id = run_id
 
     def _handle_skip(
         self,
