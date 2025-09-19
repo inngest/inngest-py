@@ -23,7 +23,6 @@ class ApiClient:
         self._env = env
 
     # TODO - Move build request as a method here
-    # TODO - Move refactor post to just take a pathname and body, not a full url
     async def post(
         self, url: str, body: object
     ) -> types.MaybeError[httpx.Response]:
