@@ -1,4 +1,5 @@
 from .base import BaseExecution, BaseExecutionSync
+from .experimental import ExperimentalContext
 from .models import (
     CallResult,
     Context,
@@ -25,4 +26,5 @@ __all__ = [
     "UserError",
     "is_function_handler_async",
     "is_function_handler_sync",
+    "ExperimentalContext",
 ]

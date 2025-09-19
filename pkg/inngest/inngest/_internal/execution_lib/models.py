@@ -7,6 +7,8 @@ import typing
 
 from inngest._internal import errors, server_lib, step_lib, types
 
+from .experimental import ExperimentalContext
+
 
 @dataclasses.dataclass
 class CallResult:
@@ -66,6 +68,7 @@ class Context:
     logger: types.Logger
     run_id: str
     step: step_lib.Step
+    experimental: ExperimentalContext
 
 
 @dataclasses.dataclass
@@ -77,6 +80,7 @@ class ContextSync:
     logger: types.Logger
     run_id: str
     step: step_lib.StepSync
+    experimental: ExperimentalContext
 
 
 FunctionHandlerAsync: typing.TypeAlias = typing.Callable[

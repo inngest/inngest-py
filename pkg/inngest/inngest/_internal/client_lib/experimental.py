@@ -1,7 +1,6 @@
-# from inngest.experimental.realtime.subscription_tokens import (
-#     get_subscription_token,
-# )
-from inngest.experimental.realtime import publish
+from inngest.experimental.realtime.subscription_tokens import (
+    get_subscription_token,
+)
 
 from .api import ApiClient
 
@@ -12,8 +11,10 @@ class Experimental:
     def __init__(self, api_client: ApiClient):
         self._api_client = api_client
 
-    async def publish(self, channel: str, topic: str, data: dict) -> None:
-        await publish(self._api_client, channel, topic, data)
-
-    # def get_subscription_token(self, channel: str, topics: list[str]):
-    #     return get_subscription_token(self._client, channel, topics)
+    async def get_subscription_token(self, channel: str, topics: list[str]):
+        """
+        Create a subscription token for a given channel and topics.
+        The token can be used by a client to subscribe to realtime events,
+        including front-end applications using the @inngest/realtime npm package.
+        """
+        return await get_subscription_token(self._api_client, channel, topics)
