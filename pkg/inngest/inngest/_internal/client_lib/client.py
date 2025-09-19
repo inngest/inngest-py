@@ -26,6 +26,8 @@ from inngest._internal import (
 )
 
 from . import models
+from .api import ApiClient
+from .experimental import Experimental
 from .utils import get_api_origin, get_event_api_origin
 
 if typing.TYPE_CHECKING:
@@ -150,6 +152,17 @@ class Inngest:
         self._http_client = net.ThreadAwareAsyncHTTPClient().initialize()
         self._http_client_sync = httpx.Client()
         self._serializer = serializer
+        self._api_client = ApiClient(
+            self._http_client,
+            self._http_client_sync,
+            self._signing_key,
+            self._signing_key_fallback,
+            self._env,
+            self._api_origin,
+        )
+        self.experimental = Experimental(
+            self._api_client,
+        )
 
     def _build_send_request(
         self,
