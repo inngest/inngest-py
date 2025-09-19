@@ -13,7 +13,7 @@ class Experimental:
         self._api_client = api_client
 
     async def publish(self, channel: str, topic: str, data: dict) -> None:
-        return await publish(self._api_client, channel, topic, data)
+        await publish(self._api_client, channel, topic, data)
 
     # def get_subscription_token(self, channel: str, topics: list[str]):
     #     return get_subscription_token(self._client, channel, topics)
