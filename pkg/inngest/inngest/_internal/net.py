@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import hashlib
 import hmac
 import http
@@ -19,6 +20,124 @@ from inngest._internal import (
     transforms,
     types,
 )
+
+
+class HTTPClient:
+    """
+    HTTP client that:
+    - Is thread-safe
+    - Works in both async and sync contexts
+    - Handles auth
+    - Handles branch environments
+    """
+
+    def __init__(
+        self,
+        *,
+        http_client: ThreadAwareAsyncHTTPClient,
+        http_client_sync: httpx.Client,
+        env: typing.Optional[str],
+        request_timeout: int | datetime.timedelta | None = None,
+        signing_key: typing.Optional[str],
+        signing_key_fallback: typing.Optional[str],
+    ):
+        self._http_client = http_client
+        self._http_client_sync = http_client_sync
+
+        # This is probably leaking an implementation detail, and maybe we should
+        # eventually remove it. In the meantime, it simplifies initial
+        # HTTPClient implementation
+        self.build_httpx_request = http_client_sync.build_request
+
+        self._env = env
+        self._signing_key = signing_key
+        self._signing_key_fallback = signing_key_fallback
+
+        if isinstance(request_timeout, int):
+            self._default_timeout = request_timeout / 1000  # convert ms to s
+        elif isinstance(request_timeout, datetime.timedelta):
+            self._default_timeout = request_timeout.total_seconds()
+        else:
+            self._default_timeout = 30.0
+
+    async def get(
+        self,
+        url: str,
+        *,
+        headers: dict[str, str] | None = None,
+    ) -> types.MaybeError[httpx.Response]:
+        """
+        Perform an asynchronous HTTP GET request. Handles authn
+        """
+
+        req = self.build_httpx_request(
+            "GET",
+            url,
+            headers={
+                # Default headers
+                **create_headers(
+                    env=self._env,
+                    framework=None,
+                    server_kind=None,
+                ),
+                # Additional headers or overrides
+                **(headers or {}),
+            },
+        )
+
+        res = await fetch_with_auth_fallback(
+            self._http_client,
+            self._http_client_sync,
+            req,
+            signing_key=self._signing_key,
+            signing_key_fallback=self._signing_key_fallback,
+        )
+        if isinstance(res, Exception):
+            return res
+
+        if res.status_code >= 400:
+            return Exception(f"HTTP error: {res.status_code} {res.text}")
+
+        return res
+
+    def get_sync(
+        self,
+        url: str,
+        *,
+        headers: dict[str, str] | None = None,
+    ) -> types.MaybeError[httpx.Response]:
+        """
+        Perform a synchronous HTTP GET request. Handles authn
+        """
+
+        req = self.build_httpx_request(
+            "GET",
+            url,
+            headers={
+                # Default headers
+                **create_headers(
+                    env=self._env,
+                    framework=None,
+                    server_kind=None,
+                ),
+                # Additional headers or overrides
+                **(headers or {}),
+            },
+        )
+
+        res = fetch_with_auth_fallback_sync(
+            self._http_client_sync,
+            req,
+            signing_key=self._signing_key,
+            signing_key_fallback=self._signing_key_fallback,
+        )
+        if isinstance(res, Exception):
+            return res
+
+        if res.status_code >= 400:
+            return Exception(f"HTTP error: {res.status_code} {res.text}")
+
+        return res
 
 
 class ThreadAwareAsyncHTTPClient(httpx.AsyncClient):
