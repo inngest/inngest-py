@@ -2,12 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import enum
-import json
 import time
 import typing
 
 import inngest
-import pydantic
 from inngest._internal import types
 from inngest.experimental import dev_server
 
