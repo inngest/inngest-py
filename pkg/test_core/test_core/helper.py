@@ -2,12 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import enum
-import json
 import time
 import typing
 
 import inngest
-import pydantic
 from inngest._internal import types
 from inngest.experimental import dev_server
 
@@ -158,14 +156,13 @@ class _Client:
         timeout: int = 20,
     ) -> _Run:
         query = """
-        query GetRun($run_id: ID!) {
-            functionRun(query: { functionRunId: $run_id }) {
-                event {
-                    raw
-                }
-                id
+        query GetRun($run_id: String!) {
+            run(runID: $run_id) {
                 output
                 status
+            }
+            runTrigger(runID: $run_id) {
+                payloads
             }
         }
         """
@@ -175,14 +172,26 @@ class _Client:
         while True:
             res = await self._gql.query(gql.Query(query, {"run_id": run_id}))
             if isinstance(res, gql.Response):
-                run = res.data.get("functionRun")
+                run = res.data.get("run")
                 if not isinstance(run, dict):
                     raise Exception("unexpected response")
                 actual_status = run["status"]
 
+                run_trigger = res.data.get("runTrigger")
+                if not isinstance(run_trigger, dict):
+                    raise Exception("unexpected response")
+                payloads = run_trigger.get("payloads")
+                if not isinstance(payloads, list):
+                    raise Exception("unexpected response")
+                event = inngest.Event.model_validate_json(payloads[0])
+
                 if actual_status == expected_status.value:
-                    run["event"] = json.loads(run["event"]["raw"])
-                    return _Run.model_validate(run)
+                    return _Run(
+                        event=event,
+                        id=run_id,
+                        output=run["output"],
+                        status=RunStatus(actual_status),
+                    )
 
                 if any(actual_status == s.value for s in ended_statuses):
                     # Fail early if the run ended with a different status
@@ -204,13 +213,6 @@ class _Run(types.BaseModel):
     id: str
     output: typing.Optional[str]
     status: RunStatus
-
-    @pydantic.field_validator("status", mode="before")
-    @classmethod
-    def convert_status(cls, value: str) -> RunStatus:
-        if isinstance(value, str):
-            return RunStatus(value)
-        raise ValueError("invalid status")
 
 
 client = _Client()
