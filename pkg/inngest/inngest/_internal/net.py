@@ -22,12 +22,12 @@ from inngest._internal import (
 )
 
 
-class HTTPClient:
+class AuthenticatedHTTPClient:
     """
     HTTP client that:
     - Is thread-safe
     - Works in both async and sync contexts
-    - Handles auth
+    - Handles auth (opt in)
     - Handles branch environments
     """
 
@@ -64,10 +64,17 @@ class HTTPClient:
         self,
         url: str,
         *,
+        auth: bool = False,
         headers: dict[str, str] | None = None,
     ) -> types.MaybeError[httpx.Response]:
         """
-        Perform an asynchronous HTTP GET request. Handles authn
+        Perform an async HTTP GET request.
+
+        Args:
+        ----
+            url: Request URL
+            auth: Include the Authorization header. Never set to True if the request is not to an Inngest server
+            headers: Additional request headers
         """
 
         req = self.build_httpx_request(
@@ -85,13 +92,20 @@ class HTTPClient:
             },
         )
 
-        res = await fetch_with_auth_fallback(
-            self._http_client,
-            self._http_client_sync,
-            req,
-            signing_key=self._signing_key,
-            signing_key_fallback=self._signing_key_fallback,
-        )
+        if auth:
+            res = await fetch_with_auth_fallback(
+                self._http_client,
+                self._http_client_sync,
+                req,
+                signing_key=self._signing_key,
+                signing_key_fallback=self._signing_key_fallback,
+            )
+        else:
+            res = await fetch_with_thready_safety(
+                self._http_client,
+                self._http_client_sync,
+                req,
+            )
         if isinstance(res, Exception):
             return res
 
@@ -104,10 +118,17 @@ class HTTPClient:
         self,
         url: str,
         *,
+        auth: bool = False,
         headers: dict[str, str] | None = None,
     ) -> types.MaybeError[httpx.Response]:
         """
-        Perform a synchronous HTTP GET request. Handles authn
+        Perform a sync HTTP GET request.
+
+        Args:
+        ----
+            url: Request URL
+            auth: Include the Authorization header. Never set to True if the request is not to an Inngest server
+            headers: Additional request headers
         """
 
         req = self.build_httpx_request(
@@ -125,12 +146,16 @@ class HTTPClient:
             },
         )
 
-        res = fetch_with_auth_fallback_sync(
-            self._http_client_sync,
-            req,
-            signing_key=self._signing_key,
-            signing_key_fallback=self._signing_key_fallback,
-        )
+        if auth:
+            res = fetch_with_auth_fallback_sync(
+                self._http_client_sync,
+                req,
+                signing_key=self._signing_key,
+                signing_key_fallback=self._signing_key_fallback,
+            )
+        else:
+            res = self._http_client_sync.send(req)
+
         if isinstance(res, Exception):
             return res
 

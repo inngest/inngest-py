@@ -148,7 +148,7 @@ class Inngest:
         self._event_api_origin = maybe_str
 
         self._serializer = serializer
-        self._http_client = net.HTTPClient(
+        self._http_client = net.AuthenticatedHTTPClient(
             http_client=net.ThreadAwareAsyncHTTPClient().initialize(),
             http_client_sync=httpx.Client(),
             env=self._env,
@@ -316,7 +316,7 @@ class Inngest:
             self._api_origin,
             f"/v0/runs/{run_id}/batch",
         )
-        res = await self._http_client.get(url)
+        res = await self._http_client.get(url, auth=True)
         if isinstance(res, Exception):
             return res
 
@@ -340,7 +340,7 @@ class Inngest:
             self._api_origin,
             f"/v0/runs/{run_id}/batch",
         )
-        res = self._http_client.get_sync(url)
+        res = self._http_client.get_sync(url, auth=True)
         if isinstance(res, Exception):
             return res
 
@@ -364,7 +364,7 @@ class Inngest:
             self._api_origin,
             f"/v0/runs/{run_id}/actions",
         )
-        res = await self._http_client.get(url)
+        res = await self._http_client.get(url, auth=True)
         if isinstance(res, Exception):
             return res
 
@@ -385,7 +385,7 @@ class Inngest:
             self._api_origin,
             f"/v0/runs/{run_id}/actions",
         )
-        res = self._http_client.get_sync(url)
+        res = self._http_client.get_sync(url, auth=True)
         if isinstance(res, Exception):
             return res
 
