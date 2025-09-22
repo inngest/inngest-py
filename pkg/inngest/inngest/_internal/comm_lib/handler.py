@@ -186,7 +186,9 @@ class CommHandler:
                             middleware,
                             step_lib.StepIDCounter(),
                             params.step_id,
-                            request.ctx.run_id,
+                        ),
+                        experimental=execution_lib.ExperimentalContext(
+                            api_client=self._client._api_client,
                         ),
                     ),
                     params.fn_id,
@@ -226,7 +228,9 @@ class CommHandler:
                         middleware,
                         step_lib.StepIDCounter(),
                         params.step_id,
-                        request.ctx.run_id,
+                    ),
+                    experimental=execution_lib.ExperimentalContext(
+                        api_client=self._client._api_client,
                     ),
                 ),
                 params.fn_id,
@@ -331,6 +335,9 @@ class CommHandler:
                     middleware,
                     step_lib.StepIDCounter(),
                     params.step_id,
+                ),
+                experimental=execution_lib.ExperimentalContext(
+                    api_client=self._client._api_client,
                 ),
             ),
             params.fn_id,

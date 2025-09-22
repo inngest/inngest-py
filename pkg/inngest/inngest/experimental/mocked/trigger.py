@@ -99,7 +99,9 @@ def trigger(
                     middleware,
                     step_lib.StepIDCounter(),
                     step_id,
-                    request.ctx.run_id,
+                ),
+                experimental=execution_lib.ExperimentalContext(
+                    api_client=client._api_client,
                 ),
             )
 
@@ -134,7 +136,9 @@ def trigger(
                     middleware,
                     step_lib.StepIDCounter(),
                     step_id,
-                    request.ctx.run_id,
+                ),
+                experimental=execution_lib.ExperimentalContext(
+                    api_client=client._api_client,
                 ),
             )
 
