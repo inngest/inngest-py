@@ -3,4 +3,4 @@ import structlog
 
 logger = structlog.get_logger()
 
-inngest_client = inngest.Inngest(app_id="fast_api_example", logger=logger)
+inngest_client = inngest.Inngest(app_id="connect_example", logger=logger)

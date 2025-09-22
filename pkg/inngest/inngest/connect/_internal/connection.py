@@ -190,6 +190,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
         self._handlers: list[_BaseHandler] = [
             _ConnInitHandler(
                 api_origin=self._api_origin,
+                env=default_client.env,
                 http_client=self._http_client,
                 http_client_sync=self._http_client_sync,
                 logger=self._logger,
