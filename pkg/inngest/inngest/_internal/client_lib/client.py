@@ -359,6 +359,39 @@ class Inngest:
 
         return res
 
+    async def _post(
+        self, url: str, body: object
+    ) -> types.MaybeError[httpx.Response]:
+        """
+        Perform an asynchronous HTTP POST request. Handles authn
+        """
+        req = self._http_client.build_request(
+            "POST",
+            url,
+            headers=net.create_headers(
+                env=self._env,
+                framework=None,
+                server_kind=None,
+            ),
+            json=body,
+            timeout=self._httpx_timeout,
+        )
+
+        res = await net.fetch_with_auth_fallback(
+            self._http_client,
+            self._http_client_sync,
+            req,
+            signing_key=self._signing_key,
+            signing_key_fallback=self._signing_key_fallback,
+        )
+        if isinstance(res, Exception):
+            return res
+
+        if res.status_code >= 400:
+            return Exception(f"HTTP error: {res.status_code} {res.text}")
+
+        return res
+
     async def _get_batch(
         self, run_id: str
     ) -> types.MaybeError[list[server_lib.Event]]:

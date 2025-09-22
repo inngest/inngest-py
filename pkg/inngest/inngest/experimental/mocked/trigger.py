@@ -99,6 +99,7 @@ def trigger(
                     middleware,
                     step_lib.StepIDCounter(),
                     step_id,
+                    request.ctx.run_id,
                 ),
             )
 
@@ -133,6 +134,7 @@ def trigger(
                     middleware,
                     step_lib.StepIDCounter(),
                     step_id,
+                    request.ctx.run_id,
                 ),
             )
 
