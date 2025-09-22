@@ -2,11 +2,14 @@ import typing
 from urllib.parse import urljoin
 
 from inngest._internal import errors
-from inngest._internal.client_lib.api import ApiClient
+from inngest._internal.net import AuthenticatedHTTPClient
 
 
 async def get_subscription_token(
-    api_client: ApiClient, channel: str, topics: list[str]
+    http_client: AuthenticatedHTTPClient,
+    api_origin: str,
+    channel: str,
+    topics: list[str],
 ) -> typing.Mapping[str, object]:
     """
     Create a subscription token for a given channel and topics.
@@ -23,8 +26,8 @@ async def get_subscription_token(
             }
         )
 
-    res = await api_client.post(
-        url="/v1/realtime/token",
+    res = await http_client.post(
+        url=urljoin(api_origin, "/v1/realtime/token"),
         body=data,
     )
     if isinstance(res, Exception):

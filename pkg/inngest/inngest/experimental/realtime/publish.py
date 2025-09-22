@@ -1,13 +1,14 @@
 import typing
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urljoin
 
 from inngest._internal import errors
-from inngest._internal.client_lib.api import ApiClient
+from inngest._internal.net import AuthenticatedHTTPClient
 
 
 # TODO - Support streams
 async def publish(
-    api_client: ApiClient,
+    http_client: AuthenticatedHTTPClient,
+    api_origin: str,
     channel: str,
     topic: str,
     data: typing.Mapping[str, object],
@@ -21,8 +22,8 @@ async def publish(
         "topic": topic,
     }
 
-    res = await api_client.post(
-        url=f"/v1/realtime/publish?{urlencode(params)}",
+    res = await http_client.post(
+        url=urljoin(api_origin, f"/v1/realtime/publish?{urlencode(params)}"),
         body=data,
     )
     if isinstance(res, Exception):

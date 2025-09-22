@@ -155,9 +155,10 @@ class Inngest:
             signing_key=self._signing_key,
             signing_key_fallback=self._signing_key_fallback,
         )
-        # self.experimental = Experimental(
-        #     self._api_client,
-        # )
+        self.experimental = Experimental(
+            self._http_client,
+            self._api_origin,
+        )
 
     def _build_send_request(
         self,

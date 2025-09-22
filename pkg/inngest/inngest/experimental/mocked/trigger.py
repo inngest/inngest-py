@@ -101,7 +101,8 @@ def trigger(
                     step_id,
                 ),
                 experimental=execution_lib.ExperimentalContext(
-                    api_client=client._api_client,
+                    http_client=client._http_client,
+                    api_origin=client._api_origin,
                 ),
             )
 
@@ -138,7 +139,8 @@ def trigger(
                     step_id,
                 ),
                 experimental=execution_lib.ExperimentalContext(
-                    api_client=client._api_client,
+                    http_client=client._http_client,
+                    api_origin=client._api_origin,
                 ),
             )
 

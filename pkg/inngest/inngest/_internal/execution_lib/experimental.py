@@ -1,12 +1,13 @@
-from inngest._internal.client_lib.api import ApiClient
+from inngest._internal.net import AuthenticatedHTTPClient
 from inngest.experimental.realtime import publish
 
 
 class ExperimentalContext:
     """A container for experimental features, available within function context."""
 
-    def __init__(self, api_client: ApiClient):
-        self._api_client = api_client
+    def __init__(self, http_client: AuthenticatedHTTPClient, api_origin: str):
+        self._http_client = http_client
+        self._api_origin = api_origin
 
     async def publish(self, channel: str, topic: str, data: dict) -> None:
         """
@@ -19,4 +20,4 @@ class ExperimentalContext:
           topic: Realtime topic name
           data: Any data to publish to any active channel and topic subscribers
         """
-        await publish(self._api_client, channel, topic, data)
+        await publish(self._http_client, self._api_origin, channel, topic, data)
