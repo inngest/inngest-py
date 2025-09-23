@@ -26,7 +26,6 @@ from inngest._internal import (
 )
 
 from . import models
-from .api import ApiClient
 from .experimental import Experimental
 from .utils import get_api_origin, get_event_api_origin
 
