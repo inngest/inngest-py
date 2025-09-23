@@ -34,20 +34,18 @@ class AuthenticatedHTTPClient:
     def __init__(
         self,
         *,
-        http_client: ThreadAwareAsyncHTTPClient,
-        http_client_sync: httpx.Client,
         env: typing.Optional[str],
         request_timeout: int | datetime.timedelta | None = None,
         signing_key: typing.Optional[str],
         signing_key_fallback: typing.Optional[str],
     ):
-        self._http_client = http_client
-        self._http_client_sync = http_client_sync
+        self._http_client = ThreadAwareAsyncHTTPClient().initialize()
+        self._http_client_sync = httpx.Client()
 
         # This is probably leaking an implementation detail, and maybe we should
         # eventually remove it. In the meantime, it simplifies initial
         # HTTPClient implementation
-        self.build_httpx_request = http_client_sync.build_request
+        self.build_httpx_request = self._http_client_sync.build_request
 
         self._env = env
         self._signing_key = signing_key

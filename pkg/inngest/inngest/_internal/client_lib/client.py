@@ -149,8 +149,6 @@ class Inngest:
 
         self._serializer = serializer
         self._http_client = net.AuthenticatedHTTPClient(
-            http_client=net.ThreadAwareAsyncHTTPClient().initialize(),
-            http_client_sync=httpx.Client(),
             env=self._env,
             signing_key=self._signing_key,
             signing_key_fallback=self._signing_key_fallback,
