@@ -21,7 +21,7 @@ async def get_subscription_token(
         data.append(
             {
                 "channel": channel,
-                "topic": topic,
+                "name": topic,
                 "kind": "run",
             }
         )
@@ -37,4 +37,11 @@ async def get_subscription_token(
             "failed to get subscription token",
         )
     # Response is an object with a "jwt" property which is a string
-    return res.json()
+    data = res.json()
+
+    # Return a dictionary ready to be used by the @inngest/realtime npm package
+    return {
+        "channel": channel,
+        "topics": topics,
+        "key": data["jwt"],
+    }
