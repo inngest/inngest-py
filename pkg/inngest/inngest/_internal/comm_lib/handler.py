@@ -52,6 +52,7 @@ class CommHandler:
         )
 
         self._client = client
+        self._http_client = client._http_client
         self._mode = client._mode
         self._api_origin = client.api_origin
         self._fns = {fn.get_id(): fn for fn in functions}
@@ -677,7 +678,7 @@ class Syncer:
         # with the concurrency scope.
         body = transforms.deep_strip_none(body)
 
-        return handler._client._http_client_sync.build_request(
+        return handler._http_client.build_httpx_request(
             "POST",
             registration_url,
             headers=headers,
@@ -730,8 +731,8 @@ class Syncer:
         self._logger.debug(f"Sending out-of-band sync request to {prep.url}")
 
         res = await net.fetch_with_auth_fallback(
-            handler._client._http_client,
-            handler._client._http_client_sync,
+            handler._http_client._http_client,
+            handler._http_client._http_client_sync,
             prep,
             signing_key=handler._signing_key,
             signing_key_fallback=handler._signing_key_fallback,
@@ -755,7 +756,7 @@ class Syncer:
         self._logger.debug(f"Sending out-of-band sync request to {prep.url}")
 
         res = net.fetch_with_auth_fallback_sync(
-            handler._client._http_client_sync,
+            handler._http_client._http_client_sync,
             prep,
             signing_key=handler._signing_key,
             signing_key_fallback=handler._signing_key_fallback,

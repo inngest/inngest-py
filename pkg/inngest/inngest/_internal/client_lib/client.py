@@ -147,9 +147,12 @@ class Inngest:
             raise maybe_str
         self._event_api_origin = maybe_str
 
-        self._http_client = net.ThreadAwareAsyncHTTPClient().initialize()
-        self._http_client_sync = httpx.Client()
         self._serializer = serializer
+        self._http_client = net.AuthenticatedHTTPClient(
+            env=self._env,
+            signing_key=self._signing_key,
+            signing_key_fallback=self._signing_key_fallback,
+        )
 
     def _build_send_request(
         self,
@@ -192,7 +195,7 @@ class Inngest:
                 d["ts"] = int(time.time() * 1000)
             body.append(d)
 
-        return self._http_client_sync.build_request(
+        return self._http_client.build_httpx_request(
             "POST", url, headers=headers, json=body, timeout=self._httpx_timeout
         )
 
@@ -300,65 +303,6 @@ class Inngest:
 
         return decorator
 
-    async def _get(self, url: str) -> types.MaybeError[httpx.Response]:
-        """
-        Perform an asynchronous HTTP GET request. Handles authn
-        """
-
-        req = self._http_client_sync.build_request(
-            "GET",
-            url,
-            headers=net.create_headers(
-                env=self._env,
-                framework=None,
-                server_kind=None,
-            ),
-        )
-
-        res = await net.fetch_with_auth_fallback(
-            self._http_client,
-            self._http_client_sync,
-            req,
-            signing_key=self._signing_key,
-            signing_key_fallback=self._signing_key_fallback,
-        )
-        if isinstance(res, Exception):
-            return res
-
-        if res.status_code >= 400:
-            return Exception(f"HTTP error: {res.status_code} {res.text}")
-
-        return res
-
-    def _get_sync(self, url: str) -> types.MaybeError[httpx.Response]:
-        """
-        Perform a synchronous HTTP GET request. Handles authn
-        """
-
-        req = self._http_client_sync.build_request(
-            "GET",
-            url,
-            headers=net.create_headers(
-                env=self._env,
-                framework=None,
-                server_kind=None,
-            ),
-        )
-
-        res = net.fetch_with_auth_fallback_sync(
-            self._http_client_sync,
-            req,
-            signing_key=self._signing_key,
-            signing_key_fallback=self._signing_key_fallback,
-        )
-        if isinstance(res, Exception):
-            return res
-
-        if res.status_code >= 400:
-            return Exception(f"HTTP error: {res.status_code} {res.text}")
-
-        return res
-
     async def _get_batch(
         self, run_id: str
     ) -> types.MaybeError[list[server_lib.Event]]:
@@ -370,7 +314,7 @@ class Inngest:
             self._api_origin,
             f"/v0/runs/{run_id}/batch",
         )
-        res = await self._get(url)
+        res = await self._http_client.get(url, auth=True)
         if isinstance(res, Exception):
             return res
 
@@ -394,7 +338,7 @@ class Inngest:
             self._api_origin,
             f"/v0/runs/{run_id}/batch",
         )
-        res = self._get_sync(url)
+        res = self._http_client.get_sync(url, auth=True)
         if isinstance(res, Exception):
             return res
 
@@ -418,7 +362,7 @@ class Inngest:
             self._api_origin,
             f"/v0/runs/{run_id}/actions",
         )
-        res = await self._get(url)
+        res = await self._http_client.get(url, auth=True)
         if isinstance(res, Exception):
             return res
 
@@ -439,7 +383,7 @@ class Inngest:
             self._api_origin,
             f"/v0/runs/{run_id}/actions",
         )
-        res = self._get_sync(url)
+        res = self._http_client.get_sync(url, auth=True)
         if isinstance(res, Exception):
             return res
 
@@ -479,12 +423,13 @@ class Inngest:
         if isinstance(req, Exception):
             raise req
 
+        # TODO: Migrate this to HTTPClient.post
         resp = None
         for attempt in range(MAX_SEND_ATTEMPTS):
             try:
                 resp = await net.fetch_with_thready_safety(
-                    self._http_client,
-                    self._http_client_sync,
+                    self._http_client._http_client,
+                    self._http_client._http_client_sync,
                     req,
                 )
             except httpx.RequestError:
@@ -549,10 +494,11 @@ class Inngest:
         if isinstance(req, Exception):
             raise req
 
+        # TODO: Migrate this to HTTPClient.post_sync
         resp = None
         for attempt in range(MAX_SEND_ATTEMPTS):
             try:
-                resp = self._http_client_sync.send(req)
+                resp = self._http_client._http_client_sync.send(req)
             except httpx.RequestError:
                 pass  # we will retry with delay
 
