@@ -1,3 +1,5 @@
+import typing
+
 from inngest._internal.net import AuthenticatedHTTPClient
 from inngest.experimental.realtime.subscription_tokens import (
     get_subscription_token,
@@ -11,7 +13,7 @@ class Experimental:
         self._http_client = http_client
         self._api_origin = api_origin
 
-    async def get_subscription_token(self, channel: str, topics: list[str]):
+    async def get_subscription_token(self, channel: str, topics: list[str]) -> typing.Mapping[str, object]:
         """
         Create a subscription token for a given channel and topics.
         The token can be used by a client to subscribe to realtime events,

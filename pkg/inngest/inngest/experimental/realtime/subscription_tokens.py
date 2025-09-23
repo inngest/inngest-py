@@ -32,16 +32,16 @@ async def get_subscription_token(
     )
     if isinstance(res, Exception):
         raise res
-    if res.status_code >= 300:
+    if res.status_code != 201:
         raise errors.Error(
             "failed to get subscription token",
         )
     # Response is an object with a "jwt" property which is a string
-    data = res.json()
+    response_data: dict[str, typing.Any] = res.json()
 
     # Return a dictionary ready to be used by the @inngest/realtime npm package
     return {
         "channel": channel,
         "topics": topics,
-        "key": data["jwt"],
+        "key": response_data["jwt"],
     }

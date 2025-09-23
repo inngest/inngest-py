@@ -1,3 +1,4 @@
+import json
 import typing
 from urllib.parse import urlencode, urljoin
 
@@ -15,8 +16,25 @@ async def publish(
 ) -> None:
     """
     Publish a message to a realtime channel.
-    This currently requires the Step object as an argument as the API is finalized.
+
+    Args:
+    ----
+        http_client: The authenticated HTTP client
+        api_origin: The API origin URL
+        channel: The realtime channel name
+        topic: The realtime topic name
+        data: JSON-serializable data to publish to subscribers
+
+    Raises:
+    ------
+        errors.Error: If data is not JSON serializable or if publishing fails
     """
+    # Validate that data is JSON serializable
+    try:
+        json.dumps(data)
+    except (TypeError, ValueError) as e:
+        raise errors.Error(f"Data must be JSON serializable: {e}")
+
     params = {
         "channel": channel,
         "topic": topic,

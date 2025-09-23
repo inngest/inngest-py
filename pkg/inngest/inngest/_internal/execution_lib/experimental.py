@@ -1,3 +1,5 @@
+import typing
+
 from inngest._internal.net import AuthenticatedHTTPClient
 from inngest.experimental.realtime import publish
 
@@ -9,15 +11,14 @@ class ExperimentalContext:
         self._http_client = http_client
         self._api_origin = api_origin
 
-    async def publish(self, channel: str, topic: str, data: dict) -> None:
+    async def publish(self, channel: str, topic: str, data: typing.Mapping[str, object]) -> None:
         """
         Publish a message to a realtime channel.
-        This currently requires the Step object as an argument as the API is finalized.
 
         Args:
         ----
           channel: Realtime channel name
           topic: Realtime topic name
-          data: Any data to publish to any active channel and topic subscribers
+          data: JSON-serializable data to publish to any active channel and topic subscribers
         """
         await publish(self._http_client, self._api_origin, channel, topic, data)
