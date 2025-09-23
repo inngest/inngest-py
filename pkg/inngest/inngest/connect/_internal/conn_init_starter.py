@@ -157,7 +157,6 @@ class _ConnInitHandler(_BaseHandler):
                         raise Exception(
                             f"failed to send start request: {res.status_code}"
                         )
-                    self._logger.debug("ConnectionStart response received")
 
                     # Clear the error since we got a successful response. Err is
                     # set if this was a retry.
@@ -165,6 +164,14 @@ class _ConnInitHandler(_BaseHandler):
 
                     start_resp = connect_pb2.StartResponse()
                     start_resp.ParseFromString(res.content)
+                    self._logger.debug(
+                        "ConnectionStart response received",
+                        extra={
+                            "connection_id": start_resp.connection_id,
+                            "gateway_endpoint": start_resp.gateway_endpoint,
+                            "gateway_group": start_resp.gateway_group,
+                        },
+                    )
 
                     self._state.conn_id = start_resp.connection_id
 

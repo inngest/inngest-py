@@ -105,10 +105,46 @@ class WebSocketProxy:
                 print("error sending message", e)
 
     async def abort_conns(self) -> None:
-        for conn in self._conns.values():
+        """
+        Abort connections at the transport level. This causes an abnormal
+        websocket connection close (due to no close frame)
+        """
+
+        for conn in list(self._conns.values()):
             for c in conn:
                 try:
                     c.transport.abort()
                 except Exception:
                     pass
+        self._conns.clear()
+
+    async def send_invalid_frame(self) -> None:
+        """
+        Send invalid WebSocket frame data. This causes an abnormal websocket
+        connection close
+        """
+
+        for conn in list(self._conns.values()):
+            client_conn = conn[0]
+            try:
+                if hasattr(client_conn.transport, "write"):
+                    # Invalid WebSocket frame (malformed header)
+                    client_conn.transport.write(b"\x88\xff\x00\x00\x00\x00")
+            except Exception:
+                pass
+        self._conns.clear()
+
+    async def close_with_code(self) -> None:
+        """
+        Send close code 1000. This causes a normal websocket connection close
+        """
+
+        for conn in list(self._conns.values()):
+            client_conn = conn[0]
+            try:
+                if hasattr(client_conn.transport, "write"):
+                    # Close code 1000
+                    client_conn.transport.write(b"\x88\x02\x03\xe8")
+            except Exception:
+                pass
         self._conns.clear()
