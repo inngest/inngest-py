@@ -13,6 +13,7 @@ from inngest._internal import (
     transforms,
     types,
 )
+from inngest._internal.errors import NonRetriableError
 from inngest._internal.client_lib import models as client_models
 from inngest.experimental import ai
 
@@ -206,13 +207,25 @@ class Step(base.StepBase):
                         step=step_info,
                     )
                 )
-            except (errors.NonRetriableError, errors.RetryAfterError) as err:
-                # Bubble up these error types to the function level
+            except errors.RetryAfterError as err:
+                # RetryAfterError still bubbles up to function level
                 raise err
             except Exception as err:
                 transforms.remove_first_traceback_frame(err)
 
-                step_info.op = server_lib.Opcode.STEP_ERROR
+                # Use decision logic instead of hardcoded STEP_ERROR
+                # Rules: NonRetryableError → STEP_FAILED (always)
+                #        attempt >= max_attempts → STEP_FAILED
+                #        Otherwise → STEP_ERROR
+                current_attempt = self._execution._request.ctx.attempt
+                max_attempts = self._execution._request.ctx.max_attempts
+
+                if isinstance(err, NonRetriableError):
+                    step_info.op = server_lib.Opcode.STEP_FAILED
+                elif current_attempt >= max_attempts:
+                    step_info.op = server_lib.Opcode.STEP_FAILED
+                else:
+                    step_info.op = server_lib.Opcode.STEP_ERROR
 
                 raise base.ResponseInterrupt(
                     base.StepResponse(

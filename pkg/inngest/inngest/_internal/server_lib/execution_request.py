@@ -18,6 +18,7 @@ class ServerRequest(types.BaseModel):
 class ServerRequestCtx(types.BaseModel):
     attempt: int
     disable_immediate_execution: bool
+    max_attempts: int = 4  # Default to 4 if not provided by server
     run_id: str
     stack: ServerRequestCtxStack
 

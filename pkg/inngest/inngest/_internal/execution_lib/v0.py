@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 import typing
+from pprint import pprint
 
 from inngest._internal import errors, server_lib, step_lib, transforms, types
 from inngest._internal.execution_lib import BaseExecution, BaseExecutionSync
@@ -36,6 +38,13 @@ class ExecutionV0(BaseExecution):
         self._request = request
         self._target_hashed_id = target_hashed_id
 
+        print("=" * 50, file=sys.stderr)
+        print("🚀 ExecutionV0.__init__ DEBUG", file=sys.stderr)
+        print("=" * 50, file=sys.stderr)
+        pprint("REQUEST:", stream=sys.stderr)
+        pprint(request, stream=sys.stderr)
+        print("=" * 50, file=sys.stderr)
+
     def _handle_skip(
         self,
         step_info: step_lib.StepInfo,
@@ -60,14 +69,23 @@ class ExecutionV0(BaseExecution):
         step = ReportedStep(step_signal, step_info)
         await step.release()
 
+        print("REPORT_STEP")
+        print("STEP_INFO:")
+        pprint(step_info)
+
         memo = self._memos.pop(step.info.id)
+        print("MEMO #77:")
+        pprint(memo)
 
         # If there are no more memos then all future code is new.
         if self._memos.size == 0:
             await self._middleware.before_execution()
 
         if not isinstance(memo, types.EmptySentinel):
+            print("NO EMPTY SENTINEL HERE BIG DOG")
             if memo.error is not None:
+                print("MEMO #87:")
+                pprint(memo)
                 step.error = errors.StepError(
                     message=memo.error.message,
                     name=memo.error.name,
@@ -165,6 +183,7 @@ class ExecutionV0(BaseExecution):
                 )
             )
         except Exception as err:
+            pprint("FULL ON EXCEPTION I THINK?")
             return CallResult(err)
 
 

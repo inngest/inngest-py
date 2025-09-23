@@ -76,6 +76,7 @@ class Opcode(enum.Enum):
     SLEEP = "Sleep"
     STEP_RUN = "StepRun"
     STEP_ERROR = "StepError"
+    STEP_FAILED = "StepFailed"
     WAIT_FOR_EVENT = "WaitForEvent"
 
 
