@@ -1,8 +1,12 @@
 import typing
 from urllib.parse import urljoin
 
-from inngest._internal import errors
+from inngest._internal import errors, types
 from inngest._internal.net import AuthenticatedHTTPClient
+
+
+class _TokenResponse(types.BaseModel):
+    jwt: str
 
 
 async def get_subscription_token(
@@ -37,11 +41,11 @@ async def get_subscription_token(
             "failed to get subscription token",
         )
     # Response is an object with a "jwt" property which is a string
-    response_data: dict[str, typing.Any] = res.json()
+    response_data = _TokenResponse.model_validate(res.json())
 
     # Return a dictionary ready to be used by the @inngest/realtime npm package
     return {
         "channel": channel,
         "topics": topics,
-        "key": response_data["jwt"],
+        "key": response_data.jwt,
     }
