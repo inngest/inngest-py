@@ -2,14 +2,12 @@ import json
 import typing
 from urllib.parse import urlencode, urljoin
 
-from inngest._internal import errors
-from inngest._internal.net import AuthenticatedHTTPClient
+from inngest._internal import client_lib, errors
 
 
 # TODO - Support streams
 async def publish(
-    http_client: AuthenticatedHTTPClient,
-    api_origin: str,
+    client: client_lib.Inngest,
     channel: str,
     topic: str,
     data: typing.Mapping[str, object],
@@ -19,8 +17,7 @@ async def publish(
 
     Args:
     ----
-        http_client: The authenticated HTTP client
-        api_origin: The API origin URL
+        client: The Inngest client
         channel: The realtime channel name
         topic: The realtime topic name
         data: JSON-serializable data to publish to subscribers
@@ -40,8 +37,8 @@ async def publish(
         "topic": topic,
     }
 
-    res = await http_client.post(
-        url=urljoin(api_origin, f"/v1/realtime/publish?{urlencode(params)}"),
+    res = await client._http_client.post(
+        url=urljoin(client._api_origin, f"/v1/realtime/publish?{urlencode(params)}"),
         body=data,
     )
     if isinstance(res, Exception):
@@ -54,8 +51,7 @@ async def publish(
 
 
 def publish_sync(
-    http_client: AuthenticatedHTTPClient,
-    api_origin: str,
+    client: client_lib.Inngest,
     channel: str,
     topic: str,
     data: typing.Mapping[str, object],
@@ -65,8 +61,7 @@ def publish_sync(
 
     Args:
     ----
-        http_client: The authenticated HTTP client
-        api_origin: The API origin URL
+        client: The Inngest client
         channel: The realtime channel name
         topic: The realtime topic name
         data: JSON-serializable data to publish to subscribers
@@ -86,8 +81,8 @@ def publish_sync(
         "topic": topic,
     }
 
-    res = http_client.post_sync(
-        url=urljoin(api_origin, f"/v1/realtime/publish?{urlencode(params)}"),
+    res = client._http_client.post_sync(
+        url=urljoin(client._api_origin, f"/v1/realtime/publish?{urlencode(params)}"),
         body=data,
     )
     if isinstance(res, Exception):

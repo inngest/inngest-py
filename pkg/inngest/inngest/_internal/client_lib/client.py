@@ -26,7 +26,6 @@ from inngest._internal import (
 )
 
 from . import models
-from .experimental import Experimental
 from .utils import get_api_origin, get_event_api_origin
 
 if typing.TYPE_CHECKING:
@@ -153,10 +152,6 @@ class Inngest:
             env=self._env,
             signing_key=self._signing_key,
             signing_key_fallback=self._signing_key_fallback,
-        )
-        self.experimental = Experimental(
-            self._http_client,
-            self._api_origin,
         )
 
     def _build_send_request(

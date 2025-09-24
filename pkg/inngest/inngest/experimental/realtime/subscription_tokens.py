@@ -1,8 +1,7 @@
 import typing
 from urllib.parse import urljoin
 
-from inngest._internal import errors, types
-from inngest._internal.net import AuthenticatedHTTPClient
+from inngest._internal import client_lib, errors, types
 
 
 class _TokenResponse(types.BaseModel):
@@ -10,8 +9,7 @@ class _TokenResponse(types.BaseModel):
 
 
 async def get_subscription_token(
-    http_client: AuthenticatedHTTPClient,
-    api_origin: str,
+    client: client_lib.Inngest,
     channel: str,
     topics: list[str],
 ) -> typing.Mapping[str, object]:
@@ -30,8 +28,8 @@ async def get_subscription_token(
             }
         )
 
-    res = await http_client.post(
-        url=urljoin(api_origin, "/v1/realtime/token"),
+    res = await client._http_client.post(
+        url=urljoin(client._api_origin, "/v1/realtime/token"),
         body=data,
     )
     if isinstance(res, Exception):
@@ -52,8 +50,7 @@ async def get_subscription_token(
 
 
 def get_subscription_token_sync(
-    http_client: AuthenticatedHTTPClient,
-    api_origin: str,
+    client: client_lib.Inngest,
     channel: str,
     topics: list[str],
 ) -> typing.Mapping[str, object]:
@@ -72,8 +69,8 @@ def get_subscription_token_sync(
             }
         )
 
-    res = http_client.post_sync(
-        url=urljoin(api_origin, "/v1/realtime/token"),
+    res = client._http_client.post_sync(
+        url=urljoin(client._api_origin, "/v1/realtime/token"),
         body=data,
     )
     if isinstance(res, Exception):
