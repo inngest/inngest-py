@@ -51,3 +51,49 @@ async def publish(
             "failed to publish to realtime channel",
         )
     return None
+
+
+def publish_sync(
+    http_client: AuthenticatedHTTPClient,
+    api_origin: str,
+    channel: str,
+    topic: str,
+    data: typing.Mapping[str, object],
+) -> None:
+    """
+    Publish a message to a realtime channel synchronously.
+
+    Args:
+    ----
+        http_client: The authenticated HTTP client
+        api_origin: The API origin URL
+        channel: The realtime channel name
+        topic: The realtime topic name
+        data: JSON-serializable data to publish to subscribers
+
+    Raises:
+    ------
+        errors.Error: If data is not JSON serializable or if publishing fails
+    """
+    # Validate that data is JSON serializable
+    try:
+        json.dumps(data)
+    except (TypeError, ValueError) as e:
+        raise errors.Error(f"Data must be JSON serializable: {e}")
+
+    params = {
+        "channel": channel,
+        "topic": topic,
+    }
+
+    res = http_client.post_sync(
+        url=urljoin(api_origin, f"/v1/realtime/publish?{urlencode(params)}"),
+        body=data,
+    )
+    if isinstance(res, Exception):
+        raise res
+    if res.status_code != 200:
+        raise errors.Error(
+            "failed to publish to realtime channel",
+        )
+    return None
