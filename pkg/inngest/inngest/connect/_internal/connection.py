@@ -268,6 +268,17 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 finally:
                     self._handling_message_count.value -= 1
 
+            if ws.close_code is not None:
+                # Normal connection close
+                self._logger.debug(
+                    "Connection closed",
+                    extra={
+                        "close_code": ws.close_code,
+                        "close_reason": ws.close_reason,
+                    },
+                )
+                self._state.conn_state.value = ConnectionState.RECONNECTING
+                self._state.conn_init.value = None
         except websockets.exceptions.ConnectionClosedError as e:
             self._logger.debug(
                 "Connection closed abnormally", extra={"error": str(e)}
