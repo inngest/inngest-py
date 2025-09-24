@@ -11,7 +11,9 @@ class ExperimentalContext:
         self._http_client = http_client
         self._api_origin = api_origin
 
-    async def publish(self, channel: str, topic: str, data: typing.Mapping[str, object]) -> None:
+    async def publish(
+        self, *, channel: str, topic: str, data: typing.Mapping[str, object]
+    ) -> None:
         """
         Publish a message to a realtime channel.
 
