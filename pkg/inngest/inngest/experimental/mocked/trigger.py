@@ -100,10 +100,6 @@ def trigger(
                     step_lib.StepIDCounter(),
                     step_id,
                 ),
-                experimental=execution_lib.ExperimentalContext(
-                    http_client=client._http_client,
-                    api_origin=client._api_origin,
-                ),
             )
 
             loop = async_lib.get_event_loop()
@@ -137,10 +133,6 @@ def trigger(
                     middleware,
                     step_lib.StepIDCounter(),
                     step_id,
-                ),
-                experimental=execution_lib.ExperimentalContext(
-                    http_client=client._http_client,
-                    api_origin=client._api_origin,
                 ),
             )
 
