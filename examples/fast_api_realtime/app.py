@@ -1,8 +1,10 @@
 import fastapi
+import inngest
 import inngest.fast_api
 from fastapi.staticfiles import StaticFiles
+from inngest.experimental import realtime
 from src.inngest.client import inngest_client
-from src.inngest.functions import hello
+from src.inngest.functions import python_realtime_publish
 
 app = fastapi.FastAPI()
 
@@ -10,7 +12,7 @@ app = fastapi.FastAPI()
 inngest.fast_api.serve(
     app,
     inngest_client,
-    [hello],
+    [python_realtime_publish],
 )
 
 
@@ -19,8 +21,10 @@ async def get_realtime_token():
     # Here, you can get params from the request to;
     # - Authorize what the user is allowed to subscribe to
     # - Allow the client to specify what topics they want to subscribe to
-    return await inngest_client.experimental.get_subscription_token(
-        "user:user_123456789", ["messages"]
+    return await realtime.get_subscription_token(
+        client=inngest_client,
+        channel="user:user_123456789",
+        topics=["messages"],
     )
 
 
