@@ -77,6 +77,7 @@ class Opcode(enum.Enum):
     STEP_RUN = "StepRun"
     STEP_ERROR = "StepError"
     WAIT_FOR_EVENT = "WaitForEvent"
+    STEP_FAILED = "StepFailed"
 
 
 class OptKey(enum.Enum):

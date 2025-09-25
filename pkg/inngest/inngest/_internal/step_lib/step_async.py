@@ -212,7 +212,14 @@ class Step(base.StepBase):
             except Exception as err:
                 transforms.remove_first_traceback_frame(err)
 
-                step_info.op = server_lib.Opcode.STEP_ERROR
+                max_attempts = self._execution._request.ctx.max_attempts
+                if (
+                    max_attempts is not None
+                    and self._execution._request.ctx.attempt + 1 >= max_attempts
+                ):
+                    step_info.op = server_lib.Opcode.STEP_FAILED
+                else:
+                    step_info.op = server_lib.Opcode.STEP_ERROR
 
                 raise base.ResponseInterrupt(
                     base.StepResponse(

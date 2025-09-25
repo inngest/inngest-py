@@ -13,11 +13,18 @@ from .models import (
 )
 
 if typing.TYPE_CHECKING:
-    from inngest._internal import client_lib, execution_lib, function, step_lib
+    from inngest._internal import (
+        client_lib,
+        execution_lib,
+        function,
+        server_lib,
+        step_lib,
+    )
 
 
 class BaseExecution(typing.Protocol):
     version: str
+    _request: server_lib.ServerRequest
 
     async def report_step(
         self,
@@ -36,6 +43,7 @@ class BaseExecution(typing.Protocol):
 
 class BaseExecutionSync(typing.Protocol):
     version: str
+    _request: server_lib.ServerRequest
 
     def report_step(
         self,
