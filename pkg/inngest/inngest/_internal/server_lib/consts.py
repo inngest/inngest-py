@@ -23,6 +23,7 @@ class ErrorCode(enum.Enum):
     SIGNING_KEY_UNSPECIFIED = "signing_key_unspecified"
     SIG_VERIFICATION_FAILED = "sig_verification_failed"
     STEP_ERRORED = "step_errored"
+    STEP_FAILED = "step_failed"
     STEP_NESTED = "step_nested"
     STEP_UNEXPECTED = "step_unexpected"
     UNKNOWN = "unknown"
@@ -77,6 +78,7 @@ class Opcode(enum.Enum):
     STEP_RUN = "StepRun"
     STEP_ERROR = "StepError"
     WAIT_FOR_EVENT = "WaitForEvent"
+    STEP_FAILED = "StepFailed"
 
 
 class OptKey(enum.Enum):
