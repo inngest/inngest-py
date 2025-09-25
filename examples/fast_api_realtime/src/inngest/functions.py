@@ -10,15 +10,15 @@ from .client import inngest_client
 )
 async def python_realtime_publish(ctx: inngest.Context) -> str:
     async def my_first_step() -> dict[str, str]:
-        return {"message": "My llm response from python!"}
+        result = {"message": "My llm response from python!"}
+        await realtime.publish(
+            client=inngest_client,
+            channel="user:user_123456789",
+            topic="messages",
+            data=result,
+        )
+        return result
 
-    result = await ctx.step.run("my-first-step", my_first_step)
+    await ctx.step.run("my-first-step", my_first_step)
 
-    await realtime.publish(
-        client=inngest_client,
-        channel="user:user_123456789",
-        topic="messages",
-        data=result,
-    )
-
-    return "Hello world!"
+    return "Finished!"
