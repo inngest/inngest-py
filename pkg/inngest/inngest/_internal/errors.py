@@ -263,6 +263,16 @@ class StepError(Error):
         self._stack = stack
 
 
+class StepFailedError(StepError):
+    """
+    Wraps an error that is explicitly non-retryable, whether that's because
+    it has finished its number of retries or because it was a NonRetriableError
+    """
+
+    code = server_lib.ErrorCode.STEP_FAILED
+    is_retriable = False
+
+
 def is_retriable(err: Exception) -> bool:
     if isinstance(err, Error):
         return err.is_retriable
