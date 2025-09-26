@@ -1,8 +1,7 @@
-import json
 import typing
 from urllib.parse import urlencode, urljoin
 
-from inngest._internal import client_lib, errors
+from inngest._internal import client_lib
 
 
 # TODO - Support streams
@@ -26,11 +25,6 @@ async def publish(
     ------
         errors.Error: If data is not JSON serializable or if publishing fails
     """
-    # Validate that data is JSON serializable
-    try:
-        json.dumps(data)
-    except (TypeError, ValueError) as e:
-        raise errors.Error(f"Data must be JSON serializable: {e}")
 
     params = {
         "channel": channel,
@@ -38,15 +32,13 @@ async def publish(
     }
 
     res = await client._http_client.post(
-        url=urljoin(client._api_origin, f"/v1/realtime/publish?{urlencode(params)}"),
+        url=urljoin(
+            client._api_origin, f"/v1/realtime/publish?{urlencode(params)}"
+        ),
         body=data,
     )
     if isinstance(res, Exception):
         raise res
-    if res.status_code != 200:
-        raise errors.Error(
-            "failed to publish to realtime channel",
-        )
     return None
 
 
@@ -70,11 +62,6 @@ def publish_sync(
     ------
         errors.Error: If data is not JSON serializable or if publishing fails
     """
-    # Validate that data is JSON serializable
-    try:
-        json.dumps(data)
-    except (TypeError, ValueError) as e:
-        raise errors.Error(f"Data must be JSON serializable: {e}")
 
     params = {
         "channel": channel,
@@ -82,13 +69,11 @@ def publish_sync(
     }
 
     res = client._http_client.post_sync(
-        url=urljoin(client._api_origin, f"/v1/realtime/publish?{urlencode(params)}"),
+        url=urljoin(
+            client._api_origin, f"/v1/realtime/publish?{urlencode(params)}"
+        ),
         body=data,
     )
     if isinstance(res, Exception):
         raise res
-    if res.status_code != 200:
-        raise errors.Error(
-            "failed to publish to realtime channel",
-        )
     return None

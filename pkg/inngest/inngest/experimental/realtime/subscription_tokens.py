@@ -1,7 +1,7 @@
 import typing
 from urllib.parse import urljoin
 
-from inngest._internal import client_lib, errors, types
+from inngest._internal import client_lib, types
 
 
 class _TokenResponse(types.BaseModel):
@@ -34,10 +34,6 @@ async def get_subscription_token(
     )
     if isinstance(res, Exception):
         raise res
-    if res.status_code != 201:
-        raise errors.Error(
-            "failed to get subscription token",
-        )
     # Response is an object with a "jwt" property which is a string
     response_data = _TokenResponse.model_validate(res.json())
 
@@ -75,10 +71,6 @@ def get_subscription_token_sync(
     )
     if isinstance(res, Exception):
         raise res
-    if res.status_code != 201:
-        raise errors.Error(
-            "failed to get subscription token",
-        )
     # Response is an object with a "jwt" property which is a string
     response_data = _TokenResponse.model_validate(res.json())
 
