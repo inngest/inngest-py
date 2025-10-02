@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import enum
+import json
 import time
 import typing
 
 import inngest
+import pydantic
 from inngest._internal import types
 from inngest.experimental import dev_server
 
@@ -28,20 +30,27 @@ ended_statuses = set(
 )
 
 
+class _Step(types.BaseModel):
+    name: str
+    output_id: str | None = pydantic.Field(alias="outputID")
+
+
 class _Client:
     def __init__(self) -> None:
         self._gql = gql.Client(f"{dev_server.server.origin}/v0/gql")
 
-    async def _get_history(
+    async def _get_steps(
         self,
         run_id: str,
-    ) -> list[object]:
+    ) -> list[_Step]:
         query = """
-        query GetHistory($run_id: ID!) {
-            functionRun(query: { functionRunId: $run_id }) {
-                history {
-                    id
-                    stepName
+        query GetHistory($run_id: String!) {
+            run(runID: $run_id) {
+                trace {
+                    childrenSpans {
+                        name
+                        outputID
+                    }
                 }
             }
         }
@@ -50,15 +59,19 @@ class _Client:
         if isinstance(res, gql.Error):
             raise Exception(res.message)
 
-        run = res.data["functionRun"]
+        run = res.data["run"]
         if not isinstance(run, dict):
             raise Exception("unexpected response")
 
-        history = run["history"]
-        if not isinstance(history, list):
+        trace = run["trace"]
+        if not isinstance(trace, dict):
             raise Exception("unexpected response")
 
-        return history
+        children_spans = trace["childrenSpans"]
+        if not isinstance(children_spans, list):
+            raise Exception("unexpected response")
+
+        return [_Step.model_validate(span) for span in children_spans]
 
     async def get_step_output(
         self,
@@ -66,47 +79,45 @@ class _Client:
         run_id: str,
         step_id: str,
     ) -> str:
-        history = await self._get_history(run_id)
+        history = await self._get_steps(run_id)
         if not isinstance(history, list):
             raise Exception("unexpected response")
 
-        history_item_id: typing.Optional[str] = None
+        output_id: str | None = None
         for step in history:
-            if not isinstance(step, dict):
-                raise Exception("unexpected response")
-            if step["stepName"] == step_id:
-                history_item_id = step["id"]
+            if step.name == step_id:
+                output_id = step.output_id
                 break
-        if not history_item_id:
+        if not output_id:
             raise Exception(f'step "{step_id}" not found in history')
 
         query = """
-        query GetHistory($history_item_id: ULID!, $run_id: ID!) {
-            functionRun(query: { functionRunId: $run_id }) {
-                historyItemOutput(id: $history_item_id)
+        query GetHistory($output_id: String!) {
+            runTraceSpanOutputByID(outputID: $output_id) {
+                data
+                error {
+                    message
+                    name
+                    stack
+                }
             }
         }
         """
-        res = await self._gql.query(
-            gql.Query(
-                query,
-                {
-                    "history_item_id": history_item_id,
-                    "run_id": run_id,
-                },
-            )
-        )
+        res = await self._gql.query(gql.Query(query, {"output_id": output_id}))
         if isinstance(res, gql.Error):
             raise Exception(res.message)
 
-        run = res.data["functionRun"]
+        run = res.data["runTraceSpanOutputByID"]
         if not isinstance(run, dict):
             raise Exception("unexpected response")
 
-        output = run["historyItemOutput"]
-        if not isinstance(output, str):
-            raise Exception("unexpected response")
-        return output
+        # Hacky stuff to maintain backwards compatibility with test code
+        if run["error"] is None:
+            del run["error"]
+        if run["data"] is not None:
+            run["data"] = json.loads(run["data"])
+
+        return json.dumps(run)
 
     async def get_run_ids_from_event_id(
         self,
