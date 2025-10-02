@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import datetime
 import hashlib
 import hmac
@@ -672,3 +673,83 @@ def validate_response_sig(
         mode=mode,
         signing_key=signing_key,
     )
+
+
+@dataclasses.dataclass
+class ServerTiming:
+    def __init__(self, name: str) -> None:
+        self._name = name
+        self._start_counter: float | None = None
+        self._end_counter: float | None = None
+
+    def __enter__(self) -> ServerTiming:
+        self._start()
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self._end()
+
+    def _start(self) -> None:
+        if self._start_counter is not None:
+            return
+
+        self._start_counter = time.perf_counter()
+
+    def _end(self) -> None:
+        if self._end_counter is not None:
+            return
+
+        self._end_counter = time.perf_counter()
+
+    def to_header(self) -> str:
+        if self._start_counter is None or self._end_counter is None:
+            return ""
+
+        dur = int((self._end_counter - self._start_counter) * 1000)
+        if dur == 0:
+            return ""
+
+        return f"{self._name};dur={dur}"
+
+
+class ServerTimings:
+    def __init__(self) -> None:
+        # CommHandler method. This should include basically everything but
+        # general HTTP framework stuff (e.g. everything besides FastAPI stuff)
+        self.comm_handler = ServerTiming("comm_handler")
+
+        # Calling the Inngest function
+        self.function = ServerTiming("function")
+
+        self.mw_transform_input = ServerTiming("mw.transform_input")
+        self.mw_transform_output = ServerTiming("mw.transform_output")
+
+        # When the SDK sends an outgoing request to fetch the events and steps.
+        # This happens when the incoming SDK request would be too large
+        self.use_api = ServerTiming("use_api")
+
+    def to_header(self) -> str:
+        """
+        Convert the server timings to the Server-Timing header value
+        """
+
+        timings = [
+            self.comm_handler,
+            self.function,
+            self.mw_transform_input,
+            self.mw_transform_output,
+            self.use_api,
+        ]
+
+        # Sort by start time
+        timings = sorted(
+            timings,
+            key=lambda x: x._start_counter or 0,
+        )
+
+        values: list[str] = [timing.to_header() for timing in timings]
+
+        # Remove empty values
+        values = [v for v in values if v != ""]
+
+        return ", ".join(values)

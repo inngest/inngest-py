@@ -416,6 +416,7 @@ class Inngest:
             middleware = middleware_lib.MiddlewareManager.from_client(
                 self,
                 raw_request=None,
+                timings=None,
             )
             await middleware.before_send_events(events)
 
@@ -485,6 +486,7 @@ class Inngest:
             middleware = middleware_lib.MiddlewareManager.from_client(
                 self,
                 raw_request=None,
+                timings=None,
             )
             err = middleware.before_send_events_sync(events)
             if isinstance(err, Exception):
