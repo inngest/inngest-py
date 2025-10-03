@@ -65,7 +65,7 @@ class TestStreaming(unittest.IsolatedAsyncioTestCase):
                 serve_origin=proxy.origin,
                 streaming=streaming,
             )
-            uvicorn.run(app, host="0.0.0.0", port=sdk_port, log_level="warning")
+            uvicorn.run(app, host="0.0.0.0", port=sdk_port, log_level="warning")  # pyright: ignore[reportUnknownMemberType]
 
         app_thread = threading.Thread(daemon=True, target=start_app)
         app_thread.start()
@@ -118,8 +118,9 @@ class TestStreaming(unittest.IsolatedAsyncioTestCase):
         assert types.is_dict(headers)
         timings = parse_timings(headers["server-timing"])
 
-        # Really short because we immediately send the streaming response
-        assert timings["comm_handler"] < 100
+        # Really short because we immediately send the streaming response. If
+        # it's 0 then it won't exist at all, so we need to default
+        assert timings.get("comm_handler", 0) < 100
 
         assert_approx_timing(timings["function"], 400)
         assert_approx_timing(timings["mw.transform_input"], 100)
