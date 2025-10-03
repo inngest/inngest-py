@@ -15,7 +15,7 @@ from . import net
 
 class Proxy:
     _port: int
-    _thread: typing.Optional[threading.Thread] = None
+    _thread: threading.Thread | None = None
 
     @property
     def host(self) -> str:
@@ -143,7 +143,7 @@ class Proxy:
 
 @dataclasses.dataclass
 class Response:
-    body: typing.Optional[bytes]
+    body: bytes | None
     headers: dict[str, str]
     status_code: int
 
@@ -152,7 +152,7 @@ class OnRequest(typing.Protocol):
     def __call__(
         self,
         *,
-        body: typing.Optional[bytes],
+        body: bytes | None,
         headers: dict[str, list[str]],
         method: str,
         path: str,
@@ -162,7 +162,7 @@ class OnRequest(typing.Protocol):
 def on_proxy_fast_api_request(
     client: fastapi.testclient.TestClient,
     *,
-    body: typing.Optional[bytes],
+    body: bytes | None,
     headers: dict[str, list[str]],
     method: str,
     path: str,
@@ -197,7 +197,7 @@ def on_proxy_fast_api_request(
 def on_proxy_flask_request(
     client: flask.testing.FlaskClient,
     *,
-    body: typing.Optional[bytes],
+    body: bytes | None,
     headers: dict[str, list[str]],
     method: str,
     path: str,

@@ -30,7 +30,7 @@ class Step(base.StepBase):
         exe: execution_lib.BaseExecution,
         middleware: middleware_lib.MiddlewareManager,
         step_id_counter: base.StepIDCounter,
-        target_hashed_id: typing.Optional[str],
+        target_hashed_id: str | None,
     ) -> None:
         super().__init__(
             client,
@@ -47,9 +47,9 @@ class Step(base.StepBase):
         step_id: str,
         *,
         function: function.Function[types.T],
-        data: typing.Optional[typing.Mapping[str, object]] = None,
-        timeout: typing.Union[int, datetime.timedelta, None] = None,
-        v: typing.Optional[str] = None,
+        data: typing.Mapping[str, object] | None = None,
+        timeout: int | datetime.timedelta | None = None,
+        v: str | None = None,
     ) -> types.T:
         """
         Invoke an Inngest function with data. Returns the result of the returned
@@ -85,11 +85,11 @@ class Step(base.StepBase):
         self,
         step_id: str,
         *,
-        app_id: typing.Optional[str] = None,
+        app_id: str | None = None,
         function_id: str,
-        data: typing.Optional[typing.Mapping[str, object]] = None,
-        timeout: typing.Union[int, datetime.timedelta, None] = None,
-        v: typing.Optional[str] = None,
+        data: typing.Mapping[str, object] | None = None,
+        timeout: int | datetime.timedelta | None = None,
+        v: str | None = None,
     ) -> object:
         """
         Invoke an Inngest function with data. Returns the result of the returned
@@ -243,7 +243,7 @@ class Step(base.StepBase):
     async def send_event(
         self,
         step_id: str,
-        events: typing.Union[server_lib.Event, list[server_lib.Event]],
+        events: server_lib.Event | list[server_lib.Event],
     ) -> list[str]:
         """
         Send an event or list of events.
@@ -265,7 +265,7 @@ class Step(base.StepBase):
                 raise middleware_err
 
             # Need to initialize `result` because of the `finally` block.
-            result: typing.Optional[client_models.SendEventsResult] = None
+            result: client_models.SendEventsResult | None = None
 
             try:
                 result = client_models.SendEventsResult(
@@ -308,7 +308,7 @@ class Step(base.StepBase):
     async def sleep(
         self,
         step_id: str,
-        duration: typing.Union[int, datetime.timedelta],
+        duration: int | datetime.timedelta,
     ) -> None:
         """
         Sleep for a duration.
@@ -365,9 +365,9 @@ class Step(base.StepBase):
         step_id: str,
         *,
         event: str,
-        if_exp: typing.Optional[str] = None,
-        timeout: typing.Union[int, datetime.timedelta],
-    ) -> typing.Optional[server_lib.Event]:
+        if_exp: str | None = None,
+        timeout: int | datetime.timedelta,
+    ) -> server_lib.Event | None:
         """
         Wait for an event to be sent.
 

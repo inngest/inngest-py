@@ -1,5 +1,4 @@
 import asyncio
-import typing
 
 from inngest._internal import types
 
@@ -9,7 +8,7 @@ from .models import _State
 
 
 class _DrainHandler(_BaseHandler):
-    _closed_event: typing.Optional[asyncio.Event] = None
+    _closed_event: asyncio.Event | None = None
 
     def __init__(
         self,

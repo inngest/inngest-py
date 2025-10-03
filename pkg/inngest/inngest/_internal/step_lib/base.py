@@ -18,7 +18,7 @@ from inngest._internal import (
 class MemoizedError(types.BaseModel):
     message: str
     name: str
-    stack: typing.Optional[str] = None
+    stack: str | None = None
 
     @classmethod
     def from_error(cls, err: Exception) -> MemoizedError:
@@ -35,7 +35,7 @@ class Output(types.BaseModel):
     model_config = pydantic.ConfigDict(extra="forbid")
 
     data: object = None
-    error: typing.Optional[MemoizedError] = None
+    error: MemoizedError | None = None
 
 
 class StepMemos:
@@ -51,7 +51,7 @@ class StepMemos:
     def values(self) -> typing.Iterator[Output]:
         return iter(self._memos.values())
 
-    def pop(self, hashed_id: str) -> typing.Union[Output, types.EmptySentinel]:
+    def pop(self, hashed_id: str) -> Output | types.EmptySentinel:
         if hashed_id in self._memos:
             memo = self._memos[hashed_id]
 
@@ -86,7 +86,7 @@ class StepBase:
         client: client_lib.Inngest,
         middleware: middleware_lib.MiddlewareManager,
         step_id_counter: StepIDCounter,
-        target_hashed_id: typing.Optional[str],
+        target_hashed_id: str | None,
     ) -> None:
         self._client = client
         self._middleware = middleware
@@ -158,7 +158,7 @@ class ResponseInterrupt(BaseException):
 
     def __init__(
         self,
-        responses: typing.Union[StepResponse, list[StepResponse]],
+        responses: StepResponse | list[StepResponse],
     ) -> None:
         if not isinstance(responses, list):
             responses = [responses]
@@ -187,16 +187,16 @@ class NestedStepInterrupt(BaseException):
 class InvokeOpts(types.BaseModel):
     function_id: str
     payload: InvokeOptsPayload
-    timeout: typing.Optional[str]
+    timeout: str | None
 
 
 class InvokeOptsPayload(types.BaseModel):
     data: object
-    v: typing.Optional[str]
+    v: str | None
 
 
 class WaitForEventOpts(types.BaseModel):
-    if_exp: typing.Optional[str] = pydantic.Field(..., serialization_alias="if")
+    if_exp: str | None = pydantic.Field(..., serialization_alias="if")
     timeout: str
 
 
@@ -214,10 +214,10 @@ class StepInfo(types.BaseModel):
     id: str
 
     # Deprecated
-    name: typing.Optional[str] = None
+    name: str | None = None
 
     op: server_lib.Opcode
-    opts: typing.Optional[dict[str, object]] = None
+    opts: dict[str, object] | None = None
 
     def set_parallel_mode(self, parallel_mode: server_lib.ParallelMode) -> None:
         if parallel_mode != server_lib.ParallelMode.RACE:

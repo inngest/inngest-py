@@ -5,7 +5,6 @@ import pathlib
 import subprocess
 import threading
 import time
-import typing
 
 import httpx
 
@@ -26,7 +25,7 @@ class _Server:
             port = 8288
         self.port = port
 
-        log_path: typing.Optional[pathlib.Path] = None
+        log_path: pathlib.Path | None = None
         if os.getenv("DEV_SERVER_LOGS") == "1":
             artifacts_dir = pathlib.Path("artifacts").absolute()
             print(f"Using artifacts directory: {artifacts_dir}")
@@ -42,9 +41,9 @@ class _Server:
         )
 
         self._enabled = os.getenv("DEV_SERVER_ENABLED") != "0"
-        self._output_thread: typing.Optional[threading.Thread] = None
+        self._output_thread: threading.Thread | None = None
 
-        self._process: typing.Optional[subprocess.Popen[str]] = None
+        self._process: subprocess.Popen[str] | None = None
         self._ready_event = threading.Event()
         self._stop_event = threading.Event()
 

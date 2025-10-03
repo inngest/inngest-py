@@ -1,5 +1,3 @@
-import typing
-
 import inngest
 import test_core.helper
 from inngest._internal import server_lib
@@ -8,10 +6,10 @@ from . import base
 
 
 class _State(base.BaseState):
-    attempt: typing.Optional[int] = None
-    event: typing.Optional[inngest.Event] = None
-    events: typing.Optional[list[inngest.Event]] = None
-    step: typing.Union[inngest.Step, inngest.StepSync, None] = None
+    attempt: int | None = None
+    event: inngest.Event | None = None
+    events: list[inngest.Event] | None = None
+    step: inngest.Step | inngest.StepSync | None = None
 
 
 def create(

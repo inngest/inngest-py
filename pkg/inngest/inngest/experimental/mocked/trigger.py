@@ -21,10 +21,10 @@ from .errors import UnstubbedStepError
 
 def trigger(
     fn: inngest.Function[typing.Any],
-    event: typing.Union[inngest.Event, list[inngest.Event]],
+    event: inngest.Event | list[inngest.Event],
     client: Inngest,
     *,
-    step_stubs: typing.Optional[dict[str, object]] = None,
+    step_stubs: dict[str, object] | None = None,
 ) -> _Result:
     """
     Trigger a function.
@@ -55,7 +55,7 @@ def trigger(
         max_attempt = fn._opts.retries
 
     while True:
-        step_id: typing.Optional[str] = None
+        step_id: str | None = None
         if len(planned) > 0:
             step_id = planned.pop()
 
@@ -202,6 +202,6 @@ def trigger(
 
 @dataclasses.dataclass
 class _Result:
-    error: typing.Optional[Exception]
+    error: Exception | None
     output: object
     status: Status

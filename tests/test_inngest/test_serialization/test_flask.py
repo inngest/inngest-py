@@ -28,7 +28,7 @@ class _TestBase(unittest.IsolatedAsyncioTestCase):
 
         def on_proxy_request(
             *,
-            body: typing.Optional[bytes],
+            body: bytes | None,
             headers: dict[str, list[str]],
             method: str,
             path: str,

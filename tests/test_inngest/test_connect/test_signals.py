@@ -4,7 +4,6 @@ import multiprocessing.connection
 import signal
 import subprocess
 import time
-import typing
 
 import httpx
 import inngest
@@ -142,7 +141,7 @@ def _start_app(
     app_id: str,
     event_name: str,
     listener_port: int,
-    signals: typing.Optional[list[signal.Signals]] = None,
+    signals: list[signal.Signals] | None = None,
 ) -> subprocess.Popen[bytes]:
     signals_str = "None"
     if signals is not None:

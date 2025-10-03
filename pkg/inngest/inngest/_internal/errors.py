@@ -35,7 +35,7 @@ class Error(Exception):
         return type(self).__name__
 
     @property
-    def stack(self) -> typing.Optional[str]:
+    def stack(self) -> str | None:
         if self.include_stack is False:
             return None
 
@@ -153,7 +153,7 @@ class NonRetriableError(Error):
 
     def __init__(
         self,
-        message: typing.Optional[str] = None,
+        message: str | None = None,
         quiet: bool = False,
     ) -> None:
         super().__init__(message)
@@ -165,8 +165,8 @@ class RetryAfterError(Error):
 
     def __init__(
         self,
-        message: typing.Optional[str],
-        retry_after: typing.Union[int, datetime.timedelta, datetime.datetime],
+        message: str | None,
+        retry_after: int | datetime.timedelta | datetime.datetime,
         quiet: bool = False,
     ) -> None:
         """
@@ -236,7 +236,7 @@ class StepError(Error):
         return self._name
 
     @property
-    def stack(self) -> typing.Optional[str]:
+    def stack(self) -> str | None:
         """
         Returns the userland error stack trace
         """
@@ -247,7 +247,7 @@ class StepError(Error):
         self,
         message: str,
         name: str,
-        stack: typing.Optional[str],
+        stack: str | None,
     ) -> None:
         """
         Args:

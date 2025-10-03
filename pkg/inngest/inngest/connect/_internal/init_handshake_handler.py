@@ -2,7 +2,6 @@ import asyncio
 import dataclasses
 import platform
 import re
-import typing
 
 import psutil
 import pydantic_core
@@ -15,16 +14,16 @@ from .models import ConnectionState, _State
 
 
 class _InitHandshakeHandler(_BaseHandler):
-    _closed_event: typing.Optional[asyncio.Event] = None
-    _send_data_task: typing.Optional[asyncio.Task[None]] = None
-    _reconnect_task: typing.Optional[asyncio.Task[None]] = None
+    _closed_event: asyncio.Event | None = None
+    _send_data_task: asyncio.Task[None] | None = None
+    _reconnect_task: asyncio.Task[None] | None = None
 
     def __init__(
         self,
         logger: types.Logger,
         state: _State,
         app_configs: dict[str, list[server_lib.FunctionConfig]],
-        env: typing.Optional[str],
+        env: str | None,
         instance_id: str,
     ) -> None:
         self._app_configs = app_configs
@@ -166,7 +165,7 @@ def _create_sync_message(
     apps_configs: dict[str, list[server_lib.FunctionConfig]],
     auth_data: connect_pb2.AuthData,
     connection_id: str,
-    env: typing.Optional[str],
+    env: str | None,
     instance_id: str,
 ) -> types.MaybeError[connect_pb2.ConnectMessage]:
     apps: list[connect_pb2.AppConfiguration] = []

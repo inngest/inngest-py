@@ -25,9 +25,9 @@ def serve(
     client: client_lib.Inngest,
     functions: list[function.Function[typing.Any]],
     *,
-    public_path: typing.Optional[str] = None,
-    serve_origin: typing.Optional[str] = None,
-    serve_path: typing.Optional[str] = None,
+    public_path: str | None = None,
+    serve_origin: str | None = None,
+    serve_path: str | None = None,
 ) -> typing.Callable[[dict[str, object], _Context], _Response]:
     """
     Serve Inngest functions in a DigitalOcean Function.
@@ -166,14 +166,14 @@ def serve(
 
 
 def _get_first(
-    items: typing.Optional[list[types.T]],
-) -> typing.Optional[types.T]:
+    items: list[types.T] | None,
+) -> types.T | None:
     if items is None or len(items) == 0:
         return None
     return items[0]
 
 
-def _to_body_bytes(body: typing.Optional[str]) -> bytes:
+def _to_body_bytes(body: str | None) -> bytes:
     if body is None:
         return b""
     return body.encode("utf-8")
@@ -190,11 +190,11 @@ def _to_response(
 
 
 class _EventHTTP(types.BaseModel):
-    body: typing.Optional[str] = None
-    headers: typing.Optional[dict[str, str]] = None
-    method: typing.Optional[str] = None
-    path: typing.Optional[str] = None
-    queryString: typing.Optional[str] = None  # noqa: N815
+    body: str | None = None
+    headers: dict[str, str] | None = None
+    method: str | None = None
+    path: str | None = None
+    queryString: str | None = None  # noqa: N815
 
 
 class _Context(typing.Protocol):

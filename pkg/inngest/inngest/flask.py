@@ -22,9 +22,9 @@ def serve(
     client: client_lib.Inngest,
     functions: list[function.Function[typing.Any]],
     *,
-    public_path: typing.Optional[str] = None,
-    serve_origin: typing.Optional[str] = None,
-    serve_path: typing.Optional[str] = None,
+    public_path: str | None = None,
+    serve_origin: str | None = None,
+    serve_path: str | None = None,
 ) -> None:
     """
     Serve Inngest functions in a Flask app.
@@ -75,15 +75,15 @@ def _create_handler_async(
     client: client_lib.Inngest,
     handler: comm_lib.CommHandler,
     *,
-    public_path: typing.Optional[str],
-    serve_origin: typing.Optional[str],
-    serve_path: typing.Optional[str],
+    public_path: str | None,
+    serve_origin: str | None,
+    serve_path: str | None,
 ) -> None:
     @app.route(
         config_lib.get_serve_path(serve_path) or const.DEFAULT_SERVE_PATH,
         methods=["GET", "POST", "PUT"],
     )
-    async def inngest_api() -> typing.Union[flask.Response, str]:
+    async def inngest_api() -> flask.Response | str:
         comm_req = comm_lib.CommRequest(
             body=_get_body_bytes(),
             headers=dict(flask.request.headers.items()),
@@ -122,15 +122,15 @@ def _create_handler_sync(
     client: client_lib.Inngest,
     handler: comm_lib.CommHandler,
     *,
-    public_path: typing.Optional[str],
-    serve_origin: typing.Optional[str],
-    serve_path: typing.Optional[str],
+    public_path: str | None,
+    serve_origin: str | None,
+    serve_path: str | None,
 ) -> None:
     @app.route(
         config_lib.get_serve_path(serve_path) or const.DEFAULT_SERVE_PATH,
         methods=["GET", "POST", "PUT"],
     )
-    def inngest_api() -> typing.Union[flask.Response, str]:
+    def inngest_api() -> flask.Response | str:
         comm_req = comm_lib.CommRequest(
             body=_get_body_bytes(),
             headers=dict(flask.request.headers.items()),

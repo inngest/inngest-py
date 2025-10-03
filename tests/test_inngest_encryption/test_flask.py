@@ -60,7 +60,7 @@ class TestEncryptionMiddleware(unittest.IsolatedAsyncioTestCase):
     def on_proxy_request(
         cls,
         *,
-        body: typing.Optional[bytes],
+        body: bytes | None,
         headers: dict[str, list[str]],
         method: str,
         path: str,

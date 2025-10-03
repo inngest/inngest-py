@@ -1,4 +1,3 @@
-import typing
 import unittest
 
 import fastapi
@@ -16,7 +15,7 @@ class TestIntrospection(base.BaseTestIntrospection):
         self,
         client: inngest.Inngest,
         *,
-        serve_path: typing.Optional[str] = None,
+        serve_path: str | None = None,
     ) -> fastapi.testclient.TestClient:
         app = fastapi.FastAPI()
         inngest.fast_api.serve(

@@ -15,16 +15,16 @@ class _CommandRunner:
         self,
         command: str,
         *,
-        log_path: typing.Optional[pathlib.Path] = None,
+        log_path: pathlib.Path | None = None,
     ):
         self._command = command
         self._log_path = log_path
-        self._process: typing.Optional[subprocess.Popen[str]] = None
+        self._process: subprocess.Popen[str] | None = None
         self._stdout_queue: queue.Queue[str] = queue.Queue()
         self._stderr_queue: queue.Queue[str] = queue.Queue()
         self._stop_printing_flag = False
-        self._stdout_thread: typing.Optional[threading.Thread] = None
-        self._stderr_thread: typing.Optional[threading.Thread] = None
+        self._stdout_thread: threading.Thread | None = None
+        self._stderr_thread: threading.Thread | None = None
         self._running = False
 
     def run(self) -> None:

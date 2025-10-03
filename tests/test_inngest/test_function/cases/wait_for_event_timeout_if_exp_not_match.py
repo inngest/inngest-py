@@ -4,7 +4,6 @@ Wait for event times out if its expression isn't matched
 
 import asyncio
 import datetime
-import typing
 
 import inngest
 import test_core.helper
@@ -14,7 +13,7 @@ from . import base
 
 
 class _State(base.BaseState):
-    result: typing.Union[inngest.Event, None, str] = "not_set"
+    result: inngest.Event | None | str = "not_set"
 
 
 def create(

@@ -28,9 +28,9 @@ def serve(
     client: client_lib.Inngest,
     functions: list[function.Function[typing.Any]],
     *,
-    public_path: typing.Optional[str] = None,
-    serve_origin: typing.Optional[str] = None,
-    serve_path: typing.Optional[str] = None,
+    public_path: str | None = None,
+    serve_origin: str | None = None,
+    serve_path: str | None = None,
 ) -> django.urls.URLPattern:
     """
     Serve Inngest functions in a Django app.
@@ -78,9 +78,9 @@ def _create_handler_sync(
     client: client_lib.Inngest,
     handler: comm_lib.CommHandler,
     *,
-    public_path: typing.Optional[str],
-    serve_origin: typing.Optional[str],
-    serve_path: typing.Optional[str],
+    public_path: str | None,
+    serve_origin: str | None,
+    serve_path: str | None,
 ) -> django.urls.URLPattern:
     def inngest_api(
         request: django.http.HttpRequest,
@@ -131,9 +131,9 @@ def _create_handler_async(
     client: client_lib.Inngest,
     handler: comm_lib.CommHandler,
     *,
-    public_path: typing.Optional[str],
-    serve_origin: typing.Optional[str],
-    serve_path: typing.Optional[str],
+    public_path: str | None,
+    serve_origin: str | None,
+    serve_path: str | None,
 ) -> django.urls.URLPattern:
     major_version = transforms.get_major_version(django.get_version())
     if isinstance(major_version, Exception):

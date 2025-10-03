@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 import enum
-import typing
 
 import websockets
 
@@ -12,16 +11,16 @@ from .value_watcher import _ValueWatcher
 
 @dataclasses.dataclass
 class _State:
-    conn_id: typing.Optional[str]
-    conn_init: _ValueWatcher[typing.Optional[tuple[connect_pb2.AuthData, str]]]
+    conn_id: str | None
+    conn_init: _ValueWatcher[tuple[connect_pb2.AuthData, str] | None]
     conn_state: _ValueWatcher[ConnectionState]
     exclude_gateways: list[str]
-    extend_lease_interval: _ValueWatcher[typing.Optional[int]]
+    extend_lease_interval: _ValueWatcher[int | None]
 
     # Error that should make Connect close and raise an exception.
-    fatal_error: _ValueWatcher[typing.Optional[Exception]]
+    fatal_error: _ValueWatcher[Exception | None]
 
-    ws: _ValueWatcher[typing.Optional[websockets.ClientConnection]]
+    ws: _ValueWatcher[websockets.ClientConnection | None]
 
 
 class ConnectionState(enum.Enum):

@@ -46,7 +46,7 @@ class Inngest:
         return self._api_origin
 
     @property
-    def env(self) -> typing.Optional[str]:
+    def env(self) -> str | None:
         return self._env
 
     @property
@@ -54,33 +54,31 @@ class Inngest:
         return self._event_api_origin
 
     @property
-    def event_key(self) -> typing.Optional[str]:
+    def event_key(self) -> str | None:
         return self._event_key
 
     @property
-    def signing_key(self) -> typing.Optional[str]:
+    def signing_key(self) -> str | None:
         return self._signing_key
 
     @property
-    def signing_key_fallback(self) -> typing.Optional[str]:
+    def signing_key_fallback(self) -> str | None:
         return self._signing_key_fallback
 
     def __init__(
         self,
         *,
-        api_base_url: typing.Optional[str] = None,
+        api_base_url: str | None = None,
         app_id: str,
-        env: typing.Optional[str] = None,
-        event_api_base_url: typing.Optional[str] = None,
-        event_key: typing.Optional[str] = None,
-        is_production: typing.Optional[bool] = None,
-        logger: typing.Optional[types.Logger] = None,
-        middleware: typing.Optional[
-            list[middleware_lib.UninitializedMiddleware]
-        ] = None,
+        env: str | None = None,
+        event_api_base_url: str | None = None,
+        event_key: str | None = None,
+        is_production: bool | None = None,
+        logger: types.Logger | None = None,
+        middleware: list[middleware_lib.UninitializedMiddleware] | None = None,
         request_timeout: int | datetime.timedelta | None = None,
         serializer: serializer_lib.Serializer | None = None,
-        signing_key: typing.Optional[str] = None,
+        signing_key: str | None = None,
     ) -> None:
         """
         Args:
@@ -208,39 +206,31 @@ class Inngest:
     def create_function(
         self,
         *,
-        batch_events: typing.Optional[server_lib.Batch] = None,
-        cancel: typing.Optional[list[server_lib.Cancel]] = None,
-        concurrency: typing.Optional[list[server_lib.Concurrency]] = None,
-        debounce: typing.Optional[server_lib.Debounce] = None,
+        batch_events: server_lib.Batch | None = None,
+        cancel: list[server_lib.Cancel] | None = None,
+        concurrency: list[server_lib.Concurrency] | None = None,
+        debounce: server_lib.Debounce | None = None,
         fn_id: str,
-        idempotency: typing.Optional[str] = None,
-        middleware: typing.Optional[
-            list[middleware_lib.UninitializedMiddleware]
-        ] = None,
-        name: typing.Optional[str] = None,
-        on_failure: typing.Union[
-            execution_lib.FunctionHandlerAsync[typing.Any],
-            execution_lib.FunctionHandlerSync[typing.Any],
-            None,
-        ] = None,
+        idempotency: str | None = None,
+        middleware: list[middleware_lib.UninitializedMiddleware] | None = None,
+        name: str | None = None,
+        on_failure: execution_lib.FunctionHandlerAsync[typing.Any]
+        | execution_lib.FunctionHandlerSync[typing.Any]
+        | None = None,
         output_type: object = types.EmptySentinel,
-        priority: typing.Optional[server_lib.Priority] = None,
-        rate_limit: typing.Optional[server_lib.RateLimit] = None,
-        retries: typing.Optional[int] = None,
-        throttle: typing.Optional[server_lib.Throttle] = None,
-        timeouts: typing.Optional[server_lib.Timeouts] = None,
-        singleton: typing.Optional[server_lib.Singleton] = None,
-        trigger: typing.Union[
-            server_lib.TriggerCron,
-            server_lib.TriggerEvent,
-            list[typing.Union[server_lib.TriggerCron, server_lib.TriggerEvent]],
-        ],
+        priority: server_lib.Priority | None = None,
+        rate_limit: server_lib.RateLimit | None = None,
+        retries: int | None = None,
+        throttle: server_lib.Throttle | None = None,
+        timeouts: server_lib.Timeouts | None = None,
+        singleton: server_lib.Singleton | None = None,
+        trigger: server_lib.TriggerCron
+        | server_lib.TriggerEvent
+        | list[server_lib.TriggerCron | server_lib.TriggerEvent],
     ) -> typing.Callable[
         [
-            typing.Union[
-                execution_lib.FunctionHandlerAsync[types.T],
-                execution_lib.FunctionHandlerSync[types.T],
-            ]
+            execution_lib.FunctionHandlerAsync[types.T]
+            | execution_lib.FunctionHandlerSync[types.T]
         ],
         function.Function[types.T],
     ]:
@@ -271,12 +261,11 @@ class Inngest:
         fully_qualified_fn_id = f"{self.app_id}-{fn_id}"
 
         def decorator(
-            func: typing.Union[
-                execution_lib.FunctionHandlerAsync[types.T],
-                execution_lib.FunctionHandlerSync[types.T],
-            ],
+            func: execution_lib.FunctionHandlerAsync[types.T]
+            | execution_lib.FunctionHandlerSync[types.T],
         ) -> function.Function[types.T]:
             triggers = trigger if isinstance(trigger, list) else [trigger]
+
             return function.Function(
                 function.FunctionOpts(
                     batch_events=batch_events,
@@ -395,7 +384,7 @@ class Inngest:
 
     async def send(
         self,
-        events: typing.Union[server_lib.Event, list[server_lib.Event]],
+        events: server_lib.Event | list[server_lib.Event],
         *,
         skip_middleware: bool = False,
     ) -> list[str]:
@@ -464,7 +453,7 @@ class Inngest:
 
     def send_sync(
         self,
-        events: typing.Union[server_lib.Event, list[server_lib.Event]],
+        events: server_lib.Event | list[server_lib.Event],
         *,
         skip_middleware: bool = False,
     ) -> list[str]:
@@ -562,7 +551,7 @@ class Inngest:
 
 def _get_mode(
     logger: types.Logger,
-    is_production: typing.Optional[bool],
+    is_production: bool | None,
 ) -> server_lib.ServerKind:
     if is_production is not None:
         if is_production:

@@ -6,7 +6,6 @@ import hmac
 import http
 import threading
 import time
-import typing
 import urllib.parse
 
 import httpx
@@ -34,10 +33,10 @@ class AuthenticatedHTTPClient:
     def __init__(
         self,
         *,
-        env: typing.Optional[str],
+        env: str | None,
         request_timeout: int | datetime.timedelta | None = None,
-        signing_key: typing.Optional[str],
-        signing_key_fallback: typing.Optional[str],
+        signing_key: str | None,
+        signing_key_fallback: str | None,
     ):
         self._http_client = ThreadAwareAsyncHTTPClient().initialize()
         self._http_client_sync = httpx.Client()
@@ -253,7 +252,7 @@ class ThreadAwareAsyncHTTPClient(httpx.AsyncClient):
     async method in a different thread will raise an exception
     """
 
-    _creation_thread_id: typing.Optional[int] = None
+    _creation_thread_id: int | None = None
 
     def is_same_thread(self) -> bool:
         if self._creation_thread_id is None:
@@ -269,9 +268,9 @@ class ThreadAwareAsyncHTTPClient(httpx.AsyncClient):
 
 def create_headers(
     *,
-    env: typing.Optional[str],
-    framework: typing.Optional[server_lib.Framework],
-    server_kind: typing.Optional[server_lib.ServerKind],
+    env: str | None,
+    framework: server_lib.Framework | None,
+    server_kind: server_lib.ServerKind | None,
 ) -> dict[str, str]:
     """
     Create standard headers that should exist on every possible outgoing
@@ -299,10 +298,10 @@ def create_headers(
 
 def create_serve_url(
     *,
-    public_path: typing.Optional[str],
+    public_path: str | None,
     request_url: str,
-    serve_origin: typing.Optional[str],
-    serve_path: typing.Optional[str],
+    serve_origin: str | None,
+    serve_path: str | None,
 ) -> str:
     """
     Create the serve URL, which is the URL that the Executor will use to reach
@@ -355,8 +354,8 @@ async def fetch_with_auth_fallback(
     client_sync: httpx.Client,
     request: httpx.Request,
     *,
-    signing_key: typing.Optional[str],
-    signing_key_fallback: typing.Optional[str],
+    signing_key: str | None,
+    signing_key_fallback: str | None,
 ) -> types.MaybeError[httpx.Response]:
     """
     Send an HTTP request with the given signing key. If the response is a 401 or
@@ -401,8 +400,8 @@ def fetch_with_auth_fallback_sync(
     client: httpx.Client,
     request: httpx.Request,
     *,
-    signing_key: typing.Optional[str],
-    signing_key_fallback: typing.Optional[str],
+    signing_key: str | None,
+    signing_key_fallback: str | None,
 ) -> types.MaybeError[httpx.Response]:
     """
     Send an HTTP request with the given signing key. If the response is a 401 or
@@ -435,7 +434,7 @@ def fetch_with_auth_fallback_sync(
 
 
 def normalize_headers(
-    headers: typing.Union[dict[str, str], dict[str, list[str]]],
+    headers: dict[str, str] | dict[str, list[str]],
 ) -> dict[str, str]:
     """
     Ensure that known headers are in the correct casing.
@@ -503,7 +502,7 @@ async def fetch_with_thready_safety(
 def sign_request(
     body: bytes,
     signing_key: str,
-    unix_ms: typing.Optional[int] = None,
+    unix_ms: int | None = None,
 ) -> types.MaybeError[str]:
     """
     Sign an HTTP request in the same way an Inngest server would. This is only
@@ -532,7 +531,7 @@ def sign_request(
 def sign_response(
     body: bytes,
     signing_key: str,
-    unix_ms: typing.Optional[int] = None,
+    unix_ms: int | None = None,
 ) -> types.MaybeError[str]:
     """
     Sign an HTTP response.
@@ -558,8 +557,8 @@ def _validate_sig(
     body: bytes,
     headers: dict[str, str],
     mode: server_lib.ServerKind,
-    signing_key: typing.Optional[str],
-) -> types.MaybeError[typing.Optional[str]]:
+    signing_key: str | None,
+) -> types.MaybeError[str | None]:
     if mode == server_lib.ServerKind.DEV_SERVER:
         return None
 
@@ -607,9 +606,9 @@ def validate_request_sig(
     body: bytes,
     headers: dict[str, str],
     mode: server_lib.ServerKind,
-    signing_key: typing.Optional[str],
-    signing_key_fallback: typing.Optional[str],
-) -> types.MaybeError[typing.Optional[str]]:
+    signing_key: str | None,
+    signing_key_fallback: str | None,
+) -> types.MaybeError[str | None]:
     """
     Validate the request signature. Falls back to the fallback signing key if
     signature validation fails with the primary signing key.
@@ -653,7 +652,7 @@ def validate_response_sig(
     headers: dict[str, str],
     mode: server_lib.ServerKind,
     signing_key: str,
-) -> types.MaybeError[typing.Optional[str]]:
+) -> types.MaybeError[str | None]:
     """
     Validate an HTTP response signature in the same way an Inngest server would.
     This is only needed for tests that mimic Inngest server behavior.
