@@ -20,9 +20,7 @@ class TestClass(typing.Protocol):
 
 @dataclasses.dataclass
 class Case:
-    fn: typing.Union[
-        inngest.Function[typing.Any], list[inngest.Function[typing.Any]]
-    ]
+    fn: inngest.Function[typing.Any] | list[inngest.Function[typing.Any]]
     name: str
     run_test: typing.Callable[[TestClass], typing.Awaitable[None]]
 
@@ -51,7 +49,7 @@ class Encryptor:
             secret_key, encoder=nacl.encoding.HexEncoder
         )
 
-    def encrypt(self, data: object) -> dict[str, typing.Union[bool, str]]:
+    def encrypt(self, data: object) -> dict[str, bool | str]:
         """
         Encrypt data the way middleware would.
         """

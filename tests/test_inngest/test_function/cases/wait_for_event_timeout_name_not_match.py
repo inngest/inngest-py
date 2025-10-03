@@ -3,7 +3,6 @@ Wait for event times out if the specified event name isn't received
 """
 
 import datetime
-import typing
 
 import inngest
 import test_core.helper
@@ -13,7 +12,7 @@ from . import base
 
 
 class _State(base.BaseState):
-    result: typing.Union[inngest.Event, None, str] = "not_set"
+    result: inngest.Event | None | str = "not_set"
 
 
 def create(

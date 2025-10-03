@@ -26,8 +26,8 @@ enc = base.Encryptor(
 
 
 class _State(base.BaseState):
-    child_run_id: typing.Optional[str] = None
-    child_event: typing.Optional[inngest.Event] = None
+    child_run_id: str | None = None
+    child_event: inngest.Event | None = None
 
     async def wait_for_child_run_id(self) -> str:
         def assertion() -> None:

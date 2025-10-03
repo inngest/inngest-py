@@ -29,7 +29,7 @@ class ExecutionV0(BaseExecution):
         memos: step_lib.StepMemos,
         middleware: middleware_lib.MiddlewareManager,
         request: server_lib.ServerRequest,
-        target_hashed_id: typing.Optional[str],
+        target_hashed_id: str | None,
     ) -> None:
         self._memos = memos
         self._middleware = middleware
@@ -176,7 +176,7 @@ class ExecutionV0Sync(BaseExecutionSync):
         memos: step_lib.StepMemos,
         middleware: middleware_lib.MiddlewareManager,
         request: server_lib.ServerRequest,
-        target_hashed_id: typing.Optional[str],
+        target_hashed_id: str | None,
     ) -> None:
         self._memos = memos
         self._middleware = middleware

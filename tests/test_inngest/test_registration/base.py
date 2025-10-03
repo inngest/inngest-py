@@ -19,8 +19,8 @@ class TestCase(unittest.TestCase):
     def put(
         self,
         *,
-        body: typing.Union[dict[str, object], bytes],
-        headers: typing.Optional[dict[str, str]] = None,
+        body: dict[str, object] | bytes,
+        headers: dict[str, str] | None = None,
     ) -> RegistrationResponse:
         raise NotImplementedError()
 

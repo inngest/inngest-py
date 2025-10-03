@@ -17,17 +17,17 @@ from inngest._internal import (
 
 class CommRequest(types.BaseModel):
     body: bytes
-    headers: typing.Union[dict[str, str], dict[str, str]]
+    headers: dict[str, str]
 
     # Is this a Connect request? (As opposed to our HTTP execution model)
     is_connect: bool = False
 
-    public_path: typing.Optional[str]
-    query_params: typing.Union[dict[str, str], dict[str, list[str]]]
+    public_path: str | None
+    query_params: dict[str, str] | dict[str, list[str]]
     raw_request: object
     request_url: str
-    serve_origin: typing.Optional[str]
-    serve_path: typing.Optional[str]
+    serve_origin: str | None
+    serve_path: str | None
 
 
 class CommResponse:
@@ -35,10 +35,9 @@ class CommResponse:
         self,
         *,
         body: object = None,
-        headers: typing.Optional[dict[str, str]] = None,
-        stream: typing.Optional[
-            typing.Callable[[], typing.AsyncGenerator[bytes, None]]
-        ] = None,
+        headers: dict[str, str] | None = None,
+        stream: typing.Callable[[], typing.AsyncGenerator[bytes, None]]
+        | None = None,
         status_code: int = http.HTTPStatus.OK.value,
     ) -> None:
         self.headers = headers or {}
@@ -54,7 +53,7 @@ class CommResponse:
         return False
 
     @property
-    def request_version(self) -> typing.Optional[int]:
+    def request_version(self) -> int | None:
         value = self.headers.get(server_lib.HeaderKey.REQUEST_VERSION.value)
         if value is None:
             return None
@@ -64,11 +63,11 @@ class CommResponse:
             return None
 
     @property
-    def retry_after(self) -> typing.Optional[str]:
+    def retry_after(self) -> str | None:
         return self.headers.get(server_lib.HeaderKey.RETRY_AFTER.value)
 
     @property
-    def sdk_version(self) -> typing.Optional[str]:
+    def sdk_version(self) -> str | None:
         return self.headers.get(server_lib.HeaderKey.SDK.value)
 
     @classmethod
@@ -76,9 +75,9 @@ class CommResponse:
         cls,
         logger: types.Logger,
         call_res_task: asyncio.Task[execution_lib.CallResult],
-        env: typing.Optional[str],
+        env: str | None,
         framework: server_lib.Framework,
-        server_kind: typing.Optional[server_lib.ServerKind],
+        server_kind: server_lib.ServerKind | None,
     ) -> CommResponse:
         """
         Create a streaming response. Sends keepalive bytes until the response is
@@ -133,9 +132,9 @@ class CommResponse:
         cls,
         logger: types.Logger,
         call_res: execution_lib.CallResult,
-        env: typing.Optional[str],
+        env: str | None,
         framework: server_lib.Framework,
-        server_kind: typing.Optional[server_lib.ServerKind],
+        server_kind: server_lib.ServerKind | None,
     ) -> CommResponse:
         headers = {
             server_lib.HeaderKey.SERVER_TIMING.value: "handler",
@@ -192,7 +191,7 @@ class CommResponse:
         err: Exception,
         status: http.HTTPStatus = http.HTTPStatus.INTERNAL_SERVER_ERROR,
     ) -> CommResponse:
-        code: typing.Optional[str] = None
+        code: str | None = None
         if isinstance(err, errors.Error):
             code = err.code.value
         else:
@@ -339,7 +338,7 @@ class ErrorData(types.BaseModel):
     code: server_lib.ErrorCode
     message: str
     name: str
-    stack: typing.Optional[str]
+    stack: str | None
 
     @classmethod
     def from_error(cls, err: Exception) -> ErrorData:

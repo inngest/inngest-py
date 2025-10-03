@@ -1,5 +1,3 @@
-import typing
-
 import inngest
 import test_core.helper
 from inngest._internal import server_lib
@@ -8,7 +6,7 @@ from . import base
 
 
 class _State(base.BaseState):
-    event: typing.Optional[inngest.Event] = None
+    event: inngest.Event | None = None
 
 
 def create(

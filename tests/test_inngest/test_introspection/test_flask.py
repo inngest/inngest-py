@@ -1,4 +1,3 @@
-import typing
 import unittest
 
 import flask
@@ -16,7 +15,7 @@ class TestIntrospection(base.BaseTestIntrospection):
         self,
         client: inngest.Inngest,
         *,
-        serve_path: typing.Optional[str] = None,
+        serve_path: str | None = None,
     ) -> flask.testing.FlaskClient:
         app = flask.Flask(__name__)
         inngest.flask.serve(

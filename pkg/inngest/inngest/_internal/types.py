@@ -8,7 +8,7 @@ import typing_extensions
 
 if typing.TYPE_CHECKING:
     # https://github.com/python/typeshed/issues/7855
-    Logger = typing.Union[logging.Logger, logging.LoggerAdapter[logging.Logger]]
+    Logger = logging.Logger | logging.LoggerAdapter[logging.Logger]
 else:
     Logger = object
 
@@ -29,15 +29,13 @@ empty_sentinel = EmptySentinel()
 # 2. Mypy errors with "possible cyclic definition"
 JSON = typing_extensions.TypeAliasType(
     "JSON",
-    typing.Union[
-        bool,
-        int,
-        float,
-        str,
-        typing.Mapping[str, object],
-        typing.Sequence[object],
-        None,
-    ],
+    bool
+    | int
+    | float
+    | str
+    | typing.Mapping[str, object]
+    | typing.Sequence[object]
+    | None,
 )
 
 
@@ -68,7 +66,7 @@ class BaseModel(pydantic.BaseModel):
     def from_raw(
         cls: type[BaseModelT],
         raw: object,
-    ) -> typing.Union[BaseModelT, Exception]:
+    ) -> BaseModelT | Exception:
         try:
             if isinstance(raw, (str, bytes)):
                 raw = cls.model_validate_json(raw)
@@ -86,7 +84,7 @@ class BaseModel(pydantic.BaseModel):
 
 BaseModelT = typing.TypeVar("BaseModelT", bound=BaseModel)
 
-MaybeError: typing_extensions.TypeAlias = typing.Union[T, Exception]
+MaybeError: typing_extensions.TypeAlias = T | Exception
 
 
 def is_dict(v: object) -> typing.TypeGuard[dict[object, object]]:

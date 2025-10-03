@@ -1,5 +1,4 @@
 import json
-import typing
 
 import inngest
 import test_core.helper
@@ -9,7 +8,7 @@ from . import base
 
 
 class _State(base.BaseState):
-    error: typing.Optional[BaseException] = None
+    error: BaseException | None = None
 
 
 def create(

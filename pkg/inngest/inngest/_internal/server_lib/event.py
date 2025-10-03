@@ -17,7 +17,7 @@ class Event(types.BaseModel):
     @classmethod
     def _ensure_dict(
         cls,
-        v: typing.Optional[typing.Mapping[str, types.JSON]],
+        v: typing.Mapping[str, types.JSON] | None,
     ) -> typing.Mapping[str, types.JSON]:
         """
         Necessary because sometimes event data is sent as null, but we want

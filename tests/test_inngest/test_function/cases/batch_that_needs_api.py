@@ -8,7 +8,6 @@ API when use_api is true.
 """
 
 import datetime
-import typing
 
 import inngest
 import test_core.helper
@@ -18,7 +17,7 @@ from . import base
 
 
 class _State(base.BaseState):
-    events: typing.Optional[list[inngest.Event]] = None
+    events: list[inngest.Event] | None = None
 
 
 def create(

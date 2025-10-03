@@ -46,7 +46,7 @@ class RemoteStateMiddleware(inngest.MiddlewareSync):
     output is stored within your infrastructure rather than Inngest's.
     """
 
-    _run_id: typing.Optional[str] = None
+    _run_id: str | None = None
 
     def __init__(
         self,

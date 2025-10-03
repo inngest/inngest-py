@@ -12,15 +12,15 @@ if typing.TYPE_CHECKING:
 
 
 class _QueryParams(types.BaseModel):
-    fn_id: typing.Optional[str]
-    probe: typing.Optional[server_lib.Probe]
-    step_id: typing.Optional[str]
-    sync_id: typing.Optional[str]
+    fn_id: str | None
+    probe: server_lib.Probe | None
+    step_id: str | None
+    sync_id: str | None
 
 
 def parse_query_params(
-    query_params: typing.Union[dict[str, str], dict[str, list[str]]],
-) -> typing.Union[_QueryParams, Exception]:
+    query_params: dict[str, str] | dict[str, list[str]],
+) -> _QueryParams | Exception:
     normalized: dict[str, str] = {}
     for k, v in query_params.items():
         if isinstance(v, list):
@@ -28,7 +28,7 @@ def parse_query_params(
         else:
             normalized[k] = v
 
-    probe: typing.Optional[server_lib.Probe] = None
+    probe: server_lib.Probe | None = None
     probe_str = normalized.get(server_lib.QueryParamKey.PROBE.value)
     if probe_str:
         try:
@@ -49,8 +49,8 @@ def parse_query_params(
 
 
 _MethodHandler = typing.Callable[
-    [typing.Any, CommRequest, types.MaybeError[typing.Optional[str]]],
-    typing.Awaitable[typing.Union[CommResponse, Exception]],
+    [typing.Any, CommRequest, types.MaybeError[str | None]],
+    typing.Awaitable[CommResponse | Exception],
 ]
 
 
@@ -128,8 +128,8 @@ def wrap_handler(
 
 
 _MethodHandlerSync = typing.Callable[
-    [typing.Any, CommRequest, types.MaybeError[typing.Optional[str]]],
-    typing.Union[CommResponse, Exception],
+    [typing.Any, CommRequest, types.MaybeError[str | None]],
+    CommResponse | Exception,
 ]
 
 

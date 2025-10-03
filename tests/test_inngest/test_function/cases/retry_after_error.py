@@ -1,5 +1,4 @@
 import datetime
-import typing
 
 import inngest
 import test_core.helper
@@ -9,12 +8,12 @@ from . import base
 
 
 class _State(base.BaseState):
-    fn_level_raise_1_time: typing.Optional[datetime.datetime] = None
-    fn_level_retry_1_time: typing.Optional[datetime.datetime] = None
-    fn_level_raise_2_time: typing.Optional[datetime.datetime] = None
-    fn_level_retry_2_time: typing.Optional[datetime.datetime] = None
-    step_level_raise_time: typing.Optional[datetime.datetime] = None
-    step_level_retry_time: typing.Optional[datetime.datetime] = None
+    fn_level_raise_1_time: datetime.datetime | None = None
+    fn_level_retry_1_time: datetime.datetime | None = None
+    fn_level_raise_2_time: datetime.datetime | None = None
+    fn_level_retry_2_time: datetime.datetime | None = None
+    step_level_raise_time: datetime.datetime | None = None
+    step_level_retry_time: datetime.datetime | None = None
 
 
 def create(

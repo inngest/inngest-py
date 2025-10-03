@@ -35,8 +35,8 @@ class CommHandler:
     _fns: dict[str, function.Function[typing.Any]]
     _framework: server_lib.Framework
     _mode: server_lib.ServerKind
-    _signing_key: typing.Optional[str]
-    _signing_key_fallback: typing.Optional[str]
+    _signing_key: str | None
+    _signing_key_fallback: str | None
 
     def __init__(
         self,
@@ -44,7 +44,7 @@ class CommHandler:
         client: client_lib.Inngest,
         framework: server_lib.Framework,
         functions: list[function.Function[typing.Any]],
-        streaming: typing.Optional[const.Streaming],
+        streaming: const.Streaming | None,
     ) -> None:
         # In-band syncing is opt-out.
         self._allow_in_band_sync = not env_lib.is_false(
@@ -105,8 +105,8 @@ class CommHandler:
     async def post(
         self,
         req: CommRequest,
-        request_signing_key: types.MaybeError[typing.Optional[str]],
-    ) -> typing.Union[CommResponse, Exception]:
+        request_signing_key: types.MaybeError[str | None],
+    ) -> CommResponse | Exception:
         params = parse_query_params(req.query_params)
         if isinstance(params, Exception):
             return params
@@ -252,8 +252,8 @@ class CommHandler:
     def post_sync(
         self,
         req: CommRequest,
-        request_signing_key: types.MaybeError[typing.Optional[str]],
-    ) -> typing.Union[CommResponse, Exception]:
+        request_signing_key: types.MaybeError[str | None],
+    ) -> CommResponse | Exception:
         params = parse_query_params(req.query_params)
         if isinstance(params, Exception):
             return params
@@ -372,7 +372,7 @@ class CommHandler:
     def get_sync(
         self,
         req: CommRequest,
-        request_signing_key: types.MaybeError[typing.Optional[str]],
+        request_signing_key: types.MaybeError[str | None],
     ) -> types.MaybeError[CommResponse]:
         """Handle Dev Server's auto-discovery."""
 
@@ -410,8 +410,8 @@ class CommHandler:
     async def put(
         self: CommHandler,
         req: CommRequest,
-        request_signing_key: types.MaybeError[typing.Optional[str]],
-    ) -> typing.Union[CommResponse, Exception]:
+        request_signing_key: types.MaybeError[str | None],
+    ) -> CommResponse | Exception:
         """Handle a PUT request."""
 
         self._client.logger.debug("Syncing app")
@@ -422,7 +422,7 @@ class CommHandler:
             == server_lib.SyncKind.IN_BAND.value
             and self._allow_in_band_sync
         ):
-            err: typing.Optional[Exception] = None
+            err: Exception | None = None
             if isinstance(request_signing_key, Exception):
                 err = request_signing_key
             elif request_signing_key is None:
@@ -441,8 +441,8 @@ class CommHandler:
     def put_sync(
         self: CommHandler,
         req: CommRequest,
-        request_signing_key: types.MaybeError[typing.Optional[str]],
-    ) -> typing.Union[CommResponse, Exception]:
+        request_signing_key: types.MaybeError[str | None],
+    ) -> CommResponse | Exception:
         """Handle a PUT request."""
 
         self._client.logger.debug("Syncing app")
@@ -453,7 +453,7 @@ class CommHandler:
             == server_lib.SyncKind.IN_BAND.value
             and self._allow_in_band_sync
         ):
-            err: typing.Optional[Exception] = None
+            err: Exception | None = None
             if isinstance(request_signing_key, Exception):
                 err = request_signing_key
             elif request_signing_key is None:
@@ -473,12 +473,9 @@ class CommHandler:
 def _build_inspection_response(
     handler: CommHandler,
     req: CommRequest,
-    request_signing_key: types.MaybeError[typing.Optional[str]],
+    request_signing_key: types.MaybeError[str | None],
 ) -> types.MaybeError[
-    typing.Union[
-        server_lib.AuthenticatedInspection,
-        server_lib.UnauthenticatedInspection,
-    ]
+    server_lib.AuthenticatedInspection | server_lib.UnauthenticatedInspection
 ]:
     server_kind = transforms.get_server_kind(req.headers)
     if isinstance(server_kind, Exception):
@@ -524,7 +521,7 @@ def _build_inspection_response(
             signing_key_hash=signing_key_hash,
         )
 
-    authentication_succeeded: typing.Optional[typing.Literal[False]] = None
+    authentication_succeeded: typing.Literal[False | None] = None
     if isinstance(request_signing_key, Exception):
         authentication_succeeded = False
 
@@ -546,7 +543,7 @@ class Syncer:
         self,
         handler: CommHandler,
         req: CommRequest,
-        request_signing_key: types.MaybeError[typing.Optional[str]],
+        request_signing_key: types.MaybeError[str | None],
     ) -> types.MaybeError[CommResponse]:
         if not isinstance(request_signing_key, str):
             # This should be checked earlier, but we'll also check it here since
@@ -609,7 +606,7 @@ class Syncer:
         self,
         handler: CommHandler,
         req: CommRequest,
-    ) -> types.MaybeError[typing.Union[CommResponse, httpx.Request]]:
+    ) -> types.MaybeError[CommResponse | httpx.Request]:
         app_url = net.create_serve_url(
             public_path=req.public_path,
             request_url=req.request_url,

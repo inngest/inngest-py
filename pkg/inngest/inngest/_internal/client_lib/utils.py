@@ -1,10 +1,8 @@
-import typing
-
 from inngest._internal import const, env_lib, net, server_lib, types
 
 
 def get_api_origin(
-    constructor_param: typing.Optional[str],
+    constructor_param: str | None,
     mode: server_lib.ServerKind,
 ) -> types.MaybeError[str]:
     """
@@ -31,7 +29,7 @@ def get_api_origin(
 
 
 def get_event_api_origin(
-    constructor_param: typing.Optional[str],
+    constructor_param: str | None,
     mode: server_lib.ServerKind,
 ) -> types.MaybeError[str]:
     """

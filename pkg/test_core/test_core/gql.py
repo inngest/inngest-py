@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import typing
-
 import httpx
 import pydantic
 
@@ -10,7 +8,7 @@ class Client:
     def __init__(self, endpoint: str):
         self._endpoint = endpoint
 
-    async def query(self, query: Query) -> typing.Union[Response, Error]:
+    async def query(self, query: Query) -> Response | Error:
         async with httpx.AsyncClient() as client:
             http_res = await client.post(
                 self._endpoint,
@@ -41,7 +39,7 @@ class Query:
     def __init__(
         self,
         query: str,
-        variables: typing.Optional[dict[str, object]] = None,
+        variables: dict[str, object] | None = None,
     ):
         self._query = query
         self._variables = variables
@@ -55,9 +53,9 @@ class Query:
 
 class Response(pydantic.BaseModel):
     data: dict[str, object]
-    errors: typing.Optional[list[dict[str, object]]] = None
+    errors: list[dict[str, object]] | None = None
 
 
 class Error(pydantic.BaseModel):
-    response: typing.Optional[Response] = None
+    response: Response | None = None
     message: str

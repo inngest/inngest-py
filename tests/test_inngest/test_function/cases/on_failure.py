@@ -1,6 +1,5 @@
 import datetime
 import json
-import typing
 import unittest.mock
 
 import inngest
@@ -11,11 +10,11 @@ from . import base
 
 
 class _State(base.BaseState):
-    attempt: typing.Optional[int] = None
-    event: typing.Optional[inngest.Event] = None
-    events: typing.Optional[list[inngest.Event]] = None
-    on_failure_run_id: typing.Optional[str] = None
-    step: typing.Union[inngest.Step, inngest.StepSync, None] = None
+    attempt: int | None = None
+    event: inngest.Event | None = None
+    events: list[inngest.Event] | None = None
+    on_failure_run_id: str | None = None
+    step: inngest.Step | inngest.StepSync | None = None
 
     async def wait_for_on_failure_run_id(self) -> str:
         def assertion() -> None:

@@ -15,7 +15,7 @@ from . import http_proxy, net
 
 
 class BaseState:
-    run_id: typing.Optional[str] = None
+    run_id: str | None = None
 
     async def wait_for_run_id(
         self,
@@ -31,9 +31,8 @@ class BaseState:
 
 
 async def wait_for(
-    assertion: typing.Union[
-        typing.Callable[[], None], typing.Callable[[], typing.Awaitable[None]]
-    ],
+    assertion: typing.Callable[[], None]
+    | typing.Callable[[], typing.Awaitable[None]],
     *,
     timeout: datetime.timedelta = datetime.timedelta(seconds=5),
 ) -> None:
@@ -83,7 +82,7 @@ class _FrameworkTestCase(typing.Protocol):
     def on_proxy_request(
         self,
         *,
-        body: typing.Optional[bytes],
+        body: bytes | None,
         headers: dict[str, list[str]],
         method: str,
         path: str,
@@ -105,7 +104,7 @@ def create_test_name(file: str) -> str:
 
 def register(
     app_port: int,
-    path: typing.Optional[str] = "/api/inngest",
+    path: str | None = "/api/inngest",
 ) -> None:
     start = time.time()
     while time.time() < start + 5:

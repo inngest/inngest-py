@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-import typing
 import unittest
 
 import httpx
@@ -27,7 +26,7 @@ class _Proxies:
 
 @dataclasses.dataclass
 class _Request:
-    body: typing.Optional[bytes]
+    body: bytes | None
     headers: dict[str, list[str]]
     method: str
     path: str
@@ -46,7 +45,7 @@ class BaseTest(unittest.IsolatedAsyncioTestCase):
 
         def http_proxy_handler(
             *,
-            body: typing.Optional[bytes],
+            body: bytes | None,
             headers: dict[str, list[str]],
             method: str,
             path: str,

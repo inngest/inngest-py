@@ -2,9 +2,11 @@ exclude = [
     ".venv",
     "pkg/inngest/inngest/connect/_internal/connect_pb2.py",
     "pkg/inngest/inngest/connect/_internal/connect_pb2.pyi",
+    "smoke_tests",
 ]
 
 line-length = 80
+target-version = "py310"
 
 [lint.extend-per-file-ignores]
 "**/*_test.py" = ['C901', 'D', 'N', 'S', 'T20']
@@ -40,9 +42,7 @@ extend-ignore = [
     'D415',
     'RUF022',
     'S112',
-
-    # Delete when we use "|" for unions.
-    'UP007',
+    'UP038',  # isinstance with tuple (has performance implications)
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.

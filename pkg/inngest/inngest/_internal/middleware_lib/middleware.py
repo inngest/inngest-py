@@ -67,7 +67,7 @@ class Middleware:
 
     async def transform_input(
         self,
-        ctx: typing.Union[execution_lib.Context, execution_lib.ContextSync],
+        ctx: execution_lib.Context | execution_lib.ContextSync,
         function: function.Function[typing.Any],
         steps: step_lib.StepMemos,
     ) -> None:
@@ -140,7 +140,7 @@ class MiddlewareSync:
 
     def transform_input(
         self,
-        ctx: typing.Union[execution_lib.Context, execution_lib.ContextSync],
+        ctx: execution_lib.Context | execution_lib.ContextSync,
         function: function.Function[typing.Any],
         steps: step_lib.StepMemos,
     ) -> None:
@@ -161,7 +161,7 @@ class MiddlewareSync:
 
 UninitializedMiddleware = typing.Callable[
     # Used a "client_lib.Inngest" string to avoid a circular import
-    ["client_lib.Inngest", object], typing.Union[Middleware, MiddlewareSync]
+    ["client_lib.Inngest", object], Middleware | MiddlewareSync
 ]
 
 
@@ -169,12 +169,12 @@ UninitializedMiddleware = typing.Callable[
 class TransformOutputResult:
     # Mutations to these fields within middleware will be kept after running
     # middleware
-    error: typing.Optional[Exception]
+    error: Exception | None
     output: object
 
     # Mutations to these fields within middleware will be discarded after
     # running middleware
-    step: typing.Optional[TransformOutputStepInfo]
+    step: TransformOutputStepInfo | None
 
     def has_output(self) -> bool:
         return self.output is not types.empty_sentinel
@@ -184,4 +184,4 @@ class TransformOutputResult:
 class TransformOutputStepInfo:
     id: str
     op: server_lib.Opcode
-    opts: typing.Optional[dict[str, object]]
+    opts: dict[str, object] | None

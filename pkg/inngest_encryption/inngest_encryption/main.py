@@ -27,7 +27,7 @@ _strategy_identifier: typing.Final = "inngest/libsodium"
 _default_event_encryption_field: typing.Final = "encrypted"
 
 
-def _ensure_key_bytes(secret_key: typing.Union[bytes, str]) -> bytes:
+def _ensure_key_bytes(secret_key: bytes | str) -> bytes:
     if isinstance(secret_key, str):
         return nacl.hash.generichash(
             secret_key.encode("utf-8"),
@@ -47,13 +47,11 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
         self,
         client: inngest.Inngest,
         raw_request: object,
-        secret_key: typing.Union[bytes, str],
+        secret_key: bytes | str,
         *,
         decrypt_only: bool = False,
         event_encryption_field: str = _default_event_encryption_field,
-        fallback_decryption_keys: typing.Optional[
-            list[typing.Union[bytes, str]]
-        ] = None,
+        fallback_decryption_keys: list[bytes | str] | None = None,
     ) -> None:
         """
         Args:
@@ -87,13 +85,11 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
     @classmethod
     def factory(
         cls,
-        secret_key: typing.Union[bytes, str],
+        secret_key: bytes | str,
         *,
         decrypt_only: bool = False,
         event_encryption_field: str = _default_event_encryption_field,
-        fallback_decryption_keys: typing.Optional[
-            list[typing.Union[bytes, str]]
-        ] = None,
+        fallback_decryption_keys: list[bytes | str] | None = None,
     ) -> typing.Callable[[inngest.Inngest, object], EncryptionMiddleware]:
         """
         Create an encryption middleware factory that can be passed to an Inngest
@@ -122,7 +118,7 @@ class EncryptionMiddleware(inngest.MiddlewareSync):
 
         return _factory
 
-    def _encrypt(self, data: object) -> dict[str, typing.Union[bool, str]]:
+    def _encrypt(self, data: object) -> dict[str, bool | str]:
         if isinstance(data, dict) and data.get(_encryption_marker) is True:
             # Already encrypted
             self.client.logger.warning(

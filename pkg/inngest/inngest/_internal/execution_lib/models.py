@@ -10,18 +10,18 @@ from inngest._internal import errors, server_lib, step_lib, types
 
 @dataclasses.dataclass
 class CallResult:
-    error: typing.Optional[Exception] = None
+    error: Exception | None = None
 
     # Multiple results from a single call (only used for steps). This will only
     # be longer than 1 for parallel steps. Otherwise, it will be 1 long for
     # sequential steps
-    multi: typing.Optional[list[CallResult]] = None
+    multi: list[CallResult] | None = None
 
     # Need a sentinel value to differentiate between None and unset
     output: object = types.empty_sentinel
 
     # Step metadata (e.g. user-specified ID)
-    step: typing.Optional[step_lib.StepInfo] = None
+    step: step_lib.StepInfo | None = None
 
     @property
     def is_empty(self) -> bool:
@@ -91,14 +91,14 @@ _in_step = contextvars.ContextVar("in_step", default=False)
 
 
 class ReportedStep:
-    _in_step_token: typing.Optional[contextvars.Token[bool]] = None
+    _in_step_token: contextvars.Token[bool] | None = None
 
     def __init__(
         self,
         step_signal: asyncio.Future[ReportedStep],
         step_info: step_lib.StepInfo,
     ) -> None:
-        self.error: typing.Optional[errors.StepError] = None
+        self.error: errors.StepError | None = None
         self.info = step_info
         self.output: object = types.empty_sentinel
         self.skip = False
@@ -142,10 +142,10 @@ class ReportedStep:
 
 
 class ReportedStepSync:
-    _in_step_token: typing.Optional[contextvars.Token[bool]] = None
+    _in_step_token: contextvars.Token[bool] | None = None
 
     def __init__(self, step_info: step_lib.StepInfo) -> None:
-        self.error: typing.Optional[errors.StepError] = None
+        self.error: errors.StepError | None = None
         self.info = step_info
         self.output: object = types.empty_sentinel
         self.skip = False
