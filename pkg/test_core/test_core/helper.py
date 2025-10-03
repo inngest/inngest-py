@@ -4,7 +4,6 @@ import asyncio
 import enum
 import json
 import time
-import typing
 
 import inngest
 import pydantic
@@ -179,7 +178,7 @@ class _Client:
         """
 
         start = time.time()
-        actual_status: typing.Optional[str] = None
+        actual_status: str | None = None
         while True:
             res = await self._gql.query(gql.Query(query, {"run_id": run_id}))
             if isinstance(res, gql.Response):
@@ -222,7 +221,7 @@ class _Client:
 class _Run(types.BaseModel):
     event: inngest.Event
     id: str
-    output: typing.Optional[str]
+    output: str | None
     status: RunStatus
 
 

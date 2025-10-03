@@ -1,6 +1,5 @@
 import datetime
 import json
-import typing
 
 import inngest
 import test_core.helper
@@ -10,7 +9,7 @@ from . import base
 
 
 class _State(base.BaseState):
-    raised_err: typing.Optional[Exception] = None
+    raised_err: Exception | None = None
 
 
 def create(

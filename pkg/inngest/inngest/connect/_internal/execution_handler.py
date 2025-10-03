@@ -1,5 +1,4 @@
 import asyncio
-import typing
 import urllib.parse
 
 import httpx
@@ -20,8 +19,8 @@ class _ExecutionHandler(_BaseHandler):
     Handles incoming execution requests from the Gateway.
     """
 
-    _leaser_extender_task: typing.Optional[asyncio.Task[None]] = None
-    _unacked_msg_flush_poller_task: typing.Optional[asyncio.Task[None]] = None
+    _leaser_extender_task: asyncio.Task[None] | None = None
+    _unacked_msg_flush_poller_task: asyncio.Task[None] | None = None
 
     def __init__(
         self,
@@ -30,8 +29,8 @@ class _ExecutionHandler(_BaseHandler):
         http_client: net.ThreadAwareAsyncHTTPClient,
         http_client_sync: httpx.Client,
         logger: types.Logger,
-        signing_key: typing.Optional[str],
-        signing_key_fallback: typing.Optional[str],
+        signing_key: str | None,
+        signing_key_fallback: str | None,
         state: _State,
     ) -> None:
         self._api_origin = api_origin

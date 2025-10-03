@@ -1,7 +1,6 @@
 import asyncio
 import dataclasses
 import os
-import typing
 
 import httpx
 import inngest
@@ -27,7 +26,7 @@ class TestAPIRequestHeaders(BaseTest):
 
         def mock_api_handler(
             *,
-            body: typing.Optional[bytes],
+            body: bytes | None,
             headers: dict[str, list[str]],
             method: str,
             path: str,
@@ -76,14 +75,14 @@ class TestAPIRequestHeaders(BaseTest):
 
         @dataclasses.dataclass
         class State:
-            attempt_1_auth_header: typing.Optional[str] = None
-            attempt_2_auth_header: typing.Optional[str] = None
+            attempt_1_auth_header: str | None = None
+            attempt_2_auth_header: str | None = None
 
         state = State()
 
         def mock_api_handler(
             *,
-            body: typing.Optional[bytes],
+            body: bytes | None,
             headers: dict[str, list[str]],
             method: str,
             path: str,
@@ -172,7 +171,7 @@ class TestAPIRequestHeaders(BaseTest):
 
         def mock_api_handler(
             *,
-            body: typing.Optional[bytes],
+            body: bytes | None,
             headers: dict[str, list[str]],
             method: str,
             path: str,
@@ -223,7 +222,7 @@ class TestAPIRequestHeaders(BaseTest):
 
         def mock_api_handler(
             *,
-            body: typing.Optional[bytes],
+            body: bytes | None,
             headers: dict[str, list[str]],
             method: str,
             path: str,

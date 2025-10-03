@@ -18,7 +18,7 @@ class _ValueWatcher(typing.Generic[T]):
         self,
         initial_value: T,
         *,
-        on_change: typing.Optional[typing.Callable[[T, T], None]] = None,
+        on_change: typing.Callable[[T, T], None] | None = None,
     ) -> None:
         """
         Args:
@@ -106,7 +106,7 @@ class _ValueWatcher(typing.Generic[T]):
         raise Exception("unreachable")
 
     async def wait_for_not_none(
-        self: _ValueWatcher[typing.Optional[S]],
+        self: _ValueWatcher[S | None],
         *,
         immediate: bool = True,
     ) -> S:
@@ -180,8 +180,8 @@ class _WatchContextManager(typing.Generic[T]):
 
     def __exit__(
         self,
-        exc_type: typing.Optional[type[BaseException]],
-        exc_value: typing.Optional[BaseException],
+        exc_type: type[BaseException | None],
+        exc_value: BaseException | None,
         traceback: object,
     ) -> None:
         self._on_exit()

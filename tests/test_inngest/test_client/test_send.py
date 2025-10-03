@@ -32,7 +32,7 @@ class TestSend(unittest.IsolatedAsyncioTestCase):
 
         def on_request(
             *,
-            body: typing.Optional[bytes],
+            body: bytes | None,
             headers: dict[str, list[str]],
             method: str,
             path: str,
@@ -221,7 +221,7 @@ class TestSend(unittest.IsolatedAsyncioTestCase):
 
                 # Create a proxy that returns a 400
                 def on_request(
-                    body: typing.Optional[bytes],
+                    body: bytes | None,
                     headers: dict[str, list[str]],
                     method: str,
                     path: str,
@@ -272,7 +272,7 @@ def create_first_request_500_handler() -> tuple[
     proxy_request_count = 0
 
     def on_request(
-        body: typing.Optional[bytes],
+        body: bytes | None,
         headers: dict[str, list[str]],
         method: str,
         path: str,
@@ -317,7 +317,7 @@ def create_first_request_timeout_handler() -> tuple[
     proxy_request_count = 0
 
     def on_request(
-        body: typing.Optional[bytes],
+        body: bytes | None,
         headers: dict[str, list[str]],
         method: str,
         path: str,

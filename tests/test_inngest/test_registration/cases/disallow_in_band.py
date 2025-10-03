@@ -1,7 +1,6 @@
 import dataclasses
 import json
 import os
-import typing
 
 import inngest
 from inngest._internal import const, net, server_lib
@@ -27,7 +26,7 @@ def create(framework: server_lib.Framework) -> base.Case:
 
         @dataclasses.dataclass
         class State:
-            body: typing.Optional[bytes]
+            body: bytes | None
             headers: dict[str, list[str]]
 
         state = State(
@@ -37,7 +36,7 @@ def create(framework: server_lib.Framework) -> base.Case:
 
         def on_request(
             *,
-            body: typing.Optional[bytes],
+            body: bytes | None,
             headers: dict[str, list[str]],
             method: str,
             path: str,

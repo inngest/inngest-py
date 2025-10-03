@@ -1,8 +1,7 @@
 import asyncio
-import typing
 
 
-def get_event_loop() -> typing.Optional[asyncio.AbstractEventLoop]:
+def get_event_loop() -> asyncio.AbstractEventLoop | None:
     try:
         loop = asyncio.get_event_loop()
     except RuntimeError:

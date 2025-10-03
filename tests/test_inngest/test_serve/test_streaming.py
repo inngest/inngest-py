@@ -1,7 +1,6 @@
 import asyncio
 import json
 import threading
-import typing
 import unittest
 
 import fastapi
@@ -31,7 +30,7 @@ class TestStreaming(unittest.IsolatedAsyncioTestCase):
         res_chunks = list[bytes]()
 
         def on_request(
-            body: typing.Optional[bytes],
+            body: bytes | None,
             headers: dict[str, list[str]],
             method: str,
             path: str,
@@ -139,7 +138,7 @@ class TestStreaming(unittest.IsolatedAsyncioTestCase):
         res_chunks = list[bytes]()
 
         def on_request(
-            body: typing.Optional[bytes],
+            body: bytes | None,
             headers: dict[str, list[str]],
             method: str,
             path: str,

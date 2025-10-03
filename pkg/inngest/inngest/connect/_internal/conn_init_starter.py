@@ -21,9 +21,9 @@ class _ConnInitHandler(_BaseHandler):
     Starts the connection by sending the "start request" to the REST API.
     """
 
-    _closed_event: typing.Optional[asyncio.Event] = None
-    _initial_request_task: typing.Optional[asyncio.Task[None]] = None
-    _reconnect_watcher_task: typing.Optional[asyncio.Task[None]] = None
+    _closed_event: asyncio.Event | None = None
+    _initial_request_task: asyncio.Task[None] | None = None
+    _reconnect_watcher_task: asyncio.Task[None] | None = None
 
     @property
     def closed_event(self) -> asyncio.Event:
@@ -35,13 +35,13 @@ class _ConnInitHandler(_BaseHandler):
         self,
         *,
         api_origin: str,
-        env: typing.Optional[str],
+        env: str | None,
         http_client: net.ThreadAwareAsyncHTTPClient,
         http_client_sync: httpx.Client,
         logger: types.Logger,
-        rewrite_gateway_endpoint: typing.Optional[typing.Callable[[str], str]],
-        signing_key: typing.Optional[str],
-        signing_key_fallback: typing.Optional[str],
+        rewrite_gateway_endpoint: typing.Callable[[str], str] | None,
+        signing_key: str | None,
+        signing_key_fallback: str | None,
         state: _State,
     ):
         self._api_origin = api_origin
@@ -87,7 +87,7 @@ class _ConnInitHandler(_BaseHandler):
                 pass
 
     async def _send_start_request(self) -> None:
-        err: typing.Optional[Exception] = None
+        err: Exception | None = None
 
         while self.closed_event.is_set() is False:
             if err is not None:

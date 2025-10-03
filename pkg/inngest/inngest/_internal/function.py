@@ -23,37 +23,37 @@ class _Config:
     main: server_lib.FunctionConfig
 
     # The internal on_failure function
-    on_failure: typing.Optional[server_lib.FunctionConfig]
+    on_failure: server_lib.FunctionConfig | None
 
 
 class FunctionOpts(types.BaseModel):
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
-    batch_events: typing.Optional[server_lib.Batch]
-    cancel: typing.Optional[list[server_lib.Cancel]]
-    concurrency: typing.Optional[list[server_lib.Concurrency]]
-    debounce: typing.Optional[server_lib.Debounce]
+    batch_events: server_lib.Batch | None
+    cancel: list[server_lib.Cancel] | None
+    concurrency: list[server_lib.Concurrency] | None
+    debounce: server_lib.Debounce | None
 
     # Unique within an environment
     fully_qualified_id: str
 
-    idempotency: typing.Optional[str]
+    idempotency: str | None
 
     # Unique within an app
     local_id: str
 
     name: str
-    on_failure: typing.Union[
-        execution_lib.FunctionHandlerAsync[typing.Any],
-        execution_lib.FunctionHandlerSync[typing.Any],
-        None,
-    ]
-    priority: typing.Optional[server_lib.Priority]
-    rate_limit: typing.Optional[server_lib.RateLimit]
-    retries: typing.Optional[int]
-    throttle: typing.Optional[server_lib.Throttle]
-    timeouts: typing.Optional[server_lib.Timeouts]
-    singleton: typing.Optional[server_lib.Singleton]
+    on_failure: (
+        execution_lib.FunctionHandlerAsync[typing.Any]
+        | execution_lib.FunctionHandlerSync[typing.Any]
+        | None
+    )
+    priority: server_lib.Priority | None
+    rate_limit: server_lib.RateLimit | None
+    retries: int | None
+    throttle: server_lib.Throttle | None
+    timeouts: server_lib.Timeouts | None
+    singleton: server_lib.Singleton | None
 
     def convert_validation_error(
         self,
@@ -63,15 +63,13 @@ class FunctionOpts(types.BaseModel):
 
 
 class Function(typing.Generic[types.T]):
-    _handler: typing.Union[
-        execution_lib.FunctionHandlerAsync[types.T],
-        execution_lib.FunctionHandlerSync[types.T],
-    ]
-    _on_failure_fn_id: typing.Optional[str] = None
+    _handler: (
+        execution_lib.FunctionHandlerAsync[types.T]
+        | execution_lib.FunctionHandlerSync[types.T]
+    )
+    _on_failure_fn_id: str | None = None
     _opts: FunctionOpts
-    _triggers: list[
-        typing.Union[server_lib.TriggerCron, server_lib.TriggerEvent]
-    ]
+    _triggers: list[server_lib.TriggerCron | server_lib.TriggerEvent]
 
     @property
     def id(self) -> str:
@@ -83,7 +81,7 @@ class Function(typing.Generic[types.T]):
         return inspect.iscoroutinefunction(self._handler)
 
     @property
-    def is_on_failure_handler_async(self) -> typing.Optional[bool]:
+    def is_on_failure_handler_async(self) -> bool | None:
         """
         Whether the on_failure handler is async. Returns None if there isn't an
         on_failure handler.
@@ -101,25 +99,19 @@ class Function(typing.Generic[types.T]):
         return self._opts.name
 
     @property
-    def on_failure_fn_id(self) -> typing.Optional[str]:
+    def on_failure_fn_id(self) -> str | None:
         return self._on_failure_fn_id
 
     def __init__(
         self,
         opts: FunctionOpts,
-        trigger: typing.Union[
-            server_lib.TriggerCron,
-            server_lib.TriggerEvent,
-            list[typing.Union[server_lib.TriggerCron, server_lib.TriggerEvent]],
-        ],
-        handler: typing.Union[
-            execution_lib.FunctionHandlerAsync[types.T],
-            execution_lib.FunctionHandlerSync[types.T],
-        ],
+        trigger: server_lib.TriggerCron
+        | server_lib.TriggerEvent
+        | list[server_lib.TriggerCron | server_lib.TriggerEvent],
+        handler: execution_lib.FunctionHandlerAsync[types.T]
+        | execution_lib.FunctionHandlerSync[types.T],
         output_type: object = types.EmptySentinel,
-        middleware: typing.Optional[
-            list[middleware_lib.UninitializedMiddleware]
-        ] = None,
+        middleware: list[middleware_lib.UninitializedMiddleware] | None = None,
     ) -> None:
         self._handler = handler
         self._middleware = middleware or []
@@ -313,8 +305,8 @@ class Function(typing.Generic[types.T]):
 
             on_failure = server_lib.FunctionConfig(
                 batch_events=None,
-                cancel=None,
-                concurrency=None,
+                cancel=[],
+                concurrency=[],
                 debounce=None,
                 id=self.on_failure_fn_id,
                 idempotency=None,

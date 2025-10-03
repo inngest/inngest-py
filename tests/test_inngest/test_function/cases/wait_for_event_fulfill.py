@@ -1,6 +1,5 @@
 import asyncio
 import datetime
-import typing
 
 import inngest
 import test_core.helper
@@ -10,7 +9,7 @@ from . import base
 
 
 class _State(base.BaseState):
-    result: typing.Optional[inngest.Event] = None
+    result: inngest.Event | None = None
 
 
 def create(

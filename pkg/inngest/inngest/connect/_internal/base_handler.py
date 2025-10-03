@@ -1,5 +1,4 @@
 import asyncio
-import typing
 
 from inngest._internal import types
 
@@ -7,7 +6,7 @@ from . import connect_pb2
 
 
 class _BaseHandler:
-    _closed_event: typing.Optional[asyncio.Event] = None
+    _closed_event: asyncio.Event | None = None
 
     @property
     def closed_event(self) -> asyncio.Event:

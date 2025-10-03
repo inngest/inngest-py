@@ -1,5 +1,4 @@
 import asyncio
-import typing
 import uuid
 
 import websockets
@@ -19,7 +18,7 @@ class WebSocketProxy:
         self._conns: dict[str, tuple[_Connection, _Connection]] = {}
         self._port = get_available_port()
         self._server_uri = server_uri
-        self._server: typing.Optional[websockets.Server] = None
+        self._server: websockets.Server | None = None
         self._tasks = set[asyncio.Task[None]]()
         self.forwarded_messages: list[bytes] = []
 

@@ -11,11 +11,9 @@ from .connection import WorkerConnection, _WebSocketWorkerConnection
 def connect(
     apps: list[tuple[inngest.Inngest, list[inngest.Function[typing.Any]]]],
     *,
-    instance_id: typing.Optional[str] = None,
-    rewrite_gateway_endpoint: typing.Optional[
-        typing.Callable[[str], str]
-    ] = None,
-    shutdown_signals: typing.Optional[list[signal.Signals]] = None,
+    instance_id: str | None = None,
+    rewrite_gateway_endpoint: typing.Callable[[str], str] | None = None,
+    shutdown_signals: list[signal.Signals] | None = None,
 ) -> WorkerConnection:
     """
     Create a persistent connection to an Inngest server.

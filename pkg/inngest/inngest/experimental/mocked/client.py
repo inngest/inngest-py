@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import typing
-
 import inngest
 from inngest._internal import server_lib
 
@@ -13,7 +11,7 @@ class Inngest(inngest.Inngest):
 
     async def send(
         self,
-        events: typing.Union[server_lib.Event, list[server_lib.Event]],
+        events: server_lib.Event | list[server_lib.Event],
         *,
         skip_middleware: bool = False,
     ) -> list[str]:
@@ -28,7 +26,7 @@ class Inngest(inngest.Inngest):
 
     def send_sync(
         self,
-        events: typing.Union[server_lib.Event, list[server_lib.Event]],
+        events: server_lib.Event | list[server_lib.Event],
         *,
         skip_middleware: bool = False,
     ) -> list[str]:

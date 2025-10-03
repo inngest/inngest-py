@@ -81,7 +81,7 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
 
         def on_request(
             *,
-            body: typing.Optional[bytes],
+            body: bytes | None,
             headers: dict[str, list[str]],
             method: str,
             path: str,
@@ -173,7 +173,7 @@ class TestClientMiddleware(unittest.IsolatedAsyncioTestCase):
 
         def on_request(
             *,
-            body: typing.Optional[bytes],
+            body: bytes | None,
             headers: dict[str, list[str]],
             method: str,
             path: str,

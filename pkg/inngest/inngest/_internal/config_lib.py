@@ -1,10 +1,9 @@
 import os
-import typing
 
 from inngest._internal import const
 
 
-def get_serve_origin(code_value: typing.Optional[str]) -> typing.Optional[str]:
+def get_serve_origin(code_value: str | None) -> str | None:
     if code_value is not None:
         return code_value
 
@@ -15,7 +14,7 @@ def get_serve_origin(code_value: typing.Optional[str]) -> typing.Optional[str]:
     return None
 
 
-def get_serve_path(code_value: typing.Optional[str]) -> typing.Optional[str]:
+def get_serve_path(code_value: str | None) -> str | None:
     if code_value is not None:
         return code_value
 

@@ -96,7 +96,7 @@ class _Duration:
 
 
 def to_duration_str(
-    ms: typing.Union[int, datetime.timedelta],
+    ms: int | datetime.timedelta,
 ) -> types.MaybeError[str]:
     if isinstance(ms, datetime.timedelta):
         ms = int(ms.total_seconds() * 1000)
@@ -119,8 +119,8 @@ def to_duration_str(
 
 
 def to_maybe_duration_str(
-    ms: typing.Union[int, datetime.timedelta, None],
-) -> typing.Union[types.MaybeError[str], None]:
+    ms: int | datetime.timedelta | None,
+) -> types.MaybeError[str | None]:
     if ms is None:
         return None
     return to_duration_str(ms)
@@ -148,7 +148,7 @@ def get_major_version(version: str) -> types.MaybeError[int]:
 
 def get_server_kind(
     headers: dict[str, str],
-) -> typing.Union[server_lib.ServerKind, None, Exception]:
+) -> server_lib.ServerKind | None | Exception:
     value = headers.get(server_lib.HeaderKey.SERVER_KIND.value, None)
     if value is None:
         return None
@@ -160,7 +160,7 @@ def get_server_kind(
 
 
 async def maybe_await(
-    value: typing.Union[types.T, typing.Awaitable[types.T]],
+    value: types.T | typing.Awaitable[types.T],
 ) -> types.T:
     if inspect.isawaitable(value):
         return await value  # type: ignore

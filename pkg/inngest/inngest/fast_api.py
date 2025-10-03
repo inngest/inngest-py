@@ -23,9 +23,9 @@ def serve(
     client: client_lib.Inngest,
     functions: list[function.Function[typing.Any]],
     *,
-    public_path: typing.Optional[str] = None,
-    serve_origin: typing.Optional[str] = None,
-    serve_path: typing.Optional[str] = None,
+    public_path: str | None = None,
+    serve_origin: str | None = None,
+    serve_path: str | None = None,
     streaming: const.Streaming | None = None,
 ) -> None:
     """

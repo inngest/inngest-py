@@ -1,5 +1,4 @@
 import asyncio
-import typing
 
 from inngest._internal import types
 
@@ -15,7 +14,7 @@ class _HeartbeatHandler(_BaseHandler):
     messages.
     """
 
-    _heartbeat_sender_task: typing.Optional[asyncio.Task[None]] = None
+    _heartbeat_sender_task: asyncio.Task[None] | None = None
 
     def __init__(
         self,

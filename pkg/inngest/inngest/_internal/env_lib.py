@@ -1,10 +1,9 @@
 import os
-import typing
 
 from . import const, net, server_lib
 
 
-def get_environment_name() -> typing.Optional[str]:
+def get_environment_name() -> str | None:
     """
     Get the Inngest environment name from env vars. Checks our env var and cloud
     platform (e.g. Vercel) specific env vars
@@ -21,7 +20,7 @@ def get_environment_name() -> typing.Optional[str]:
 def get_url(
     env_var: const.EnvKey,
     mode: server_lib.ServerKind,
-) -> typing.Optional[str]:
+) -> str | None:
     """
     Get a URL from an env var. Returns None if the env var is not set or if its value is not a valid URL
     """
@@ -68,7 +67,7 @@ def is_truthy(env_var: const.EnvKey) -> bool:
     return True
 
 
-def get_int(env_var: const.EnvKey) -> typing.Optional[int]:
+def get_int(env_var: const.EnvKey) -> int | None:
     """
     Get an int from an env var. Returns None if the env var is not set or if its
     value is not an int.
@@ -83,7 +82,7 @@ def get_int(env_var: const.EnvKey) -> typing.Optional[int]:
         return None
 
 
-def get_streaming(env_var: const.EnvKey) -> typing.Optional[const.Streaming]:
+def get_streaming(env_var: const.EnvKey) -> const.Streaming | None:
     val = os.getenv(env_var.value)
     if val is None:
         return None

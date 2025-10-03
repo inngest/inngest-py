@@ -35,7 +35,7 @@ DEFAULT_CLIENT_MIDDLEWARE: list[UninitializedMiddleware] = [LoggerMiddleware]
 
 class MiddlewareManager:
     @property
-    def middleware(self) -> list[typing.Union[Middleware, MiddlewareSync]]:
+    def middleware(self) -> list[Middleware | MiddlewareSync]:
         return [*self._middleware]
 
     def __init__(
@@ -46,7 +46,7 @@ class MiddlewareManager:
     ) -> None:
         self.client = client
         self._disabled_hooks = set[str]()
-        self._middleware = list[typing.Union[Middleware, MiddlewareSync]]()
+        self._middleware = list[Middleware | MiddlewareSync]()
         self._raw_request = raw_request
         self._timings = timings
 
@@ -217,7 +217,7 @@ class MiddlewareManager:
 
     async def transform_input(
         self,
-        ctx: typing.Union[execution_lib.Context, execution_lib.ContextSync],
+        ctx: execution_lib.Context | execution_lib.ContextSync,
         function: function.Function[typing.Any],
         steps: step_lib.StepMemos,
     ) -> types.MaybeError[None]:
@@ -234,7 +234,7 @@ class MiddlewareManager:
 
     def transform_input_sync(
         self,
-        ctx: typing.Union[execution_lib.Context, execution_lib.ContextSync],
+        ctx: execution_lib.Context | execution_lib.ContextSync,
         function: function.Function[typing.Any],
         steps: step_lib.StepMemos,
     ) -> types.MaybeError[None]:

@@ -76,22 +76,18 @@ class WorkerConnection(typing.Protocol):
 
 
 class _WebSocketWorkerConnection(WorkerConnection):
-    _consumers_closed_task: typing.Optional[asyncio.Task[None]] = None
-    _event_loop_keep_alive_task: typing.Optional[asyncio.Task[None]] = None
+    _consumers_closed_task: asyncio.Task[None] | None = None
+    _event_loop_keep_alive_task: asyncio.Task[None] | None = None
 
-    _message_handler_task: typing.Optional[
-        asyncio.Task[types.MaybeError[None]]
-    ] = None
+    _message_handler_task: asyncio.Task[types.MaybeError[None]] | None = None
 
     def __init__(
         self,
         apps: list[tuple[inngest.Inngest, list[inngest.Function[typing.Any]]]],
         *,
-        instance_id: typing.Optional[str] = None,
-        rewrite_gateway_endpoint: typing.Optional[
-            typing.Callable[[str], str]
-        ] = None,
-        shutdown_signals: typing.Optional[list[signal.Signals]] = None,
+        instance_id: str | None = None,
+        rewrite_gateway_endpoint: typing.Callable[[str], str] | None = None,
+        shutdown_signals: list[signal.Signals] | None = None,
     ) -> None:
         # Used to ensure that no messages are being handled when we fully close.
         self._handling_message_count = _ValueWatcher(0)
@@ -429,11 +425,7 @@ async def _wait_for_gateway_endpoint(
         # Need to cast because Mypy doesn't understand the type (it thinks it's
         # `object`).
         r = typing.cast(
-            typing.Union[
-                ConnectionState,
-                tuple[connect_pb2.AuthData, str],
-                Exception,
-            ],
+            ConnectionState | tuple[connect_pb2.AuthData, str] | Exception,
             t.result(),
         )
 

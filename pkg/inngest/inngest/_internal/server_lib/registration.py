@@ -21,17 +21,15 @@ class _BaseConfig(types.BaseModel):
 
 class Batch(_BaseConfig):
     max_size: int = pydantic.Field(..., serialization_alias="maxSize")
-    timeout: typing.Union[int, datetime.timedelta, None] = None
-    key: typing.Optional[str] = None
-    if_exp: typing.Optional[str] = pydantic.Field(
-        default=None, serialization_alias="if"
-    )
+    timeout: int | datetime.timedelta | None = None
+    key: str | None = None
+    if_exp: str | None = pydantic.Field(default=None, serialization_alias="if")
 
     @pydantic.field_serializer("timeout")
     def serialize_timeout(
         self,
-        value: typing.Union[int, datetime.timedelta, None],
-    ) -> typing.Optional[str]:
+        value: int | datetime.timedelta | None,
+    ) -> str | None:
         if value is None:
             return None
         out = transforms.to_duration_str(value)
@@ -42,16 +40,14 @@ class Batch(_BaseConfig):
 
 class Cancel(_BaseConfig):
     event: str
-    if_exp: typing.Optional[str] = pydantic.Field(
-        default=None, serialization_alias="if"
-    )
-    timeout: typing.Union[int, datetime.timedelta, None] = None
+    if_exp: str | None = pydantic.Field(default=None, serialization_alias="if")
+    timeout: int | datetime.timedelta | None = None
 
     @pydantic.field_serializer("timeout")
     def serialize_timeout(
         self,
-        value: typing.Union[int, datetime.timedelta, None],
-    ) -> typing.Optional[str]:
+        value: int | datetime.timedelta | None,
+    ) -> str | None:
         if value is None:
             return None
         out = transforms.to_duration_str(value)
@@ -61,20 +57,20 @@ class Cancel(_BaseConfig):
 
 
 class Concurrency(_BaseConfig):
-    key: typing.Optional[str] = None
+    key: str | None = None
     limit: int
-    scope: typing.Optional[typing.Literal["account", "env", "fn"]] = None
+    scope: typing.Literal["account", "env", "fn"] | None = None
 
 
 class Debounce(_BaseConfig):
-    key: typing.Optional[str] = None
-    period: typing.Union[int, datetime.timedelta]
+    key: str | None = None
+    period: int | datetime.timedelta
 
     @pydantic.field_serializer("period")
     def serialize_period(
         self,
-        value: typing.Union[int, datetime.timedelta, None],
-    ) -> typing.Optional[str]:
+        value: int | datetime.timedelta | None,
+    ) -> str | None:
         if value is None:
             return None
         out = transforms.to_duration_str(value)
@@ -84,24 +80,24 @@ class Debounce(_BaseConfig):
 
 
 class FunctionConfig(_BaseConfig):
-    batch_events: typing.Optional[Batch] = pydantic.Field(
+    batch_events: Batch | None = pydantic.Field(
         ..., serialization_alias="batchEvents"
     )
-    cancel: typing.Optional[list[Cancel]]
-    concurrency: typing.Optional[list[Concurrency]]
-    debounce: typing.Optional[Debounce]
+    cancel: list[Cancel] | None
+    concurrency: list[Concurrency] | None
+    debounce: Debounce | None
     id: str
-    idempotency: typing.Optional[str]
-    name: typing.Optional[str]
-    priority: typing.Optional[Priority]
-    rate_limit: typing.Optional[RateLimit] = pydantic.Field(
+    idempotency: str | None
+    name: str | None
+    priority: Priority | None
+    rate_limit: RateLimit | None = pydantic.Field(
         ..., serialization_alias="rateLimit"
     )
     steps: dict[str, Step]
-    throttle: typing.Optional[Throttle]
-    timeouts: typing.Optional[Timeouts]
-    singleton: typing.Optional[Singleton]
-    triggers: list[typing.Union[TriggerCron, TriggerEvent]]
+    throttle: Throttle | None
+    timeouts: Timeouts | None
+    singleton: Singleton | None
+    triggers: list[TriggerCron | TriggerEvent]
 
 
 class Priority(_BaseConfig):
@@ -109,15 +105,15 @@ class Priority(_BaseConfig):
 
 
 class RateLimit(_BaseConfig):
-    key: typing.Optional[str] = None
+    key: str | None = None
     limit: int
-    period: typing.Union[int, datetime.timedelta]
+    period: int | datetime.timedelta
 
     @pydantic.field_serializer("period")
     def serialize_period(
         self,
-        value: typing.Union[int, datetime.timedelta, None],
-    ) -> typing.Optional[str]:
+        value: int | datetime.timedelta | None,
+    ) -> str | None:
         if value is None:
             return None
         out = transforms.to_duration_str(value)
@@ -138,21 +134,21 @@ class Runtime(_BaseConfig):
 class Step(_BaseConfig):
     id: str
     name: str
-    retries: typing.Optional[Retries] = None
+    retries: Retries | None = None
     runtime: Runtime
 
 
 class Throttle(_BaseConfig):
-    key: typing.Optional[str] = None
+    key: str | None = None
     limit: int
-    period: typing.Union[int, datetime.timedelta]
-    burst: typing.Optional[int] = 1
+    period: int | datetime.timedelta
+    burst: int | None = 1
 
     @pydantic.field_serializer("period")
     def serialize_period(
         self,
-        value: typing.Union[int, datetime.timedelta, None],
-    ) -> typing.Optional[str]:
+        value: int | datetime.timedelta | None,
+    ) -> str | None:
         if value is None:
             return None
         out = transforms.to_duration_str(value)
@@ -162,14 +158,14 @@ class Throttle(_BaseConfig):
 
 
 class Timeouts(_BaseConfig):
-    start: typing.Union[int, datetime.timedelta, None] = None
-    finish: typing.Union[int, datetime.timedelta, None] = None
+    start: int | datetime.timedelta | None = None
+    finish: int | datetime.timedelta | None = None
 
     @pydantic.field_serializer("start")
     def serialize_start(
         self,
-        value: typing.Union[int, datetime.timedelta, None],
-    ) -> typing.Optional[str]:
+        value: int | datetime.timedelta | None,
+    ) -> str | None:
         if value is None:
             return None
         out = transforms.to_duration_str(value)
@@ -180,8 +176,8 @@ class Timeouts(_BaseConfig):
     @pydantic.field_serializer("finish")
     def serialize_finish(
         self,
-        value: typing.Union[int, datetime.timedelta, None],
-    ) -> typing.Optional[str]:
+        value: int | datetime.timedelta | None,
+    ) -> str | None:
         if value is None:
             return None
         out = transforms.to_duration_str(value)
@@ -191,7 +187,7 @@ class Timeouts(_BaseConfig):
 
 
 class Singleton(_BaseConfig):
-    key: typing.Optional[str] = None
+    key: str | None = None
     mode: typing.Literal["skip", "cancel"]
 
 
@@ -201,7 +197,7 @@ class TriggerCron(_BaseConfig):
 
 class TriggerEvent(_BaseConfig):
     event: str
-    expression: typing.Optional[str] = None
+    expression: str | None = None
 
 
 class SynchronizeRequest(types.BaseModel):
@@ -221,11 +217,11 @@ class InBandSynchronizeRequest(types.BaseModel):
 
 class InBandSynchronizeResponse(types.BaseModel):
     app_id: str
-    env: typing.Optional[str]
+    env: str | None
     framework: Framework
     functions: list[FunctionConfig]
     inspection: AuthenticatedInspection
-    platform: typing.Optional[str]
+    platform: str | None
     sdk_author: str = const.AUTHOR
     sdk_language: str = const.LANGUAGE
     sdk_version: str = const.VERSION
