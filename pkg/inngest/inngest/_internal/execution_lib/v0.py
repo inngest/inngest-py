@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import time
 import typing
 
 from inngest._internal import errors, server_lib, step_lib, transforms, types
