@@ -682,32 +682,19 @@ class ServerTiming:
         self._end_counter: float | None = None
 
     def __enter__(self) -> ServerTiming:
-        self._start()
+        if self._start_counter is None:
+            self._start_counter = time.perf_counter()
         return self
 
     def __exit__(self, *args: object) -> None:
-        self._end()
-
-    def _start(self) -> None:
-        if self._start_counter is not None:
-            return
-
-        self._start_counter = time.perf_counter()
-
-    def _end(self) -> None:
-        if self._end_counter is not None:
-            return
-
-        self._end_counter = time.perf_counter()
+        if self._end_counter is None:
+            self._end_counter = time.perf_counter()
 
     def to_header(self) -> str:
         if self._start_counter is None or self._end_counter is None:
             return ""
 
         dur = int((self._end_counter - self._start_counter) * 1000)
-        if dur == 0:
-            return ""
-
         return f"{self._name};dur={dur}"
 
 

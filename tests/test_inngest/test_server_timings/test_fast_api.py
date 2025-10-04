@@ -117,11 +117,7 @@ class TestStreaming(unittest.IsolatedAsyncioTestCase):
         headers = wrapped_resp["headers"]
         assert types.is_dict(headers)
         timings = parse_timings(headers["server-timing"])
-
-        # Really short because we immediately send the streaming response. If
-        # it's 0 then it won't exist at all, so we need to default
-        assert timings.get("comm_handler", 0) < 100
-
+        assert_approx_timing(timings["comm_handler"], 0)
         assert_approx_timing(timings["function"], 400)
         assert_approx_timing(timings["mw.transform_input"], 100)
         assert_approx_timing(timings["mw.transform_output"], 200)
