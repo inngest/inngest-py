@@ -7,6 +7,7 @@ from inngest._internal import (
     errors,
     execution_lib,
     function,
+    net,
     server_lib,
     step_lib,
     transforms,
@@ -37,23 +38,35 @@ class MiddlewareManager:
     def middleware(self) -> list[Middleware | MiddlewareSync]:
         return [*self._middleware]
 
-    def __init__(self, client: client_lib.Inngest, raw_request: object) -> None:
+    def __init__(
+        self,
+        client: client_lib.Inngest,
+        raw_request: object,
+        timings: net.ServerTimings,
+    ) -> None:
         self.client = client
         self._disabled_hooks = set[str]()
         self._middleware = list[Middleware | MiddlewareSync]()
         self._raw_request = raw_request
+        self._timings = timings
 
     @classmethod
     def from_client(
         cls,
         client: client_lib.Inngest,
         raw_request: object,
+        timings: net.ServerTimings | None,
     ) -> MiddlewareManager:
         """
         Create a new manager from an Inngest client, using the middleware on the
         client.
         """
-        mgr = cls(client, raw_request)
+
+        if timings is None:
+            # A dummy timings object to simplify logic
+            timings = net.ServerTimings()
+
+        mgr = cls(client, raw_request, timings)
 
         for m in DEFAULT_CLIENT_MIDDLEWARE:
             mgr.add(m)
@@ -69,7 +82,7 @@ class MiddlewareManager:
         Create a new manager from another manager, using the middleware on the
         passed manager. Effectively wraps a manager.
         """
-        new_mgr = cls(manager.client, manager._raw_request)
+        new_mgr = cls(manager.client, manager._raw_request, manager._timings)
         for m in manager.middleware:
             new_mgr._middleware = [*new_mgr._middleware, m]
         return new_mgr
@@ -208,15 +221,16 @@ class MiddlewareManager:
         function: function.Function[typing.Any],
         steps: step_lib.StepMemos,
     ) -> types.MaybeError[None]:
-        try:
-            for m in self._middleware:
-                await transforms.maybe_await(
-                    m.transform_input(ctx, function, steps),
-                )
-        except Exception as err:
-            return err
+        with self._timings.mw_transform_input:
+            try:
+                for m in self._middleware:
+                    await transforms.maybe_await(
+                        m.transform_input(ctx, function, steps),
+                    )
+            except Exception as err:
+                return err
 
-        return None
+            return None
 
     def transform_input_sync(
         self,
@@ -224,102 +238,101 @@ class MiddlewareManager:
         function: function.Function[typing.Any],
         steps: step_lib.StepMemos,
     ) -> types.MaybeError[None]:
-        try:
-            for m in self._middleware:
-                if inspect.iscoroutinefunction(m.transform_input):
-                    return _mismatched_sync
-                m.transform_input(ctx, function, steps)
-        except Exception as err:
-            return err
+        with self._timings.mw_transform_input:
+            try:
+                for m in self._middleware:
+                    if inspect.iscoroutinefunction(m.transform_input):
+                        return _mismatched_sync
+                    m.transform_input(ctx, function, steps)
+            except Exception as err:
+                return err
 
-        return None
+            return None
 
     async def transform_output(
         self,
         call_res: execution_lib.CallResult,
     ) -> types.MaybeError[None]:
-        # This should only happen when planning parallel steps
-        if call_res.multi is not None:
-            if len(call_res.multi) > 1:
+        with self._timings.mw_transform_output:
+            # This should only happen when planning parallel steps
+            if call_res.multi is not None:
+                if len(call_res.multi) > 1:
+                    return None
+                call_res = call_res.multi[0]
+
+            # Not sure how this can happen, but we should handle it
+            if call_res.is_empty:
                 return None
-            call_res = call_res.multi[0]
 
-        # Not sure how this can happen, but we should handle it
-        if call_res.is_empty:
-            return None
-
-        # Create a new result object to pass to the middleware. We don't want to
-        # pass the CallResult object because it exposes too many internal
-        # implementation details
-        result = TransformOutputResult(
-            error=call_res.error,
-            output=call_res.output,
-            step=None,
-        )
-        if call_res.step is not None:
-            result.step = TransformOutputStepInfo(
-                id=call_res.step.display_name,
-                op=call_res.step.op,
-                opts=call_res.step.opts,
+            # Create a new result object to pass to the middleware. We don't want to
+            # pass the CallResult object because it exposes too many internal
+            # implementation details
+            result = TransformOutputResult(
+                error=call_res.error,
+                output=call_res.output,
+                step=None,
             )
+            if call_res.step is not None:
+                result.step = TransformOutputStepInfo(
+                    id=call_res.step.display_name,
+                    op=call_res.step.op,
+                    opts=call_res.step.opts,
+                )
 
-        try:
-            # Reverse order because this is an "after" hook.
-            for m in reversed(self._middleware):
-                await transforms.maybe_await(m.transform_output(result))
+            try:
+                # Reverse order because this is an "after" hook.
+                for m in reversed(self._middleware):
+                    await transforms.maybe_await(m.transform_output(result))
 
-            # Update the original call result with the (possibly) mutated fields
-            call_res.error = result.error
-            call_res.output = result.output
+                # Update the original call result with the (possibly) mutated fields
+                call_res.error = result.error
+                call_res.output = result.output
 
-            return None
-        except Exception as err:
-            return err
+                return None
+            except Exception as err:
+                return err
 
     def transform_output_sync(
         self,
         call_res: execution_lib.CallResult,
     ) -> types.MaybeError[None]:
-        # This should only happen when planning parallel steps
-        if call_res.multi is not None:
-            if len(call_res.multi) > 1:
+        with self._timings.mw_transform_output:
+            # This should only happen when planning parallel steps
+            if call_res.multi is not None:
+                if len(call_res.multi) > 1:
+                    return None
+                call_res = call_res.multi[0]
+
+            # Not sure how this can happen, but we should handle it
+            if call_res.is_empty:
                 return None
-            first = call_res.multi[0]
-            if first is not None:
-                call_res = first
-            else:
-                return None  # type: ignore
 
-        # Not sure how this can happen, but we should handle it
-        if call_res.is_empty:
-            return None
-
-        # Create a new result object to pass to the middleware. We don't want to
-        # pass the CallResult object because it exposes too many internal
-        # implementation details
-        result = TransformOutputResult(
-            error=call_res.error,
-            output=call_res.output,
-            step=None,
-        )
-        if call_res.step is not None:
-            result.step = TransformOutputStepInfo(
-                id=call_res.step.display_name,
-                op=call_res.step.op,
-                opts=call_res.step.opts,
+            # Create a new result object to pass to the middleware. We don't want to
+            # pass the CallResult object because it exposes too many internal
+            # implementation details
+            result = TransformOutputResult(
+                error=call_res.error,
+                output=call_res.output,
+                step=None,
             )
+            if call_res.step is not None:
+                result.step = TransformOutputStepInfo(
+                    id=call_res.step.display_name,
+                    op=call_res.step.op,
+                    opts=call_res.step.opts,
+                )
 
-        try:
-            # Reverse order because this is an "after" hook.
-            for m in reversed(self._middleware):
-                if isinstance(m, Middleware):
-                    return _mismatched_sync
-                m.transform_output(result)
+            try:
+                # Reverse order because this is an "after" hook.
+                for m in reversed(self._middleware):
+                    if isinstance(m, Middleware):
+                        return _mismatched_sync
+                    m.transform_output(result)
 
-            # Update the original call result with the (possibly) mutated fields
-            call_res.error = result.error
-            call_res.output = result.output
+                # Update the original call result with the (possibly) mutated fields
+                call_res.error = result.error
+                call_res.output = result.output
 
-            return None
-        except Exception as err:
-            return err
+                return None
+            except Exception as err:
+                return err

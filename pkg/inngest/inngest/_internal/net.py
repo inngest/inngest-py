@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import datetime
 import hashlib
 import hmac
@@ -671,3 +672,117 @@ def validate_response_sig(
         mode=mode,
         signing_key=signing_key,
     )
+
+
+class ServerTiming:
+    def __init__(self, name: str) -> None:
+        self._name = name
+        self._start_counter: float | None = None
+        self._end_counter: float | None = None
+
+    def __enter__(self) -> ServerTiming:
+        if self._start_counter is None:
+            self._start_counter = time.perf_counter()
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        if self._end_counter is None:
+            self._end_counter = time.perf_counter()
+
+    def to_header(self) -> str:
+        if self._start_counter is None or self._end_counter is None:
+            return ""
+
+        dur = int((self._end_counter - self._start_counter) * 1000)
+        return f"{self._name};dur={dur}"
+
+
+class _AsyncBlockServerTiming:
+    """
+    Special server timing that tracks how long the event loop is blocked
+    """
+
+    def __init__(self, name: str) -> None:
+        self._block_dur: float = 0
+        self._name = name
+        self._start_counter: float | None = None
+        self._tracker_task: asyncio.Task[None] | None = None
+
+    def __enter__(self) -> _AsyncBlockServerTiming:
+        if self._start_counter is None:
+            self._start_counter = time.perf_counter()
+        if self._tracker_task is None:
+            self._tracker_task = asyncio.create_task(self._tracker())
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        if self._tracker_task is not None:
+            self._tracker_task.cancel()
+
+    async def _tracker(self) -> None:
+        last = time.perf_counter()
+
+        # Yield control. Without this, we'll undercount the async block duration
+        # by 100 ms. It's unclear why this happens, but tests prove it
+        await asyncio.sleep(0)
+
+        interval = 0.1
+        while True:
+            now = time.perf_counter()
+            self._block_dur += max(now - last - interval, 0)
+            last = now
+            await asyncio.sleep(interval)
+
+    def to_header(self) -> str:
+        if self._tracker_task is None:
+            return ""
+
+        dur = int((self._block_dur) * 1000)
+        return f"{self._name};dur={dur}"
+
+
+class ServerTimings:
+    def __init__(self) -> None:
+        # How long the event loop is blocked
+        self.async_block = _AsyncBlockServerTiming("async_block")
+
+        # CommHandler method. This should include basically everything but
+        # general HTTP framework stuff (e.g. everything besides FastAPI stuff)
+        self.comm_handler = ServerTiming("comm_handler")
+
+        # Calling the Inngest function
+        self.function = ServerTiming("function")
+
+        self.mw_transform_input = ServerTiming("mw.transform_input")
+        self.mw_transform_output = ServerTiming("mw.transform_output")
+
+        # When the SDK sends an outgoing request to fetch the events and steps.
+        # This happens when the incoming SDK request would be too large
+        self.use_api = ServerTiming("use_api")
+
+    def to_header(self) -> str:
+        """
+        Convert the server timings to the Server-Timing header value
+        """
+
+        timings: list[ServerTiming | _AsyncBlockServerTiming] = [
+            self.async_block,
+            self.comm_handler,
+            self.function,
+            self.mw_transform_input,
+            self.mw_transform_output,
+            self.use_api,
+        ]
+
+        # Sort by start time
+        timings = sorted(
+            timings,
+            key=lambda x: x._start_counter or 0,
+        )
+
+        values: list[str] = [timing.to_header() for timing in timings]
+
+        # Remove empty values
+        values = [v for v in values if v != ""]
+
+        return ", ".join(values)

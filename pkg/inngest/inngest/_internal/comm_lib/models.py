@@ -5,6 +5,8 @@ import http
 import json
 import typing
 
+import pydantic
+
 from inngest._internal import (
     errors,
     execution_lib,
@@ -28,6 +30,13 @@ class CommRequest(types.BaseModel):
     request_url: str
     serve_origin: str | None
     serve_path: str | None
+    timings: net.ServerTimings = pydantic.Field(
+        default_factory=net.ServerTimings,
+        exclude=True,
+    )
+
+    class Config:
+        arbitrary_types_allowed = True
 
 
 class CommResponse:
@@ -78,6 +87,7 @@ class CommResponse:
         env: str | None,
         framework: server_lib.Framework,
         server_kind: server_lib.ServerKind | None,
+        timings: net.ServerTimings,
     ) -> CommResponse:
         """
         Create a streaming response. Sends keepalive bytes until the response is
@@ -92,7 +102,15 @@ class CommResponse:
             # Send keepalives until task completes.
             while not call_res_task.done():
                 yield b" "
-                await asyncio.sleep(3)
+
+                # Wait for either the task to complete or 3 seconds to pass
+                try:
+                    await asyncio.wait_for(
+                        asyncio.shield(call_res_task),
+                        timeout=3,
+                    )
+                except asyncio.TimeoutError:
+                    pass
 
             # Get the "actual" CommResponse.
             comm_res = cls.from_call_result(
@@ -107,6 +125,10 @@ class CommResponse:
             if isinstance(body, Exception):
                 comm_res = cls.from_error(logger, body)
                 body = json.dumps(comm_res.body)
+
+            comm_res.headers[server_lib.HeaderKey.SERVER_TIMING.value] = (
+                timings.to_header()
+            )
 
             # Send the "actual" CommResponse as the body.
             yield json.dumps(
@@ -137,7 +159,6 @@ class CommResponse:
         server_kind: server_lib.ServerKind | None,
     ) -> CommResponse:
         headers = {
-            server_lib.HeaderKey.SERVER_TIMING.value: "handler",
             **net.create_headers(
                 env=env,
                 framework=framework,

@@ -122,6 +122,7 @@ class CommHandler:
         middleware = middleware_lib.MiddlewareManager.from_client(
             self._client,
             req.raw_request,
+            req.timings,
         )
 
         request = server_lib.ServerRequest.from_raw(req.body)
@@ -145,16 +146,17 @@ class CommHandler:
             # to big, so the Executor is telling the SDK to fetch them from the
             # API
 
-            fetched_events, fetched_steps = await asyncio.gather(
-                self._client._get_batch(request.ctx.run_id),
-                self._client._get_steps(request.ctx.run_id),
-            )
-            if isinstance(fetched_events, Exception):
-                return fetched_events
-            events = fetched_events
-            if isinstance(fetched_steps, Exception):
-                return fetched_steps
-            steps = fetched_steps
+            with req.timings.use_api:
+                fetched_events, fetched_steps = await asyncio.gather(
+                    self._client._get_batch(request.ctx.run_id),
+                    self._client._get_steps(request.ctx.run_id),
+                )
+                if isinstance(fetched_events, Exception):
+                    return fetched_events
+                events = fetched_events
+                if isinstance(fetched_steps, Exception):
+                    return fetched_steps
+                steps = fetched_steps
         if events is None:
             # Should be unreachable. The Executor should always either send the
             # batch or tell the SDK to fetch the batch
@@ -182,6 +184,7 @@ class CommHandler:
                                 middleware,
                                 request,
                                 params.step_id,
+                                req.timings,
                             ),
                             middleware,
                             step_lib.StepIDCounter(),
@@ -200,6 +203,7 @@ class CommHandler:
                     self._client.env,
                     self._framework,
                     server_kind,
+                    req.timings,
                 )
 
             call_res = await call_res_task
@@ -221,6 +225,7 @@ class CommHandler:
                             middleware,
                             request,
                             params.step_id,
+                            req.timings,
                         ),
                         middleware,
                         step_lib.StepIDCounter(),
@@ -269,6 +274,7 @@ class CommHandler:
         middleware = middleware_lib.MiddlewareManager.from_client(
             self._client,
             req.raw_request,
+            req.timings,
         )
 
         request = server_lib.ServerRequest.from_raw(req.body)
@@ -292,15 +298,18 @@ class CommHandler:
             # to big, so the Executor is telling the SDK to fetch them from the
             # API
 
-            fetched_events = self._client._get_batch_sync(request.ctx.run_id)
-            if isinstance(fetched_events, Exception):
-                return fetched_events
-            events = fetched_events
+            with req.timings.use_api:
+                fetched_events = self._client._get_batch_sync(
+                    request.ctx.run_id
+                )
+                if isinstance(fetched_events, Exception):
+                    return fetched_events
+                events = fetched_events
 
-            fetched_steps = self._client._get_steps_sync(request.ctx.run_id)
-            if isinstance(fetched_steps, Exception):
-                return fetched_steps
-            steps = fetched_steps
+                fetched_steps = self._client._get_steps_sync(request.ctx.run_id)
+                if isinstance(fetched_steps, Exception):
+                    return fetched_steps
+                steps = fetched_steps
         if events is None:
             # Should be unreachable. The Executor should always either send the
             # batch or tell the SDK to fetch the batch
@@ -325,6 +334,7 @@ class CommHandler:
                         middleware,
                         request,
                         params.step_id,
+                        req.timings,
                     ),
                     middleware,
                     step_lib.StepIDCounter(),
