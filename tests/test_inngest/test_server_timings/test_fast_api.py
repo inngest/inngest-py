@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
+import time
 import typing
 import unittest
 
@@ -76,11 +77,8 @@ class TestStreaming(unittest.IsolatedAsyncioTestCase):
 
     async def test_streaming_enabled(self) -> None:
         """
-        Ensure that we get the correct response when streaming is enabled:
-        - Status code is 201.
-        - Keepalive bytes are sent.
-        - The full streamed body is effectively an HTTP response (status code,
-          headers, body).
+        When streaming is enabled, the comm_handler timing is basically 0
+        because we immediately respond
         """
 
         client = inngest.Inngest(
@@ -98,8 +96,6 @@ class TestStreaming(unittest.IsolatedAsyncioTestCase):
         )
         async def fn(ctx: inngest.Context) -> None:
             state.run_id = ctx.run_id
-
-            # Sleep long enough for first keepalive byte to send.
             await asyncio.sleep(0.4)
 
         resps = self.start_proxy(client, [fn], inngest.Streaming.FORCE)
@@ -117,20 +113,13 @@ class TestStreaming(unittest.IsolatedAsyncioTestCase):
         headers = wrapped_resp["headers"]
         assert types.is_dict(headers)
         timings = parse_timings(headers["server-timing"])
+        assert_approx_timing(timings["async_block"], 0)
         assert_approx_timing(timings["comm_handler"], 0)
         assert_approx_timing(timings["function"], 400)
         assert_approx_timing(timings["mw.transform_input"], 100)
         assert_approx_timing(timings["mw.transform_output"], 200)
 
     async def test_streaming_disabled(self) -> None:
-        """
-        Ensure that we get the correct response when streaming is enabled:
-        - Status code is 201.
-        - Keepalive bytes are sent.
-        - The full streamed body is effectively an HTTP response (status code,
-          headers, body).
-        """
-
         client = inngest.Inngest(
             app_id=test_core.random_suffix("app"),
             is_production=False,
@@ -146,8 +135,6 @@ class TestStreaming(unittest.IsolatedAsyncioTestCase):
         )
         async def fn(ctx: inngest.Context) -> None:
             state.run_id = ctx.run_id
-
-            # Sleep long enough for first keepalive byte to send.
             await asyncio.sleep(0.4)
 
         resps = self.start_proxy(client, [fn], inngest.Streaming.DISABLE)
@@ -157,10 +144,57 @@ class TestStreaming(unittest.IsolatedAsyncioTestCase):
             await state.wait_for_run_id(),
             test_core.helper.RunStatus.COMPLETED,
         )
-
         timings = parse_timings(resps[0].headers["server-timing"])
+        assert_approx_timing(timings["async_block"], 0)
         assert_approx_timing(timings["comm_handler"], 700)
         assert_approx_timing(timings["function"], 400)
+        assert_approx_timing(timings["mw.transform_input"], 100)
+        assert_approx_timing(timings["mw.transform_output"], 200)
+
+    async def test_async_block(self) -> None:
+        """
+        Blocking the event loop (e.g. with `time.sleep`) is reported in the
+        async_block timing
+        """
+
+        client = inngest.Inngest(
+            app_id=test_core.random_suffix("app"),
+            is_production=False,
+            middleware=[Middleware],
+        )
+
+        state = test_core.BaseState()
+        event_name = test_core.random_suffix("event")
+
+        blocking_sleep_dur = 300
+        async_sleep_dur = 400
+
+        @client.create_function(
+            fn_id="fn",
+            trigger=inngest.TriggerEvent(event=event_name),
+        )
+        async def fn(ctx: inngest.Context) -> None:
+            state.run_id = ctx.run_id
+
+            # Block the thread, leading to async_block duration
+            time.sleep(blocking_sleep_dur / 1000.0)  # noqa: ASYNC251
+
+            await asyncio.sleep(async_sleep_dur / 1000.0)
+
+        resps = self.start_proxy(client, [fn], inngest.Streaming.DISABLE)
+
+        await client.send(inngest.Event(name=event_name))
+        await test_core.helper.client.wait_for_run_status(
+            await state.wait_for_run_id(),
+            test_core.helper.RunStatus.COMPLETED,
+        )
+        timings = parse_timings(resps[0].headers["server-timing"])
+        assert_approx_timing(timings["async_block"], blocking_sleep_dur)
+        assert_approx_timing(timings["comm_handler"], 1000)
+        assert_approx_timing(
+            timings["function"],
+            blocking_sleep_dur + async_sleep_dur,
+        )
         assert_approx_timing(timings["mw.transform_input"], 100)
         assert_approx_timing(timings["mw.transform_output"], 200)
 

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import dataclasses
+import asyncio
 import datetime
 import hashlib
 import hmac
 import http
 import threading
 import time
+import typing
 import urllib.parse
 
 import httpx
@@ -674,7 +675,6 @@ def validate_response_sig(
     )
 
 
-@dataclasses.dataclass
 class ServerTiming:
     def __init__(self, name: str) -> None:
         self._name = name
@@ -698,8 +698,55 @@ class ServerTiming:
         return f"{self._name};dur={dur}"
 
 
+class _AsyncBlockServerTiming:
+    """
+    Special server timing that tracks how long the event loop is blocked
+    """
+
+    def __init__(self, name: str) -> None:
+        self._block_dur: float = 0
+        self._name = name
+        self._start_counter: float | None = None
+        self._tracker_task: asyncio.Task[None] | None = None
+
+    def __enter__(self) -> _AsyncBlockServerTiming:
+        if self._start_counter is None:
+            self._start_counter = time.perf_counter()
+        if self._tracker_task is None:
+            self._tracker_task = asyncio.create_task(self._tracker())
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        if self._tracker_task is not None:
+            self._tracker_task.cancel()
+
+    async def _tracker(self) -> None:
+        last = time.perf_counter()
+
+        # Yield control. Without this, we'll undercount the async block duration
+        # by 100 ms. It's unclear why this happens, but tests prove it
+        await asyncio.sleep(0)
+
+        interval = 0.1
+        while True:
+            now = time.perf_counter()
+            self._block_dur += max(now - last - interval, 0)
+            last = now
+            await asyncio.sleep(interval)
+
+    def to_header(self) -> str:
+        if self._tracker_task is None:
+            return ""
+
+        dur = int((self._block_dur) * 1000)
+        return f"{self._name};dur={dur}"
+
+
 class ServerTimings:
     def __init__(self) -> None:
+        # How long the event loop is blocked
+        self.async_block = _AsyncBlockServerTiming("async_block")
+
         # CommHandler method. This should include basically everything but
         # general HTTP framework stuff (e.g. everything besides FastAPI stuff)
         self.comm_handler = ServerTiming("comm_handler")
@@ -719,7 +766,8 @@ class ServerTimings:
         Convert the server timings to the Server-Timing header value
         """
 
-        timings = [
+        timings: list[ServerTiming | _AsyncBlockServerTiming] = [
+            self.async_block,
             self.comm_handler,
             self.function,
             self.mw_transform_input,

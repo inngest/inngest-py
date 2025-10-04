@@ -75,7 +75,7 @@ def wrap_handler(
             req: CommRequest,
         ) -> CommResponse:
             request_signing_key = None
-            with req.timings.comm_handler:
+            with req.timings.async_block, req.timings.comm_handler:
                 if req.is_connect is False:
                     # Connect uses WebSockets so there isn't a request signature
                     # header.
