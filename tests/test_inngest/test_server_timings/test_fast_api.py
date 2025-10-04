@@ -144,6 +144,7 @@ class TestStreaming(unittest.IsolatedAsyncioTestCase):
             await state.wait_for_run_id(),
             test_core.helper.RunStatus.COMPLETED,
         )
+
         timings = parse_timings(resps[0].headers["server-timing"])
         assert_approx_timing(timings["async_block"], 0)
         assert_approx_timing(timings["comm_handler"], 700)
@@ -188,6 +189,7 @@ class TestStreaming(unittest.IsolatedAsyncioTestCase):
             await state.wait_for_run_id(),
             test_core.helper.RunStatus.COMPLETED,
         )
+
         timings = parse_timings(resps[0].headers["server-timing"])
         assert_approx_timing(timings["async_block"], blocking_sleep_dur)
         assert_approx_timing(timings["comm_handler"], 1000)

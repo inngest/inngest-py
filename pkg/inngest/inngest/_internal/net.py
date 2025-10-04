@@ -7,7 +7,6 @@ import hmac
 import http
 import threading
 import time
-import typing
 import urllib.parse
 
 import httpx
