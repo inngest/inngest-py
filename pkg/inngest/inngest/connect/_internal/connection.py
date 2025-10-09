@@ -89,6 +89,8 @@ class _WebSocketWorkerConnection(WorkerConnection):
         rewrite_gateway_endpoint: typing.Callable[[str], str] | None = None,
         shutdown_signals: list[signal.Signals] | None = None,
     ) -> None:
+        self._allow_reconnect = True
+
         # Used to ensure that no messages are being handled when we fully close.
         self._handling_message_count = _ValueWatcher(0)
 
@@ -232,6 +234,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
         self,
         ws: websockets.ClientConnection,
     ) -> types.MaybeError[None]:
+        disconnect = False
         try:
             async for raw_msg in ws:
                 if self._state.conn_init.value is None:
@@ -273,20 +276,22 @@ class _WebSocketWorkerConnection(WorkerConnection):
                         "close_reason": ws.close_reason,
                     },
                 )
-                self._state.conn_state.value = ConnectionState.RECONNECTING
-                self._state.conn_init.value = None
+                disconnect = True
         except websockets.exceptions.ConnectionClosedError as e:
             self._logger.debug(
                 "Connection closed abnormally", extra={"error": str(e)}
             )
-            self._state.conn_state.value = ConnectionState.RECONNECTING
-            self._state.conn_init.value = None
+            disconnect = True
         except websockets.exceptions.ConnectionClosedOK:
             self._logger.debug("Connection closed normally")
             await self.close()
         except Exception as e:
             self._logger.debug("Connection error", extra={"error": str(e)})
-            self._state.conn_state.value = ConnectionState.RECONNECTING
+            disconnect = True
+
+        if disconnect is True:
+            if self._allow_reconnect is True:
+                self._state.conn_state.value = ConnectionState.RECONNECTING
             self._state.conn_init.value = None
         return None
 
@@ -302,10 +307,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
             self._wait_for_consumers_closed(),
         )
 
-        while self._state.conn_state.value not in [
-            ConnectionState.CLOSED,
-            ConnectionState.CLOSING,
-        ]:
+        while self._allow_reconnect:
             gateway_endpoint = await _wait_for_gateway_endpoint(self._state)
             if isinstance(gateway_endpoint, Exception):
                 # Fatal error.
@@ -339,8 +341,8 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 self._state.conn_state.value = ConnectionState.RECONNECTING
                 await asyncio.sleep(5)  # Reconnection delay
             except asyncio.CancelledError:
-                # TODO: Figure out why we reach here sometimes.
-                pass
+                self._logger.debug("Gateway connection cancelled")
+                break
             finally:
                 self._logger.debug("Gateway connection closed")
 
@@ -354,6 +356,8 @@ class _WebSocketWorkerConnection(WorkerConnection):
         """
         Must be sync since it's called in signal handlers.
         """
+
+        self._allow_reconnect = False
 
         if self._state.conn_state.value == ConnectionState.CLOSED:
             # Already closed.
