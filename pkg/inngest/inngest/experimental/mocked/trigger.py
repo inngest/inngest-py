@@ -10,6 +10,7 @@ from inngest._internal import (
     async_lib,
     execution_lib,
     middleware_lib,
+    net,
     server_lib,
     step_lib,
 )
@@ -45,6 +46,7 @@ def trigger(
     if step_stubs is None:
         step_stubs = {}
 
+    timings = net.ServerTimings()
     stack: list[str] = []
     steps: dict[str, object] = {}
     planned = set[str]()
@@ -75,6 +77,7 @@ def trigger(
         middleware = middleware_lib.MiddlewareManager.from_client(
             client,
             {},
+            timings,
         )
 
         memos = step_lib.StepMemos.from_raw(steps)
@@ -95,6 +98,7 @@ def trigger(
                         middleware,
                         request,
                         step_id,
+                        timings,
                     ),
                     middleware,
                     step_lib.StepIDCounter(),
@@ -129,6 +133,7 @@ def trigger(
                         middleware,
                         request,
                         step_id,
+                        timings,
                     ),
                     middleware,
                     step_lib.StepIDCounter(),

@@ -18,7 +18,7 @@ from .models import (
 )
 
 if typing.TYPE_CHECKING:
-    from inngest._internal import client_lib, function, middleware_lib
+    from inngest._internal import client_lib, function, middleware_lib, net
 
 
 class ExecutionV0(BaseExecution):
@@ -30,11 +30,13 @@ class ExecutionV0(BaseExecution):
         middleware: middleware_lib.MiddlewareManager,
         request: server_lib.ServerRequest,
         target_hashed_id: str | None,
+        timings: net.ServerTimings,
     ) -> None:
         self._memos = memos
         self._middleware = middleware
         self._request = request
         self._target_hashed_id = target_hashed_id
+        self._timings = timings
 
     def _handle_skip(
         self,
@@ -135,7 +137,8 @@ class ExecutionV0(BaseExecution):
 
         try:
             try:
-                output: object = await handler(ctx)
+                with self._timings.function:
+                    output: object = await handler(ctx)
                 output = client._serialize(output, output_type)
             except Exception as user_err:
                 transforms.remove_first_traceback_frame(user_err)
@@ -177,11 +180,13 @@ class ExecutionV0Sync(BaseExecutionSync):
         middleware: middleware_lib.MiddlewareManager,
         request: server_lib.ServerRequest,
         target_hashed_id: str | None,
+        timings: net.ServerTimings,
     ) -> None:
         self._memos = memos
         self._middleware = middleware
         self._request = request
         self._target_hashed_id = target_hashed_id
+        self._timings = timings
 
     def _handle_skip(
         self,
@@ -277,7 +282,8 @@ class ExecutionV0Sync(BaseExecutionSync):
 
         try:
             try:
-                output: object = handler(ctx)
+                with self._timings.function:
+                    output: object = handler(ctx)
                 output = client._serialize(output, output_type)
             except Exception as user_err:
                 transforms.remove_first_traceback_frame(user_err)
