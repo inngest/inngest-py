@@ -10,7 +10,7 @@
   },
   "devDependencies": {
     "typescript": "~5.8.3",
-    "vite": "^7.1.7"
+    "vite": "^7.1.11"
   },
   "dependencies": {
     "@inngest/realtime": "^0.4.2"
