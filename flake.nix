@@ -13,7 +13,7 @@
       in {
         devShells.default = pkgs.mkShell {
           nativeBuildInputs = with pkgs; [
-            # Protobuf
+            # Python
             python3
             uv
 
