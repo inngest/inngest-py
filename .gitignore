@@ -14,3 +14,7 @@ dist/
 # Env vars
 *.env*
 !.env.example
+!.envrc
+
+# direnv
+.direnv/*
