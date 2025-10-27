@@ -96,7 +96,9 @@ class _Client:
             if index is None:
                 raise Exception(f'step "{step_id}" not found in history')
             else:
-                raise Exception(f'step "{step_id}" index={index} not found in history')
+                raise Exception(
+                    f'step "{step_id}" index={index} not found in history'
+                )
 
         query = """
         query GetHistory($output_id: String!) {
