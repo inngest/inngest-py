@@ -109,7 +109,8 @@ def create(
         step_2_output_in_api = json.loads(
             await test_core.helper.client.get_step_output(
                 run_id=run_id,
-                step_id="foo:1",
+                step_id="foo",
+                index=1,
             )
         )
         assert step_2_output_in_api == {"data": 1}

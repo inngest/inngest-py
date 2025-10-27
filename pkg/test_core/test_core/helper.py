@@ -77,18 +77,28 @@ class _Client:
         *,
         run_id: str,
         step_id: str,
+        index: int | None = None,
     ) -> str:
         history = await self._get_steps(run_id)
         if not isinstance(history, list):
             raise Exception("unexpected response")
 
+        expected = 1 if index is None else index + 1
+        found = 0
         output_id: str | None = None
         for step in history:
             if step.name == step_id:
-                output_id = step.output_id
-                break
+                found += 1
+                if found == expected:
+                    output_id = step.output_id
+                    break
         if not output_id:
-            raise Exception(f'step "{step_id}" not found in history')
+            if index is None:
+                raise Exception(f'step "{step_id}" not found in history')
+            else:
+                raise Exception(
+                    f'step "{step_id}" index={index} not found in history'
+                )
 
         query = """
         query GetHistory($output_id: String!) {
