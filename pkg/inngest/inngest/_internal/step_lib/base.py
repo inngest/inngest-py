@@ -130,7 +130,7 @@ class StepBase:
 class ParsedStepID:
     hashed: str
     user_facing: str
-    index: int | None = None
+    index: int | None
 
     def userland_info(self) -> StepUserlandInfo:
         return StepUserlandInfo(
@@ -242,7 +242,7 @@ class StepInfo(types.BaseModel):
 @dataclasses.dataclass
 class StepUserlandInfo:
     id: str
-    index: int | None = None
+    index: int | None
 
 
 class StepResponse(types.BaseModel):
