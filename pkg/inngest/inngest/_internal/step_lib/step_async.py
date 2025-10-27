@@ -138,6 +138,7 @@ class Step(base.StepBase):
             name=parsed_step_id.user_facing,
             op=server_lib.Opcode.INVOKE,
             opts=opts,
+            userland=parsed_step_id.userland_info(),
         )
 
         async with await self._execution.report_step(step_info) as step:
@@ -177,6 +178,7 @@ class Step(base.StepBase):
             id=parsed_step_id.hashed,
             name=parsed_step_id.user_facing,
             op=server_lib.Opcode.STEP_RUN,
+            userland=parsed_step_id.userland_info(),
         )
 
         async with await self._execution.report_step(step_info) as step:
@@ -348,6 +350,7 @@ class Step(base.StepBase):
             id=parsed_step_id.hashed,
             name=transforms.to_iso_utc(until),
             op=server_lib.Opcode.SLEEP,
+            userland=parsed_step_id.userland_info(),
         )
 
         async with await self._execution.report_step(step_info) as step:
@@ -398,6 +401,7 @@ class Step(base.StepBase):
             name=event,
             op=server_lib.Opcode.WAIT_FOR_EVENT,
             opts=opts,
+            userland=parsed_step_id.userland_info(),
         )
 
         async with await self._execution.report_step(step_info) as step:
@@ -460,6 +464,7 @@ class AI:
             name=parsed_step_id.user_facing,
             op=server_lib.Opcode.AI_GATEWAY,
             opts=opts,
+            userland=parsed_step_id.userland_info(),
         )
 
         async with await self._step._execution.report_step(step_info) as step:

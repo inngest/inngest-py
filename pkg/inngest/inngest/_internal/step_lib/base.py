@@ -114,13 +114,15 @@ class StepBase:
         user-facing step ID.
         """
 
+        pre_hashed = step_id
         id_count = self._step_id_counter.increment(step_id)
         if id_count > 1:
-            step_id = f"{step_id}:{id_count - 1}"
+            pre_hashed = f"{step_id}:{id_count - 1}"
 
         return ParsedStepID(
-            hashed=transforms.hash_step_id(step_id),
+            hashed=transforms.hash_step_id(pre_hashed),
             user_facing=step_id,
+            index=(id_count - 1) if id_count > 1 else None,
         )
 
 
@@ -128,6 +130,13 @@ class StepBase:
 class ParsedStepID:
     hashed: str
     user_facing: str
+    index: int | None = None
+
+    def userland_info(self) -> StepUserlandInfo:
+        return StepUserlandInfo(
+            id=self.user_facing,
+            index=self.index,
+        )
 
 
 class StepIDCounter:
@@ -218,6 +227,7 @@ class StepInfo(types.BaseModel):
 
     op: server_lib.Opcode
     opts: dict[str, object] | None = None
+    userland: StepUserlandInfo | None = None
 
     def set_parallel_mode(self, parallel_mode: server_lib.ParallelMode) -> None:
         if parallel_mode != server_lib.ParallelMode.RACE:
@@ -227,6 +237,11 @@ class StepInfo(types.BaseModel):
         if self.opts is None:
             self.opts = {}
         self.opts[server_lib.OptKey.PARALLEL_MODE.value] = parallel_mode.value
+
+@dataclasses.dataclass
+class StepUserlandInfo:
+    id: str
+    index: int | None = None
 
 
 class StepResponse(types.BaseModel):
