@@ -77,7 +77,7 @@ class _Client:
         *,
         run_id: str,
         step_id: str,
-        index=None: int | None,
+        index: int | None = None,
     ) -> str:
         history = await self._get_steps(run_id)
         if not isinstance(history, list):
