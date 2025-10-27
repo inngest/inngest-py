@@ -338,6 +338,7 @@ class StepSync(base.StepBase):
             id=parsed_step_id.hashed,
             name=transforms.to_iso_utc(until),
             op=server_lib.Opcode.SLEEP,
+            userland=parsed_step_id.userland_info(),
         )
 
         with self._execution.report_step(step_info) as step:
