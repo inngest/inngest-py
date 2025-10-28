@@ -28,7 +28,9 @@ def get_step_context() -> step_lib.Step | step_lib.StepSync:
 
 
 @contextlib.contextmanager
-def set_step_context(step: step_lib.Step | step_lib.StepSync):
+def set_step_context(
+    step: step_lib.Step | step_lib.StepSync,
+) -> typing.Generator[None, None, None]:
     if is_step_context_set():
         raise Exception("Step context already set")
 
@@ -45,17 +47,15 @@ def step(
     output_type: object = types.EmptySentinel,
 ) -> typing.Callable[[typing.Callable[P, R]], typing.Callable[P, R]]:
     def decorator(func: typing.Callable[P, R]) -> typing.Callable[P, R]:
-        def wrapper(*args: typing.Any, **kwargs: typing.Any) -> R:
-            handler = typing.cast(
-                typing.Callable[..., typing.Any],
-                functools.partial(func, *args, **kwargs),
-            )
+        @functools.wraps(func)
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+            handler = functools.partial(func, *args, **kwargs)
 
             if is_step_context_set() is False:
                 return handler()
 
             step = step_context_var.get()
-            output = typing.cast(R, step.run(step_id, handler))
+            output = typing.cast(R, step.run(step_id, handler))  # type: ignore[arg-type]
             return output
 
         return wrapper
