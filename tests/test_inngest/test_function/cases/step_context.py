@@ -28,16 +28,6 @@ def create(
     fn_id = base.create_fn_id(test_name)
     state = _State()
 
-    @inngest.experimental.step("step_1")
-    def step_1_sync() -> list[dict[str, object]]:
-        state.step_1_counter += 1
-        return [{"foo": {"bar": 1}, "empty": None}]
-
-    @inngest.experimental.step("step_1")
-    async def step_1_async() -> list[dict[str, object]]:
-        state.step_1_counter += 1
-        return [{"foo": {"bar": 1}, "empty": None}]
-
     @client.create_function(
         fn_id=fn_id,
         retries=0,
