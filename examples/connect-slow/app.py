@@ -8,5 +8,6 @@ from src.inngest.functions import hello_slow, hello_really_slow
 asyncio.run(
     connect(
         [(inngest_client_slow, [hello_slow, hello_really_slow])],
-        max_worker_concurrency=1
-    ).start())
+        max_worker_concurrency=1,
+    ).start()
+)
