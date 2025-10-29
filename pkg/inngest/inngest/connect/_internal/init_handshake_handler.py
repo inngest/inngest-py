@@ -25,6 +25,7 @@ class _InitHandshakeHandler(_BaseHandler):
         app_configs: dict[str, list[server_lib.FunctionConfig]],
         env: str | None,
         instance_id: str,
+        max_worker_concurrency: int | None = None,
     ) -> None:
         self._app_configs = app_configs
         self._env = env
@@ -32,6 +33,7 @@ class _InitHandshakeHandler(_BaseHandler):
         self._logger = logger
         self._kind_state = _KindState()
         self._state = state
+        self._max_worker_concurrency = max_worker_concurrency
 
     def start(self) -> types.MaybeError[None]:
         err = super().start()
@@ -140,6 +142,7 @@ class _InitHandshakeHandler(_BaseHandler):
             connection_id=connection_id,
             env=self._env,
             instance_id=self._instance_id,
+            max_worker_concurrency=self._max_worker_concurrency,
         )
         if isinstance(sync_message, Exception):
             self._logger.error(

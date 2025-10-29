@@ -88,6 +88,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
         instance_id: str | None = None,
         rewrite_gateway_endpoint: typing.Callable[[str], str] | None = None,
         shutdown_signals: list[signal.Signals] | None = None,
+        max_worker_concurrency: int | None = None,
     ) -> None:
         self._allow_reconnect = True
 
@@ -155,6 +156,8 @@ class _WebSocketWorkerConnection(WorkerConnection):
         if instance_id is None:
             instance_id = socket.gethostname()
         self._instance_id = instance_id
+        # Maximum number of worker concurrency to use. Defaults to None.
+        self._max_worker_concurrency = max_worker_concurrency
 
         self._rewrite_gateway_endpoint = rewrite_gateway_endpoint
         self._http_client = net.ThreadAwareAsyncHTTPClient().initialize()
@@ -204,6 +207,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 self._app_configs,
                 default_client.env,
                 self._instance_id,
+                max_worker_concurrency=self._max_worker_concurrency,
             ),
             _ExecutionHandler(
                 api_origin=self._api_origin,
