@@ -1,3 +1,5 @@
+import time
+
 import inngest
 
 from .client import inngest_client_slow
