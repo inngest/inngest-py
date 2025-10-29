@@ -20,6 +20,7 @@ from .consts import (
     _framework,
     _protocol,
 )
+from .configs_lib import get_max_worker_concurrency
 from .drain_handler import _DrainHandler
 from .errors import _UnreachableError
 from .execution_handler import _ExecutionHandler
@@ -157,6 +158,8 @@ class _WebSocketWorkerConnection(WorkerConnection):
             instance_id = socket.gethostname()
         self._instance_id = instance_id
         # Maximum number of worker concurrency to use. Defaults to None.
+        if max_worker_concurrency is None:
+            max_worker_concurrency = get_max_worker_concurrency()
         self._max_worker_concurrency = max_worker_concurrency
 
         self._rewrite_gateway_endpoint = rewrite_gateway_endpoint
