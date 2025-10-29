@@ -167,6 +167,7 @@ def _create_sync_message(
     connection_id: str,
     env: str | None,
     instance_id: str,
+    max_worker_concurrency: int | None = None,
 ) -> types.MaybeError[connect_pb2.ConnectMessage]:
     apps: list[connect_pb2.AppConfiguration] = []
     for app_id, functions in apps_configs.items():
@@ -202,6 +203,7 @@ def _create_sync_message(
             os=platform.system().lower(),
         ),
         worker_manual_readiness_ack=False,
+        max_worker_concurrency=max_worker_concurrency,
     )
 
     return connect_pb2.ConnectMessage(

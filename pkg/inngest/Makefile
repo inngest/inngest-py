@@ -13,7 +13,7 @@ lint:
 
 .PHONY: proto
 proto:
-	@uv run protoc --proto_path=./inngest/experimental/connect/ --python_out=./inngest/experimental/connect/ ./inngest/experimental/connect/connect.proto --pyi_out=./inngest/experimental/connect/
+	@uv run protoc --proto_path=./inngest/connect/_internal/ --python_out=./inngest/connect/_internal/ ./inngest/connect/_internal/connect.proto --pyi_out=./inngest/connect/_internal/
 
 release:
 	@grep "version = \"$${VERSION}\"" pyproject.toml && git tag inngest@$${VERSION} && git push origin inngest@$${VERSION} || echo "pyproject.toml version does not match"
