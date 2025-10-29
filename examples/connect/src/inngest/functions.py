@@ -1,6 +1,6 @@
 import inngest
 
-from .client import inngest_client
+from .client import inngest_client, inngest_client_slow
 
 
 @inngest_client.create_function(
@@ -11,7 +11,7 @@ async def hello(ctx: inngest.Context) -> str:
     return "Hello world!"
 
 
-@inngest_client.create_function(
+@inngest_client_slow.create_function(
     fn_id="hello-slow-world",
     trigger=inngest.TriggerEvent(event="say-hello-slow"),
 )
