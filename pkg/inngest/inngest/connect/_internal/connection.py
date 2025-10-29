@@ -255,7 +255,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 self._logger.debug(
                     "Received message",
                     extra={
-                        "kind": msg.kind,
+                        "kind": connect_pb2.GatewayMessageType.Name(msg.kind),
                         "payload": msg.payload,
                     },
                 )
