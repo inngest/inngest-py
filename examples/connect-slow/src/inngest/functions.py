@@ -1,4 +1,4 @@
-import time
+import asyncio
 
 import inngest
 
@@ -10,7 +10,7 @@ from .client import inngest_client_slow
     trigger=inngest.TriggerEvent(event="say-hello-slow"),
 )
 async def hello_slow(ctx: inngest.Context) -> str:
-    time.sleep(100)
+    await asyncio.sleep(100)
     return "Hello Slow World!"
 
 
@@ -19,5 +19,5 @@ async def hello_slow(ctx: inngest.Context) -> str:
     trigger=inngest.TriggerEvent(event="say-hello-really-slow"),
 )
 async def hello_really_slow(ctx: inngest.Context) -> str:
-    time.sleep(10000)
+    await asyncio.sleep(10000)
     return "Hello Really Slow World!"
