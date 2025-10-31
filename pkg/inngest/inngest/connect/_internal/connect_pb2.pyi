@@ -11,6 +11,7 @@ class GatewayMessageType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     GATEWAY_HELLO: _ClassVar[GatewayMessageType]
     WORKER_CONNECT: _ClassVar[GatewayMessageType]
+    SYNC_FAILED: _ClassVar[GatewayMessageType]
     GATEWAY_CONNECTION_READY: _ClassVar[GatewayMessageType]
     GATEWAY_EXECUTOR_REQUEST: _ClassVar[GatewayMessageType]
     WORKER_READY: _ClassVar[GatewayMessageType]
@@ -47,6 +48,7 @@ class WorkerDisconnectReason(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     MESSAGE_TOO_LARGE: _ClassVar[WorkerDisconnectReason]
 GATEWAY_HELLO: GatewayMessageType
 WORKER_CONNECT: GatewayMessageType
+SYNC_FAILED: GatewayMessageType
 GATEWAY_CONNECTION_READY: GatewayMessageType
 GATEWAY_EXECUTOR_REQUEST: GatewayMessageType
 WORKER_READY: GatewayMessageType
@@ -100,7 +102,7 @@ class AuthData(_message.Message):
     def __init__(self, session_token: _Optional[str] = ..., sync_token: _Optional[str] = ...) -> None: ...
 
 class WorkerConnectRequestData(_message.Message):
-    __slots__ = ("connection_id", "instance_id", "auth_data", "capabilities", "apps", "worker_manual_readiness_ack", "system_attributes", "environment", "framework", "platform", "sdk_version", "sdk_language", "started_at")
+    __slots__ = ("connection_id", "instance_id", "auth_data", "capabilities", "apps", "worker_manual_readiness_ack", "system_attributes", "environment", "framework", "platform", "sdk_version", "sdk_language", "started_at", "max_worker_concurrency")
     CONNECTION_ID_FIELD_NUMBER: _ClassVar[int]
     INSTANCE_ID_FIELD_NUMBER: _ClassVar[int]
     AUTH_DATA_FIELD_NUMBER: _ClassVar[int]
@@ -114,6 +116,7 @@ class WorkerConnectRequestData(_message.Message):
     SDK_VERSION_FIELD_NUMBER: _ClassVar[int]
     SDK_LANGUAGE_FIELD_NUMBER: _ClassVar[int]
     STARTED_AT_FIELD_NUMBER: _ClassVar[int]
+    MAX_WORKER_CONCURRENCY_FIELD_NUMBER: _ClassVar[int]
     connection_id: str
     instance_id: str
     auth_data: AuthData
@@ -127,7 +130,8 @@ class WorkerConnectRequestData(_message.Message):
     sdk_version: str
     sdk_language: str
     started_at: _timestamp_pb2.Timestamp
-    def __init__(self, connection_id: _Optional[str] = ..., instance_id: _Optional[str] = ..., auth_data: _Optional[_Union[AuthData, _Mapping]] = ..., capabilities: _Optional[bytes] = ..., apps: _Optional[_Iterable[_Union[AppConfiguration, _Mapping]]] = ..., worker_manual_readiness_ack: bool = ..., system_attributes: _Optional[_Union[SystemAttributes, _Mapping]] = ..., environment: _Optional[str] = ..., framework: _Optional[str] = ..., platform: _Optional[str] = ..., sdk_version: _Optional[str] = ..., sdk_language: _Optional[str] = ..., started_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    max_worker_concurrency: int
+    def __init__(self, connection_id: _Optional[str] = ..., instance_id: _Optional[str] = ..., auth_data: _Optional[_Union[AuthData, _Mapping]] = ..., capabilities: _Optional[bytes] = ..., apps: _Optional[_Iterable[_Union[AppConfiguration, _Mapping]]] = ..., worker_manual_readiness_ack: bool = ..., system_attributes: _Optional[_Union[SystemAttributes, _Mapping]] = ..., environment: _Optional[str] = ..., framework: _Optional[str] = ..., platform: _Optional[str] = ..., sdk_version: _Optional[str] = ..., sdk_language: _Optional[str] = ..., started_at: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., max_worker_concurrency: _Optional[int] = ...) -> None: ...
 
 class GatewayConnectionReadyData(_message.Message):
     __slots__ = ("heartbeat_interval", "extend_lease_interval")
