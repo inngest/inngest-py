@@ -56,7 +56,6 @@ class EnvKey(enum.Enum):
     CONNECT_MAX_WORKER_CONCURRENCY = "INNGEST_CONNECT_MAX_WORKER_CONCURRENCY"
 
 
-
 class Streaming(enum.Enum):
     """
     Controls the "streaming" feature, which sends keepalive bytes until the

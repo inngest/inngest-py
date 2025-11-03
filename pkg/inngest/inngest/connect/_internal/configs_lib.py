@@ -1,5 +1,7 @@
 import os
+
 from inngest._internal import const
+
 
 def get_max_worker_concurrency() -> int | None:
     """

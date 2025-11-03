@@ -14,13 +14,13 @@ from inngest._internal import comm_lib, const, net, server_lib, types
 
 from . import connect_pb2
 from .base_handler import _BaseHandler
+from .configs_lib import get_max_worker_concurrency
 from .conn_init_starter import _ConnInitHandler
 from .consts import (
     _default_shutdown_signals,
     _framework,
     _protocol,
 )
-from .configs_lib import get_max_worker_concurrency
 from .drain_handler import _DrainHandler
 from .errors import _UnreachableError
 from .execution_handler import _ExecutionHandler

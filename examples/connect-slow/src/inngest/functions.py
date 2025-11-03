@@ -4,6 +4,7 @@ import inngest
 
 from .client import inngest_client_slow
 
+
 @inngest_client_slow.create_function(
     fn_id="hello-world",
     trigger=inngest.TriggerEvent(event="say-hello"),
@@ -12,6 +13,7 @@ async def hello(ctx: inngest.Context) -> str:
     await asyncio.sleep(1)
     return "Hello World!"
 
+
 @inngest_client_slow.create_function(
     fn_id="hello-slowish-world",
     trigger=inngest.TriggerEvent(event="say-hello-slowish"),
@@ -19,6 +21,7 @@ async def hello(ctx: inngest.Context) -> str:
 async def hello_slowish(ctx: inngest.Context) -> str:
     await asyncio.sleep(10)
     return "Hello Slowish World!"
+
 
 @inngest_client_slow.create_function(
     fn_id="hello-slow-world",
