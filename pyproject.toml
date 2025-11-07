@@ -59,7 +59,7 @@ constraint-dependencies = [
     # consumers
     "httpx==0.26.0",
     "jcs==0.2.1",
-    "protobuf==5.29.5",
+    "protobuf==5.29.4",
     "psutil==6.0.0",
     "pydantic==2.11.0",
     "typing-extensions==4.13.0",
