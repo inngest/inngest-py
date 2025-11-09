@@ -1,6 +1,8 @@
-import re
+from __future__ import annotations
+
 from pathlib import Path
 
+import pydantic
 import toml
 
 workspace_deps = ["inngest", "test_core", "inngest_encryption"]
@@ -15,23 +17,18 @@ def test_constraint_dependencies_match_minimum_versions() -> None:
 
     root_path = Path(__file__).parent.parent.parent
     with open(root_path / "pyproject.toml") as f:
-        root_config = toml.load(f)
+        root_config = RootConfig.model_validate(toml.load(f))
 
-    constraints = get_constraint_dependencies(root_config)
+    constraints = _get_constraint_dependencies(root_config)
 
     dep_mins: dict[str, str] = {}
-    for member in get_workspace_members(root_config):
+    for member in root_config.tool.uv.workspace.members:
         # Load workspace pyproject.toml
         with open(root_path / member / "pyproject.toml") as f:
-            workspace_config = toml.load(f)
-
-        project_config = workspace_config.get("project")
-        assert isinstance(project_config, dict)
+            workspace_config = WorkspaceConfig.model_validate(toml.load(f))
 
         # Parse dependencies
-        dependencies_config = project_config.get("dependencies")
-        assert isinstance(dependencies_config, list)
-        for dep_name in dependencies_config:
+        for dep_name in workspace_config.project.dependencies:
             assert isinstance(dep_name, str)
 
             if dep_name in workspace_deps:
@@ -45,17 +42,13 @@ def test_constraint_dependencies_match_minimum_versions() -> None:
             assert len(parts) == 2
             existing_min = dep_mins.get(parts[0])
             if existing_min:
-                dep_mins[parts[0]] = use_min_version(existing_min, parts[1])
+                dep_mins[parts[0]] = _use_min_version(existing_min, parts[1])
             else:
                 dep_mins[parts[0]] = parts[1]
 
-        # Parse optional dependencies
-        optional_dependencies_config = project_config.get(
-            "optional-dependencies",
-            {},
-        )
-        assert isinstance(optional_dependencies_config, dict)
-        for _, group_deps in optional_dependencies_config.items():
+        for (
+            group_deps
+        ) in workspace_config.project.optional_dependencies.values():
             assert isinstance(group_deps, list)
             for dep_name in group_deps:
                 assert isinstance(dep_name, str)
@@ -71,7 +64,9 @@ def test_constraint_dependencies_match_minimum_versions() -> None:
                 assert len(parts) == 2
                 existing_min = dep_mins.get(parts[0])
                 if existing_min:
-                    dep_mins[parts[0]] = use_min_version(existing_min, parts[1])
+                    dep_mins[parts[0]] = _use_min_version(
+                        existing_min, parts[1]
+                    )
                 else:
                     dep_mins[parts[0]] = parts[1]
 
@@ -82,7 +77,7 @@ def test_constraint_dependencies_match_minimum_versions() -> None:
         )
 
         assert min_version == constraints[dep_name], (
-            f"Dependency '{dep_name}' has minimum version '{min_version}' in {member} but constraint-dependencies specifies '{constraints[dep_name]}'"
+            f"Dependency '{dep_name}' has minimum version '{min_version}' but constraint-dependencies specifies '{constraints[dep_name]}'"
         )
 
     # Ensure all constraints match real dependencies in workspaces
@@ -92,48 +87,55 @@ def test_constraint_dependencies_match_minimum_versions() -> None:
         )
 
 
-def get_constraint_dependencies(
-    root_config: dict[str, object],
+class RootConfig(pydantic.BaseModel):
+    tool: RootConfigTool
+
+
+class RootConfigTool(pydantic.BaseModel):
+    uv: RootConfigToolUvConfig
+
+
+class RootConfigToolUvConfig(pydantic.BaseModel):
+    constraint_dependencies: list[str] = pydantic.Field(
+        alias="constraint-dependencies"
+    )
+    workspace: RootConfigToolUvWorkspaceConfig
+
+
+class RootConfigToolUvWorkspaceConfig(pydantic.BaseModel):
+    members: list[str]
+
+
+class WorkspaceConfig(pydantic.BaseModel):
+    project: WorkspaceConfigProject
+
+
+class WorkspaceConfigProject(pydantic.BaseModel):
+    dependencies: list[str]
+    optional_dependencies: dict[str, list[str]] = pydantic.Field(
+        alias="optional-dependencies",
+        default_factory=dict,
+    )
+
+
+def _get_constraint_dependencies(
+    root_config: RootConfig,
 ) -> dict[str, str]:
     """
     Get the constraint dependencies from the root pyproject.toml
     """
 
-    tool_config = root_config.get("tool")
-    assert isinstance(tool_config, dict)
-    uv_config = tool_config.get("uv")
-    assert isinstance(uv_config, dict)
-    constraint_deps = uv_config.get("constraint-dependencies")
-    assert isinstance(constraint_deps, list)
-
     constraints: dict[str, str] = {}
-    for dep in constraint_deps:
-        match = re.match(r"^([a-zA-Z0-9_-]+)==(.+)$", dep)
-        assert match, f"Invalid constraint format: {dep}"
-        package, version = match.groups()
-        assert isinstance(package, str)
-        assert isinstance(version, str)
+    for dep in root_config.tool.uv.constraint_dependencies:
+        assert "==" in dep, f"Invalid constraint format: {dep}"
+        parts = dep.split("==")
+        assert len(parts) == 2, f"Invalid constraint format: {dep}"
+        package, version = parts
         constraints[package] = version
     return constraints
 
 
-def get_workspace_members(root_config: dict[str, object]) -> list[str]:
-    """
-    Get the list of workspace members from the root pyproject.toml
-    """
-
-    tool_config = root_config.get("tool")
-    assert isinstance(tool_config, dict)
-    uv_config = tool_config.get("uv")
-    assert isinstance(uv_config, dict)
-    workspace_config = uv_config.get("workspace")
-    assert isinstance(workspace_config, dict)
-    members = workspace_config.get("members")
-    assert isinstance(members, list)
-    return members
-
-
-def use_min_version(a: str, b: str) -> str:
+def _use_min_version(a: str, b: str) -> str:
     """
     Compare two version strings and return the minimum version
     """
