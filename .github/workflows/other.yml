@@ -87,4 +87,4 @@ jobs:
       - name: "Install"
         run: "make install"
       - name: "Test"
-        run: "@uv run pytest -v tests/test_repo"
+        run: "uv run pytest -v tests/test_repo"
