@@ -14,6 +14,7 @@ from inngest._internal import comm_lib, const, net, server_lib, types
 
 from . import connect_pb2
 from .base_handler import _BaseHandler
+from .configs_lib import get_max_worker_concurrency
 from .conn_init_starter import _ConnInitHandler
 from .consts import (
     _default_shutdown_signals,
@@ -88,6 +89,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
         instance_id: str | None = None,
         rewrite_gateway_endpoint: typing.Callable[[str], str] | None = None,
         shutdown_signals: list[signal.Signals] | None = None,
+        max_worker_concurrency: int | None = None,
     ) -> None:
         self._allow_reconnect = True
 
@@ -155,6 +157,10 @@ class _WebSocketWorkerConnection(WorkerConnection):
         if instance_id is None:
             instance_id = socket.gethostname()
         self._instance_id = instance_id
+        # Maximum number of worker concurrency to use. Defaults to None.
+        if max_worker_concurrency is None:
+            max_worker_concurrency = get_max_worker_concurrency()
+        self._max_worker_concurrency = max_worker_concurrency
 
         self._rewrite_gateway_endpoint = rewrite_gateway_endpoint
         self._http_client = net.ThreadAwareAsyncHTTPClient().initialize()
@@ -204,6 +210,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 self._app_configs,
                 default_client.env,
                 self._instance_id,
+                max_worker_concurrency=self._max_worker_concurrency,
             ),
             _ExecutionHandler(
                 api_origin=self._api_origin,
@@ -251,7 +258,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 self._logger.debug(
                     "Received message",
                     extra={
-                        "kind": msg.kind,
+                        "kind": connect_pb2.GatewayMessageType.Name(msg.kind),
                         "payload": msg.payload,
                     },
                 )
