@@ -74,3 +74,17 @@ jobs:
         run: "make install"
       - name: "Type check"
         run: "make type-check-pyright"
+
+  test:
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.13"]
+    steps:
+      - uses: "actions/checkout@v4"
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@v4
+      - name: "Install"
+        run: "make install"
+      - name: "Test"
+        run: "uv run pytest -v tests/test_repo"
