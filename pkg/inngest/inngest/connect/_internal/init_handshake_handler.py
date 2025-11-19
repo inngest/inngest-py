@@ -153,7 +153,7 @@ class _InitHandshakeHandler(_BaseHandler):
 
         err = await ws_utils.safe_send(
             self._logger,
-            self._state.ws,
+            self._state,
             ws,
             sync_message.SerializeToString(),
         )

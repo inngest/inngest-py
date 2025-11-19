@@ -134,7 +134,7 @@ class _ExecutionHandler(_BaseHandler):
             ws = await self._state.ws.wait_for_not_none()
             err = await ws_utils.safe_send(
                 self._logger,
-                self._state.ws,
+                self._state,
                 ws,
                 connect_pb2.ConnectMessage(
                     kind=connect_pb2.GatewayMessageType.WORKER_REQUEST_ACK,
@@ -215,7 +215,7 @@ class _ExecutionHandler(_BaseHandler):
             self._logger.debug("Sending execution reply")
             err = await ws_utils.safe_send(
                 self._logger,
-                self._state.ws,
+                self._state,
                 ws,
                 connect_pb2.ConnectMessage(
                     kind=connect_pb2.GatewayMessageType.WORKER_REPLY,
@@ -304,7 +304,7 @@ class _ExecutionHandler(_BaseHandler):
             for req_data, _ in self._pending_requests.values():
                 err = await ws_utils.safe_send(
                     self._logger,
-                    self._state.ws,
+                    self._state,
                     ws,
                     connect_pb2.ConnectMessage(
                         kind=connect_pb2.GatewayMessageType.WORKER_REQUEST_EXTEND_LEASE,

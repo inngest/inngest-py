@@ -71,7 +71,7 @@ class _HeartbeatHandler(_BaseHandler):
             self._logger.debug("Sending heartbeat")
             err = await ws_utils.safe_send(
                 self._logger,
-                self._state.ws,
+                self._state,
                 ws,
                 connect_pb2.ConnectMessage(
                     kind=connect_pb2.GatewayMessageType.WORKER_HEARTBEAT,

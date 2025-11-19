@@ -84,7 +84,6 @@ class TestWaitForExecutionRequest(BaseTest):
             method: str,
             path: str,
         ) -> http_proxy.Response:
-            print("on_request")
             nonlocal api_called
             api_called = True
 

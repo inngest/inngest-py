@@ -2,14 +2,12 @@ import websockets
 
 from inngest._internal import types
 
-from . import value_watcher
+from . import models
 
 
 async def safe_send(
     logger: types.Logger,
-    value_watcher: value_watcher._ValueWatcher[
-        websockets.ClientConnection | None
-    ],
+    state: models._State,
     ws: websockets.ClientConnection,
     message: bytes,
 ) -> types.MaybeError[None]:
@@ -23,7 +21,7 @@ async def safe_send(
         await ws.send(message)
     except websockets.exceptions.ConnectionClosed as e:
         logger.error(f"Error sending message: {e!s}", extra={"error": str(e)})
-        value_watcher.value = None
+        state.close_ws()
         return e
     except Exception as e:
         logger.error(f"Error sending message: {e!s}", extra={"error": str(e)})

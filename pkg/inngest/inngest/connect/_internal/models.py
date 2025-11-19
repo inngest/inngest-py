@@ -22,6 +22,22 @@ class _State:
 
     ws: _ValueWatcher[websockets.ClientConnection | None]
 
+    def allow_reconnect(self) -> bool:
+        return self.conn_state.value not in [
+            ConnectionState.CLOSED,
+            ConnectionState.CLOSING,
+        ]
+
+    def close_ws(self) -> None:
+        """
+        Close the WebSocket connection
+        """
+
+        if self.allow_reconnect():
+            self.conn_state.value = ConnectionState.RECONNECTING
+        self.conn_init.value = None
+        self.ws.value = None
+
 
 class ConnectionState(enum.Enum):
     """
