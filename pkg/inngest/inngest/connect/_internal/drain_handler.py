@@ -30,4 +30,4 @@ class _DrainHandler(_BaseHandler):
         self._logger.debug("Draining")
 
         # Clear the connection to trigger reconnection logic elsewhere
-        self._state.conn_init.value = None
+        self._state.close_ws()
