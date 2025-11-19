@@ -5,7 +5,7 @@ import httpx
 
 from inngest._internal import comm_lib, net, server_lib, types
 
-from . import connect_pb2
+from . import connect_pb2, ws_utils
 from .base_handler import _BaseHandler
 from .buffer import _SizeConstrainedBuffer
 from .models import _State
@@ -132,23 +132,25 @@ class _ExecutionHandler(_BaseHandler):
 
         async def execute() -> None:
             ws = await self._state.ws.wait_for_not_none()
-            try:
-                await ws.send(
-                    connect_pb2.ConnectMessage(
-                        kind=connect_pb2.GatewayMessageType.WORKER_REQUEST_ACK,
-                        payload=connect_pb2.WorkerRequestAckData(
-                            account_id=req_data.account_id,
-                            app_id=req_data.app_id,
-                            env_id=req_data.env_id,
-                            function_slug=req_data.function_slug,
-                            request_id=req_data.request_id,
-                            step_id=req_data.step_id,
-                            system_trace_ctx=req_data.system_trace_ctx,
-                            user_trace_ctx=req_data.user_trace_ctx,
-                        ).SerializeToString(),
-                    ).SerializeToString()
-                )
-
+            err = await ws_utils.safe_send(
+                self._logger,
+                self._state.ws,
+                ws,
+                connect_pb2.ConnectMessage(
+                    kind=connect_pb2.GatewayMessageType.WORKER_REQUEST_ACK,
+                    payload=connect_pb2.WorkerRequestAckData(
+                        account_id=req_data.account_id,
+                        app_id=req_data.app_id,
+                        env_id=req_data.env_id,
+                        function_slug=req_data.function_slug,
+                        request_id=req_data.request_id,
+                        step_id=req_data.step_id,
+                        system_trace_ctx=req_data.system_trace_ctx,
+                        user_trace_ctx=req_data.user_trace_ctx,
+                    ).SerializeToString(),
+                ).SerializeToString(),
+            )
+            if err is None:
                 comm_res = await comm_handler.post(
                     comm_lib.CommRequest(
                         body=req_data.request_payload,
@@ -164,9 +166,11 @@ class _ExecutionHandler(_BaseHandler):
                         serve_path=None,
                     )
                 )
-            except Exception as e:
-                self._logger.error("Execution failed", extra={"error": str(e)})
-                comm_res = comm_lib.CommResponse.from_error(self._logger, e)
+            else:
+                self._logger.error(
+                    "Execution failed", extra={"error": str(err)}
+                )
+                comm_res = comm_lib.CommResponse.from_error(self._logger, err)
 
             body = comm_res.body_bytes()
             if isinstance(body, Exception):
@@ -209,12 +213,19 @@ class _ExecutionHandler(_BaseHandler):
             self._buffer.add(req_data.request_id, reply_payload)
 
             self._logger.debug("Sending execution reply")
-            await ws.send(
+            err = await ws_utils.safe_send(
+                self._logger,
+                self._state.ws,
+                ws,
                 connect_pb2.ConnectMessage(
                     kind=connect_pb2.GatewayMessageType.WORKER_REPLY,
                     payload=reply_payload,
-                ).SerializeToString()
+                ).SerializeToString(),
             )
+            if err is not None:
+                self._logger.error(
+                    "Failed to send execution reply", extra={"error": str(err)}
+                )
 
         # Store the task.
         task = asyncio.create_task(execute())
@@ -291,26 +302,28 @@ class _ExecutionHandler(_BaseHandler):
             )
 
             for req_data, _ in self._pending_requests.values():
-                try:
-                    await ws.send(
-                        connect_pb2.ConnectMessage(
-                            kind=connect_pb2.GatewayMessageType.WORKER_REQUEST_EXTEND_LEASE,
-                            payload=connect_pb2.WorkerRequestExtendLeaseData(
-                                account_id=req_data.account_id,
-                                env_id=req_data.env_id,
-                                function_slug=req_data.function_slug,
-                                lease_id=req_data.lease_id,
-                                request_id=req_data.request_id,
-                                run_id=req_data.run_id,
-                                step_id=req_data.step_id,
-                                system_trace_ctx=req_data.system_trace_ctx,
-                                user_trace_ctx=req_data.user_trace_ctx,
-                            ).SerializeToString(),
-                        ).SerializeToString()
-                    )
-                except Exception as e:
+                err = await ws_utils.safe_send(
+                    self._logger,
+                    self._state.ws,
+                    ws,
+                    connect_pb2.ConnectMessage(
+                        kind=connect_pb2.GatewayMessageType.WORKER_REQUEST_EXTEND_LEASE,
+                        payload=connect_pb2.WorkerRequestExtendLeaseData(
+                            account_id=req_data.account_id,
+                            env_id=req_data.env_id,
+                            function_slug=req_data.function_slug,
+                            lease_id=req_data.lease_id,
+                            request_id=req_data.request_id,
+                            run_id=req_data.run_id,
+                            step_id=req_data.step_id,
+                            system_trace_ctx=req_data.system_trace_ctx,
+                            user_trace_ctx=req_data.user_trace_ctx,
+                        ).SerializeToString(),
+                    ).SerializeToString(),
+                )
+                if err is not None:
                     self._logger.error(
-                        "Failed to extend lease", extra={"error": str(e)}
+                        "Failed to extend lease", extra={"error": str(err)}
                     )
 
     async def _unacked_msg_flush_poller(self) -> None:
