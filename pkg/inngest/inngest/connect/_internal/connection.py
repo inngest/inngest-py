@@ -186,6 +186,8 @@ class _WebSocketWorkerConnection(WorkerConnection):
             exclude_gateways=[],
             extend_lease_interval=_ValueWatcher(None),
             fatal_error=_ValueWatcher(None),
+            init_handshake_complete=_ValueWatcher(False),
+            pending_request_count=_ValueWatcher(0),
             ws=_ValueWatcher(None),
         )
 
