@@ -8,7 +8,7 @@ import pydantic_core
 
 from inngest._internal import const, errors, server_lib, types
 
-from . import connect_pb2
+from . import connect_pb2, ws_utils
 from .base_handler import _BaseHandler
 from .models import ConnectionState, _State
 
@@ -151,7 +151,19 @@ class _InitHandshakeHandler(_BaseHandler):
             )
             return
 
-        await ws.send(sync_message.SerializeToString())
+        err = await ws_utils.safe_send(
+            self._logger,
+            self._state,
+            ws,
+            sync_message.SerializeToString(),
+        )
+        if err is not None:
+            self._logger.error(
+                "Failed to send sync message",
+                extra={"error": str(err)},
+            )
+            return
+
         self._kind_state.SYNCED = True
         return None
 

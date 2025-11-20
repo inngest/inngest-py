@@ -2,7 +2,7 @@ import asyncio
 
 from inngest._internal import types
 
-from . import connect_pb2
+from . import connect_pb2, ws_utils
 from .base_handler import _BaseHandler
 from .consts import _heartbeat_interval_sec
 from .models import ConnectionState, _State
@@ -60,30 +60,29 @@ class _HeartbeatHandler(_BaseHandler):
         await self._state.ws.wait_for_not_none()
 
         while self.closed_event.is_set() is False:
-            # Use try/except to ensure that we don't stop sending heartbeats if
-            # one errors
-            try:
-                # Only send heartbeats when the connection is active.
-                if self._state.conn_state.value != ConnectionState.ACTIVE:
-                    await self._state.conn_state.wait_for(
-                        ConnectionState.ACTIVE
-                    )
+            # Only send heartbeats when the connection is active.
+            if self._state.conn_state.value != ConnectionState.ACTIVE:
+                await self._state.conn_state.wait_for(ConnectionState.ACTIVE)
 
-                # IMPORTANT: We need to get the WS conn each loop iteration because
-                # it may have changed (e.g. due to a reconnect)
-                ws = await self._state.ws.wait_for_not_none()
+            # IMPORTANT: We need to get the WS conn each loop iteration because
+            # it may have changed (e.g. due to a reconnect)
+            ws = await self._state.ws.wait_for_not_none()
 
-                self._logger.debug("Sending heartbeat")
-                await ws.send(
-                    connect_pb2.ConnectMessage(
-                        kind=connect_pb2.GatewayMessageType.WORKER_HEARTBEAT,
-                    ).SerializeToString()
-                )
-            except Exception as e:
-                # Don't raise the error because we want to continue heartbeating
+            self._logger.debug("Sending heartbeat")
+            err = await ws_utils.safe_send(
+                self._logger,
+                self._state,
+                ws,
+                connect_pb2.ConnectMessage(
+                    kind=connect_pb2.GatewayMessageType.WORKER_HEARTBEAT,
+                ).SerializeToString(),
+            )
+            if err is not None:
+                # Only log the error because we want to continue heartbeating
                 self._logger.error(
-                    "Error sending heartbeat", extra={"error": str(e)}
+                    "Error sending heartbeat", extra={"error": str(err)}
                 )
+
             await asyncio.sleep(_heartbeat_interval_sec)
 
         self._logger.debug("Heartbeater task stopped")
