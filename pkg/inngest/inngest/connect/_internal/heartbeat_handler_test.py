@@ -31,6 +31,8 @@ class TestHeartbeatHandle(unittest.IsolatedAsyncioTestCase):
                 exclude_gateways=[],
                 extend_lease_interval=_ValueWatcher(None),
                 fatal_error=_ValueWatcher(None),
+                init_handshake_complete=_ValueWatcher(True),
+                pending_request_count=_ValueWatcher(0),
                 ws=_ValueWatcher(mock_ws),
             ),
         )
