@@ -44,6 +44,7 @@ class _HeartbeatHandler(_BaseHandler):
         await self._state.pending_request_count.wait_for(0)
 
         if self._heartbeat_sender_task is not None:
+            self._heartbeat_sender_task.cancel()
             try:
                 await self._heartbeat_sender_task
             except asyncio.CancelledError:
