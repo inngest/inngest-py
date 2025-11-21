@@ -1,4 +1,5 @@
 import asyncio
+import typing
 import urllib.parse
 
 import httpx
@@ -9,9 +10,51 @@ from . import connect_pb2, ws_utils
 from .base_handler import _BaseHandler
 from .buffer import _SizeConstrainedBuffer
 from .models import _State
+from .value_watcher import _ValueWatcher
 
 # TODO: Make this configurable.
 _default_max_buffer_size_bytes = 1024 * 1024 * 500  # 500MB
+
+
+PendingRequest: typing.TypeAlias = tuple[
+    connect_pb2.GatewayExecutorRequestData,
+    asyncio.Task[None],
+]
+
+
+class _PendingRequestManager:
+    def __init__(self, pending_request_count: _ValueWatcher[int]) -> None:
+        self._pending_request_count = pending_request_count
+        self._pending_requests: dict[str, PendingRequest] = {}
+
+    def add(
+        self,
+        request_id: str,
+        request_data: connect_pb2.GatewayExecutorRequestData,
+        task: asyncio.Task[None],
+    ) -> None:
+        self._pending_requests[request_id] = (request_data, task)
+        self._pending_request_count.value += 1
+
+    def clear(self) -> None:
+        self._pending_requests.clear()
+        self._pending_request_count.value = 0
+
+    def count(self) -> int:
+        return len(self._pending_requests)
+
+    def get(self, request_id: str) -> PendingRequest | None:
+        return self._pending_requests.get(request_id, None)
+
+    def get_all(
+        self,
+    ) -> list[PendingRequest]:
+        return list(self._pending_requests.values())
+
+    def pop(self, request_id: str) -> PendingRequest:
+        req = self._pending_requests.pop(request_id)
+        self._pending_request_count.value -= 1
+        return req
 
 
 class _ExecutionHandler(_BaseHandler):
@@ -45,10 +88,9 @@ class _ExecutionHandler(_BaseHandler):
 
         # Keep track of pending tasks to support graceful shutdown and lease
         # extensions.
-        self._pending_requests: dict[
-            str,
-            tuple[connect_pb2.GatewayExecutorRequestData, asyncio.Task[None]],
-        ] = {}
+        self._pending_requests = _PendingRequestManager(
+            state.pending_request_count
+        )
 
     def start(self) -> types.MaybeError[None]:
         err = super().start()
@@ -68,20 +110,17 @@ class _ExecutionHandler(_BaseHandler):
         return None
 
     def close(self) -> None:
-        super().close()
-
-        if self._leaser_extender_task is not None:
-            self._leaser_extender_task.cancel()
-
-        if self._unacked_msg_flush_poller_task is not None:
-            self._unacked_msg_flush_poller_task.cancel()
+        # Don't close until all pending requests end
+        self._state.pending_request_count.on_value(0, super().close)
 
     async def closed(self) -> None:
         await super().closed()
-        await asyncio.gather(*[t for _, t in self._pending_requests.values()])
+        await asyncio.gather(*[t for _, t in self._pending_requests.get_all()])
         self._pending_requests.clear()
 
         if self._leaser_extender_task is not None:
+            # Force lease extension to stop
+            self._leaser_extender_task.cancel()
             try:
                 await self._leaser_extender_task
             except asyncio.CancelledError:
@@ -90,6 +129,8 @@ class _ExecutionHandler(_BaseHandler):
                 pass
 
         if self._unacked_msg_flush_poller_task is not None:
+            # Force unacked message flush to stop
+            self._unacked_msg_flush_poller_task.cancel()
             try:
                 await self._unacked_msg_flush_poller_task
             except asyncio.CancelledError:
@@ -229,7 +270,7 @@ class _ExecutionHandler(_BaseHandler):
 
         # Store the task.
         task = asyncio.create_task(execute())
-        self._pending_requests[req_data.request_id] = (req_data, task)
+        self._pending_requests.add(req_data.request_id, req_data, task)
 
         # Remove the task when it completes.
         task.add_done_callback(
@@ -243,7 +284,7 @@ class _ExecutionHandler(_BaseHandler):
         req_data = connect_pb2.WorkerRequestExtendLeaseAckData()
         req_data.ParseFromString(msg.payload)
 
-        pending_req = self._pending_requests.get(req_data.request_id, None)
+        pending_req = self._pending_requests.get(req_data.request_id)
         if pending_req is None:
             self._logger.error(
                 "Received lease extend ack for unknown request",
@@ -294,14 +335,15 @@ class _ExecutionHandler(_BaseHandler):
 
             await asyncio.sleep(extend_lease_interval)
 
-            if len(self._pending_requests) == 0:
+            if self._pending_requests.count() == 0:
                 continue
 
             self._logger.debug(
-                "Extending leases", extra={"count": len(self._pending_requests)}
+                "Extending leases",
+                extra={"count": self._pending_requests.count()},
             )
 
-            for req_data, _ in self._pending_requests.values():
+            for req_data, _ in self._pending_requests.get_all():
                 err = await ws_utils.safe_send(
                     self._logger,
                     self._state,

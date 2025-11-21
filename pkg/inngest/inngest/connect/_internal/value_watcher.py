@@ -65,6 +65,16 @@ class _ValueWatcher(typing.Generic[T]):
 
         self._on_changes.append(on_change)
 
+    def on_value(self, value: T, cb: typing.Callable[[], None]) -> None:
+        """
+        Add a callback that's called when the value is equal to the given value.
+        Will not call the callback more than once.
+        """
+
+        asyncio.create_task(self.wait_for(value)).add_done_callback(
+            lambda _: cb()
+        )
+
     async def wait_for(self, value: T, *, immediate: bool = True) -> T:
         """
         Wait for the value to be equal to the given value.

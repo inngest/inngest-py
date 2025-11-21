@@ -1,9 +1,12 @@
 import asyncio
+import dataclasses
 import json
 
 import inngest
+import pytest
 import test_core
 from inngest.connect import ConnectionState, connect
+from inngest.connect._internal import connect_pb2
 from test_core import http_proxy
 
 from .base import BaseTest, collect_states
@@ -125,3 +128,95 @@ class TestWaitForExecutionRequest(BaseTest):
             ConnectionState.CLOSING,
             ConnectionState.CLOSED,
         ]
+
+    @pytest.mark.timeout(30, method="thread")
+    async def test_wait_for_execution_request(self) -> None:
+        """
+        Test that the worker waits for an execution request to complete before
+        closing. We'll assert this by ensuring that heartbeats and lease extends
+        continue after close
+        """
+
+        proxies = await self.create_proxies()
+        client = inngest.Inngest(
+            api_base_url=proxies.http_proxy.origin,
+            app_id=test_core.random_suffix("app"),
+            is_production=False,
+        )
+        event_name = test_core.random_suffix("event")
+
+        class _State(test_core.BaseState):
+            after_sleep: bool = False
+
+        state = _State()
+
+        @client.create_function(
+            fn_id="fn",
+            trigger=inngest.TriggerEvent(event=event_name),
+        )
+        async def fn(ctx: inngest.Context) -> None:
+            state.run_id = ctx.run_id
+
+            # Intentionally keep the execution request going long enough for
+            # heartbeats and lease extends to send after Connect close
+            await asyncio.sleep(20)
+
+            state.after_sleep = True
+
+        # Start app
+        conn = connect([(client, [fn])])
+        task = asyncio.create_task(conn.start())
+        self.addCleanup(task.cancel)
+        await conn.wait_for_state(ConnectionState.ACTIVE)
+
+        # Trigger the function
+        await client.send(inngest.Event(name=event_name))
+        await state.wait_for_run_id()
+
+        counts_before_close = count_messages(
+            proxies.ws_proxy.forwarded_messages
+        )
+
+        # Close Connect
+        await conn.close()
+        await conn.wait_for_state(ConnectionState.CLOSING)
+        await conn.closed()
+
+        assert state.after_sleep is True
+        counts_after_close = count_messages(proxies.ws_proxy.forwarded_messages)
+
+        # Heartbeats continued after close, since the function was still running
+        assert (
+            counts_after_close.heartbeats - counts_before_close.heartbeats >= 2
+        )
+
+        # No lease extends before close since the function had just started
+        # running
+        assert counts_before_close.lease_extends == 0
+
+        # Lease extends continued after close, since the function was still
+        # running
+        assert counts_after_close.lease_extends >= 4
+
+
+@dataclasses.dataclass
+class MessageCounts:
+    heartbeats: int
+    lease_extends: int
+
+
+def count_messages(
+    raw_msgs: list[bytes],
+) -> MessageCounts:
+    counts = MessageCounts(heartbeats=0, lease_extends=0)
+    for raw_msg in raw_msgs:
+        msg = connect_pb2.ConnectMessage()
+        msg.ParseFromString(raw_msg)
+        if msg.kind == connect_pb2.GatewayMessageType.WORKER_HEARTBEAT:
+            counts.heartbeats += 1
+        elif (
+            msg.kind
+            == connect_pb2.GatewayMessageType.WORKER_REQUEST_EXTEND_LEASE
+        ):
+            counts.lease_extends += 1
+    return counts
