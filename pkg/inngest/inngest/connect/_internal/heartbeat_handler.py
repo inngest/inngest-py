@@ -5,7 +5,7 @@ from inngest._internal import types
 from . import connect_pb2, ws_utils
 from .base_handler import _BaseHandler
 from .consts import _heartbeat_interval_sec
-from .models import ConnectionState, _State
+from .models import _State
 
 
 class _HeartbeatHandler(_BaseHandler):
@@ -37,15 +37,14 @@ class _HeartbeatHandler(_BaseHandler):
         return None
 
     def close(self) -> None:
-        super().close()
-
-        if self._heartbeat_sender_task is not None:
-            self._heartbeat_sender_task.cancel()
+        self._state.pending_request_count.on_value(0, super().close)
 
     async def closed(self) -> None:
         await super().closed()
+        await self._state.pending_request_count.wait_for(0)
 
         if self._heartbeat_sender_task is not None:
+            self._heartbeat_sender_task.cancel()
             try:
                 await self._heartbeat_sender_task
             except asyncio.CancelledError:
@@ -56,13 +55,11 @@ class _HeartbeatHandler(_BaseHandler):
     async def _heartbeat_sender(
         self,
     ) -> None:
-        # Don't start heartbeats until the connection is established
-        await self._state.ws.wait_for_not_none()
-
         while self.closed_event.is_set() is False:
-            # Only send heartbeats when the connection is active.
-            if self._state.conn_state.value != ConnectionState.ACTIVE:
-                await self._state.conn_state.wait_for(ConnectionState.ACTIVE)
+            # We can't send heartbeats until the handshake is complete. Doing so
+            # isn't fatal, but will result in "connect_worker_hello_invalid_msg"
+            # logs
+            await self._state.init_handshake_complete.wait_for(True)
 
             # IMPORTANT: We need to get the WS conn each loop iteration because
             # it may have changed (e.g. due to a reconnect)

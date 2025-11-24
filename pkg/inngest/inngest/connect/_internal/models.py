@@ -20,6 +20,12 @@ class _State:
     # Error that should make Connect close and raise an exception.
     fatal_error: _ValueWatcher[Exception | None]
 
+    init_handshake_complete: _ValueWatcher[bool]
+
+    # Number of pending requests. This is useful for handlers that need to wait
+    # for all pending requests to complete before closing.
+    pending_request_count: _ValueWatcher[int]
+
     ws: _ValueWatcher[websockets.ClientConnection | None]
 
     def allow_reconnect(self) -> bool:

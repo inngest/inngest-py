@@ -81,6 +81,9 @@ class _InitHandshakeHandler(_BaseHandler):
                 return
             self._kind_state.GATEWAY_HELLO = True
 
+            # Reset because we were told to redo the initial handshake
+            self._state.init_handshake_complete.value = False
+
         if self._kind_state.SYNCED is False:
             self._logger.debug("Syncing")
 
@@ -126,6 +129,7 @@ class _InitHandshakeHandler(_BaseHandler):
 
             self._kind_state.GATEWAY_CONNECTION_READY = True
             self._state.conn_state.value = ConnectionState.ACTIVE
+            self._state.init_handshake_complete.value = True
 
         return
 
