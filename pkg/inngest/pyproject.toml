@@ -1,6 +1,6 @@
 [project]
 name = "inngest"
-version = "0.5.12"
+version = "0.5.13"
 authors = [{ name = "Inngest Inc.", email = "hello@inngest.com" }]
 description = "Python SDK for Inngest"
 readme = "README.md"
