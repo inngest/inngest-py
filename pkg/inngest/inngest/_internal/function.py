@@ -169,13 +169,14 @@ class Function(typing.Generic[types.T]):
         if not execution_lib.is_function_handler_async(handler):
             raise errors.UnreachableError("handler is not async")
 
-        call_res = await ctx.step._execution.run(
-            client,
-            ctx,
-            handler,
-            self,
-            output_type,
-        )
+        with execution_lib.set_step_context(ctx.step):
+            call_res = await ctx.step._execution.run(
+                client,
+                ctx,
+                handler,
+                self,
+                output_type,
+            )
 
         err = await middleware.transform_output(call_res)
         if isinstance(err, Exception):
@@ -219,15 +220,16 @@ class Function(typing.Generic[types.T]):
         if not execution_lib.is_function_handler_sync(handler):
             raise errors.UnreachableError("handler is not sync")
 
-        # We don't need to pass a thread pool here because the sync handler is
-        # not used by Connect.
-        call_res = ctx.step._execution.run(
-            client,
-            ctx,
-            handler,
-            self,
-            output_type,
-        )
+        with execution_lib.set_step_context(ctx.step):
+            # We don't need to pass a thread pool here because the sync handler
+            # is not used by Connect.
+            call_res = ctx.step._execution.run(
+                client,
+                ctx,
+                handler,
+                self,
+                output_type,
+            )
 
         err = middleware.transform_output_sync(call_res)
         if isinstance(err, Exception):
