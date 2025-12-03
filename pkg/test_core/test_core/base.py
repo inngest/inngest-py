@@ -157,7 +157,6 @@ class BaseTestIntrospection(BaseTest):
 
     def setUp(self) -> None:
         self.expected_unauthed_body = {
-            "authentication_succeeded": None,
             "function_count": 1,
             "has_event_key": True,
             "has_signing_key": True,
