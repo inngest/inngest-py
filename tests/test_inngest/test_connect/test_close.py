@@ -19,7 +19,9 @@ class TestWaitForExecutionRequest(BaseTest):
         closing.
         """
 
+        proxies = await self.create_proxies()
         client = inngest.Inngest(
+            api_base_url=proxies.http_proxy.origin,
             app_id=test_core.random_suffix("app"),
             is_production=False,
         )
@@ -63,6 +65,17 @@ class TestWaitForExecutionRequest(BaseTest):
         )
         assert run.output is not None
         assert json.loads(run.output) == "Hello"
+
+        # Assert that we sent the worker pause message, which tells the Inngest
+        # Server not to send any more execution requests
+        sent_worker_pause = False
+        for msg_byt in proxies.ws_proxy.forwarded_messages:
+            msg = connect_pb2.ConnectMessage()
+            msg.ParseFromString(msg_byt)
+            if msg.kind == connect_pb2.GatewayMessageType.WORKER_PAUSE:
+                sent_worker_pause = True
+                break
+        assert sent_worker_pause is True
 
         await conn.closed()
         assert states == [

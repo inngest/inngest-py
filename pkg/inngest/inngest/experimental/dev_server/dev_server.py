@@ -36,7 +36,7 @@ class _Server:
             log_path = artifacts_dir / "dev_server.log"
 
         self._runner = _CommandRunner(
-            f"npx --yes inngest-cli@latest dev --no-discovery --no-poll --port {self.port}",
+            f"npx --ignore-scripts=false --yes inngest-cli@latest dev --no-discovery --no-poll --port {self.port}",
             log_path=log_path,
         )
 

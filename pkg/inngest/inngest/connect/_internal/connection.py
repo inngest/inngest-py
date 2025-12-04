@@ -12,7 +12,7 @@ import websockets
 import inngest
 from inngest._internal import comm_lib, const, net, server_lib, types
 
-from . import connect_pb2
+from . import async_lib, connect_pb2
 from .base_handler import _BaseHandler
 from .configs_lib import get_max_worker_concurrency
 from .conn_init_starter import _ConnInitHandler
@@ -367,6 +367,25 @@ class _WebSocketWorkerConnection(WorkerConnection):
             return
 
         self._state.conn_state.value = ConnectionState.CLOSING
+
+        ws = self._state.ws.value
+        if ws is not None:
+            result = async_lib.run_sync(
+                ws.send(
+                    connect_pb2.ConnectMessage(
+                        kind=connect_pb2.GatewayMessageType.WORKER_PAUSE,
+                    ).SerializeToString()
+                ),
+            )
+            if isinstance(result, Exception):
+                self._logger.error(
+                    "Failed to send worker pause message",
+                    extra={"error": str(result)},
+                )
+        else:
+            self._logger.warning(
+                "Unable to send worker pause message because the WebSocket connection is not open"
+            )
 
         # Tell all the handlers to close.
         for h in self._handlers:
