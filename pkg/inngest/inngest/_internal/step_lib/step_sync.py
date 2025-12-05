@@ -7,7 +7,6 @@ import typing_extensions
 
 from inngest._internal import errors, server_lib, transforms, types
 from inngest._internal.client_lib import models as client_models
-from inngest.experimental import ai
 
 from . import base
 
@@ -19,6 +18,7 @@ if typing.TYPE_CHECKING:
         function,
         middleware_lib,
     )
+    from inngest.experimental import ai
 
 
 class StepSync(base.StepBase):
