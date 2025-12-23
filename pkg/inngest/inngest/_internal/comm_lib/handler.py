@@ -531,12 +531,7 @@ def _build_inspection_response(
             signing_key_hash=signing_key_hash,
         )
 
-    authentication_succeeded: typing.Literal[False | None] = None
-    if isinstance(request_signing_key, Exception):
-        authentication_succeeded = False
-
     return server_lib.UnauthenticatedInspection(
-        authentication_succeeded=authentication_succeeded,
         function_count=len(handler._fns),
         has_event_key=handler._client.event_key is not None,
         has_signing_key=handler._signing_key is not None,

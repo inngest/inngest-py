@@ -124,7 +124,10 @@ class _ConnInitHandler(_BaseHandler):
                     await asyncio.sleep(_reconnect_interval.seconds)
                     self._logger.debug(
                         "ConnectionStart request retry",
-                        extra={"url": url},
+                        extra={
+                            "error": str(err),
+                            "url": url,
+                        },
                     )
 
                 headers = {
@@ -181,6 +184,10 @@ class _ConnInitHandler(_BaseHandler):
                             final_endpoint
                         )
 
+                    err = validate_gateway_endpoint(final_endpoint)
+                    if isinstance(err, Exception):
+                        raise err
+
                     self._state.conn_init.value = (
                         connect_pb2.AuthData(
                             session_token=start_resp.session_token,
@@ -210,3 +217,24 @@ class _ConnInitHandler(_BaseHandler):
                 ConnectionState.RECONNECTING,
                 immediate=False,
             )
+
+
+def validate_gateway_endpoint(endpoint: str) -> types.MaybeError[None]:
+    if endpoint.strip() == "":
+        return Exception("gateway endpoint is empty")
+
+    try:
+        parsed = urllib.parse.urlparse(endpoint)
+    except Exception as e:
+        return e
+
+    valid_schemes = ["ws", "wss"]
+    if parsed.scheme not in valid_schemes:
+        return Exception(
+            f"gateway endpoint scheme {parsed.scheme} is not valid, must be one of {', '.join(valid_schemes)}"
+        )
+
+    if parsed.hostname is None:
+        return Exception("gateway endpoint hostname is required")
+
+    return None

@@ -31,5 +31,6 @@ type-check-pyright:
 	@cd tests && make type-check-pyright
 
 utest:
+	@uv run pytest -v tests/test_repo
 	@cd pkg/inngest && make utest
 	@cd pkg/inngest_encryption && make utest

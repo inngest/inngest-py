@@ -52,6 +52,9 @@ class EnvKey(enum.Enum):
     # https://vercel.com/docs/concepts/projects/environment-variables/system-environment-variables#system-environment-variables
     VERCEL_GIT_BRANCH = "VERCEL_GIT_COMMIT_REF"
 
+    # The maximum number of worker concurrency for the Connect API.
+    CONNECT_MAX_WORKER_CONCURRENCY = "INNGEST_CONNECT_MAX_WORKER_CONCURRENCY"
+
 
 class Streaming(enum.Enum):
     """

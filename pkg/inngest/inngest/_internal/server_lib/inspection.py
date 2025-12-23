@@ -14,7 +14,6 @@ class Capabilities(types.BaseModel):
 class UnauthenticatedInspection(types.BaseModel):
     schema_version: str = "2024-05-24"
 
-    authentication_succeeded: typing.Literal[False] | None
     function_count: int
     has_event_key: bool
     has_signing_key: bool

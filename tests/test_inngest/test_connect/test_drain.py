@@ -62,6 +62,7 @@ class TestDrain(BaseTest):
         assert states == [
             ConnectionState.CONNECTING,
             ConnectionState.ACTIVE,
+            ConnectionState.RECONNECTING,
             ConnectionState.CONNECTING,
             ConnectionState.ACTIVE,
         ]
@@ -83,8 +84,10 @@ class TestDrain(BaseTest):
         assert states == [
             ConnectionState.CONNECTING,
             ConnectionState.ACTIVE,
+            ConnectionState.RECONNECTING,
             ConnectionState.CONNECTING,
             ConnectionState.ACTIVE,
+            ConnectionState.RECONNECTING,
             ConnectionState.CONNECTING,
             ConnectionState.RECONNECTING,
             ConnectionState.CONNECTING,
