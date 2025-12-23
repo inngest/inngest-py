@@ -14,13 +14,13 @@ from inngest._internal import (
     types,
 )
 from inngest._internal.client_lib import models as client_models
-from inngest.experimental import ai
 
 from . import base
 
 # Avoid circular import at runtime
 if typing.TYPE_CHECKING:
     from inngest._internal import execution_lib, function, middleware_lib
+    from inngest.experimental import ai
 
 
 class Step(base.StepBase):
