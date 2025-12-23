@@ -89,15 +89,6 @@ class _FrameworkTestCase(typing.Protocol):
     ) -> http_proxy.Response: ...
 
 
-def create_app_id(framework: str) -> str:
-    suffix = ""
-    worker_id = os.getenv("PYTEST_XDIST_WORKER")
-    if worker_id:
-        suffix += f"-{worker_id}"
-
-    return framework + suffix
-
-
 def create_test_name(file: str) -> str:
     return os.path.basename(file).replace(".py", "").removeprefix("test_")
 
