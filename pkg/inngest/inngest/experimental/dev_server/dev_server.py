@@ -11,7 +11,7 @@ import httpx
 
 from .command_runner import _CommandRunner
 
-_dev_server_version: typing.Final = "latest"
+_dev_server_version: typing.Final = os.getenv("DEV_SERVER_VERSION", "latest")
 
 
 class _Server:

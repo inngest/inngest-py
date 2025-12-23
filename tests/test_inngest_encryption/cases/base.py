@@ -1,11 +1,11 @@
 import dataclasses
 import json
-import os
 import typing
 
 import inngest
 import nacl.encoding
 import nacl.secret
+import test_core
 from inngest._internal import server_lib
 from test_core import base
 
@@ -26,21 +26,7 @@ class Case:
 
 
 def create_event_name(framework: server_lib.Framework, test_name: str) -> str:
-    suffix = ""
-    worker_id = os.getenv("PYTEST_XDIST_WORKER")
-    if worker_id:
-        suffix += f"-{worker_id}"
-
-    return f"{framework.value}/{test_name}{suffix}"
-
-
-def create_fn_id(test_name: str) -> str:
-    suffix = ""
-    worker_id = os.getenv("PYTEST_XDIST_WORKER")
-    if worker_id:
-        suffix += f"-{worker_id}"
-
-    return test_name + suffix
+    return test_core.worker_suffix(f"{framework.value}/{test_name}")
 
 
 class Encryptor:

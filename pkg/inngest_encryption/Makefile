@@ -7,7 +7,7 @@ build:
 
 .PHONY: itest
 itest:
-	@cd ../.. && uv run pytest -n 4 -v tests/test_inngest_encryption
+	@cd ../.. && uv run pytest -n 4 -sv tests/test_inngest_encryption
 
 .PHONY: lint
 lint:

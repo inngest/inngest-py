@@ -5,6 +5,7 @@ import unittest
 import fastapi
 import inngest
 import inngest.fast_api
+import test_core
 import uvicorn
 from inngest._internal import server_lib
 from inngest.experimental import dev_server
@@ -13,7 +14,7 @@ from test_core import base, net
 from . import cases
 
 _framework = server_lib.Framework.FAST_API
-_app_id = f"{_framework.value}-remote-state-middleware"
+_app_id = test_core.worker_suffix(f"{_framework.value}-remote-state-middleware")
 
 _client = inngest.Inngest(
     api_base_url=dev_server.server.origin,
