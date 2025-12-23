@@ -11,7 +11,7 @@ import httpx
 
 from .command_runner import _CommandRunner
 
-_dev_server_version: typing.Final = "latest"
+_dev_server_version: typing.Final = os.getenv("DEV_SERVER_VERSION", "latest")
 
 
 class _Server:
@@ -29,7 +29,6 @@ class _Server:
         self.port = port
 
         log_path: pathlib.Path | None = None
-        print("DEV_SERVER_LOGS:", os.getenv("DEV_SERVER_LOGS"))
         if os.getenv("DEV_SERVER_LOGS") == "1":
             artifacts_dir = pathlib.Path("artifacts").absolute()
             print(f"Using artifacts directory: {artifacts_dir}")

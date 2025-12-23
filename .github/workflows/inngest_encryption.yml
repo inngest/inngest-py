@@ -19,6 +19,10 @@ on:
       - "ruff.toml"
       - "uv.lock"
 
+env:
+  DEV_SERVER_LOGS: "1"
+  DEV_SERVER_VERSION: "1.14.0"
+
 jobs:
   itest:
     runs-on: "ubuntu-latest"
@@ -35,6 +39,12 @@ jobs:
       - name: "Integration test"
         run: "make itest"
         working-directory: "./pkg/inngest_encryption"
+      - name: Upload Dev Server logs
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: dev-server-logs
+          path: "./artifacts/dev_server.log"
 
   lint:
     runs-on: "ubuntu-latest"

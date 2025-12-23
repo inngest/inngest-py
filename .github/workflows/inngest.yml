@@ -26,7 +26,8 @@ on:
   workflow_dispatch:
 
 env:
-  DEV_SERVER_LOGS: 1
+  DEV_SERVER_LOGS: "1"
+  DEV_SERVER_VERSION: "1.14.3"
 
 jobs:
   itest:
@@ -49,7 +50,7 @@ jobs:
         if: failure()
         with:
           name: dev-server-logs
-          path: "./tests/test_inngest/artifacts/dev_server.log"
+          path: "./artifacts/dev_server.log"
 
   lint:
     runs-on: "ubuntu-latest"
