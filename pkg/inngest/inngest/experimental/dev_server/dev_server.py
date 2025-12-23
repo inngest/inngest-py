@@ -11,7 +11,7 @@ import httpx
 
 from .command_runner import _CommandRunner
 
-_dev_server_version: typing.Final = "1.15.0"
+_dev_server_version: typing.Final = "latest"
 
 
 class _Server:
