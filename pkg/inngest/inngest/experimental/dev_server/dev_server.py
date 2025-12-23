@@ -56,7 +56,14 @@ class _Server:
         # Print inngest-cli version
         try:
             result = subprocess.run(
-                ["npx", "--yes", "inngest-cli@latest", "version"],
+                [
+                    "npx",
+                    "--ignore-scripts",
+                    "false",
+                    "--yes",
+                    "inngest-cli@latest",
+                    "version",
+                ],
                 capture_output=True,
                 text=True,
                 timeout=10,
