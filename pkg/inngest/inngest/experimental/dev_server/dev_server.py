@@ -5,10 +5,13 @@ import pathlib
 import subprocess
 import threading
 import time
+import typing
 
 import httpx
 
 from .command_runner import _CommandRunner
+
+_dev_server_version: typing.Final = os.getenv("DEV_SERVER_VERSION", "latest")
 
 
 class _Server:
@@ -36,7 +39,7 @@ class _Server:
             log_path = artifacts_dir / "dev_server.log"
 
         self._runner = _CommandRunner(
-            f"npx --ignore-scripts=false --yes inngest-cli@latest dev --no-discovery --no-poll --port {self.port}",
+            f"npx --ignore-scripts=false --yes inngest-cli@{_dev_server_version} dev --no-discovery --no-poll --port {self.port}",
             log_path=log_path,
         )
 
@@ -56,7 +59,13 @@ class _Server:
         # Print inngest-cli version
         try:
             result = subprocess.run(
-                ["npx", "--yes", "inngest-cli@latest", "version"],
+                [
+                    "npx",
+                    "--ignore-scripts=false",
+                    "--yes",
+                    f"inngest-cli@{_dev_server_version}",
+                    "version",
+                ],
                 capture_output=True,
                 text=True,
                 timeout=10,

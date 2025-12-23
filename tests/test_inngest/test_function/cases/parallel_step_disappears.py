@@ -29,7 +29,7 @@ def create(
 ) -> base.Case:
     test_name = base.create_test_name(__file__)
     event_name = base.create_event_name(framework, test_name)
-    fn_id = base.create_fn_id(test_name)
+    fn_id = test_name
     state = _State()
 
     @client.create_function(

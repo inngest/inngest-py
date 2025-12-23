@@ -19,7 +19,7 @@ def create(
     is_sync: bool,
 ) -> base.Case:
     test_name = base.create_test_name(__file__)
-    fn_id = base.create_fn_id(test_name)
+    fn_id = test_name
 
     states_events = [
         StateAndEvent(

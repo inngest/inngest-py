@@ -51,7 +51,7 @@ def create(
     class MyEvent(BaseEvent[MyEventData]):
         name = base.create_event_name(framework, test_name)
 
-    fn_id = base.create_fn_id(test_name)
+    fn_id = test_name
     state = base.BaseState()
 
     @client.create_function(

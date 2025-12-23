@@ -5,6 +5,7 @@ import flask
 import flask.testing
 import inngest
 import inngest.flask
+import test_core
 from inngest._internal import server_lib
 from inngest.experimental import dev_server
 from test_core import base, http_proxy
@@ -12,7 +13,7 @@ from test_core import base, http_proxy
 from . import cases
 
 _framework = server_lib.Framework.FLASK
-_app_id = f"{_framework.value}-remote-state-middleware"
+_app_id = test_core.worker_suffix(f"{_framework.value}-remote-state-middleware")
 
 _client = inngest.Inngest(
     api_base_url=dev_server.server.origin,
