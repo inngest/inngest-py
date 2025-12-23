@@ -1,5 +1,4 @@
 import inngest
-import inngest.experimental
 
 from .client import inngest_client
 
