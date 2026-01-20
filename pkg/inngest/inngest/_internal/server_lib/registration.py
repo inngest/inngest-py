@@ -65,9 +65,22 @@ class Concurrency(_BaseConfig):
 class Debounce(_BaseConfig):
     key: str | None = None
     period: int | datetime.timedelta
+    timeout: int | datetime.timedelta | None = None
 
     @pydantic.field_serializer("period")
     def serialize_period(
+        self,
+        value: int | datetime.timedelta | None,
+    ) -> str | None:
+        if value is None:
+            return None
+        out = transforms.to_duration_str(value)
+        if isinstance(out, Exception):
+            raise out
+        return out
+
+    @pydantic.field_serializer("timeout")
+    def serialize_timeout(
         self,
         value: int | datetime.timedelta | None,
     ) -> str | None:

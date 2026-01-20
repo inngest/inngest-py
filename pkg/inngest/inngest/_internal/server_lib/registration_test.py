@@ -44,6 +44,7 @@ def test_serialization() -> None:
         debounce=Debounce(
             key="foo",
             period=datetime.timedelta(seconds=60),
+            timeout=datetime.timedelta(minutes=2),
         ),
         id="foo",
         idempotency="event.data.foo",
@@ -109,6 +110,7 @@ def test_serialization() -> None:
         "debounce": {
             "key": "foo",
             "period": "1m",
+            "timeout": "2m",
         },
         "id": "foo",
         "idempotency": "event.data.foo",
