@@ -1,6 +1,11 @@
+"""
+Use `step` from the step context, instead of using `ctx.step`
+"""
+
 import json
 
 import inngest
+import inngest.experimental
 import test_core.helper
 from inngest._internal import server_lib
 
@@ -35,7 +40,11 @@ def create(
             state.step_1_counter += 1
             return [{"foo": {"bar": 1}, "empty": None}]
 
-        state.step_1_output = ctx.step.run("step_1", step_1)
+        step = inngest.experimental.get_step_context()
+
+        # There's a type error because `get_step_context` returns the union
+        # `Step | StepSync`
+        state.step_1_output = step.run("step_1", step_1)  # type: ignore
 
         def step_2() -> None:
             state.step_2_counter += 1
@@ -54,7 +63,8 @@ def create(
             state.step_1_counter += 1
             return [{"foo": {"bar": 1}, "empty": None}]
 
-        state.step_1_output = await ctx.step.run("step_1", step_1)
+        step = inngest.experimental.get_step_context()
+        state.step_1_output = await step.run("step_1", step_1)
 
         async def step_2() -> None:
             state.step_2_counter += 1

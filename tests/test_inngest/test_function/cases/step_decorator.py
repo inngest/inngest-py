@@ -1,6 +1,11 @@
+"""
+Use `step` decorator to "stepify" a function
+"""
+
 import json
 
 import inngest
+import inngest.experimental
 import test_core.helper
 from inngest._internal import server_lib
 
@@ -23,6 +28,16 @@ def create(
     fn_id = test_name
     state = _State()
 
+    @inngest.experimental.step("step_1")
+    def step_1_sync(msg: str) -> list[dict[str, inngest.JSON]]:
+        state.step_1_counter += 1
+        return [{"foo": {"bar": 1}, "empty": None, "msg": msg}]
+
+    @inngest.experimental.step("step_1")
+    async def step_1_async(msg: str) -> list[dict[str, inngest.JSON]]:
+        state.step_1_counter += 1
+        return [{"foo": {"bar": 1}, "empty": None, "msg": msg}]
+
     @client.create_function(
         fn_id=fn_id,
         retries=0,
@@ -30,12 +45,7 @@ def create(
     )
     def fn_sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
-
-        def step_1() -> list[dict[str, inngest.JSON]]:
-            state.step_1_counter += 1
-            return [{"foo": {"bar": 1}, "empty": None}]
-
-        state.step_1_output = ctx.step.run("step_1", step_1)
+        state.step_1_output = step_1_sync("Hello")
 
         def step_2() -> None:
             state.step_2_counter += 1
@@ -49,12 +59,7 @@ def create(
     )
     async def fn_async(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
-
-        async def step_1() -> list[dict[str, inngest.JSON]]:
-            state.step_1_counter += 1
-            return [{"foo": {"bar": 1}, "empty": None}]
-
-        state.step_1_output = await ctx.step.run("step_1", step_1)
+        state.step_1_output = await step_1_async("Hello")
 
         async def step_2() -> None:
             state.step_2_counter += 1
@@ -71,7 +76,9 @@ def create(
 
         assert state.step_1_counter == 1
         assert state.step_2_counter == 1
-        assert state.step_1_output == [{"empty": None, "foo": {"bar": 1}}]
+        assert state.step_1_output == [
+            {"empty": None, "foo": {"bar": 1}, "msg": "Hello"}
+        ]
 
         step_1_output_in_api = json.loads(
             await test_core.helper.client.get_step_output(
@@ -80,7 +87,7 @@ def create(
             )
         )
         assert step_1_output_in_api == {
-            "data": [{"empty": None, "foo": {"bar": 1}}]
+            "data": [{"empty": None, "foo": {"bar": 1}, "msg": "Hello"}]
         }
 
     if is_sync:

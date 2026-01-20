@@ -46,7 +46,7 @@ def create(
     test_name = base.create_test_name(__file__)
     event_name = base.create_event_name(framework, test_name)
     child_event_name = f"{event_name}/child"
-    fn_id = base.create_fn_id(test_name)
+    fn_id = test_name
     state = _State()
     mw = EncryptionMiddleware.factory(_secret_key)
 
