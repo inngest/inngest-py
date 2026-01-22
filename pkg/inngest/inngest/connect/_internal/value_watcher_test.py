@@ -4,7 +4,7 @@ import unittest
 
 import pytest
 
-from .value_watcher import _ValueWatcher
+from .value_watcher import ValueWatcher
 
 
 class TestValueWatcher(unittest.IsolatedAsyncioTestCase):
@@ -25,7 +25,7 @@ class TestValueWatcher(unittest.IsolatedAsyncioTestCase):
 
     @pytest.mark.timeout(2, method="thread")
     async def test_wait_for(self) -> None:
-        watcher = _ValueWatcher(0)
+        watcher = ValueWatcher(0)
 
         # Immediately returns because the value is already 0.
         await watcher.wait_for(0)
@@ -41,7 +41,7 @@ class TestValueWatcher(unittest.IsolatedAsyncioTestCase):
 
     @pytest.mark.timeout(2, method="thread")
     async def test_wait_for_not(self) -> None:
-        watcher = _ValueWatcher(0)
+        watcher = ValueWatcher(0)
 
         # Immediately returns because the value is already 0.
         await watcher.wait_for_not(1)
@@ -57,7 +57,7 @@ class TestValueWatcher(unittest.IsolatedAsyncioTestCase):
 
     @pytest.mark.timeout(2, method="thread")
     async def test_wait_for_change(self) -> None:
-        watcher = _ValueWatcher(0)
+        watcher = ValueWatcher(0)
 
         wait_for_tasks = await self._start_tasks(
             watcher.wait_for_change(),
@@ -76,7 +76,7 @@ class TestValueWatcher(unittest.IsolatedAsyncioTestCase):
         - Wait for the value to be a certain value.
         """
 
-        watcher = _ValueWatcher(0)
+        watcher = ValueWatcher(0)
 
         wait_for_tasks = await self._start_tasks(
             watcher.wait_for_not(0),
@@ -95,7 +95,7 @@ class TestValueWatcher(unittest.IsolatedAsyncioTestCase):
         Setting twice really quickly should not cause a missed value.
         """
 
-        watcher = _ValueWatcher(0)
+        watcher = ValueWatcher(0)
 
         wait_for_tasks = await self._start_tasks(
             watcher.wait_for(1),
