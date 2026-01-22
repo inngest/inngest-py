@@ -6,27 +6,31 @@ import enum
 import websockets
 
 from . import connect_pb2
-from .value_watcher import _ValueWatcher
+from .value_watcher import ValueWatcher
 
 
 @dataclasses.dataclass
-class _State:
+class State:
+    """
+    Shared state for the Connect feature.
+    """
+
     conn_id: str | None
-    conn_init: _ValueWatcher[tuple[connect_pb2.AuthData, str] | None]
-    conn_state: _ValueWatcher[ConnectionState]
+    conn_init: ValueWatcher[tuple[connect_pb2.AuthData, str] | None]
+    conn_state: ValueWatcher[ConnectionState]
     exclude_gateways: list[str]
-    extend_lease_interval: _ValueWatcher[int | None]
+    extend_lease_interval: ValueWatcher[int | None]
 
     # Error that should make Connect close and raise an exception.
-    fatal_error: _ValueWatcher[Exception | None]
+    fatal_error: ValueWatcher[Exception | None]
 
-    init_handshake_complete: _ValueWatcher[bool]
+    init_handshake_complete: ValueWatcher[bool]
 
     # Number of pending requests. This is useful for handlers that need to wait
     # for all pending requests to complete before closing.
-    pending_request_count: _ValueWatcher[int]
+    pending_request_count: ValueWatcher[int]
 
-    ws: _ValueWatcher[websockets.ClientConnection | None]
+    ws: ValueWatcher[websockets.ClientConnection | None]
 
     def allow_reconnect(self) -> bool:
         return self.conn_state.value not in [

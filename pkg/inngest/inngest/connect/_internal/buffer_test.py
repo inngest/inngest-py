@@ -1,4 +1,4 @@
-from .buffer import _SizeConstrainedBuffer
+from .buffer import SizeConstrainedBuffer
 
 
 def test_evict_oldest_items() -> None:
@@ -7,7 +7,7 @@ def test_evict_oldest_items() -> None:
     are evicted.
     """
 
-    buffer = _SizeConstrainedBuffer(3)
+    buffer = SizeConstrainedBuffer(3)
 
     # Fill the buffer with 3 items (each is 1 byte).
     assert buffer.add("1", b"A") is True
@@ -36,7 +36,7 @@ def test_item_larger_than_max_size() -> None:
     If an item is larger than the max size, it is not added to the buffer.
     """
 
-    buffer = _SizeConstrainedBuffer(1)
+    buffer = SizeConstrainedBuffer(1)
 
     assert buffer.add("1", b"A" * 2) is False
     assert buffer.get("1") is None

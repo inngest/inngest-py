@@ -7,9 +7,12 @@ T = typing.TypeVar("T")
 S = typing.TypeVar("S")
 
 
-class _ValueWatcher(typing.Generic[T]):
+class ValueWatcher(typing.Generic[T]):
     """
-    A container that allows consumers to watch for changes to the wrapped value.
+    A container that allows consumers to reactively wait for value changes.
+
+    This pattern enables clean coordination between handlers without tight
+    coupling or polling.
     """
 
     _on_changes: list[typing.Callable[[T, T], None]]
@@ -116,7 +119,7 @@ class _ValueWatcher(typing.Generic[T]):
         raise Exception("unreachable")
 
     async def wait_for_not_none(
-        self: _ValueWatcher[S | None],
+        self: ValueWatcher[S | None],
         *,
         immediate: bool = True,
     ) -> S:

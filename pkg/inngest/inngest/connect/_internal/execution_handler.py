@@ -7,14 +7,11 @@ import httpx
 from inngest._internal import comm_lib, net, server_lib, types
 
 from . import connect_pb2, ws_utils
-from .base_handler import _BaseHandler
-from .buffer import _SizeConstrainedBuffer
-from .models import _State
-from .value_watcher import _ValueWatcher
-
-# TODO: Make this configurable.
-_default_max_buffer_size_bytes = 1024 * 1024 * 500  # 500MB
-
+from .base_handler import BaseHandler
+from .buffer import SizeConstrainedBuffer
+from .consts import DEFAULT_MAX_BUFFER_SIZE_BYTES
+from .models import State
+from .value_watcher import ValueWatcher
 
 PendingRequest: typing.TypeAlias = tuple[
     connect_pb2.GatewayExecutorRequestData,
@@ -23,7 +20,7 @@ PendingRequest: typing.TypeAlias = tuple[
 
 
 class _PendingRequestManager:
-    def __init__(self, pending_request_count: _ValueWatcher[int]) -> None:
+    def __init__(self, pending_request_count: ValueWatcher[int]) -> None:
         self._pending_request_count = pending_request_count
         self._pending_requests: dict[str, PendingRequest] = {}
 
@@ -57,9 +54,24 @@ class _PendingRequestManager:
         return req
 
 
-class _ExecutionHandler(_BaseHandler):
+class ExecutionHandler(BaseHandler):
     """
-    Handles incoming execution requests from the Gateway.
+    Handles GATEWAY_EXECUTOR_REQUEST messages containing function invocations.
+
+    Manages the full execution lifecycle:
+        1. Receive execution request
+        2. Send WORKER_REQUEST_ACK to confirm receipt
+        3. Execute the function via the CommHandler
+        4. Send WORKER_REPLY with execution result
+        5. Wait for WORKER_REPLY_ACK to confirm receipt
+
+    Additional responsibilities:
+        - Lease extension: Long-running functions need periodic lease renewals
+          to prevent the server from timing out and retrying the request.
+        - Unacked message flushing: If WORKER_REPLY_ACK isn't received in time,
+          the reply is flushed via HTTP as a fallback.
+        - Pending request tracking: Graceful shutdown waits for all pending
+          requests to complete before closing.
     """
 
     _leaser_extender_task: asyncio.Task[None] | None = None
@@ -74,10 +86,10 @@ class _ExecutionHandler(_BaseHandler):
         logger: types.Logger,
         signing_key: str | None,
         signing_key_fallback: str | None,
-        state: _State,
+        state: State,
     ) -> None:
         self._api_origin = api_origin
-        self._buffer = _SizeConstrainedBuffer(_default_max_buffer_size_bytes)
+        self._buffer = SizeConstrainedBuffer(DEFAULT_MAX_BUFFER_SIZE_BYTES)
         self._comm_handlers = comm_handlers
         self._http_client = http_client
         self._http_client_sync = http_client_sync
@@ -171,111 +183,124 @@ class _ExecutionHandler(_BaseHandler):
             )
             return
 
-        async def execute() -> None:
-            ws = await self._state.ws.wait_for_not_none()
-            err = await ws_utils.safe_send(
-                self._logger,
-                self._state,
-                ws,
-                connect_pb2.ConnectMessage(
-                    kind=connect_pb2.GatewayMessageType.WORKER_REQUEST_ACK,
-                    payload=connect_pb2.WorkerRequestAckData(
-                        account_id=req_data.account_id,
-                        app_id=req_data.app_id,
-                        env_id=req_data.env_id,
-                        function_slug=req_data.function_slug,
-                        request_id=req_data.request_id,
-                        step_id=req_data.step_id,
-                        system_trace_ctx=req_data.system_trace_ctx,
-                        user_trace_ctx=req_data.user_trace_ctx,
-                    ).SerializeToString(),
-                ).SerializeToString(),
-            )
-            if err is None:
-                comm_res = await comm_handler.post(
-                    comm_lib.CommRequest(
-                        body=req_data.request_payload,
-                        headers={},
-                        is_connect=True,
-                        public_path=None,
-                        query_params={
-                            server_lib.QueryParamKey.FUNCTION_ID.value: req_data.function_slug,
-                        },
-                        raw_request=req_data,
-                        request_url="",
-                        serve_origin=None,
-                        serve_path=None,
-                    )
-                )
-            else:
-                self._logger.error(
-                    "Execution failed", extra={"error": str(err)}
-                )
-                comm_res = comm_lib.CommResponse.from_error(self._logger, err)
-
-            body = comm_res.body_bytes()
-            if isinstance(body, Exception):
-                raise body
-
-            status: connect_pb2.SDKResponseStatus
-            if comm_res.status_code == 200:
-                # Function-level success.
-                status = connect_pb2.SDKResponseStatus.DONE
-            elif comm_res.status_code == 206:
-                # Step-level success.
-                status = connect_pb2.SDKResponseStatus.NOT_COMPLETED
-            elif comm_res.status_code == 500:
-                # Error.
-                status = connect_pb2.SDKResponseStatus.ERROR
-            else:
-                # Unreachable.
-                status = connect_pb2.SDKResponseStatus.ERROR
-                self._logger.error(
-                    "Unexpected status code",
-                    extra={"status_code": comm_res.status_code},
-                )
-
-            reply_payload = connect_pb2.SDKResponse(
-                account_id=req_data.account_id,
-                app_id=req_data.app_id,
-                body=body,
-                env_id=req_data.env_id,
-                no_retry=comm_res.no_retry,
-                request_id=req_data.request_id,
-                request_version=comm_res.request_version,
-                retry_after=comm_res.retry_after,
-                sdk_version=comm_res.sdk_version,
-                status=status,
-                system_trace_ctx=req_data.system_trace_ctx,
-                user_trace_ctx=req_data.user_trace_ctx,
-            ).SerializeToString()
-
-            # Add the reply to the buffer in case we need to flush it later.
-            self._buffer.add(req_data.request_id, reply_payload)
-
-            self._logger.debug("Sending execution reply")
-            err = await ws_utils.safe_send(
-                self._logger,
-                self._state,
-                ws,
-                connect_pb2.ConnectMessage(
-                    kind=connect_pb2.GatewayMessageType.WORKER_REPLY,
-                    payload=reply_payload,
-                ).SerializeToString(),
-            )
-            if err is not None:
-                self._logger.error(
-                    "Failed to send execution reply", extra={"error": str(err)}
-                )
-
         # Store the task.
-        task = asyncio.create_task(execute())
+        task = asyncio.create_task(
+            self._execute_request(req_data, comm_handler)
+        )
         self._pending_requests.add(req_data.request_id, req_data, task)
 
         # Remove the task when it completes.
         task.add_done_callback(
             lambda _: self._pending_requests.pop(req_data.request_id)
         )
+
+    async def _execute_request(
+        self,
+        req_data: connect_pb2.GatewayExecutorRequestData,
+        comm_handler: comm_lib.CommHandler,
+    ) -> None:
+        """
+        Execute a single function request.
+
+        This method handles the full execution lifecycle:
+            1. Send WORKER_REQUEST_ACK to confirm receipt
+            2. Execute the function via the CommHandler
+            3. Send WORKER_REPLY with execution result
+        """
+
+        ws = await self._state.ws.wait_for_not_none()
+        err = await ws_utils.safe_send(
+            self._logger,
+            self._state,
+            ws,
+            connect_pb2.ConnectMessage(
+                kind=connect_pb2.GatewayMessageType.WORKER_REQUEST_ACK,
+                payload=connect_pb2.WorkerRequestAckData(
+                    account_id=req_data.account_id,
+                    app_id=req_data.app_id,
+                    env_id=req_data.env_id,
+                    function_slug=req_data.function_slug,
+                    request_id=req_data.request_id,
+                    step_id=req_data.step_id,
+                    system_trace_ctx=req_data.system_trace_ctx,
+                    user_trace_ctx=req_data.user_trace_ctx,
+                ).SerializeToString(),
+            ).SerializeToString(),
+        )
+        if err is None:
+            comm_res = await comm_handler.post(
+                comm_lib.CommRequest(
+                    body=req_data.request_payload,
+                    headers={},
+                    is_connect=True,
+                    public_path=None,
+                    query_params={
+                        server_lib.QueryParamKey.FUNCTION_ID.value: req_data.function_slug,
+                    },
+                    raw_request=req_data,
+                    request_url="",
+                    serve_origin=None,
+                    serve_path=None,
+                )
+            )
+        else:
+            self._logger.error("Execution failed", extra={"error": str(err)})
+            comm_res = comm_lib.CommResponse.from_error(self._logger, err)
+
+        body = comm_res.body_bytes()
+        if isinstance(body, Exception):
+            raise body
+
+        status: connect_pb2.SDKResponseStatus
+        if comm_res.status_code == 200:
+            # Function-level success.
+            status = connect_pb2.SDKResponseStatus.DONE
+        elif comm_res.status_code == 206:
+            # Step-level success.
+            status = connect_pb2.SDKResponseStatus.NOT_COMPLETED
+        elif comm_res.status_code == 500:
+            # Error.
+            status = connect_pb2.SDKResponseStatus.ERROR
+        else:
+            # Unreachable.
+            status = connect_pb2.SDKResponseStatus.ERROR
+            self._logger.error(
+                "Unexpected status code",
+                extra={"status_code": comm_res.status_code},
+            )
+
+        reply_payload = connect_pb2.SDKResponse(
+            account_id=req_data.account_id,
+            app_id=req_data.app_id,
+            body=body,
+            env_id=req_data.env_id,
+            no_retry=comm_res.no_retry,
+            request_id=req_data.request_id,
+            request_version=comm_res.request_version,
+            retry_after=comm_res.retry_after,
+            sdk_version=comm_res.sdk_version,
+            status=status,
+            system_trace_ctx=req_data.system_trace_ctx,
+            user_trace_ctx=req_data.user_trace_ctx,
+        ).SerializeToString()
+
+        # Add the reply to the buffer in case we need to flush it later.
+        self._buffer.add(req_data.request_id, reply_payload)
+
+        self._logger.debug("Sending execution reply")
+        err = await ws_utils.safe_send(
+            self._logger,
+            self._state,
+            ws,
+            connect_pb2.ConnectMessage(
+                kind=connect_pb2.GatewayMessageType.WORKER_REPLY,
+                payload=reply_payload,
+            ).SerializeToString(),
+        )
+        if err is not None:
+            self._logger.error(
+                "Failed to send execution reply", extra={"error": str(err)}
+            )
 
     def _handle_lease_extend_ack(
         self,

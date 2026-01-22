@@ -3,15 +3,25 @@ import asyncio
 from inngest._internal import types
 
 from . import connect_pb2, ws_utils
-from .base_handler import _BaseHandler
-from .consts import _heartbeat_interval_sec
-from .models import _State
+from .base_handler import BaseHandler
+from .consts import HEARTBEAT_INTERVAL_SEC
+from .models import State
 
 
-class _HeartbeatHandler(_BaseHandler):
+class HeartbeatHandler(BaseHandler):
     """
-    Sends outgoing heartbeats to the Gateway and handles incoming heartbeat
-    messages.
+    Maintains connection health via periodic heartbeat messages.
+
+    Responsibilities:
+        1. Sending periodic WORKER_HEARTBEAT messages to the server
+        2. Receiving GATEWAY_HEARTBEAT messages from the server
+
+    The heartbeat interval is defined in consts.py (HEARTBEAT_INTERVAL_SEC).
+    Heartbeats only begin after the initial handshake is complete.
+
+    Graceful Shutdown:
+        The heartbeat handler waits for all pending requests to complete before
+        closing, ensuring heartbeats continue while work is in progress.
     """
 
     _heartbeat_sender_task: asyncio.Task[None] | None = None
@@ -19,7 +29,7 @@ class _HeartbeatHandler(_BaseHandler):
     def __init__(
         self,
         logger: types.Logger,
-        state: _State,
+        state: State,
     ) -> None:
         self._logger = logger
         self._state = state
@@ -80,7 +90,7 @@ class _HeartbeatHandler(_BaseHandler):
                     "Error sending heartbeat", extra={"error": str(err)}
                 )
 
-            await asyncio.sleep(_heartbeat_interval_sec)
+            await asyncio.sleep(HEARTBEAT_INTERVAL_SEC)
 
         self._logger.debug("Heartbeater task stopped")
 
