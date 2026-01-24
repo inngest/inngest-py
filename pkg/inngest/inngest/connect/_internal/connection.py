@@ -17,6 +17,7 @@ from .base_handler import _BaseHandler
 from .configs_lib import get_max_worker_concurrency
 from .conn_init_starter import _ConnInitHandler
 from .consts import (
+    MAX_MESSAGE_SIZE,
     _default_shutdown_signals,
     _framework,
     _protocol,
@@ -329,6 +330,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
 
                 async with websockets.connect(
                     endpoint,
+                    max_size=MAX_MESSAGE_SIZE,
                     subprotocols=[_protocol],
                 ) as ws:
                     self._logger.debug("Gateway connected")

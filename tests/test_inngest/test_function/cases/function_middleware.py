@@ -8,6 +8,7 @@ import test_core.helper
 import tornado.httputil
 import werkzeug.local
 from inngest._internal import server_lib
+from inngest.connect._internal import connect_pb2
 
 from . import base
 
@@ -175,7 +176,12 @@ def create(
             assert isinstance(
                 state.raw_request, tornado.httputil.HTTPServerRequest
             )
+        elif framework == server_lib.Framework.CONNECT:
+            assert isinstance(
+                state.raw_request, connect_pb2.GatewayExecutorRequestData
+            )
         else:
+            print(state.raw_request)
             raise ValueError(f"unknown framework: {framework.value}")
 
         # Assert that the middleware hooks were called in the correct order
