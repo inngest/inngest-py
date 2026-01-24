@@ -181,8 +181,7 @@ def create(
                 state.raw_request, connect_pb2.GatewayExecutorRequestData
             )
         else:
-            # type: ignore[unreachable]
-            raise ValueError(f"unknown framework: {framework.value}")
+            raise ValueError(f"unknown framework: {framework.value}")  # type: ignore[unreachable]
 
         # Assert that the middleware hooks were called in the correct order
         assert state.messages == [
