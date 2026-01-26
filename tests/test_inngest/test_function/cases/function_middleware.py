@@ -8,6 +8,7 @@ import test_core.helper
 import tornado.httputil
 import werkzeug.local
 from inngest._internal import server_lib
+from inngest.connect._internal import connect_pb2
 
 from . import base
 
@@ -174,6 +175,10 @@ def create(
         elif framework == server_lib.Framework.TORNADO:
             assert isinstance(
                 state.raw_request, tornado.httputil.HTTPServerRequest
+            )
+        elif framework == server_lib.Framework.CONNECT:
+            assert isinstance(
+                state.raw_request, connect_pb2.GatewayExecutorRequestData
             )
         else:
             raise ValueError(f"unknown framework: {framework.value}")
