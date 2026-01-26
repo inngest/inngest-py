@@ -23,7 +23,7 @@ dev = [
     "inngest_encryption",
     "moto[s3,server]==5.0.18",
     "mypy==1.10.0",
-    "pynacl==1.5.0",
+    "pynacl==1.6.2",
     "pyright==1.1.402",
     "pytest==8.3.4",
     "pytest-django==4.7.0",
@@ -64,7 +64,7 @@ constraint-dependencies = [
     "protobuf==5.29.4",
     "psutil==6.0.0",
     "pydantic==2.11.0",
-    "pynacl==1.5.0",
+    "pynacl==1.6.2",
     "typing-extensions==4.13.0",
     "websockets==15.0.0",
 ]
