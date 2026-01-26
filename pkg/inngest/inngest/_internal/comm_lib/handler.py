@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import concurrent.futures
+import dataclasses
 import functools
 import http
 import os
@@ -29,6 +30,22 @@ from .models import CommRequest, CommResponse
 from .utils import parse_query_params, wrap_handler, wrap_handler_sync
 
 
+@dataclasses.dataclass
+class ThreadPoolConfig:
+    """
+    Configuration for thread pools used to execute Inngest functions. This
+    config is effectively ignored when using a synchronous HTTP framework.
+    """
+
+    pool: concurrent.futures.ThreadPoolExecutor
+
+    # Whether to run async Inngest functions in the thread pool.
+    enable_for_async_fns: bool = True
+
+    # Whether to run sync Inngest functions in the thread pool.
+    enable_for_sync_fns: bool = True
+
+
 class CommHandler:
     _base_url: str
     _client: client_lib.Inngest
@@ -45,6 +62,7 @@ class CommHandler:
         framework: server_lib.Framework,
         functions: list[function.Function[typing.Any]],
         streaming: const.Streaming | None,
+        thread_pool: ThreadPoolConfig | None = None,
     ) -> None:
         # In-band syncing is opt-out.
         self._allow_in_band_sync = not env_lib.is_false(
@@ -64,31 +82,20 @@ class CommHandler:
         if self._streaming == const.Streaming.FORCE:
             self._client.logger.warning("Streaming responses are enabled")
 
-        # TODO: Graduate this to a config option, rather than an env var.
-        thread_pool_max_workers = env_lib.get_int(
-            const.EnvKey.THREAD_POOL_MAX_WORKERS,
-        )
-        if thread_pool_max_workers == 0:
-            self._client.logger.debug(
-                "Skipping thread pool creation because max workers is 0",
-            )
-            self._thread_pool = None
-        else:
-            # We need a thread pool when both of the following are true:
-            # 1. CommHandler is called from an async context (e.g. using FastAPI
-            #   or Connect).
-            # 2. Executing a non-async function.
+        if thread_pool is None:
+            # Only reachable when using Serve (not Connect). For Serve, a thread
+            # pool is necessarily required because we can delegate concurrent
+            # request handling to the user's HTTP framework.
             #
-            # When the aforementioned situation happens, we need a thread pool
-            # to run the function in a non-blocking way. Without a thread pool,
-            # blocking operations will block the event loop.
-            #
-            # We don't need the thread pool when CommHandler is called from a
-            # non-async context because we can assume that the HTTP framework
-            # (e.g.  Flask) created a thread for the request.
-            self._thread_pool = concurrent.futures.ThreadPoolExecutor(
-                max_workers=thread_pool_max_workers,
+            # Default to disabled for both async and sync functions, since we
+            # expect Connect to automatically handle the config. Or users will
+            # explicitly set the config.
+            thread_pool = ThreadPoolConfig(
+                enable_for_async_fns=False,
+                enable_for_sync_fns=False,
+                pool=concurrent.futures.ThreadPoolExecutor(),
             )
+        self._thread_pool = thread_pool
 
         signing_key = client.signing_key
         if signing_key is None:
@@ -129,13 +136,14 @@ class CommHandler:
         if isinstance(request, Exception):
             return request
 
-        if params.fn_id is None:
+        fn_id = params.fn_id
+        if fn_id is None:
             return errors.QueryParamMissingError(
                 server_lib.QueryParamKey.FUNCTION_ID.value
             )
 
         # Get the function we should call.
-        fn = self._get_function(params.fn_id)
+        fn = self._get_function(fn_id)
         if isinstance(fn, Exception):
             return fn
 
@@ -166,36 +174,60 @@ class CommHandler:
         memos = step_lib.StepMemos.from_raw(steps)
 
         if fn.is_handler_async:
-            # Don't await because we might need to stream the response.
-            call_res_task = asyncio.create_task(
-                fn.call(
+            ctx = execution_lib.Context(
+                attempt=request.ctx.attempt,
+                event=request.event,
+                events=events,
+                group=step_lib.Group(),
+                logger=self._client.logger,
+                run_id=request.ctx.run_id,
+                step=step_lib.Step(
                     self._client,
-                    execution_lib.Context(
-                        attempt=request.ctx.attempt,
-                        event=request.event,
-                        events=events,
-                        group=step_lib.Group(),
-                        logger=self._client.logger,
-                        run_id=request.ctx.run_id,
-                        step=step_lib.Step(
-                            self._client,
-                            execution_lib.ExecutionV0(
-                                memos,
-                                middleware,
-                                request,
-                                params.step_id,
-                                req.timings,
-                            ),
-                            middleware,
-                            step_lib.StepIDCounter(),
-                            params.step_id,
-                        ),
+                    execution_lib.ExecutionV0(
+                        memos,
+                        middleware,
+                        request,
+                        params.step_id,
+                        req.timings,
                     ),
-                    params.fn_id,
                     middleware,
-                )
+                    step_lib.StepIDCounter(),
+                    params.step_id,
+                ),
             )
 
+            if self._thread_pool.enable_for_async_fns:
+                # Run async function in a thread pool worker to prevent
+                # thread-blocking operations from stalling Inngest functions.
+                # Without this, thread-blocking logic in one Inngest function
+                # would block all other Inngest functions.
+                #
+                # Each worker thread creates its own event loop via
+                # `asyncio.run()`.
+
+                # This function is runs in a separate thread
+                def run_in_thread() -> execution_lib.CallResult:
+                    return asyncio.run(
+                        fn.call(self._client, ctx, fn_id, middleware)
+                    )
+
+                async def run_in_pool() -> execution_lib.CallResult:
+                    loop = asyncio.get_running_loop()
+                    return await loop.run_in_executor(
+                        self._thread_pool.pool,
+                        run_in_thread,
+                    )
+
+                call_res_task = asyncio.create_task(run_in_pool())
+            else:
+                # No thread pool: run directly on the main event loop.
+                call_res_task = asyncio.create_task(
+                    fn.call(self._client, ctx, fn_id, middleware)
+                )
+
+            # Streaming sends keepalive bytes while the task runs, then
+            # sends the result when complete. Works with both thread pool
+            # and direct execution since both produce an asyncio.Task.
             if self._streaming is const.Streaming.FORCE:
                 return CommResponse.create_streaming(
                     self._client.logger,
@@ -208,41 +240,45 @@ class CommHandler:
 
             call_res = await call_res_task
         else:
-            fn_call = functools.partial(
-                fn.call_sync,
-                self._client,
-                execution_lib.ContextSync(
-                    attempt=request.ctx.attempt,
-                    event=request.event,
-                    events=events,
-                    group=step_lib.GroupSync(),
-                    logger=self._client.logger,
-                    run_id=request.ctx.run_id,
-                    step=step_lib.StepSync(
-                        self._client,
-                        execution_lib.ExecutionV0Sync(
-                            memos,
-                            middleware,
-                            request,
-                            params.step_id,
-                            req.timings,
-                        ),
+            # Sync function path.
+            ctx = execution_lib.ContextSync(
+                attempt=request.ctx.attempt,
+                event=request.event,
+                events=events,
+                group=step_lib.GroupSync(),
+                logger=self._client.logger,
+                run_id=request.ctx.run_id,
+                step=step_lib.StepSync(
+                    self._client,
+                    execution_lib.ExecutionV0Sync(
+                        memos,
                         middleware,
-                        step_lib.StepIDCounter(),
+                        request,
                         params.step_id,
+                        req.timings,
                     ),
+                    middleware,
+                    step_lib.StepIDCounter(),
+                    params.step_id,
                 ),
-                params.fn_id,
-                middleware,
             )
 
-            if self._thread_pool is not None:
+            fn_call = functools.partial(
+                fn.call_sync, self._client, ctx, fn_id, middleware
+            )
+
+            if self._thread_pool.enable_for_sync_fns:
+                # Run in thread pool to avoid blocking the main event loop.
                 loop = asyncio.get_running_loop()
                 call_res = await loop.run_in_executor(
-                    self._thread_pool,
+                    self._thread_pool.pool,
                     fn_call,
                 )
             else:
+                # No thread pool: call directly. This blocks the event
+                # loop, which is acceptable when CommHandler is used from
+                # a sync context (e.g. Flask) where the framework manages
+                # threading.
                 call_res = fn_call()
 
         return CommResponse.from_call_result(

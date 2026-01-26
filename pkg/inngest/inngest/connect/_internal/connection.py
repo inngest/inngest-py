@@ -91,6 +91,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
         rewrite_gateway_endpoint: typing.Callable[[str], str] | None = None,
         shutdown_signals: list[signal.Signals] | None = None,
         max_worker_concurrency: int | None = None,
+        thread_pool: comm_lib.ThreadPoolConfig,
     ) -> None:
         # Used to ensure that no messages are being handled when we fully close.
         self._handling_message_count = _ValueWatcher(0)
@@ -104,6 +105,11 @@ class _WebSocketWorkerConnection(WorkerConnection):
 
         if shutdown_signals is None:
             shutdown_signals = _default_shutdown_signals
+
+        if thread_pool.enable_for_sync_fns is False:
+            self._logger.warning(
+                "Thread pool is disabled for sync functions. This is not recommended."
+            )
 
         # Only set up signal handlers if we're in the main thread. Otherwise,
         # we'll get a "signal only works in main thread" error when outside the
@@ -151,6 +157,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 framework=_framework,
                 functions=fns,
                 streaming=const.Streaming.DISABLE,  # Probably doesn't make sense for Connect.
+                thread_pool=thread_pool,
             )
 
         if instance_id is None:
