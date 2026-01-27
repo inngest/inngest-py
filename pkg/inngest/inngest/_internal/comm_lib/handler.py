@@ -109,7 +109,7 @@ class CommHandler:
         if self._streaming == const.Streaming.FORCE:
             self._client.logger.warning("Streaming responses are enabled")
 
-        self._thread_pool = thread_pool or ThreadPoolConfig.create_default()
+        self._thread_pool = thread_pool or ThreadPoolConfig._create_default()
 
         signing_key = client.signing_key
         if signing_key is None:
