@@ -44,7 +44,6 @@ class TestConcurrentAsyncFunctions(BaseTest):
             [(client, [fn])],
             _experimental_thread_pool=ThreadPoolConfig(
                 enable_for_async_fns=True,
-                pool=concurrent.futures.ThreadPoolExecutor(),
             ),
         )
         task = asyncio.create_task(conn.start())

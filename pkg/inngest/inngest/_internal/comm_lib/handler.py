@@ -30,37 +30,47 @@ from .models import CommRequest, CommResponse
 from .utils import parse_query_params, wrap_handler, wrap_handler_sync
 
 
-@dataclasses.dataclass
 class ThreadPoolConfig:
-    """
-    Configuration for thread pools used to execute Inngest functions. This
-    config is effectively ignored when using a synchronous HTTP framework.
-    """
+    def __init__(
+        self,
+        enable_for_async_fns: bool = True,
+        enable_for_sync_fns: bool = True,
+        pool: concurrent.futures.ThreadPoolExecutor | None = None,
+    ):
+        """
+        Configuration for thread pools used to execute Inngest functions. This
+        config is effectively ignored when using a synchronous HTTP framework.
 
-    pool: concurrent.futures.ThreadPoolExecutor
+        This config is effectively ignored when using a synchronous HTTP
+        framework.
 
-    # Whether to run async Inngest functions in the thread pool.
-    enable_for_async_fns: bool = True
+        Args:
+        ----
+            enable_for_async_fns: Run async Inngest functions in the thread pool.
+            enable_for_sync_fns: Run sync Inngest functions in the thread pool.
+            pool: The thread pool to use. If not provided, a default thread pool is created.
+        """
 
-    # Whether to run sync Inngest functions in the thread pool.
-    enable_for_sync_fns: bool = True
+        self.enable_for_async_fns = enable_for_async_fns
+        self.enable_for_sync_fns = enable_for_sync_fns
+        self.pool = pool or concurrent.futures.ThreadPoolExecutor()
 
+    @staticmethod
+    def _create_default() -> ThreadPoolConfig:
+        # TODO: Default `enable_for_async_fns` to true in v0.6. Running async
+        # functions in a thread pool should be a good default, but it's a
+        # breaking change in runtime behavior.
+        enable_for_async_fns = False
 
-def create_default_thread_pool() -> ThreadPoolConfig:
-    # TODO: Default `enable_for_async_fns` to true in v0.6. Running async
-    # functions in a thread pool should be a good default, but it's a
-    # breaking change in runtime behavior.
-    enable_for_async_fns = False
+        # If we don't use a thread pool for sync functions then users will only
+        # be able to run 1 function at a time.
+        enabled_for_sync_fns = True
 
-    # If we don't use a thread pool for sync functions then users will only
-    # be able to run 1 function at a time.
-    enabled_for_sync_fns = True
-
-    return ThreadPoolConfig(
-        enable_for_async_fns=enable_for_async_fns,
-        enable_for_sync_fns=enabled_for_sync_fns,
-        pool=concurrent.futures.ThreadPoolExecutor(),
-    )
+        return ThreadPoolConfig(
+            enable_for_async_fns=enable_for_async_fns,
+            enable_for_sync_fns=enabled_for_sync_fns,
+            pool=concurrent.futures.ThreadPoolExecutor(),
+        )
 
 
 class CommHandler:
@@ -99,7 +109,7 @@ class CommHandler:
         if self._streaming == const.Streaming.FORCE:
             self._client.logger.warning("Streaming responses are enabled")
 
-        self._thread_pool = thread_pool or create_default_thread_pool()
+        self._thread_pool = thread_pool or ThreadPoolConfig.create_default()
 
         signing_key = client.signing_key
         if signing_key is None:
