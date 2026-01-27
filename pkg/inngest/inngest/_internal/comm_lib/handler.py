@@ -46,6 +46,23 @@ class ThreadPoolConfig:
     enable_for_sync_fns: bool = True
 
 
+def create_default_thread_pool() -> ThreadPoolConfig:
+    # TODO: Default `enable_for_async_fns` to true in v0.6. Running async
+    # functions in a thread pool should be a good default, but it's a
+    # breaking change in runtime behavior.
+    enable_for_async_fns = False
+
+    # If we don't use a thread pool for sync functions then users will only
+    # be able to run 1 function at a time.
+    enabled_for_sync_fns = True
+
+    return ThreadPoolConfig(
+        enable_for_async_fns=enable_for_async_fns,
+        enable_for_sync_fns=enabled_for_sync_fns,
+        pool=concurrent.futures.ThreadPoolExecutor(),
+    )
+
+
 class CommHandler:
     _base_url: str
     _client: client_lib.Inngest
@@ -82,20 +99,7 @@ class CommHandler:
         if self._streaming == const.Streaming.FORCE:
             self._client.logger.warning("Streaming responses are enabled")
 
-        if thread_pool is None:
-            # Only reachable when using Serve (not Connect). For Serve, a thread
-            # pool is necessarily required because we can delegate concurrent
-            # request handling to the user's HTTP framework.
-            #
-            # Default to disabled for both async and sync functions, since we
-            # expect Connect to automatically handle the config. Or users will
-            # explicitly set the config.
-            thread_pool = ThreadPoolConfig(
-                enable_for_async_fns=False,
-                enable_for_sync_fns=False,
-                pool=concurrent.futures.ThreadPoolExecutor(),
-            )
-        self._thread_pool = thread_pool
+        self._thread_pool = thread_pool or create_default_thread_pool()
 
         signing_key = client.signing_key
         if signing_key is None:

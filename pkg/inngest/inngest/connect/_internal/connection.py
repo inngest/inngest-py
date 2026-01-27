@@ -91,7 +91,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
         rewrite_gateway_endpoint: typing.Callable[[str], str] | None = None,
         shutdown_signals: list[signal.Signals] | None = None,
         max_worker_concurrency: int | None = None,
-        thread_pool: comm_lib.ThreadPoolConfig,
+        thread_pool: comm_lib.ThreadPoolConfig | None = None,
     ) -> None:
         # Used to ensure that no messages are being handled when we fully close.
         self._handling_message_count = _ValueWatcher(0)
@@ -106,7 +106,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
         if shutdown_signals is None:
             shutdown_signals = _default_shutdown_signals
 
-        if thread_pool.enable_for_sync_fns is False:
+        if thread_pool is not None and thread_pool.enable_for_sync_fns is False:
             self._logger.warning(
                 "Thread pool is disabled for sync functions. This is not recommended."
             )
