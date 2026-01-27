@@ -1,9 +1,11 @@
 import asyncio
+import concurrent.futures
 import time
 
 import inngest
 import test_core
 from inngest.connect import ConnectionState, connect
+from inngest.experimental import ThreadPoolConfig
 
 from .base import BaseTest
 
@@ -11,7 +13,7 @@ from .base import BaseTest
 class TestConcurrentAsyncFunctions(BaseTest):
     async def test(self) -> None:
         """
-        Test that sync functions can be run concurrently. Under-the-hood, this
+        Test that async functions can be run concurrently. Under-the-hood, this
         is accomplished with a ThreadPoolExecutor that is shared across all
         functions.
         """
@@ -38,7 +40,13 @@ class TestConcurrentAsyncFunctions(BaseTest):
                     break
                 time.sleep(0.1)  # noqa: ASYNC251
 
-        conn = connect([(client, [fn])])
+        conn = connect(
+            [(client, [fn])],
+            _experimental_thread_pool=ThreadPoolConfig(
+                enable_for_async_fns=True,
+                pool=concurrent.futures.ThreadPoolExecutor(),
+            ),
+        )
         task = asyncio.create_task(conn.start())
         self.addCleanup(conn.close, wait=True)
         self.addCleanup(task.cancel)
