@@ -4,6 +4,7 @@ import signal
 import typing
 
 import inngest
+from inngest._internal import comm_lib
 
 from .connection import WorkerConnection, _WebSocketWorkerConnection
 
@@ -11,6 +12,7 @@ from .connection import WorkerConnection, _WebSocketWorkerConnection
 def connect(
     apps: list[tuple[inngest.Inngest, list[inngest.Function[typing.Any]]]],
     *,
+    _experimental_thread_pool: comm_lib.ThreadPoolConfig | None = None,
     instance_id: str | None = None,
     rewrite_gateway_endpoint: typing.Callable[[str], str] | None = None,
     shutdown_signals: list[signal.Signals] | None = None,
@@ -27,10 +29,12 @@ def connect(
         shutdown_signals: A list of graceful shutdown signals to handle. Defaults to [SIGTERM, SIGINT].
         max_worker_concurrency: The maximum number of worker concurrency to use. Defaults to None.
     """
+
     return _WebSocketWorkerConnection(
         apps=apps,
         instance_id=instance_id,
         rewrite_gateway_endpoint=rewrite_gateway_endpoint,
         shutdown_signals=shutdown_signals,
         max_worker_concurrency=max_worker_concurrency,
+        thread_pool=_experimental_thread_pool,
     )
