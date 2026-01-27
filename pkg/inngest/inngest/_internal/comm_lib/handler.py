@@ -241,7 +241,7 @@ class CommHandler:
             call_res = await call_res_task
         else:
             # Sync function path.
-            ctx = execution_lib.ContextSync(
+            ctx_sync = execution_lib.ContextSync(
                 attempt=request.ctx.attempt,
                 event=request.event,
                 events=events,
@@ -264,7 +264,7 @@ class CommHandler:
             )
 
             fn_call = functools.partial(
-                fn.call_sync, self._client, ctx, fn_id, middleware
+                fn.call_sync, self._client, ctx_sync, fn_id, middleware
             )
 
             if self._thread_pool.enable_for_sync_fns:
