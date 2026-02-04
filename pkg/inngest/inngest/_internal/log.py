@@ -1,13 +1,27 @@
 from __future__ import annotations
 
+from contextvars import ContextVar
+
 from . import types
 
+# ContextVar for async/thread-safe enable/disable state
+_logging_enabled: ContextVar[bool] = ContextVar(
+    "inngest_logging_enabled", default=False
+)
 
-class LoggerProxy:
+
+def enable_logging() -> None:
+    _logging_enabled.set(True)
+
+
+def disable_logging() -> None:
+    _logging_enabled.set(False)
+
+
+class FilteredLogger:
     """
-    Wraps a logger, allowing us to disable logging when we want to. This is
-    important because we may call a function multiple times and we don't want
-    duplicate logs.
+    Wrapper that intercepts logging calls to prevent duplicates during step replay.
+    Uses ContextVar for async/thread safety.
     """
 
     _proxied_methods = (
@@ -23,15 +37,11 @@ class LoggerProxy:
     )
 
     def __init__(self, logger: types.Logger) -> None:
-        self._is_enabled = False
-        self.logger = logger
+        self._logger = logger
 
     def __getattr__(self, name: str) -> object:
-        if name in self._proxied_methods and not self._is_enabled:
-            # Return noop
+        if name in self._proxied_methods and not _logging_enabled.get():
+            # Return noop when logging is disabled
             return lambda *args, **kwargs: None
 
-        return getattr(self.logger, name)
-
-    def enable(self) -> None:
-        self._is_enabled = True
+        return getattr(self._logger, name)
