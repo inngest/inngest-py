@@ -10,7 +10,7 @@ from . import connect_pb2, ws_utils
 from .base_handler import _BaseHandler
 from .buffer import _SizeConstrainedBuffer
 from .models import _State
-from .value_watcher import _ValueWatcher
+from .value_watcher import ValueWatcher
 
 # TODO: Make this configurable.
 _default_max_buffer_size_bytes = 1024 * 1024 * 500  # 500MB
@@ -23,7 +23,7 @@ PendingRequest: typing.TypeAlias = tuple[
 
 
 class _PendingRequestManager:
-    def __init__(self, pending_request_count: _ValueWatcher[int]) -> None:
+    def __init__(self, pending_request_count: ValueWatcher[int]) -> None:
         self._pending_request_count = pending_request_count
         self._pending_requests: dict[str, PendingRequest] = {}
 
