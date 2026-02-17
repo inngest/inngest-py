@@ -28,7 +28,7 @@ from .execution_handler import _ExecutionHandler
 from .heartbeat_handler import _HeartbeatHandler
 from .init_handshake_handler import _InitHandshakeHandler
 from .models import ConnectionState, _State
-from .value_watcher import _ValueWatcher
+from .value_watcher import ValueWatcher
 
 
 class WorkerConnection(typing.Protocol):
@@ -93,7 +93,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
         max_worker_concurrency: int | None = None,
     ) -> None:
         # Used to ensure that no messages are being handled when we fully close.
-        self._handling_message_count = _ValueWatcher(0)
+        self._handling_message_count = ValueWatcher(0)
 
         if len(apps) == 0:
             raise Exception("no apps provided")
@@ -179,17 +179,17 @@ class _WebSocketWorkerConnection(WorkerConnection):
 
         self._state = _State(
             conn_id=None,
-            conn_init=_ValueWatcher(None),
-            conn_state=_ValueWatcher(
+            conn_init=ValueWatcher(None),
+            conn_state=ValueWatcher(
                 ConnectionState.CONNECTING,
                 on_change=on_conn_state_change,
             ),
             exclude_gateways=[],
-            extend_lease_interval=_ValueWatcher(None),
-            fatal_error=_ValueWatcher(None),
-            init_handshake_complete=_ValueWatcher(False),
-            pending_request_count=_ValueWatcher(0),
-            ws=_ValueWatcher(None),
+            extend_lease_interval=ValueWatcher(None),
+            fatal_error=ValueWatcher(None),
+            init_handshake_complete=ValueWatcher(False),
+            pending_request_count=ValueWatcher(0),
+            ws=ValueWatcher(None),
         )
 
         self._handlers: list[_BaseHandler] = [
