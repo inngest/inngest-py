@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import typing
 import urllib.parse
 
@@ -8,17 +7,37 @@ import httpx
 from inngest._internal import net, server_lib, types
 
 from . import connect_pb2
-from .base_handler import _BaseHandler
-from .errors import _NonRetryableError
-from .models import ConnectionState, _State
-
-_max_attempts = 5
-_reconnect_interval = datetime.timedelta(seconds=5)
+from .base_handler import BaseHandler
+from .consts import CONN_INIT_RETRY_INTERVAL_SEC, MAX_CONN_INIT_ATTEMPTS
+from .errors import NonRetryableError
+from .models import ConnectionState, State
 
 
-class _ConnInitHandler(_BaseHandler):
+class ConnInitHandler(BaseHandler):
     """
-    Starts the connection by sending the "start request" to the REST API.
+    Bootstraps the connection by making a REST call to /v0/connect/start.
+
+    The server responds with:
+        - connection_id: Unique identifier for this connection
+        - gateway_endpoint: WebSocket URL to connect to
+        - session_token/sync_token: Authentication tokens for the WebSocket
+
+    Retry Behavior:
+        - Max attempts: Configurable via MAX_CONN_INIT_ATTEMPTS
+        - Retry interval: Configurable via CONN_INIT_RETRY_INTERVAL_SEC
+        - Non-retryable errors (e.g., 401/403) cause immediate failure
+
+    State Ownership:
+        This handler sets:
+        - conn_id: The connection ID from the server response
+        - conn_init: Tuple of (AuthData, gateway_endpoint)
+        - fatal_error: Set on non-retryable errors
+        - conn_state: Set to CONNECTING when starting
+
+    Reconnection:
+        The handler watches for RECONNECTING state and re-sends the start
+        request when triggered. The exclude_gateways list allows avoiding
+        problematic gateways on reconnect.
     """
 
     _closed_event: asyncio.Event | None = None
@@ -42,7 +61,7 @@ class _ConnInitHandler(_BaseHandler):
         rewrite_gateway_endpoint: typing.Callable[[str], str] | None,
         signing_key: str | None,
         signing_key_fallback: str | None,
-        state: _State,
+        state: State,
     ):
         self._api_origin = api_origin
         self._env = env
@@ -113,7 +132,8 @@ class _ConnInitHandler(_BaseHandler):
 
             attempts = 0
             while (
-                attempts < _max_attempts and self.closed_event.is_set() is False
+                attempts < MAX_CONN_INIT_ATTEMPTS
+                and self.closed_event.is_set() is False
             ):
                 if attempts == 0:
                     self._logger.debug(
@@ -121,7 +141,7 @@ class _ConnInitHandler(_BaseHandler):
                         extra={"url": url},
                     )
                 else:
-                    await asyncio.sleep(_reconnect_interval.seconds)
+                    await asyncio.sleep(CONN_INIT_RETRY_INTERVAL_SEC)
                     self._logger.debug(
                         "ConnectionStart request retry",
                         extra={
@@ -155,7 +175,7 @@ class _ConnInitHandler(_BaseHandler):
                     if isinstance(res, Exception):
                         raise res
                     if res.status_code == 401 or res.status_code == 403:
-                        raise _NonRetryableError("unauthorized")
+                        raise NonRetryableError("unauthorized")
                     if res.status_code != 200:
                         raise Exception(
                             f"failed to send start request: {res.status_code}"
@@ -197,7 +217,7 @@ class _ConnInitHandler(_BaseHandler):
                     )
 
                     break
-                except _NonRetryableError as e:
+                except NonRetryableError as e:
                     err = e
                     break
                 except Exception as e:

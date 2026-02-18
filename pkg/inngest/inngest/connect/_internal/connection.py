@@ -1,3 +1,25 @@
+"""
+Main orchestrator for the Connect WebSocket connection.
+
+This module provides the primary entry point for establishing and managing
+persistent WebSocket connections between the SDK and the Inngest server.
+
+Architecture:
+    The connection uses a handler pipeline pattern where incoming WebSocket
+    messages are dispatched to all registered handlers. Each handler is
+    responsible for a specific concern:
+
+    - ConnInitHandler: Bootstraps the connection via REST API
+    - InitHandshakeHandler: Performs the WebSocket handshake protocol
+    - ExecutionHandler: Processes function execution requests
+    - HeartbeatHandler: Maintains keep-alive with the server
+    - DrainHandler: Handles graceful shutdown signals from the server
+
+Reconnection:
+    The connection automatically reconnects on disconnect unless explicitly
+    closed. Fatal errors (e.g. authentication failure) prevent reconnection.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -13,21 +35,23 @@ import inngest
 from inngest._internal import comm_lib, const, net, server_lib, types
 
 from . import async_lib, connect_pb2
-from .base_handler import _BaseHandler
+from .base_handler import BaseHandler
 from .configs_lib import get_max_worker_concurrency
-from .conn_init_starter import _ConnInitHandler
+from .conn_init_starter import ConnInitHandler
 from .consts import (
+    DEFAULT_SHUTDOWN_SIGNALS,
+    FRAMEWORK,
     MAX_MESSAGE_SIZE,
-    _default_shutdown_signals,
-    _framework,
-    _protocol,
+    POST_CONNECT_SETTLE_SEC,
+    PROTOCOL,
+    RECONNECTION_DELAY_SEC,
 )
-from .drain_handler import _DrainHandler
-from .errors import _UnreachableError
-from .execution_handler import _ExecutionHandler
-from .heartbeat_handler import _HeartbeatHandler
-from .init_handshake_handler import _InitHandshakeHandler
-from .models import ConnectionState, _State
+from .drain_handler import DrainHandler
+from .errors import UnreachableError
+from .execution_handler import ExecutionHandler
+from .heartbeat_handler import HeartbeatHandler
+from .init_handshake_handler import InitHandshakeHandler
+from .models import ConnectionState, State
 from .value_watcher import ValueWatcher
 
 
@@ -103,7 +127,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
         self._signing_key = None
 
         if shutdown_signals is None:
-            shutdown_signals = _default_shutdown_signals
+            shutdown_signals = DEFAULT_SHUTDOWN_SIGNALS
 
         # Only set up signal handlers if we're in the main thread. Otherwise,
         # we'll get a "signal only works in main thread" error when outside the
@@ -148,7 +172,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
 
             self._comm_handlers[client.app_id] = comm_lib.CommHandler(
                 client=client,
-                framework=_framework,
+                framework=FRAMEWORK,
                 functions=fns,
                 streaming=const.Streaming.DISABLE,  # Probably doesn't make sense for Connect.
             )
@@ -177,7 +201,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 },
             )
 
-        self._state = _State(
+        self._state = State(
             conn_id=None,
             conn_init=ValueWatcher(None),
             conn_state=ValueWatcher(
@@ -192,8 +216,8 @@ class _WebSocketWorkerConnection(WorkerConnection):
             ws=ValueWatcher(None),
         )
 
-        self._handlers: list[_BaseHandler] = [
-            _ConnInitHandler(
+        self._handlers: list[BaseHandler] = [
+            ConnInitHandler(
                 api_origin=self._api_origin,
                 env=default_client.env,
                 http_client=self._http_client,
@@ -204,8 +228,8 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 signing_key_fallback=self._fallback_signing_key,
                 state=self._state,
             ),
-            _HeartbeatHandler(self._logger, self._state),
-            _InitHandshakeHandler(
+            HeartbeatHandler(self._logger, self._state),
+            InitHandshakeHandler(
                 self._logger,
                 self._state,
                 self._app_configs,
@@ -213,7 +237,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 self._instance_id,
                 max_worker_concurrency=self._max_worker_concurrency,
             ),
-            _ExecutionHandler(
+            ExecutionHandler(
                 api_origin=self._api_origin,
                 comm_handlers=self._comm_handlers,
                 http_client=self._http_client,
@@ -223,7 +247,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 signing_key=self._signing_key,
                 signing_key_fallback=self._fallback_signing_key,
             ),
-            _DrainHandler(self._logger, self._state),
+            DrainHandler(self._logger, self._state),
         ]
 
     def get_connection_id(self) -> str:
@@ -246,7 +270,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
         try:
             async for raw_msg in ws:
                 if self._state.conn_init.value is None:
-                    return _UnreachableError("Missing conn init")
+                    return UnreachableError("Missing conn init")
 
                 if not isinstance(raw_msg, bytes):
                     self._logger.debug(
@@ -331,7 +355,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 async with websockets.connect(
                     endpoint,
                     max_size=MAX_MESSAGE_SIZE,
-                    subprotocols=[_protocol],
+                    subprotocols=[PROTOCOL],
                 ) as ws:
                     self._logger.debug("Gateway connected")
                     self._state.ws.value = ws
@@ -340,13 +364,13 @@ class _WebSocketWorkerConnection(WorkerConnection):
                     )
 
                     await self._state.conn_init.wait_for_change()
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(POST_CONNECT_SETTLE_SEC)
             except Exception as e:
                 self._logger.error(
                     f"Gateway connection error: {e}. Reconnecting..."
                 )
                 self._state.close_ws()
-                await asyncio.sleep(5)  # Reconnection delay
+                await asyncio.sleep(RECONNECTION_DELAY_SEC)
             except asyncio.CancelledError:
                 self._logger.debug("Gateway connection cancelled")
                 break
@@ -431,7 +455,7 @@ def _event_loop_keep_alive() -> asyncio.Task[None]:
 
 
 async def _wait_for_gateway_endpoint(
-    state: _State,
+    state: State,
 ) -> types.MaybeError[tuple[str, bool]]:
     """
     Wait for the Gateway endpoint to be set or for the connection to be closing.
@@ -464,10 +488,10 @@ async def _wait_for_gateway_endpoint(
         if isinstance(r, Exception):
             return r
         if isinstance(r, ConnectionState):
-            return _UnreachableError(
+            return UnreachableError(
                 "We already checked the only possible ConnectionState"
             )
 
         return r[1], False
 
-    return _UnreachableError()
+    return UnreachableError()

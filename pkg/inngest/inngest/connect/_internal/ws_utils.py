@@ -7,7 +7,7 @@ from . import models
 
 async def safe_send(
     logger: types.Logger,
-    state: models._State,
+    state: models.State,
     ws: websockets.ClientConnection,
     message: bytes,
 ) -> types.MaybeError[None]:

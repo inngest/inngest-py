@@ -3,7 +3,7 @@ import uuid
 
 import websockets
 import websockets.asyncio.connection
-from inngest.connect._internal.consts import _protocol
+from inngest.connect._internal.consts import PROTOCOL
 
 from .net import get_available_port
 
@@ -60,7 +60,7 @@ class WebSocketProxy:
         conn_id = str(uuid.uuid4())
         async with websockets.connect(
             self._server_uri,
-            subprotocols=[_protocol],
+            subprotocols=[PROTOCOL],
         ) as server_conn:
             self._conns[conn_id] = (client_conn, server_conn)
             client_to_server = asyncio.create_task(
