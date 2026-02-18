@@ -12,7 +12,7 @@ from .value_watcher import ValueWatcher
 @dataclasses.dataclass
 class State:
     """
-    Shared state for the Connect feature.
+    Shared state for Connect.
     """
 
     conn_id: str | None

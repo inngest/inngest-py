@@ -37,6 +37,9 @@ class ValueWatcher(typing.Generic[T]):
         # value changes, so its items are tuples of the old and new values.
         self._watch_queues: list[asyncio.Queue[tuple[T, T]]] = []
 
+        # Hold references to fire-and-forget tasks to prevent GC.
+        self._background_tasks: set[asyncio.Task[T]] = set()
+
         self._value = initial_value
 
     @property
@@ -74,80 +77,133 @@ class ValueWatcher(typing.Generic[T]):
         Will not call the callback more than once.
         """
 
-        asyncio.create_task(self.wait_for(value)).add_done_callback(
-            lambda _: cb()
-        )
+        task = asyncio.create_task(self.wait_for(value))
+        self._background_tasks.add(task)
 
-    async def wait_for(self, value: T, *, immediate: bool = True) -> T:
+        def _done(t: asyncio.Task[T]) -> None:
+            self._background_tasks.discard(t)
+            if not t.cancelled() and t.exception() is None:
+                cb()
+
+        task.add_done_callback(_done)
+
+    async def wait_for(
+        self,
+        value: T,
+        *,
+        immediate: bool = True,
+        timeout: float | None = None,
+    ) -> T:
         """
         Wait for the value to be equal to the given value.
 
         Args:
             value: Return when the value is equal to this.
             immediate: If True and the value is already equal to the given value, return immediately. Defaults to True.
+            timeout: Seconds to wait before raising asyncio.TimeoutError. None means wait forever.
         """
 
-        if immediate and self._value == value:
-            # No need to wait.
-            return self._value
+        return await self._wait_for_condition(
+            lambda v: v == value,
+            immediate=immediate,
+            timeout=timeout,
+        )
 
-        with self._watch() as watch:
-            async for _, new in watch:
-                if new == value:
-                    return new
-
-        raise Exception("unreachable")
-
-    async def wait_for_not(self, value: T, *, immediate: bool = True) -> T:
+    async def wait_for_not(
+        self,
+        value: T,
+        *,
+        immediate: bool = True,
+        timeout: float | None = None,
+    ) -> T:
         """
         Wait for the value to not be equal to the given value.
 
         Args:
             value: Return when the value is not equal to this.
             immediate: If True and the value is already not equal to the given value, return immediately. Defaults to True.
+            timeout: Seconds to wait before raising asyncio.TimeoutError. None means wait forever.
         """
 
-        if immediate and self._value != value:
-            # No need to wait.
-            return self._value
-
-        with self._watch() as watch:
-            async for _, new in watch:
-                if new != value:
-                    return new
-
-        raise Exception("unreachable")
+        return await self._wait_for_condition(
+            lambda v: v != value,
+            immediate=immediate,
+            timeout=timeout,
+        )
 
     async def wait_for_not_none(
         self: ValueWatcher[S | None],
         *,
         immediate: bool = True,
+        timeout: float | None = None,
     ) -> S:
         """
         Wait for the value to be not None.
+
+        Args:
+            immediate: If True and the value is already not None, return immediately. Defaults to True.
+            timeout: Seconds to wait before raising asyncio.TimeoutError. None means wait forever.
         """
 
-        if immediate and self._value is not None:
-            # No need to wait.
+        result = await self._wait_for_condition(
+            lambda v: v is not None,
+            immediate=immediate,
+            timeout=timeout,
+        )
+        if result is None:
+            raise AssertionError("unreachable")
+        return result
+
+    async def _wait_for_condition(
+        self,
+        condition: typing.Callable[[T], bool],
+        *,
+        immediate: bool = True,
+        timeout: float | None = None,
+    ) -> T:
+        """
+        Internal method to DRY race condition handling in other methods.
+        """
+
+        # Fast path: no task needed if the value already matches.
+        if immediate and condition(self._value):
             return self._value
 
-        with self._watch() as watch:
-            async for _, new in watch:
-                if new is not None:
-                    return new
+        async def _wait() -> T:
+            with self._watch() as watch:
+                # Re-check after queue registration to close the gap
+                # between the fast path above and the queue being live.
+                if immediate and condition(self._value):
+                    return self._value
 
-        raise Exception("unreachable")
+                async for _, new in watch:
+                    if condition(new):
+                        return new
 
-    async def wait_for_change(self) -> T:
+            raise AssertionError("unreachable")
+
+        return await asyncio.wait_for(_wait(), timeout=timeout)
+
+    async def wait_for_change(
+        self,
+        *,
+        timeout: float | None = None,
+    ) -> T:
         """
         Wait for the value to change.
+
+        Args:
+            timeout: Seconds to wait before raising asyncio.TimeoutError. None means wait forever.
         """
 
-        with self._watch() as watch:
-            async for _, new in watch:
-                return new
+        async def _wait() -> T:
+            with self._watch() as watch:
+                async for _, new in watch:
+                    return new
 
-        raise Exception("unreachable")
+            raise AssertionError("unreachable")
+
+        return await asyncio.wait_for(_wait(), timeout=timeout)
 
     def _watch(self) -> _WatchContextManager[T]:
         """
@@ -193,7 +249,7 @@ class _WatchContextManager(typing.Generic[T]):
 
     def __exit__(
         self,
-        exc_type: type[BaseException | None],
+        exc_type: type[BaseException] | None,
         exc_value: BaseException | None,
         traceback: object,
     ) -> None:

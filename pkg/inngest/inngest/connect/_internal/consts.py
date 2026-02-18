@@ -1,9 +1,5 @@
 """
-Constants and configuration values for the Connect feature.
-
-This module centralizes timing constants and configuration values used
-throughout the Connect implementation. All timing-related values should be
-defined here for easy tuning and documentation.
+Constants and configuration values for Connect.
 """
 
 import signal
@@ -44,6 +40,10 @@ RECONNECTION_DELAY_SEC = 5
 # ============================================================================
 # Size Constants
 # ============================================================================
+
+# Inngest servers are configured to send up to 4 MB, but we'll set a higher
+# limit to be safe
+MAX_MESSAGE_SIZE = 5 * 1024 * 1024  # 5 MB
 
 # Maximum size of the unacked message buffer (bytes). Messages exceeding this
 # limit cause oldest messages to be evicted. This should probably be

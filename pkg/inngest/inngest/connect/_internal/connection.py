@@ -41,6 +41,7 @@ from .conn_init_starter import ConnInitHandler
 from .consts import (
     DEFAULT_SHUTDOWN_SIGNALS,
     FRAMEWORK,
+    MAX_MESSAGE_SIZE,
     POST_CONNECT_SETTLE_SEC,
     PROTOCOL,
     RECONNECTION_DELAY_SEC,
@@ -353,6 +354,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
 
                 async with websockets.connect(
                     endpoint,
+                    max_size=MAX_MESSAGE_SIZE,
                     subprotocols=[PROTOCOL],
                 ) as ws:
                     self._logger.debug("Gateway connected")
