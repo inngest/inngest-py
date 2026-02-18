@@ -236,6 +236,7 @@ class ExecutionHandler(BaseHandler):
                     public_path=None,
                     query_params={
                         server_lib.QueryParamKey.FUNCTION_ID.value: req_data.function_slug,
+                        server_lib.QueryParamKey.STEP_ID.value: req_data.step_id,
                     },
                     raw_request=req_data,
                     request_url="",
