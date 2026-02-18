@@ -10,7 +10,7 @@ from inngest._internal import const, errors, server_lib, types
 
 from . import connect_pb2, ws_utils
 from .base_handler import _BaseHandler
-from .models import ConnectionState, _State
+from .models import AppConfig, ConnectionState, _State
 
 
 class _InitHandshakeHandler(_BaseHandler):
@@ -22,7 +22,7 @@ class _InitHandshakeHandler(_BaseHandler):
         self,
         logger: types.Logger,
         state: _State,
-        app_configs: dict[str, list[server_lib.FunctionConfig]],
+        app_configs: dict[str, AppConfig],
         env: str | None,
         instance_id: str,
         max_worker_concurrency: int | None,
@@ -141,7 +141,7 @@ class _InitHandshakeHandler(_BaseHandler):
         ws = await self._state.ws.wait_for_not_none()
 
         sync_message = _create_sync_message(
-            apps_configs=self._app_configs,
+            app_configs=self._app_configs,
             auth_data=auth_data,
             connection_id=connection_id,
             env=self._env,
@@ -181,7 +181,7 @@ class _KindState:
 
 def _create_sync_message(
     *,
-    apps_configs: dict[str, list[server_lib.FunctionConfig]],
+    app_configs: dict[str, AppConfig],
     auth_data: connect_pb2.AuthData,
     connection_id: str,
     env: str | None,
@@ -189,10 +189,10 @@ def _create_sync_message(
     max_worker_concurrency: int | None,
 ) -> types.MaybeError[connect_pb2.ConnectMessage]:
     apps: list[connect_pb2.AppConfiguration] = []
-    for app_id, functions in apps_configs.items():
+    for app_id, config in app_configs.items():
         try:
             functions_bytes = pydantic_core.to_json(
-                functions, exclude_none=True
+                config.functions, exclude_none=True
             )
         except Exception as err:
             return err
@@ -200,6 +200,7 @@ def _create_sync_message(
         apps.append(
             connect_pb2.AppConfiguration(
                 app_name=app_id,
+                app_version=config.version,
                 functions=functions_bytes,
             )
         )
