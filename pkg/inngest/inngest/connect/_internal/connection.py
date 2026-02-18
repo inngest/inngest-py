@@ -27,7 +27,7 @@ from .errors import _UnreachableError
 from .execution_handler import _ExecutionHandler
 from .heartbeat_handler import _HeartbeatHandler
 from .init_handshake_handler import _InitHandshakeHandler
-from .models import ConnectionState, _State
+from .models import AppConfig, ConnectionState, _State
 from .value_watcher import ValueWatcher
 
 
@@ -124,7 +124,7 @@ class _WebSocketWorkerConnection(WorkerConnection):
             self._fallback_signing_key = default_client.signing_key_fallback
 
         self._comm_handlers: dict[str, comm_lib.CommHandler] = {}
-        self._app_configs: dict[str, list[server_lib.FunctionConfig]] = {}
+        self._app_configs: dict[str, AppConfig] = {}
         for a in apps:
             (client, fns) = a
 
@@ -144,7 +144,10 @@ class _WebSocketWorkerConnection(WorkerConnection):
             )
             if isinstance(configs, Exception):
                 raise configs
-            self._app_configs[client.app_id] = configs
+            self._app_configs[client.app_id] = AppConfig(
+                functions=configs,
+                version=client.app_version,
+            )
 
             self._comm_handlers[client.app_id] = comm_lib.CommHandler(
                 client=client,

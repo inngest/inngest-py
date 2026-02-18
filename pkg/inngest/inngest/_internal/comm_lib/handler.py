@@ -583,6 +583,7 @@ class Syncer:
 
         res_body = server_lib.InBandSynchronizeResponse(
             app_id=handler._client.app_id,
+            app_version=handler._client.app_version,
             env=handler._client.env,
             framework=handler._framework,
             functions=fn_configs,
@@ -653,6 +654,7 @@ class Syncer:
 
         body = server_lib.SynchronizeRequest(
             app_name=handler._client.app_id,
+            app_version=handler._client.app_version,
             deploy_type=server_lib.DeployType.PING,
             framework=handler._framework,
             functions=fn_configs,
