@@ -55,6 +55,11 @@ class EnvKey(enum.Enum):
     # The maximum number of worker concurrency for the Connect API.
     CONNECT_MAX_WORKER_CONCURRENCY = "INNGEST_CONNECT_MAX_WORKER_CONCURRENCY"
 
+    # Controls whether Connect isolates user function execution in a separate
+    # thread pool to prevent blocking heartbeats and WebSocket operations.
+    # Enabled by default. Set to "0" or "false" to disable.
+    CONNECT_ISOLATE_EXECUTION = "INNGEST_CONNECT_ISOLATE_EXECUTION"
+
 
 class Streaming(enum.Enum):
     """

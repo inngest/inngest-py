@@ -1,4 +1,5 @@
 import asyncio
+import threading
 import typing
 import unittest
 
@@ -196,3 +197,32 @@ class TestValueWatcher(unittest.IsolatedAsyncioTestCase):
         watcher.value = 2
 
         self.assertEqual(changes, [(0, 1), (1, 2)])
+
+    @pytest.mark.timeout(2, method="thread")
+    async def test_cross_thread_notification(self) -> None:
+        """
+        Value set from another thread should notify waiters.
+
+        This test is important because different threads have different event
+        loops. Some asyncio primitives are not thread-safe, so we need to make
+        sure we aren't using them.
+        """
+
+        # Create a watcher in this thread
+        watcher = ValueWatcher(0)
+
+        # Create a waiter in this thread
+        wait_for_tasks = await self._start_tasks(
+            watcher.wait_for(1),
+        )
+
+        def other_thread() -> None:
+            # Set the value in another thread
+            watcher.value = 1
+
+        thread = threading.Thread(target=other_thread)
+        thread.start()
+        thread.join()
+
+        # Wait for the notification to come from the other thread
+        await wait_for_tasks()
