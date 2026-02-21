@@ -125,7 +125,7 @@ class ConnInitHandler(BaseHandler):
             self._state.conn_state.value = ConnectionState.CONNECTING
 
             req = connect_pb2.StartRequest(
-                exclude_gateways=self._state.exclude_gateways,
+                exclude_gateways=self._state.get_exclude_gateways(),
             )
 
             url = urllib.parse.urljoin(self._api_origin, "/v0/connect/start")
@@ -196,7 +196,7 @@ class ConnInitHandler(BaseHandler):
                         },
                     )
 
-                    self._state.conn_id = start_resp.connection_id
+                    self._state.set_conn_id(start_resp.connection_id)
 
                     final_endpoint = start_resp.gateway_endpoint
                     if self._rewrite_gateway_endpoint:

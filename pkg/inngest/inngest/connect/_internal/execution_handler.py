@@ -1,4 +1,5 @@
 import asyncio
+import threading
 import typing
 import urllib.parse
 
@@ -20,7 +21,12 @@ PendingRequest: typing.TypeAlias = tuple[
 
 
 class _PendingRequestManager:
+    """
+    Thread-safe manager for pending requests.
+    """
+
     def __init__(self, pending_request_count: ValueWatcher[int]) -> None:
+        self._lock = threading.Lock()
         self._pending_request_count = pending_request_count
         self._pending_requests: dict[str, PendingRequest] = {}
 
@@ -30,27 +36,34 @@ class _PendingRequestManager:
         request_data: connect_pb2.GatewayExecutorRequestData,
         task: asyncio.Task[None],
     ) -> None:
-        self._pending_requests[request_id] = (request_data, task)
+        with self._lock:
+            self._pending_requests[request_id] = (request_data, task)
         self._pending_request_count.value += 1
 
     def clear(self) -> None:
-        self._pending_requests.clear()
+        with self._lock:
+            self._pending_requests.clear()
         self._pending_request_count.value = 0
 
     def count(self) -> int:
-        return len(self._pending_requests)
+        with self._lock:
+            return len(self._pending_requests)
 
     def get(self, request_id: str) -> PendingRequest | None:
-        return self._pending_requests.get(request_id, None)
+        with self._lock:
+            return self._pending_requests.get(request_id, None)
 
     def get_all(
         self,
     ) -> list[PendingRequest]:
-        return list(self._pending_requests.values())
+        with self._lock:
+            return list(self._pending_requests.values())
 
-    def pop(self, request_id: str) -> PendingRequest:
-        req = self._pending_requests.pop(request_id)
-        self._pending_request_count.value -= 1
+    def pop(self, request_id: str) -> PendingRequest | None:
+        with self._lock:
+            req = self._pending_requests.pop(request_id, None)
+        if req is not None:
+            self._pending_request_count.value -= 1
         return req
 
 
@@ -84,6 +97,7 @@ class ExecutionHandler(BaseHandler):
         http_client: net.ThreadAwareAsyncHTTPClient,
         http_client_sync: httpx.Client,
         logger: types.Logger,
+        main_loop: asyncio.AbstractEventLoop | None,
         signing_key: str | None,
         signing_key_fallback: str | None,
         state: State,
@@ -94,6 +108,7 @@ class ExecutionHandler(BaseHandler):
         self._http_client = http_client
         self._http_client_sync = http_client_sync
         self._logger = logger
+        self._main_loop = main_loop
         self._signing_key = signing_key
         self._signing_key_fallback = signing_key_fallback
         self._state = state
@@ -228,22 +243,37 @@ class ExecutionHandler(BaseHandler):
             ).SerializeToString(),
         )
         if err is None:
-            comm_res = await comm_handler.post(
-                comm_lib.CommRequest(
-                    body=req_data.request_payload,
-                    headers={},
-                    is_connect=True,
-                    public_path=None,
-                    query_params={
-                        server_lib.QueryParamKey.FUNCTION_ID.value: req_data.function_slug,
-                        server_lib.QueryParamKey.STEP_ID.value: req_data.step_id,
-                    },
-                    raw_request=req_data,
-                    request_url="",
-                    serve_origin=None,
-                    serve_path=None,
-                )
+            comm_request = comm_lib.CommRequest(
+                body=req_data.request_payload,
+                headers={},
+                is_connect=True,
+                public_path=None,
+                query_params={
+                    server_lib.QueryParamKey.FUNCTION_ID.value: req_data.function_slug,
+                    server_lib.QueryParamKey.STEP_ID.value: req_data.step_id,
+                },
+                raw_request=req_data,
+                request_url="",
+                serve_origin=None,
+                serve_path=None,
             )
+
+            if self._main_loop is not None:
+                # Dispatch user function execution to the main event loop.
+                # This allows async functions to run on the user's event
+                # loop while WebSocket operations run in this background
+                # thread.
+                coro = typing.cast(
+                    typing.Coroutine[
+                        typing.Any, typing.Any, comm_lib.CommResponse
+                    ],
+                    comm_handler.post(comm_request),
+                )
+                future = asyncio.run_coroutine_threadsafe(coro, self._main_loop)
+                comm_res = await asyncio.wrap_future(future)
+            else:
+                # Isolation disabled - run on WebSocket event loop.
+                comm_res = await comm_handler.post(comm_request)
         else:
             self._logger.error("Execution failed", extra={"error": str(err)})
             comm_res = comm_lib.CommResponse.from_error(self._logger, err)

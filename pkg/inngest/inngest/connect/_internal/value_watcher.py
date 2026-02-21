@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 import typing
 
 T = typing.TypeVar("T")
@@ -10,9 +11,7 @@ S = typing.TypeVar("S")
 class ValueWatcher(typing.Generic[T]):
     """
     A container that allows consumers to reactively wait for value changes.
-
-    This pattern enables clean coordination between handlers without tight
-    coupling or polling.
+    Thread-safe for value access and callback registration.
     """
 
     _on_changes: list[typing.Callable[[T, T], None]]
@@ -29,13 +28,24 @@ class ValueWatcher(typing.Generic[T]):
             on_change: Called when the value changes. Good for debug logging.
         """
 
+        self._lock = threading.Lock()
         self._on_changes = []
         if on_change:
             self._on_changes.append(on_change)
 
-        # Every watcher gets its own queue. The queue is used to communicate
-        # value changes, so its items are tuples of the old and new values.
-        self._watch_queues: list[asyncio.Queue[tuple[T, T]]] = []
+        # Every watcher gets its own (loop, queue) pair. The queue communicates
+        # value changes as tuples of (old, new). Storing the loop allows the
+        # setter to use `call_soon_threadsafe`, making notifications work across
+        # threads without polling.
+
+        # Every watcher gets its own (loop, queue) pair. Storing the loop allows
+        # the setter to use `call_soon_threadsafe`, making notifications work
+        # across threads without polling.
+        #
+        # The queue's type is a tuple that of the changed value: (old, new).
+        self._watch_queues: list[
+            tuple[asyncio.AbstractEventLoop, asyncio.Queue[tuple[T, T]]]
+        ] = []
 
         # Hold references to fire-and-forget tasks to prevent GC.
         self._background_tasks: set[asyncio.Task[T]] = set()
@@ -44,21 +54,50 @@ class ValueWatcher(typing.Generic[T]):
 
     @property
     def value(self) -> T:
-        return self._value
+        with self._lock:
+            return self._value
 
     @value.setter
     def value(self, new_value: T) -> None:
-        if new_value == self._value:
-            return
+        with self._lock:
+            if new_value == self._value:
+                return
 
-        old_value = self._value
-        self._value = new_value
+            old_value = self._value
+            self._value = new_value
 
-        # Notify all watchers.
-        for queue in self._watch_queues:
-            queue.put_nowait((old_value, new_value))
+            # Snapshot lists under lock to avoid iteration issues
+            queues = list(self._watch_queues)
+            callbacks = list(self._on_changes)
 
-        for on_change in self._on_changes:
+        # Notify all watchers outside the lock to avoid deadlock.
+        for loop, queue in queues:
+            try:
+                # We use `call_soon_threadsafe` instead of direct
+                # `queue.put_nowait` because the setter may run on a different
+                # thread than the waiter's event loop. A direct `put_nowait`
+                # would place the item in the queue and schedule the callback
+                # via `call_soon`, but `call_soon` doesn't write to the event
+                # loop's self-pipe, so the loop stays blocked in `select()`
+                # until something else happens to wake it.
+                #
+                # In other words, the notification will _eventually_ reflect in
+                # the other thread's event loop, but it may take a while.
+                # Something _else_ needs to wake the other thread's event loop
+                # for it to see the notification. This manifests in
+                # significantly longer integration test times (orders of
+                # magnitude slower).
+                #
+                # `call_soon_threadsafe` pokes the selector, ensuring immediate
+                # wake-up.  This also works correctly in the single-thread case.
+                loop.call_soon_threadsafe(
+                    queue.put_nowait, (old_value, new_value)
+                )
+            except RuntimeError:
+                # Target event loop is closed.
+                pass
+
+        for on_change in callbacks:
             on_change(old_value, new_value)
 
     def on_change(self, on_change: typing.Callable[[T, T], None]) -> None:
@@ -69,7 +108,8 @@ class ValueWatcher(typing.Generic[T]):
             on_change: The callback to call when the value changes.
         """
 
-        self._on_changes.append(on_change)
+        with self._lock:
+            self._on_changes.append(on_change)
 
     def on_value(self, value: T, cb: typing.Callable[[], None]) -> None:
         """
@@ -214,13 +254,22 @@ class ValueWatcher(typing.Generic[T]):
         new values.
         """
 
+        loop = asyncio.get_running_loop()
         queue = asyncio.Queue[tuple[T, T]]()
-        self._watch_queues.append(queue)
+        with self._lock:
+            self._watch_queues.append((loop, queue))
 
         return _WatchContextManager(
-            on_exit=lambda: self._watch_queues.remove(queue),
+            on_exit=lambda: self._remove_queue(queue),
             queue=queue,
         )
+
+    def _remove_queue(self, queue: asyncio.Queue[tuple[T, T]]) -> None:
+        """Remove a queue from the watch list in a thread-safe manner."""
+        with self._lock:
+            self._watch_queues = [
+                entry for entry in self._watch_queues if entry[1] is not queue
+            ]
 
 
 class _WatchContextManager(typing.Generic[T]):
