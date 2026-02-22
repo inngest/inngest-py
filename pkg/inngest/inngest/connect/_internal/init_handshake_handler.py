@@ -8,7 +8,7 @@ import pydantic_core
 
 from inngest._internal import const, errors, server_lib, types
 
-from . import connect_pb2, ws_utils
+from . import async_lib, connect_pb2, ws_utils
 from .base_handler import BaseHandler
 from .models import ConnectionState, State
 
@@ -72,16 +72,13 @@ class InitHandshakeHandler(BaseHandler):
 
         if self._send_data_task is not None:
             self._send_data_task.cancel()
+        if self._reconnect_task is not None:
+            self._reconnect_task.cancel()
 
     async def closed(self) -> None:
         await super().closed()
-
-        if self._send_data_task is not None:
-            try:
-                await self._send_data_task
-            except asyncio.CancelledError:
-                # Expected.
-                pass
+        await async_lib.cancel_and_wait(self._send_data_task)
+        await async_lib.cancel_and_wait(self._reconnect_task)
 
     async def _reconnect_watcher(self, closed_event: asyncio.Event) -> None:
         while closed_event.is_set() is False:

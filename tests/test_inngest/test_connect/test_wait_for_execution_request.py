@@ -1,5 +1,6 @@
 import asyncio
 import json
+import threading
 
 import inngest
 import test_core
@@ -21,7 +22,7 @@ class TestWaitForExecutionRequest(BaseTest):
         )
         event_name = test_core.random_suffix("event")
         state = test_core.BaseState()
-        closed_event = asyncio.Event()
+        closed_event = threading.Event()
 
         @client.create_function(
             fn_id="fn",
@@ -32,15 +33,14 @@ class TestWaitForExecutionRequest(BaseTest):
             state.run_id = ctx.run_id
 
             # Suspend the function until the connection is closing.
-            await closed_event.wait()
+            await asyncio.to_thread(closed_event.wait)
 
             return "Hello"
 
         conn = connect([(client, [fn])])
         states = collect_states(conn)
         task = asyncio.create_task(conn.start())
-        self.addCleanup(conn.closed)
-        self.addCleanup(task.cancel)
+        self.addConnCleanup(conn, task)
         await conn.wait_for_state(ConnectionState.ACTIVE)
 
         await client.send(inngest.Event(name=event_name))
@@ -61,7 +61,7 @@ class TestWaitForExecutionRequest(BaseTest):
         assert run.output is not None
         assert json.loads(run.output) == "Hello"
 
-        await conn.closed()
+        await task
         assert states == [
             ConnectionState.CONNECTING,
             ConnectionState.ACTIVE,

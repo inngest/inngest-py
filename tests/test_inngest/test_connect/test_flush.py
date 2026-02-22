@@ -48,8 +48,7 @@ class TestFlush(BaseTest):
         # Startup.
         conn = connect([(client, [fn])])
         task = asyncio.create_task(conn.start())
-        self.addCleanup(conn.close, wait=True)
-        self.addCleanup(task.cancel)
+        self.addConnCleanup(conn, task)
         await conn.wait_for_state(ConnectionState.ACTIVE)
 
         # Trigger the function.
@@ -57,7 +56,7 @@ class TestFlush(BaseTest):
         run_id = await state.wait_for_run_id()
 
         # Abort the WS conn.
-        await proxies.ws_proxy.abort_conns()
+        proxies.ws_proxy.abort_conns()
         state.ws_aborted = True
 
         # Wait for the run to complete.
@@ -107,8 +106,7 @@ class TestFlush(BaseTest):
         # Startup.
         conn = connect([(client, [fn])])
         task = asyncio.create_task(conn.start())
-        self.addCleanup(conn.close, wait=True)
-        self.addCleanup(task.cancel)
+        self.addConnCleanup(conn, task)
         await conn.wait_for_state(ConnectionState.ACTIVE)
 
         # Trigger the function.

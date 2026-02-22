@@ -198,6 +198,17 @@ class TestValueWatcher(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(changes, [(0, 1), (1, 2)])
 
+    async def test_watch_returns_queue(self) -> None:
+        """
+        `_watch` must return a Queue, not an async generator. An async
+        generator causes "Task was destroyed but it is pending!" warnings
+        when the event loop closes shortly after `wait_for` completes.
+        """
+
+        watcher = ValueWatcher(0)
+        with watcher._watch() as result:
+            self.assertIsInstance(result, asyncio.Queue)
+
     @pytest.mark.timeout(2, method="thread")
     async def test_cross_thread_notification(self) -> None:
         """

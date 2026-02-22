@@ -210,17 +210,16 @@ class ValueWatcher(typing.Generic[T]):
             return self._value
 
         async def _wait() -> T:
-            with self._watch() as watch:
+            with self._watch() as queue:
                 # Re-check after queue registration to close the gap
                 # between the fast path above and the queue being live.
                 if immediate and condition(self._value):
                     return self._value
 
-                async for _, new in watch:
+                while True:
+                    _, new = await queue.get()
                     if condition(new):
                         return new
-
-            raise AssertionError("unreachable")
 
         return await asyncio.wait_for(_wait(), timeout=timeout)
 
@@ -237,11 +236,9 @@ class ValueWatcher(typing.Generic[T]):
         """
 
         async def _wait() -> T:
-            with self._watch() as watch:
-                async for _, new in watch:
-                    return new
-
-            raise AssertionError("unreachable")
+            with self._watch() as queue:
+                _, new = await queue.get()
+                return new
 
         return await asyncio.wait_for(_wait(), timeout=timeout)
 
@@ -250,8 +247,8 @@ class ValueWatcher(typing.Generic[T]):
         Watch for all changes to the value. This method returns a context
         manager so it must be used in a `with` statement.
 
-        Its return value is an async generator that yields tuples of the old and
-        new values.
+        Its return value is a queue that yields tuples of the old and new
+        values.
         """
 
         loop = asyncio.get_running_loop()
@@ -277,8 +274,7 @@ class _WatchContextManager(typing.Generic[T]):
     Context manager that's used to automatically delete a queue when it's no
     longer being watched.
 
-    Its return value is an async generator that yields tuples of the old and
-    new values.
+    Returns a queue that yields tuples of the old and new values.
     """
 
     def __init__(
@@ -289,12 +285,10 @@ class _WatchContextManager(typing.Generic[T]):
         self._on_exit = on_exit
         self._queue = queue
 
-    def __enter__(self) -> typing.AsyncGenerator[tuple[T, T], None]:
-        async def _watch() -> typing.AsyncGenerator[tuple[T, T], None]:
-            while True:
-                yield await self._queue.get()
-
-        return _watch()
+    def __enter__(self) -> asyncio.Queue[tuple[T, T]]:
+        # IMPORTANT: Do not return an async generator. That can lead to "Task
+        # was destroyed but it is pending!" warnings when the event loop closes.
+        return self._queue
 
     def __exit__(
         self,

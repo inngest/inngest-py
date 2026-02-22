@@ -7,6 +7,21 @@ import typing
 from inngest._internal import types
 
 
+async def cancel_and_wait(task: asyncio.Task[typing.Any] | None) -> None:
+    """
+    Cancel a task and wait for its cancellation to complete.
+    """
+
+    if task is None:
+        return
+
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+
 def run_sync(
     coro: typing.Coroutine[typing.Any, typing.Any, types.T],
 ) -> types.MaybeError[concurrent.futures.Future[types.T]]:

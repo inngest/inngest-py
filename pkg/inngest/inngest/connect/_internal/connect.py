@@ -5,7 +5,7 @@ import typing
 
 import inngest
 
-from .connection import WorkerConnection, _WebSocketWorkerConnection
+from .connection import WorkerConnection, WorkerConnectionImpl
 
 
 def connect(
@@ -27,7 +27,7 @@ def connect(
         shutdown_signals: A list of graceful shutdown signals to handle. Defaults to [SIGTERM, SIGINT].
         max_worker_concurrency: The maximum number of worker concurrency to use. Defaults to None.
     """
-    return _WebSocketWorkerConnection(
+    return WorkerConnectionImpl(
         apps=apps,
         instance_id=instance_id,
         rewrite_gateway_endpoint=rewrite_gateway_endpoint,

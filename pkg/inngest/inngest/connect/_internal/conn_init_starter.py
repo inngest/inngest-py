@@ -6,7 +6,7 @@ import httpx
 
 from inngest._internal import net, server_lib, types
 
-from . import connect_pb2
+from . import async_lib, connect_pb2
 from .base_handler import BaseHandler
 from .consts import CONN_INIT_RETRY_INTERVAL_SEC, MAX_CONN_INIT_ATTEMPTS
 from .errors import NonRetryableError
@@ -92,18 +92,15 @@ class ConnInitHandler(BaseHandler):
     def close(self) -> None:
         self.closed_event.set()
 
+        if self._initial_request_task is not None:
+            self._initial_request_task.cancel()
         if self._reconnect_watcher_task is not None:
             self._reconnect_watcher_task.cancel()
 
     async def closed(self) -> None:
         await self.closed_event.wait()
-
-        if self._reconnect_watcher_task is not None:
-            try:
-                await self._reconnect_watcher_task
-            except asyncio.CancelledError:
-                # Expected.
-                pass
+        await async_lib.cancel_and_wait(self._initial_request_task)
+        await async_lib.cancel_and_wait(self._reconnect_watcher_task)
 
     async def _send_start_request(self) -> None:
         err: Exception | None = None
@@ -125,7 +122,7 @@ class ConnInitHandler(BaseHandler):
             self._state.conn_state.value = ConnectionState.CONNECTING
 
             req = connect_pb2.StartRequest(
-                exclude_gateways=self._state.get_exclude_gateways(),
+                exclude_gateways=self._state.exclude_gateways,
             )
 
             url = urllib.parse.urljoin(self._api_origin, "/v0/connect/start")
@@ -196,7 +193,7 @@ class ConnInitHandler(BaseHandler):
                         },
                     )
 
-                    self._state.set_conn_id(start_resp.connection_id)
+                    self._state.conn_id = start_resp.connection_id
 
                     final_endpoint = start_resp.gateway_endpoint
                     if self._rewrite_gateway_endpoint:

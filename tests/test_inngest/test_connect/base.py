@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import unittest
 
@@ -12,7 +13,7 @@ from inngest.connect import ConnectionState
 from inngest.connect._internal import connect_pb2
 from inngest.connect._internal.connection import (
     WorkerConnection,
-    _WebSocketWorkerConnection,  # pyright: ignore[reportPrivateUsage]
+    WorkerConnectionImpl,  # pyright: ignore[reportPrivateUsage]
 )
 from inngest.experimental.dev_server import dev_server
 
@@ -34,12 +35,30 @@ class _Request:
 
 @pytest.mark.timeout(5, method="thread")
 class BaseTest(unittest.IsolatedAsyncioTestCase):
+    def addConnCleanup(
+        self,
+        conn: WorkerConnection,
+        task: asyncio.Task[None],
+    ) -> None:
+        """
+        Register a cleanup that closes a connection and awaits its start task.
+        """
+
+        async def _close() -> None:
+            await conn.close()
+            try:
+                await task
+            except Exception:
+                pass
+
+        self.addCleanup(_close)
+
     async def create_proxies(self) -> _Proxies:
         ws_proxy = test_core.ws_proxy.WebSocketProxy(
             f"ws://0.0.0.0:{dev_server.server.port + 1}/v0/connect"
         )
         self.addCleanup(ws_proxy.stop)
-        await ws_proxy.start()
+        ws_proxy.start()
 
         requests: list[_Request] = []
 
@@ -91,7 +110,7 @@ class BaseTest(unittest.IsolatedAsyncioTestCase):
 
 def collect_states(conn: WorkerConnection) -> list[ConnectionState]:
     states: list[ConnectionState] = []
-    if isinstance(conn, _WebSocketWorkerConnection):
+    if isinstance(conn, WorkerConnectionImpl):
         conn._state.conn_state.on_change(lambda _, state: states.append(state))  # pyright: ignore[reportPrivateUsage]
     states.append(conn.get_state())
     return states
