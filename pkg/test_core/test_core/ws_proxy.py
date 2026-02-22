@@ -33,7 +33,7 @@ def _on_proxy_loop(
         )
         future.result(timeout=5)
 
-    return wrapper  # type: ignore[return-value]
+    return wrapper
 
 
 class WebSocketProxy:

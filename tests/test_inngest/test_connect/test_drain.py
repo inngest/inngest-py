@@ -88,7 +88,5 @@ class TestDrain(BaseTest):
             ConnectionState.ACTIVE,
             ConnectionState.RECONNECTING,
             ConnectionState.CONNECTING,
-            ConnectionState.RECONNECTING,
-            ConnectionState.CONNECTING,
             ConnectionState.ACTIVE,
         ]

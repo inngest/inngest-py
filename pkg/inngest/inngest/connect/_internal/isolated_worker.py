@@ -185,7 +185,7 @@ class IsolatedWorker:
             self._logger.debug("Connection error", extra={"error": str(e)})
             disconnect = True
 
-        if disconnect is True:
+        if disconnect is True and self._state.ws.value is not None:
             self._state.close_ws()
         return None
 
