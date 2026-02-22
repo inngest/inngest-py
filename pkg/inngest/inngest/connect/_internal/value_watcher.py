@@ -33,16 +33,9 @@ class ValueWatcher(typing.Generic[T]):
         if on_change:
             self._on_changes.append(on_change)
 
-        # Every watcher gets its own (loop, queue) pair. The queue communicates
-        # value changes as tuples of (old, new). Storing the loop allows the
-        # setter to use `call_soon_threadsafe`, making notifications work across
-        # threads without polling.
-
-        # Every watcher gets its own (loop, queue) pair. Storing the loop allows
-        # the setter to use `call_soon_threadsafe`, making notifications work
-        # across threads without polling.
-        #
-        # The queue's type is a tuple that of the changed value: (old, new).
+        # Every watcher gets its own (loop, queue) pair. Storing the loop lets
+        # the setter use `call_soon_threadsafe` for cross-thread notification.
+        # Queue items are (old, new) tuples.
         self._watch_queues: list[
             tuple[asyncio.AbstractEventLoop, asyncio.Queue[tuple[T, T]]]
         ] = []
@@ -73,23 +66,10 @@ class ValueWatcher(typing.Generic[T]):
         # Notify all watchers outside the lock to avoid deadlock.
         for loop, queue in queues:
             try:
-                # We use `call_soon_threadsafe` instead of direct
-                # `queue.put_nowait` because the setter may run on a different
-                # thread than the waiter's event loop. A direct `put_nowait`
-                # would place the item in the queue and schedule the callback
-                # via `call_soon`, but `call_soon` doesn't write to the event
-                # loop's self-pipe, so the loop stays blocked in `select()`
-                # until something else happens to wake it.
-                #
-                # In other words, the notification will _eventually_ reflect in
-                # the other thread's event loop, but it may take a while.
-                # Something _else_ needs to wake the other thread's event loop
-                # for it to see the notification. This manifests in
-                # significantly longer integration test times (orders of
-                # magnitude slower).
-                #
-                # `call_soon_threadsafe` pokes the selector, ensuring immediate
-                # wake-up.  This also works correctly in the single-thread case.
+                # `call_soon_threadsafe` wakes the target loop's selector
+                # immediately. A plain `put_nowait` wouldn't poke the
+                # self-pipe, so a cross-thread waiter could stall until
+                # something else wakes its loop.
                 loop.call_soon_threadsafe(
                     queue.put_nowait, (old_value, new_value)
                 )

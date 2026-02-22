@@ -47,18 +47,21 @@ class IsolatedWorker:
         handlers: list[BaseHandler],
         state: State,
         logger: types.Logger,
-        handling_message_count: ValueWatcher[int],
     ) -> None:
         self._handlers = handlers
         self._state = state
         self._logger = logger
-        self._handling_message_count = handling_message_count
+
+        # Track in-flight messages to prevent closing mid-handling.
+        self._handling_message_count = ValueWatcher(0)
 
         # Strong refs to fire-and-forget tasks so they aren't GC'd.
         self._background_tasks: set[asyncio.Task[typing.Any]] = set()
 
     async def run(self) -> None:
-        """Reconnect loop: connects, reads messages, reconnects on failure."""
+        """
+        Reconnect loop: connects, reads messages, reconnects on failure.
+        """
 
         self._event_loop_keep_alive_task = _event_loop_keep_alive()
 
@@ -124,7 +127,9 @@ class IsolatedWorker:
         self,
         ws: websockets.ClientConnection,
     ) -> types.MaybeError[None]:
-        """Read messages from the WS and dispatch to all handlers."""
+        """
+        Read messages from the WS and dispatch to all handlers.
+        """
 
         disconnect = False
         try:
@@ -133,6 +138,7 @@ class IsolatedWorker:
                     return UnreachableError("Missing conn init")
 
                 if not isinstance(raw_msg, bytes):
+                    # Unreachable
                     self._logger.debug(
                         "Received non-bytes message", extra={"message": raw_msg}
                     )
@@ -174,7 +180,7 @@ class IsolatedWorker:
                 )
                 disconnect = True
         except websockets.exceptions.ConnectionClosedError as e:
-            self._logger.debug(
+            self._logger.error(
                 "Connection closed abnormally", extra={"error": str(e)}
             )
             disconnect = True
@@ -182,7 +188,7 @@ class IsolatedWorker:
             self._logger.debug("Connection closed normally")
             disconnect = True
         except Exception as e:
-            self._logger.debug("Connection error", extra={"error": str(e)})
+            self._logger.error("Connection error", extra={"error": str(e)})
             disconnect = True
 
         if disconnect is True and self._state.ws.value is not None:
@@ -206,8 +212,7 @@ class IsolatedWorker:
         ws = self._state.ws.value
         if ws is not None:
             try:
-                # Send WORKER_PAUSE to the Inngest Server, telling it to stop
-                # sending execution requests.
+                # Tell the Inngest Server to stop sending execution requests.
                 await ws.send(
                     connect_pb2.ConnectMessage(
                         kind=connect_pb2.GatewayMessageType.WORKER_PAUSE,

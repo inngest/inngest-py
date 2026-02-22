@@ -8,7 +8,7 @@ Thread ownership:
     This module contains only main-thread concerns: public API, signal
     handling, thread creation, and bridging into the internal thread.
     Internal-thread logic (WebSocket lifecycle, message handling, shutdown
-    coordination) lives in ``worker_loop.py``.
+    coordination) lives in `isolated_worker.py`.
 """
 
 from __future__ import annotations
@@ -101,9 +101,6 @@ class WorkerConnectionImpl(WorkerConnection):
         max_worker_concurrency: int | None = None,
         _test_only_heartbeat_interval_sec: int = HEARTBEAT_INTERVAL_SEC,
     ) -> None:
-        # Used to ensure that no messages are being handled when we fully close.
-        self._handling_message_count = ValueWatcher(0)
-
         if len(apps) == 0:
             raise Exception("no apps provided")
         default_client = apps[0][0]
@@ -245,7 +242,6 @@ class WorkerConnectionImpl(WorkerConnection):
             handlers=self._handlers,
             state=self._state,
             logger=self._logger,
-            handling_message_count=self._handling_message_count,
         )
 
     def get_connection_id(self) -> str:
@@ -286,9 +282,7 @@ class WorkerConnectionImpl(WorkerConnection):
 
         # Block until the connection reaches CLOSED state.
         await self._state.conn_state.wait_for(ConnectionState.CLOSED)
-
-        if self._thread is not None:
-            await asyncio.to_thread(self._thread.join)
+        await asyncio.to_thread(self._thread.join)
 
         if thread_exc is not None:
             raise thread_exc
