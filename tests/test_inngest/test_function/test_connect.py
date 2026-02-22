@@ -66,7 +66,7 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
     def tearDownClass(cls) -> None:
         super().tearDownClass()
         if isinstance(cls.conn, WorkerConnectionImpl):
-            cls.conn._close()
+            cls.conn._close()  # pyright: ignore[reportPrivateUsage]
             cls._conn_thread.join(timeout=5)
 
 
