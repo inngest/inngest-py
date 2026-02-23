@@ -21,7 +21,7 @@ class TestDrain(BaseTest):
 
         client = inngest.Inngest(
             api_base_url=proxies.http_proxy.origin,
-            app_id="app",
+            app_id=test_core.random_suffix("app"),
             is_production=False,
         )
 

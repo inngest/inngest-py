@@ -114,6 +114,7 @@ class TestWaitForExecutionRequest(BaseTest):
             )
 
         proxy = http_proxy.Proxy(on_request).start()
+        self.addCleanup(proxy.stop)
 
         client = inngest.Inngest(
             api_base_url=proxy.origin,

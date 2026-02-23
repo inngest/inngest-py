@@ -186,15 +186,15 @@ class ValueWatcher(typing.Generic[T]):
         """
 
         # Fast path: no task needed if the value already matches.
-        if immediate and condition(self._value):
-            return self._value
+        if immediate and condition(self.value):
+            return self.value
 
         async def _wait() -> T:
             with self._watch() as queue:
                 # Re-check after queue registration to close the gap
                 # between the fast path above and the queue being live.
-                if immediate and condition(self._value):
-                    return self._value
+                if immediate and condition(self.value):
+                    return self.value
 
                 while True:
                     _, new = await queue.get()

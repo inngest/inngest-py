@@ -27,7 +27,9 @@ def _on_proxy_loop(
         self = args[0]
         assert isinstance(self, WebSocketProxy)
         if self._loop is None:
-            return
+            raise RuntimeError(
+                "WebSocketProxy loop is None; was start() called?"
+            )
         future = asyncio.run_coroutine_threadsafe(
             fn(*args, **kwargs), self._loop
         )

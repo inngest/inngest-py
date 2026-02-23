@@ -20,7 +20,7 @@ class TestReconnect(BaseTest):
 
         client = inngest.Inngest(
             api_base_url=proxies.http_proxy.origin,
-            app_id="app",
+            app_id=test_core.random_suffix("app"),
             is_production=False,
         )
 
@@ -71,7 +71,7 @@ class TestReconnect(BaseTest):
 
         client = inngest.Inngest(
             api_base_url=proxies.http_proxy.origin,
-            app_id="app",
+            app_id=test_core.random_suffix("app"),
             is_production=False,
         )
 
@@ -88,18 +88,21 @@ class TestReconnect(BaseTest):
         self.addConnCleanup(conn, task)
 
         # Initial connection.
-        await conn.wait_for_state(ConnectionState.ACTIVE)
+        await asyncio.wait_for(
+            conn.wait_for_state(ConnectionState.ACTIVE),
+            timeout=2,
+        )
         await test_core.wait_for_len(lambda: proxies.requests, 1)
 
         # Abort all WS conns. This avoids graceful shutdown.
         proxies.ws_proxy.abort_conns()
 
-        # Ensure we enter the reconnecting state.
-        await conn.wait_for_state(ConnectionState.RECONNECTING)
-
         # Post-reconnect connection.
         await test_core.wait_for_len(lambda: proxies.requests, 2)
-        await conn.wait_for_state(ConnectionState.ACTIVE)
+        await asyncio.wait_for(
+            conn.wait_for_state(ConnectionState.ACTIVE),
+            timeout=2,
+        )
 
         assert states == [
             ConnectionState.CONNECTING,
@@ -121,7 +124,7 @@ class TestReconnect(BaseTest):
 
         client = inngest.Inngest(
             api_base_url=proxies.http_proxy.origin,
-            app_id="app",
+            app_id=test_core.random_suffix("app"),
             is_production=False,
         )
 

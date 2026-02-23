@@ -135,7 +135,9 @@ class IsolatedWorker:
         try:
             async for raw_msg in ws:
                 if self._state.conn_init.value is None:
-                    return UnreachableError("Missing conn init")
+                    # Connection is being torn down (e.g. drain). Stop
+                    # processing messages.
+                    return None
 
                 if not isinstance(raw_msg, bytes):
                     # Unreachable
@@ -156,7 +158,10 @@ class IsolatedWorker:
 
                 conn_id = self._state.conn_id
                 if conn_id is None:
-                    return UnreachableError("Missing connection ID")
+                    # Unreachable
+                    self._logger.error("Missing connection ID")
+                    self._state.close_ws()
+                    return None
 
                 self._handling_message_count.value += 1
                 try:
@@ -282,7 +287,7 @@ async def _wait_for_gateway_endpoint(
 
     # Kill the losers
     for t in pending_tasks:
-        t.cancel()
+        await async_lib.cancel_and_wait(t)
 
     for t in done_tasks:
         # Need to cast because Mypy doesn't understand the type (it thinks it's
