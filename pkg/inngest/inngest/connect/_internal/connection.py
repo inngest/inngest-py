@@ -29,8 +29,9 @@ import threading
 import typing
 
 import httpx
-import inngest
 import websockets
+
+import inngest
 from inngest._internal import comm_lib, const, net, server_lib, types
 
 from . import async_lib, connect_pb2

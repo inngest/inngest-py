@@ -5,6 +5,7 @@ import re
 
 import psutil
 import pydantic_core
+
 from inngest._internal import const, errors, server_lib, types
 
 from . import connect_pb2, ws_utils
