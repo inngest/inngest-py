@@ -410,7 +410,9 @@ class Inngest:
                 raw_request=None,
                 timings=None,
             )
-            await middleware.before_send_events(events)
+            err = await middleware.before_send_events(events)
+            if isinstance(err, Exception):
+                raise err
 
         req = self._build_send_request(events)
         if isinstance(req, Exception):

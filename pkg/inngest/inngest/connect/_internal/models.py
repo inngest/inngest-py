@@ -4,21 +4,23 @@ import dataclasses
 import enum
 
 import websockets
-
 from inngest._internal import server_lib
 
 from . import connect_pb2
 from .value_watcher import ValueWatcher
 
 
-@dataclasses.dataclass
 class AppConfig:
     functions: list[server_lib.FunctionConfig]
     version: str | None
 
 
 @dataclasses.dataclass
-class _State:
+class State:
+    """
+    Shared state for Connect.
+    """
+
     conn_id: str | None
     conn_init: ValueWatcher[tuple[connect_pb2.AuthData, str] | None]
     conn_state: ValueWatcher[ConnectionState]

@@ -3,8 +3,8 @@ import unittest.mock
 
 import test_core
 
-from .heartbeat_handler import _HeartbeatHandler
-from .models import ConnectionState, _State
+from .heartbeat_handler import HeartbeatHandler
+from .models import ConnectionState, State
 from .value_watcher import ValueWatcher
 
 
@@ -22,9 +22,9 @@ class TestHeartbeatHandle(unittest.IsolatedAsyncioTestCase):
 
         mock_ws = _MockWS()
 
-        handler = _HeartbeatHandler(
+        handler = HeartbeatHandler(
             logger=unittest.mock.Mock(),
-            state=_State(
+            state=State(
                 conn_id=None,
                 conn_init=ValueWatcher(None),
                 conn_state=ValueWatcher(ConnectionState.ACTIVE),

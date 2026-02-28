@@ -10,11 +10,28 @@ class _BufferItem:
     timestamp: float
 
 
-class _SizeConstrainedBuffer:
+class SizeConstrainedBuffer:
+    """
+    Buffer for storing execution replies awaiting server acknowledgment.
+
+    If the WebSocket connection drops before acknowledgment, these messages can
+    be flushed via HTTP as a fallback.
+
+    Features:
+        - Maximum size enforcement: Oldest items are evicted when full
+        - Timestamp tracking: Items can be retrieved by age for TTL-based flushing
+        - O(1) add/delete/get operations using OrderedDict
+
+    Used by _ExecutionHandler to implement reliable message delivery even
+    across connection interruptions.
+    """
+
     def __init__(self, max_size_bytes: int):
         """
-        A size-constrained buffer. The total size of all items' data never
-        exceeds the max size.
+        Initialize the buffer with a maximum size constraint.
+
+        Args:
+            max_size_bytes: Maximum total size of all items' data.
         """
 
         self._current_size = 0

@@ -1,19 +1,39 @@
 import asyncio
-import dataclasses
+import enum
 import platform
 import re
 
 import psutil
 import pydantic_core
-
 from inngest._internal import const, errors, server_lib, types
 
 from . import connect_pb2, ws_utils
-from .base_handler import _BaseHandler
-from .models import AppConfig, ConnectionState, _State
+from .base_handler import BaseHandler
+from .models import AppConfig, ConnectionState, State
 
 
-class _InitHandshakeHandler(_BaseHandler):
+class InitHandshakeHandler(BaseHandler):
+    """
+    Implements the handshake protocol after WebSocket connection is established.
+
+    The handshake synchronizes SDK configuration with the server.
+
+    Handshake State Machine:
+        AWAITING_HELLO (initial state)
+            |
+            v  [Receive GATEWAY_HELLO]
+        AWAITING_SYNC_COMPLETE
+            |
+            v  [Send WORKER_CONNECT, wait for internal sync]
+        AWAITING_READY
+            |
+            v  [Receive GATEWAY_CONNECTION_READY]
+        COMPLETE
+
+    Reconnection:
+        On reconnect, the handshake state is reset and repeated.
+    """
+
     _closed_event: asyncio.Event | None = None
     _send_data_task: asyncio.Task[None] | None = None
     _reconnect_task: asyncio.Task[None] | None = None
@@ -21,7 +41,7 @@ class _InitHandshakeHandler(_BaseHandler):
     def __init__(
         self,
         logger: types.Logger,
-        state: _State,
+        state: State,
         app_configs: dict[str, AppConfig],
         env: str | None,
         instance_id: str,
@@ -31,7 +51,7 @@ class _InitHandshakeHandler(_BaseHandler):
         self._env = env
         self._instance_id = instance_id
         self._logger = logger
-        self._kind_state = _KindState()
+        self._handshake_state = _HandshakeState.AWAITING_HELLO
         self._state = state
         self._max_worker_concurrency = max_worker_concurrency
 
@@ -66,8 +86,8 @@ class _InitHandshakeHandler(_BaseHandler):
         while closed_event.is_set() is False:
             await self._state.conn_init.wait_for(None, immediate=False)
 
-            # Reset the kind state so that we redo initialization.
-            self._kind_state = _KindState()
+            # Reset the handshake state so that we redo initialization.
+            self._handshake_state = _HandshakeState.AWAITING_HELLO
 
     def handle_msg(
         self,
@@ -75,16 +95,20 @@ class _InitHandshakeHandler(_BaseHandler):
         auth_data: connect_pb2.AuthData,
         connection_id: str,
     ) -> None:
-        if self._kind_state.GATEWAY_HELLO is False:
+        if self._handshake_state == _HandshakeState.AWAITING_HELLO:
             if msg.kind != connect_pb2.GatewayMessageType.GATEWAY_HELLO:
                 self._logger.error("Expected GATEWAY_HELLO")
                 return
-            self._kind_state.GATEWAY_HELLO = True
+
+            self._logger.debug(
+                "Handshake: AWAITING_HELLO -> AWAITING_SYNC_COMPLETE"
+            )
+            self._handshake_state = _HandshakeState.AWAITING_SYNC_COMPLETE
 
             # Reset because we were told to redo the initial handshake
             self._state.init_handshake_complete.value = False
 
-        if self._kind_state.SYNCED is False:
+        if self._handshake_state == _HandshakeState.AWAITING_SYNC_COMPLETE:
             self._logger.debug("Syncing")
 
             if (
@@ -102,7 +126,7 @@ class _InitHandshakeHandler(_BaseHandler):
             )
             return
 
-        if self._kind_state.GATEWAY_CONNECTION_READY is False:
+        if self._handshake_state == _HandshakeState.AWAITING_READY:
             if (
                 msg.kind
                 != connect_pb2.GatewayMessageType.GATEWAY_CONNECTION_READY
@@ -127,7 +151,8 @@ class _InitHandshakeHandler(_BaseHandler):
                     extra={"value": extend_lease_interval},
                 )
 
-            self._kind_state.GATEWAY_CONNECTION_READY = True
+            self._logger.debug("Handshake: AWAITING_READY -> COMPLETE")
+            self._handshake_state = _HandshakeState.COMPLETE
             self._state.conn_state.value = ConnectionState.ACTIVE
             self._state.init_handshake_complete.value = True
 
@@ -168,15 +193,27 @@ class _InitHandshakeHandler(_BaseHandler):
             )
             return
 
-        self._kind_state.SYNCED = True
+        self._logger.debug(
+            "Handshake: AWAITING_SYNC_COMPLETE -> AWAITING_READY"
+        )
+        self._handshake_state = _HandshakeState.AWAITING_READY
         return None
 
 
-@dataclasses.dataclass
-class _KindState:
-    GATEWAY_HELLO: bool = False
-    GATEWAY_CONNECTION_READY: bool = False
-    SYNCED: bool = False
+class _HandshakeState(enum.Enum):
+    """
+    Explicit state machine for the WebSocket handshake protocol.
+
+    State transitions:
+        AWAITING_HELLO -> AWAITING_SYNC_COMPLETE  (on receiving GATEWAY_HELLO)
+        AWAITING_SYNC_COMPLETE -> AWAITING_READY  (after sending WORKER_CONNECT)
+        AWAITING_READY -> COMPLETE                (on receiving GATEWAY_CONNECTION_READY)
+    """
+
+    AWAITING_HELLO = enum.auto()
+    AWAITING_SYNC_COMPLETE = enum.auto()
+    AWAITING_READY = enum.auto()
+    COMPLETE = enum.auto()
 
 
 def _create_sync_message(

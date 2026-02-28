@@ -9,7 +9,10 @@ S = typing.TypeVar("S")
 
 class ValueWatcher(typing.Generic[T]):
     """
-    A container that allows consumers to watch for changes to the wrapped value.
+    A container that allows consumers to reactively wait for value changes.
+
+    This pattern enables clean coordination between handlers without tight
+    coupling or polling.
     """
 
     _on_changes: list[typing.Callable[[T, T], None]]
