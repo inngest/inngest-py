@@ -14,7 +14,7 @@ import websockets
 
 from inngest._internal import types
 
-from . import async_lib, connect_pb2
+from . import async_lib, connect_pb2, pb_utils
 from .base_handler import BaseHandler
 from .consts import (
     MAX_MESSAGE_SIZE,
@@ -134,7 +134,8 @@ class IsolatedWorker:
         disconnect = False
         try:
             async for raw_msg in ws:
-                if self._state.conn_init.value is None:
+                conn_init = self._state.conn_init.value
+                if conn_init is None:
                     # Connection is being torn down (e.g. drain). Stop
                     # processing messages.
                     return None
@@ -146,17 +147,21 @@ class IsolatedWorker:
                     )
                     continue
 
-                msg = connect_pb2.ConnectMessage()
-                msg.ParseFromString(raw_msg)
+                msg = pb_utils.safe_parse(connect_pb2.ConnectMessage, raw_msg)
+                if isinstance(msg, Exception):
+                    self._logger.error(
+                        "Failed to parse message",
+                        extra={"error": str(msg)},
+                    )
+                    return None
                 self._logger.debug(
                     "Received message",
                     extra={
                         "kind": connect_pb2.GatewayMessageType.Name(msg.kind),
-                        "payload": msg.payload,
                     },
                 )
 
-                conn_id = self._state.conn_id
+                conn_id = self._state.conn_id.value
                 if conn_id is None:
                     # Unreachable
                     self._logger.error("Missing connection ID")
@@ -168,9 +173,14 @@ class IsolatedWorker:
                     for h in self._handlers:
                         h.handle_msg(
                             msg,
-                            self._state.conn_init.value[0],
+                            conn_init[0],
                             conn_id,
                         )
+                except Exception as e:
+                    self._logger.error(
+                        "Error handling message",
+                        extra={"error": str(e)},
+                    )
                 finally:
                     self._handling_message_count.value -= 1
 
@@ -274,14 +284,16 @@ async def _wait_for_gateway_endpoint(
     closing.
     """
 
+    conn_init_task = asyncio.create_task(state.conn_init.wait_for_not_none())
+    closing_task = asyncio.create_task(
+        state.conn_state.wait_for(ConnectionState.CLOSING)
+    )
+    fatal_error_task = asyncio.create_task(
+        state.fatal_error.wait_for_not_none()
+    )
+
     done_tasks, pending_tasks = await asyncio.wait(
-        (
-            asyncio.create_task(state.conn_init.wait_for_not_none()),
-            asyncio.create_task(
-                state.conn_state.wait_for(ConnectionState.CLOSING)
-            ),
-            asyncio.create_task(state.fatal_error.wait_for_not_none()),
-        ),
+        (conn_init_task, closing_task, fatal_error_task),
         return_when=asyncio.FIRST_COMPLETED,
     )
 
@@ -289,24 +301,17 @@ async def _wait_for_gateway_endpoint(
     for t in pending_tasks:
         await async_lib.cancel_and_wait(t)
 
-    for t in done_tasks:
-        # Need to cast because Mypy doesn't understand the type (it thinks it's
-        # `object`).
-        r = typing.cast(
-            ConnectionState | tuple[connect_pb2.AuthData, str] | Exception,
-            t.result(),
-        )
+    # Check results in priority order: fatal errors first, then closing,
+    # then the endpoint. This avoids non-deterministic set iteration
+    # masking a fatal error.
+    if fatal_error_task in done_tasks:
+        return fatal_error_task.result()
 
-        if r is ConnectionState.CLOSING:
-            # We need to shutdown.
-            return ("", True)
-        if isinstance(r, Exception):
-            return r
-        if isinstance(r, ConnectionState):
-            return UnreachableError(
-                "We already checked the only possible ConnectionState"
-            )
+    if closing_task in done_tasks:
+        return ("", True)
 
+    if conn_init_task in done_tasks:
+        r = conn_init_task.result()
         return r[1], False
 
     return UnreachableError()

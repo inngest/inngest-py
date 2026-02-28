@@ -15,10 +15,10 @@ class State:
     Shared state for Connect.
     """
 
-    conn_id: str | None
+    conn_id: ValueWatcher[str | None]
     conn_init: ValueWatcher[tuple[connect_pb2.AuthData, str] | None]
     conn_state: ValueWatcher[ConnectionState]
-    exclude_gateways: list[str]
+    exclude_gateways: ValueWatcher[list[str]]
     extend_lease_interval: ValueWatcher[int | None]
 
     # Error that should make Connect close and raise an exception.

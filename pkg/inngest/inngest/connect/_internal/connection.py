@@ -184,13 +184,13 @@ class WorkerConnectionImpl(WorkerConnection):
             )
 
         self._state = State(
-            conn_id=None,
+            conn_id=ValueWatcher(None),
             conn_init=ValueWatcher(None),
             conn_state=ValueWatcher(
                 ConnectionState.CONNECTING,
                 on_change=on_conn_state_change,
             ),
-            exclude_gateways=[],
+            exclude_gateways=ValueWatcher([]),
             extend_lease_interval=ValueWatcher(None),
             fatal_error=ValueWatcher(None),
             init_handshake_complete=ValueWatcher(False),
@@ -245,10 +245,11 @@ class WorkerConnectionImpl(WorkerConnection):
         )
 
     def get_connection_id(self) -> str:
-        if self._state.conn_id is None:
+        conn_id = self._state.conn_id.value
+        if conn_id is None:
             raise Exception("connection not established")
 
-        return self._state.conn_id
+        return conn_id
 
     def get_state(self) -> ConnectionState:
         return self._state.conn_state.value
@@ -284,6 +285,9 @@ class WorkerConnectionImpl(WorkerConnection):
         await self._state.conn_state.wait_for(ConnectionState.CLOSED)
         await asyncio.to_thread(self._thread.join)
 
+        await self._http_client.aclose()
+        self._http_client_sync.close()
+
         if thread_exc is not None:
             raise thread_exc
 
@@ -298,8 +302,11 @@ class WorkerConnectionImpl(WorkerConnection):
         Must be sync since it's called in signal handlers.
         """
 
-        if self._state.conn_state.value == ConnectionState.CLOSED:
-            # Already closed.
+        if self._state.conn_state.value in (
+            ConnectionState.CLOSING,
+            ConnectionState.CLOSED,
+        ):
+            # Already closed or closing.
             return
 
         self._state.conn_state.value = ConnectionState.CLOSING

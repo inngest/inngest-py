@@ -54,7 +54,7 @@ class WebSocketProxy:
 
     @property
     def url(self) -> str:
-        return f"ws://0.0.0.0:{self._port}"
+        return f"ws://127.0.0.1:{self._port}"
 
     def start(self) -> None:
         self._loop = asyncio.new_event_loop()
@@ -71,7 +71,7 @@ class WebSocketProxy:
     async def _async_start(self) -> None:
         self._server = await websockets.serve(
             self._handle_client,
-            "0.0.0.0",
+            "127.0.0.1",
             self._port,
         )
 

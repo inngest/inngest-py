@@ -55,7 +55,7 @@ class BaseTest(unittest.IsolatedAsyncioTestCase):
 
     async def create_proxies(self) -> _Proxies:
         ws_proxy = test_core.ws_proxy.WebSocketProxy(
-            f"ws://0.0.0.0:{dev_server.server.port + 1}/v0/connect"
+            f"ws://127.0.0.1:{dev_server.server.port + 1}/v0/connect"
         )
         self.addCleanup(ws_proxy.stop)
         ws_proxy.start()
@@ -75,7 +75,7 @@ class BaseTest(unittest.IsolatedAsyncioTestCase):
                 content=body,
                 headers={k: v[0] for k, v in headers.items()},
                 method=method,
-                url=f"http://0.0.0.0:{dev_server.server.port}{path}",
+                url=f"http://127.0.0.1:{dev_server.server.port}{path}",
             )
 
             resp_body = resp.content

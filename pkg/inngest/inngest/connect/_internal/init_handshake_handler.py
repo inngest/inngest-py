@@ -8,7 +8,7 @@ import pydantic_core
 
 from inngest._internal import const, errors, server_lib, types
 
-from . import async_lib, connect_pb2, ws_utils
+from . import async_lib, connect_pb2, pb_utils, ws_utils
 from .base_handler import BaseHandler
 from .models import ConnectionState, State
 
@@ -132,8 +132,15 @@ class InitHandshakeHandler(BaseHandler):
                 self._logger.error("Expected GATEWAY_CONNECTION_READY")
                 return
 
-            req_data = connect_pb2.GatewayConnectionReadyData()
-            req_data.ParseFromString(msg.payload)
+            req_data = pb_utils.safe_parse(
+                connect_pb2.GatewayConnectionReadyData, msg.payload
+            )
+            if isinstance(req_data, Exception):
+                self._logger.error(
+                    "Failed to parse connection ready data",
+                    extra={"error": str(req_data)},
+                )
+                return
 
             extend_lease_interval = _duration_str_to_sec(
                 req_data.extend_lease_interval

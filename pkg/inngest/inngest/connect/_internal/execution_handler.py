@@ -6,7 +6,7 @@ import httpx
 
 from inngest._internal import comm_lib, net, server_lib, types
 
-from . import async_lib, connect_pb2, ws_utils
+from . import async_lib, connect_pb2, pb_utils, ws_utils
 from .base_handler import BaseHandler
 from .buffer import SizeConstrainedBuffer
 from .consts import DEFAULT_MAX_BUFFER_SIZE_BYTES
@@ -48,9 +48,10 @@ class _PendingRequestManager:
     ) -> list[PendingRequest]:
         return list(self._pending_requests.values())
 
-    def pop(self, request_id: str) -> PendingRequest:
-        req = self._pending_requests.pop(request_id)
-        self._pending_request_count.value -= 1
+    def pop(self, request_id: str) -> PendingRequest | None:
+        req = self._pending_requests.pop(request_id, None)
+        if req is not None:
+            self._pending_request_count.value -= 1
         return req
 
 
@@ -93,7 +94,17 @@ class ExecutionHandler(BaseHandler):
         state: State,
     ) -> None:
         self._api_origin = api_origin
-        self._buffer = SizeConstrainedBuffer(DEFAULT_MAX_BUFFER_SIZE_BYTES)
+        self._buffer = SizeConstrainedBuffer(
+            DEFAULT_MAX_BUFFER_SIZE_BYTES,
+            on_evict=lambda item_id: logger.warning(
+                "Evicted unacked message from buffer to make room",
+                extra={"request_id": item_id},
+            ),
+            on_reject=lambda item_id: logger.warning(
+                "Message too large for buffer",
+                extra={"request_id": item_id},
+            ),
+        )
         self._comm_handlers = comm_handlers
         self._http_client = http_client
         self._http_client_sync = http_client_sync
@@ -156,8 +167,15 @@ class ExecutionHandler(BaseHandler):
     ) -> None:
         self._logger.debug("Received executor request")
 
-        req_data = connect_pb2.GatewayExecutorRequestData()
-        req_data.ParseFromString(msg.payload)
+        req_data = pb_utils.safe_parse(
+            connect_pb2.GatewayExecutorRequestData, msg.payload
+        )
+        if isinstance(req_data, Exception):
+            self._logger.error(
+                "Failed to parse executor request",
+                extra={"error": str(req_data)},
+            )
+            return
 
         comm_handler = self._comm_handlers.get(req_data.app_name)
         if comm_handler is None:
@@ -358,8 +376,15 @@ class ExecutionHandler(BaseHandler):
         self,
         msg: connect_pb2.ConnectMessage,
     ) -> None:
-        req_data = connect_pb2.WorkerRequestExtendLeaseAckData()
-        req_data.ParseFromString(msg.payload)
+        req_data = pb_utils.safe_parse(
+            connect_pb2.WorkerRequestExtendLeaseAckData, msg.payload
+        )
+        if isinstance(req_data, Exception):
+            self._logger.error(
+                "Failed to parse lease extend ack",
+                extra={"error": str(req_data)},
+            )
+            return
 
         pending_req = self._pending_requests.get(req_data.request_id)
         if pending_req is None:
@@ -394,8 +419,15 @@ class ExecutionHandler(BaseHandler):
         received the execution reply.
         """
 
-        req_data = connect_pb2.WorkerReplyAckData()
-        req_data.ParseFromString(msg.payload)
+        req_data = pb_utils.safe_parse(
+            connect_pb2.WorkerReplyAckData, msg.payload
+        )
+        if isinstance(req_data, Exception):
+            self._logger.error(
+                "Failed to parse worker reply ack",
+                extra={"error": str(req_data)},
+            )
+            return
 
         self._logger.debug(
             "Received worker reply ack",
