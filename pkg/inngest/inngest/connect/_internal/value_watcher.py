@@ -1,3 +1,4 @@
+# ruff: noqa: S110
 from __future__ import annotations
 
 import asyncio
@@ -5,16 +6,21 @@ import threading
 import typing
 
 T = typing.TypeVar("T")
+
+# Used by `wait_for_not_none` to narrow `ValueWatcher[X | None]` to `X`.
 S = typing.TypeVar("S")
 
 
 class ValueWatcher(typing.Generic[T]):
     """
-    A container that allows consumers to reactively wait for value changes.
-    Thread-safe for value access and callback registration.
-    """
+    Thread-safe observable value with async watchers.
 
-    _on_changes: list[typing.Callable[[T, T], None]]
+    Watchers can await value changes via methods like `wait_for` and
+    `wait_for_change`. Alternatively, they can add callbacks via `on_change` and
+    `on_value`.
+
+    Any thread can set `.value`, and the watcher will react accordingly.
+    """
 
     def __init__(
         self,
@@ -29,7 +35,7 @@ class ValueWatcher(typing.Generic[T]):
         """
 
         self._lock = threading.Lock()
-        self._on_changes = []
+        self._on_changes: list[typing.Callable[[T, T], None]] = []
         if on_change:
             self._on_changes.append(on_change)
 
@@ -67,9 +73,13 @@ class ValueWatcher(typing.Generic[T]):
         for loop, queue in queues:
             try:
                 # `call_soon_threadsafe` wakes the target loop's selector
-                # immediately. A plain `put_nowait` wouldn't poke the
-                # self-pipe, so a cross-thread waiter could stall until
-                # something else wakes its loop.
+                # immediately. A plain `put_nowait` wouldn't poke the self-pipe,
+                # so a cross-thread watcher could stall until something else
+                # wakes its loop.
+                #
+                # In other words, without `call_soon_threadsafe`, a watcher
+                # could get the changed value notification long after the value
+                # actually changed.
                 loop.call_soon_threadsafe(
                     queue.put_nowait, (old_value, new_value)
                 )
@@ -78,23 +88,32 @@ class ValueWatcher(typing.Generic[T]):
                 pass
 
         for on_change in callbacks:
-            on_change(old_value, new_value)
+            try:
+                on_change(old_value, new_value)
+            except Exception:
+                # Suppress exceptions from callbacks so one failure doesn't skip
+                # the rest.
+                pass
 
-    def on_change(self, on_change: typing.Callable[[T, T], None]) -> None:
+    def on_change(self, callback: typing.Callable[[T, T], None]) -> None:
         """
         Add a callback that's called when the value changes.
 
         Args:
-            on_change: The callback to call when the value changes.
+            callback: Called with (old_value, new_value) on each change.
         """
 
         with self._lock:
-            self._on_changes.append(on_change)
+            self._on_changes.append(callback)
 
-    def on_value(self, value: T, cb: typing.Callable[[], None]) -> None:
+    def on_value(self, value: T, callback: typing.Callable[[], None]) -> None:
         """
-        Add a callback that's called when the value is equal to the given value.
-        Will not call the callback more than once.
+        One-shot callback for when the value equals `value`. Requires a
+        running event loop (internally spawns a background task).
+
+        Args:
+            value: The value to wait for.
+            callback: Called when the internal value equals `value`.
         """
 
         task = asyncio.create_task(self.wait_for(value))
@@ -103,7 +122,7 @@ class ValueWatcher(typing.Generic[T]):
         def _done(t: asyncio.Task[T]) -> None:
             self._background_tasks.discard(t)
             if not t.cancelled() and t.exception() is None:
-                cb()
+                callback()
 
         task.add_done_callback(_done)
 
@@ -115,12 +134,12 @@ class ValueWatcher(typing.Generic[T]):
         timeout: float | None = None,
     ) -> T:
         """
-        Wait for the value to be equal to the given value.
+        Wait for the internal value to equal the given value.
 
         Args:
-            value: Return when the value is equal to this.
-            immediate: If True and the value is already equal to the given value, return immediately. Defaults to True.
-            timeout: Seconds to wait before raising asyncio.TimeoutError. None means wait forever.
+            value: Return when the internal value is equal to this.
+            immediate: If True and the internal value is already equal to the given value, return immediately. Defaults to True.
+            timeout: Seconds to wait before raising `asyncio.TimeoutError`. None means wait forever.
         """
 
         return await self._wait_for_condition(
@@ -137,12 +156,12 @@ class ValueWatcher(typing.Generic[T]):
         timeout: float | None = None,
     ) -> T:
         """
-        Wait for the value to not be equal to the given value.
+        Wait for the internal value to not equal the given value.
 
         Args:
-            value: Return when the value is not equal to this.
-            immediate: If True and the value is already not equal to the given value, return immediately. Defaults to True.
-            timeout: Seconds to wait before raising asyncio.TimeoutError. None means wait forever.
+            value: Return when the internal value is not equal to this.
+            immediate: If True and the internal value is already not equal to the given value, return immediately. Defaults to True.
+            timeout: Seconds to wait before raising `asyncio.TimeoutError`. None means wait forever.
         """
 
         return await self._wait_for_condition(
@@ -158,11 +177,11 @@ class ValueWatcher(typing.Generic[T]):
         timeout: float | None = None,
     ) -> S:
         """
-        Wait for the value to be not None.
+        Wait for the internal value to be not None.
 
         Args:
-            immediate: If True and the value is already not None, return immediately. Defaults to True.
-            timeout: Seconds to wait before raising asyncio.TimeoutError. None means wait forever.
+            immediate: If True and the internal value is already not None, return immediately. Defaults to True.
+            timeout: Seconds to wait before raising `asyncio.TimeoutError`. None means wait forever.
         """
 
         result = await self._wait_for_condition(
@@ -182,19 +201,27 @@ class ValueWatcher(typing.Generic[T]):
         timeout: float | None = None,
     ) -> T:
         """
-        Internal method to DRY race condition handling in other methods.
+        Wait until `condition(current_value)` is true, then return the
+        matching value. Handles the TOCTOU gap between checking the current
+        value and subscribing to the change queue.
         """
 
         # Fast path: no task needed if the value already matches.
-        if immediate and condition(self.value):
-            return self.value
+        if immediate:
+            # Read once to avoid a TOCTOU race between check and return.
+            current = self.value
+            if condition(current):
+                return current
 
         async def _wait() -> T:
             with self._watch() as queue:
                 # Re-check after queue registration to close the gap
                 # between the fast path above and the queue being live.
-                if immediate and condition(self.value):
-                    return self.value
+                if immediate:
+                    # Read once to avoid a TOCTOU race between check and return.
+                    current = self.value
+                    if condition(current):
+                        return current
 
                 while True:
                     _, new = await queue.get()
@@ -209,10 +236,10 @@ class ValueWatcher(typing.Generic[T]):
         timeout: float | None = None,
     ) -> T:
         """
-        Wait for the value to change.
+        Wait for the internal value to change.
 
         Args:
-            timeout: Seconds to wait before raising asyncio.TimeoutError. None means wait forever.
+            timeout: Seconds to wait before raising `asyncio.TimeoutError`. None means wait forever.
         """
 
         async def _wait() -> T:
@@ -242,7 +269,10 @@ class ValueWatcher(typing.Generic[T]):
         )
 
     def _remove_queue(self, queue: asyncio.Queue[tuple[T, T]]) -> None:
-        """Remove a queue from the watch list in a thread-safe manner."""
+        """
+        Remove a queue from the watch list in a thread-safe manner.
+        """
+
         with self._lock:
             self._watch_queues = [
                 entry for entry in self._watch_queues if entry[1] is not queue
