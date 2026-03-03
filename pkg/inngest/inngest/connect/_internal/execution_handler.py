@@ -75,6 +75,7 @@ class ExecutionHandler(BaseHandler):
           requests to complete before closing.
     """
 
+    _closing = False
     _leaser_extender_task: asyncio.Task[None] | None = None
     _unacked_msg_flush_poller_task: asyncio.Task[None] | None = None
 
@@ -137,7 +138,10 @@ class ExecutionHandler(BaseHandler):
         return None
 
     def close(self) -> None:
-        # Don't close until all pending requests end
+        # Reject new requests from this point forward.
+        self._closing = True
+
+        # Don't close until all pending requests end.
         self._state.pending_request_count.on_value(0, super().close)
 
     async def closed(self) -> None:
@@ -165,6 +169,12 @@ class ExecutionHandler(BaseHandler):
         self,
         msg: connect_pb2.ConnectMessage,
     ) -> None:
+        if self._closing:
+            self._logger.warning(
+                "Rejecting executor request: handler is closing"
+            )
+            return
+
         self._logger.debug("Received executor request")
 
         req_data = pb_utils.safe_parse(
@@ -325,9 +335,10 @@ class ExecutionHandler(BaseHandler):
             )
 
             # Build a minimal error reply so the server doesn't hang.
-            error_body = comm_lib.CommResponse.from_error(
-                self._logger,
-                e,
+            # Use a generic message to avoid leaking internal details.
+            error_body = comm_lib.CommResponse.from_error_code(
+                server_lib.ErrorCode.UNKNOWN,
+                "internal error",
             ).body_bytes()
             if isinstance(error_body, Exception):
                 self._logger.error(

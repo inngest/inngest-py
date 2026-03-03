@@ -17,6 +17,7 @@ from inngest._internal import types
 from . import async_lib, connect_pb2, pb_utils
 from .base_handler import BaseHandler
 from .consts import (
+    GRACEFUL_SHUTDOWN_TIMEOUT_SEC,
     MAX_MESSAGE_SIZE,
     POST_CONNECT_SETTLE_SEC,
     PROTOCOL,
@@ -153,7 +154,7 @@ class IsolatedWorker:
                         "Failed to parse message",
                         extra={"error": str(msg)},
                     )
-                    return None
+                    continue
                 self._logger.debug(
                     "Received message",
                     extra={
@@ -253,11 +254,24 @@ class IsolatedWorker:
 
     async def _wait_for_handlers_closed(self) -> None:
         """
-        Block until all handlers are closed and no messages are in-flight.
+        Block until all handlers are closed and no messages are in-flight,
+        or until the graceful shutdown timeout expires.
         """
 
-        await asyncio.gather(*[h.closed() for h in self._handlers])
-        await self._handling_message_count.wait_for(0)
+        try:
+            await asyncio.wait_for(
+                asyncio.gather(
+                    *[h.closed() for h in self._handlers],
+                    self._handling_message_count.wait_for(0),
+                ),
+                timeout=GRACEFUL_SHUTDOWN_TIMEOUT_SEC,
+            )
+        except asyncio.TimeoutError:
+            self._logger.error(
+                "Graceful shutdown timed out waiting for in-flight work to finish",
+                extra={"timeout_sec": GRACEFUL_SHUTDOWN_TIMEOUT_SEC},
+            )
+
         self._state.conn_init.value = None
 
 

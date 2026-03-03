@@ -244,9 +244,7 @@ class TestValueWatcher(unittest.IsolatedAsyncioTestCase):
         def bad_callback(old: int, new: int) -> None:
             raise RuntimeError("boom")
 
-        watcher = ValueWatcher(
-            0, on_change=bad_callback
-        )
+        watcher = ValueWatcher(0, on_change=bad_callback)
         watcher.on_change(lambda old, new: changes.append((old, new)))
 
         watcher.value = 1

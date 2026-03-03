@@ -37,6 +37,10 @@ POST_CONNECT_SETTLE_SEC = 1
 # Delay before reconnecting after a connection error (seconds)
 RECONNECTION_DELAY_SEC = 5
 
+# Maximum time to wait for in-flight work to finish during shutdown (seconds).
+# Must accommodate the longest possible execution (up to 2 hours).
+GRACEFUL_SHUTDOWN_TIMEOUT_SEC = 2 * 60 * 60
+
 # ============================================================================
 # Size Constants
 # ============================================================================

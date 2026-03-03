@@ -88,6 +88,7 @@ class WorkerConnection(typing.Protocol):
 
 
 class WorkerConnectionImpl(WorkerConnection):
+    _close_lock = threading.Lock()
     _loop: asyncio.AbstractEventLoop | None = None
     _thread: threading.Thread | None = None
 
@@ -261,6 +262,8 @@ class WorkerConnectionImpl(WorkerConnection):
         # User functions execute on the caller's loop (main thread).
         self._execution_handler._main_loop = asyncio.get_running_loop()
 
+        # Created here so `_close` can call `call_soon_threadsafe` on it
+        # before the thread starts. The loop isn't *run* until `run_connect`.
         self._loop = asyncio.new_event_loop()
         thread_exc: Exception | None = None
 
@@ -268,7 +271,6 @@ class WorkerConnectionImpl(WorkerConnection):
             nonlocal thread_exc
             if self._loop is None:
                 raise UnreachableError("loop is None")
-            asyncio.set_event_loop(self._loop)
             try:
                 self._loop.run_until_complete(self._isolated_worker.run())
             except Exception as e:
@@ -277,6 +279,8 @@ class WorkerConnectionImpl(WorkerConnection):
                 # before its try/finally block.
                 if self._state.conn_state.value != ConnectionState.CLOSED:
                     self._state.conn_state.value = ConnectionState.CLOSED
+            finally:
+                _shutdown_loop(self._loop)
 
         self._thread = threading.Thread(target=run_connect, daemon=True)
         self._thread.start()
@@ -302,14 +306,15 @@ class WorkerConnectionImpl(WorkerConnection):
         Must be sync since it's called in signal handlers.
         """
 
-        if self._state.conn_state.value in (
-            ConnectionState.CLOSING,
-            ConnectionState.CLOSED,
-        ):
-            # Already closed or closing.
-            return
+        with self._close_lock:
+            if self._state.conn_state.value in (
+                ConnectionState.CLOSING,
+                ConnectionState.CLOSED,
+            ):
+                # Already closed or closing.
+                return
 
-        self._state.conn_state.value = ConnectionState.CLOSING
+            self._state.conn_state.value = ConnectionState.CLOSING
 
         if self._loop is not None:
             self._loop.call_soon_threadsafe(
@@ -321,3 +326,21 @@ class WorkerConnectionImpl(WorkerConnection):
 
         if self._thread is not None:
             await asyncio.to_thread(self._thread.join)
+
+
+def _shutdown_loop(loop: asyncio.AbstractEventLoop) -> None:
+    """
+    Cancel all remaining tasks on the loop and close it. Called from the worker
+    thread after `run_until_complete` returns.
+    """
+
+    try:
+        pending = asyncio.all_tasks(loop)
+        for t in pending:
+            t.cancel()
+        if pending:
+            loop.run_until_complete(
+                asyncio.gather(*pending, return_exceptions=True)
+            )
+    finally:
+        loop.close()
