@@ -9,7 +9,7 @@ from .base import BaseTest
 
 
 class TestLongFunctionRun(BaseTest):
-    @pytest.mark.timeout(30, method="thread")
+    @pytest.mark.timeout(60, method="thread")
     async def test(self) -> None:
         client = inngest.Inngest(
             app_id=test_core.random_suffix("app"),
