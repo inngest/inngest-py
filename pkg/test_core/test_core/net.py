@@ -1,7 +1,7 @@
 import socket
 import typing
 
-HOST: typing.Final = "0.0.0.0"
+HOST: typing.Final = "127.0.0.1"
 
 
 def get_available_port() -> int:

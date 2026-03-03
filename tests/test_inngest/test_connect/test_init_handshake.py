@@ -56,9 +56,8 @@ class TestAPIRequestHeaders(BaseTest):
         conn = connect(
             [(client, [fn])],
         )
-        self.addCleanup(conn.close, wait=True)
         task = asyncio.create_task(conn.start())
-        self.addCleanup(task.cancel)
+        self.addConnCleanup(conn, task)
 
         def assert_headers() -> None:
             assert state.outgoing_headers["authorization"] == [
@@ -138,9 +137,8 @@ class TestAPIRequestHeaders(BaseTest):
         conn = connect(
             [(client, [fn])],
         )
-        self.addCleanup(conn.close, wait=True)
         task = asyncio.create_task(conn.start())
-        self.addCleanup(task.cancel)
+        self.addConnCleanup(conn, task)
 
         def assert_headers() -> None:
             # Signing key.
@@ -202,9 +200,8 @@ class TestAPIRequestHeaders(BaseTest):
         conn = connect(
             [(client, [fn])],
         )
-        self.addCleanup(conn.close, wait=True)
         task = asyncio.create_task(conn.start())
-        self.addCleanup(task.cancel)
+        self.addConnCleanup(conn, task)
 
         await test_core.wait_for_truthy(lambda: state.outgoing_headers)
         assert "authorization" not in state.outgoing_headers
@@ -252,11 +249,8 @@ class TestAPIRequestHeaders(BaseTest):
         conn = connect(
             [(client, [fn])],
         )
-        self.addCleanup(conn.close, wait=True)
         task = asyncio.create_task(conn.start())
-        self.addCleanup(task.cancel)
+        self.addConnCleanup(conn, task)
 
-        with pytest.raises(Exception) as e:
+        with pytest.raises(Exception, match="unauthorized"):
             await task
-
-        assert str(e.value) == "unauthorized"

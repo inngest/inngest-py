@@ -8,7 +8,7 @@ import pydantic_core
 
 from inngest._internal import const, errors, server_lib, types
 
-from . import connect_pb2, ws_utils
+from . import async_lib, connect_pb2, pb_utils, ws_utils
 from .base_handler import BaseHandler
 from .models import ConnectionState, State
 
@@ -72,16 +72,13 @@ class InitHandshakeHandler(BaseHandler):
 
         if self._send_data_task is not None:
             self._send_data_task.cancel()
+        if self._reconnect_task is not None:
+            self._reconnect_task.cancel()
 
     async def closed(self) -> None:
         await super().closed()
-
-        if self._send_data_task is not None:
-            try:
-                await self._send_data_task
-            except asyncio.CancelledError:
-                # Expected.
-                pass
+        await async_lib.cancel_and_wait(self._send_data_task)
+        await async_lib.cancel_and_wait(self._reconnect_task)
 
     async def _reconnect_watcher(self, closed_event: asyncio.Event) -> None:
         while closed_event.is_set() is False:
@@ -135,8 +132,15 @@ class InitHandshakeHandler(BaseHandler):
                 self._logger.error("Expected GATEWAY_CONNECTION_READY")
                 return
 
-            req_data = connect_pb2.GatewayConnectionReadyData()
-            req_data.ParseFromString(msg.payload)
+            req_data = pb_utils.safe_parse(
+                connect_pb2.GatewayConnectionReadyData, msg.payload
+            )
+            if isinstance(req_data, Exception):
+                self._logger.error(
+                    "Failed to parse connection ready data",
+                    extra={"error": str(req_data)},
+                )
+                return
 
             extend_lease_interval = _duration_str_to_sec(
                 req_data.extend_lease_interval

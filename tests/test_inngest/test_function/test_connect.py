@@ -7,10 +7,13 @@ import inngest
 import test_core
 from inngest._internal import server_lib
 from inngest.connect import ConnectionState, connect
-from inngest.connect._internal.connection import WorkerConnection
+from inngest.connect._internal.connection import (
+    WorkerConnection,
+    WorkerConnectionImpl,
+)
 from inngest.experimental import dev_server
 
-from . import cases
+from test_inngest.test_function import cases
 
 _framework = server_lib.Framework.CONNECT
 _app_id = test_core.worker_suffix(f"{_framework.value}-functions")
@@ -34,45 +37,37 @@ for case in _cases:
 class TestFunctions(unittest.IsolatedAsyncioTestCase):
     client = _client
     conn: WorkerConnection
-    conn_loop: asyncio.AbstractEventLoop
-    conn_ready: threading.Event
-    conn_thread: threading.Thread
+    _conn_ready: threading.Event
+    _conn_thread: threading.Thread
 
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
-        cls.conn_ready = threading.Event()
+        cls.conn = connect([(cls.client, _fns)])
+        cls._conn_ready = threading.Event()
 
         def run_connection() -> None:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            cls.conn_loop = loop
-
-            async def start_conn() -> None:
-                conn = connect([(cls.client, _fns)])
-                cls.conn = conn
-                task = asyncio.create_task(conn.start())
-                await conn.wait_for_state(ConnectionState.ACTIVE)
-                cls.conn_ready.set()
+            async def _run() -> None:
+                task = asyncio.create_task(cls.conn.start())
+                await cls.conn.wait_for_state(ConnectionState.ACTIVE)
+                cls._conn_ready.set()
                 try:
                     await task
                 except asyncio.CancelledError:
                     pass
 
-            loop.run_until_complete(start_conn())
+            asyncio.run(_run())
 
-        cls.conn_thread = threading.Thread(daemon=True, target=run_connection)
-        cls.conn_thread.start()
-        cls.conn_ready.wait(timeout=30)
+        cls._conn_thread = threading.Thread(daemon=True, target=run_connection)
+        cls._conn_thread.start()
+        cls._conn_ready.wait(timeout=30)
 
     @classmethod
     def tearDownClass(cls) -> None:
         super().tearDownClass()
-        if hasattr(cls, "conn"):
-            cls.conn_loop.call_soon_threadsafe(
-                lambda: asyncio.create_task(cls.conn.close(wait=True))
-            )
-        cls.conn_thread.join(timeout=5)
+        if isinstance(cls.conn, WorkerConnectionImpl):
+            cls.conn._close()  # pyright: ignore[reportPrivateUsage]
+            cls._conn_thread.join(timeout=5)
 
 
 for case in _cases:

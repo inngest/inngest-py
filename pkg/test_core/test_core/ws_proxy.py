@@ -1,4 +1,7 @@
 import asyncio
+import functools
+import threading
+import typing
 import uuid
 
 import websockets
@@ -7,7 +10,32 @@ from inngest.connect._internal.consts import PROTOCOL
 
 from .net import get_available_port
 
-_Connection = websockets.asyncio.connection.Connection
+_Connection: typing.TypeAlias = websockets.asyncio.connection.Connection
+_P = typing.ParamSpec("_P")
+
+
+def _on_proxy_loop(
+    fn: typing.Callable[_P, typing.Coroutine[typing.Any, typing.Any, None]],
+) -> typing.Callable[_P, None]:
+    """
+    Decorator that dispatches an async method to the proxy's dedicated loop
+    and blocks until done.
+    """
+
+    @functools.wraps(fn)
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> None:
+        self = args[0]
+        assert isinstance(self, WebSocketProxy)
+        if self._loop is None:
+            raise RuntimeError(
+                "WebSocketProxy loop is None; was start() called?"
+            )
+        future = asyncio.run_coroutine_threadsafe(
+            fn(*args, **kwargs), self._loop
+        )
+        future.result(timeout=5)
+
+    return wrapper
 
 
 class WebSocketProxy:
@@ -16,24 +44,56 @@ class WebSocketProxy:
         server_uri: str,
     ):
         self._conns: dict[str, tuple[_Connection, _Connection]] = {}
+        self._loop: asyncio.AbstractEventLoop | None = None
         self._port = get_available_port()
         self._server_uri = server_uri
         self._server: websockets.Server | None = None
-        self._tasks = set[asyncio.Task[None]]()
+        self._tasks: set[asyncio.Task[None]] = set()
+        self._thread: threading.Thread | None = None
         self.forwarded_messages: list[bytes] = []
 
     @property
     def url(self) -> str:
-        return f"ws://0.0.0.0:{self._port}"
+        return f"ws://127.0.0.1:{self._port}"
 
-    async def start(self) -> None:
+    def start(self) -> None:
+        self._loop = asyncio.new_event_loop()
+        self._thread = threading.Thread(
+            target=self._loop.run_forever,
+            daemon=True,
+        )
+        self._thread.start()
+        future = asyncio.run_coroutine_threadsafe(
+            self._async_start(), self._loop
+        )
+        future.result(timeout=5)
+
+    async def _async_start(self) -> None:
         self._server = await websockets.serve(
             self._handle_client,
-            "0.0.0.0",
+            "127.0.0.1",
             self._port,
         )
 
-    async def stop(self) -> None:
+    def stop(self) -> None:
+        try:
+            if self._loop is not None:
+                future = asyncio.run_coroutine_threadsafe(
+                    self._async_stop(), self._loop
+                )
+                future.result(timeout=5)
+        finally:
+            if self._loop is not None:
+                self._loop.call_soon_threadsafe(self._loop.stop)
+            if self._thread is not None:
+                self._thread.join(timeout=5)
+            if self._loop is not None:
+                self._loop.close()
+                self._loop = None
+            self._thread = None
+
+    async def _async_stop(self) -> None:
+        # Close server first to stop accepting new connections.
         if self._server:
             self._server.close()
             await self._server.wait_closed()
@@ -45,6 +105,7 @@ class WebSocketProxy:
         if self._tasks:
             await asyncio.gather(*self._tasks, return_exceptions=True)
 
+    @_on_proxy_loop
     async def send_to_clients(self, message: bytes) -> None:
         """
         Send a message to all connected clients (a.k.a. the SDKs).
@@ -75,7 +136,7 @@ class WebSocketProxy:
 
             try:
                 # Wait until either task completes (connection closes).
-                done, pending = await asyncio.wait(
+                _, pending = await asyncio.wait(
                     [client_to_server, server_to_client],
                     return_when=asyncio.FIRST_COMPLETED,
                 )
@@ -87,7 +148,7 @@ class WebSocketProxy:
                 # Remove tasks from the set.
                 self._tasks.discard(client_to_server)
                 self._tasks.discard(server_to_client)
-                del self._conns[conn_id]
+                self._conns.pop(conn_id, None)
 
     async def _forward_messages(
         self,
@@ -103,6 +164,7 @@ class WebSocketProxy:
             except Exception as e:
                 print("error sending message", e)
 
+    @_on_proxy_loop
     async def abort_conns(self) -> None:
         """
         Abort connections at the transport level. This causes an abnormal
@@ -117,6 +179,7 @@ class WebSocketProxy:
                     pass
         self._conns.clear()
 
+    @_on_proxy_loop
     async def send_invalid_frame(self) -> None:
         """
         Send invalid WebSocket frame data. This causes an abnormal websocket
@@ -133,6 +196,7 @@ class WebSocketProxy:
                 pass
         self._conns.clear()
 
+    @_on_proxy_loop
     async def close_with_code(self) -> None:
         """
         Send close code 1000. This causes a normal websocket connection close

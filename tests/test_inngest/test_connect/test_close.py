@@ -1,6 +1,7 @@
 import asyncio
 import dataclasses
 import json
+import threading
 
 import inngest
 import pytest
@@ -13,6 +14,7 @@ from .base import BaseTest, collect_states
 
 
 class TestWaitForExecutionRequest(BaseTest):
+    @pytest.mark.timeout(10, method="thread")
     async def test_after_initial_connection(self) -> None:
         """
         Test that the worker waits for an execution request to complete before
@@ -27,7 +29,7 @@ class TestWaitForExecutionRequest(BaseTest):
         )
         event_name = test_core.random_suffix("event")
         state = test_core.BaseState()
-        closed_event = asyncio.Event()
+        closed_event = threading.Event()
 
         @client.create_function(
             fn_id="fn",
@@ -38,14 +40,14 @@ class TestWaitForExecutionRequest(BaseTest):
             state.run_id = ctx.run_id
 
             # Suspend the function until the connection is closing.
-            await closed_event.wait()
+            await asyncio.to_thread(closed_event.wait)
 
             return "Hello"
 
         conn = connect([(client, [fn])])
         states = collect_states(conn)
         task = asyncio.create_task(conn.start())
-        self.addCleanup(task.cancel)
+        self.addConnCleanup(conn, task)
         await conn.wait_for_state(ConnectionState.ACTIVE)
 
         await client.send(inngest.Event(name=event_name))
@@ -77,7 +79,7 @@ class TestWaitForExecutionRequest(BaseTest):
                 break
         assert sent_worker_pause is True
 
-        await conn.closed()
+        await task
         assert states == [
             ConnectionState.CONNECTING,
             ConnectionState.ACTIVE,
@@ -112,6 +114,7 @@ class TestWaitForExecutionRequest(BaseTest):
             )
 
         proxy = http_proxy.Proxy(on_request).start()
+        self.addCleanup(proxy.stop)
 
         client = inngest.Inngest(
             api_base_url=proxy.origin,
@@ -131,11 +134,11 @@ class TestWaitForExecutionRequest(BaseTest):
         conn = connect([(client, [fn])])
         states = collect_states(conn)
         task = asyncio.create_task(conn.start())
-        self.addCleanup(task.cancel)
+        self.addConnCleanup(conn, task)
 
         await test_core.wait_for_truthy(lambda: api_called)
         await conn.close()
-        await conn.closed()
+        await task
         assert states == [
             ConnectionState.CONNECTING,
             ConnectionState.CLOSING,
@@ -179,7 +182,7 @@ class TestWaitForExecutionRequest(BaseTest):
         # Start app
         conn = connect([(client, [fn])])
         task = asyncio.create_task(conn.start())
-        self.addCleanup(task.cancel)
+        self.addConnCleanup(conn, task)
         await conn.wait_for_state(ConnectionState.ACTIVE)
 
         # Trigger the function
@@ -193,7 +196,7 @@ class TestWaitForExecutionRequest(BaseTest):
         # Close Connect
         await conn.close()
         await conn.wait_for_state(ConnectionState.CLOSING)
-        await conn.closed()
+        await task
 
         assert state.after_sleep is True
         counts_after_close = count_messages(proxies.ws_proxy.forwarded_messages)

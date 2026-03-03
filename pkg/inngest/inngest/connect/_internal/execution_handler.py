@@ -6,7 +6,7 @@ import httpx
 
 from inngest._internal import comm_lib, net, server_lib, types
 
-from . import connect_pb2, ws_utils
+from . import async_lib, connect_pb2, pb_utils, ws_utils
 from .base_handler import BaseHandler
 from .buffer import SizeConstrainedBuffer
 from .consts import DEFAULT_MAX_BUFFER_SIZE_BYTES
@@ -48,9 +48,10 @@ class _PendingRequestManager:
     ) -> list[PendingRequest]:
         return list(self._pending_requests.values())
 
-    def pop(self, request_id: str) -> PendingRequest:
-        req = self._pending_requests.pop(request_id)
-        self._pending_request_count.value -= 1
+    def pop(self, request_id: str) -> PendingRequest | None:
+        req = self._pending_requests.pop(request_id, None)
+        if req is not None:
+            self._pending_request_count.value -= 1
         return req
 
 
@@ -74,8 +75,13 @@ class ExecutionHandler(BaseHandler):
           requests to complete before closing.
     """
 
+    _closing = False
     _leaser_extender_task: asyncio.Task[None] | None = None
     _unacked_msg_flush_poller_task: asyncio.Task[None] | None = None
+
+    # Caller's (main) event loop. User functions are dispatched here so they
+    # run on the main thread instead of the worker thread.
+    _main_loop: asyncio.AbstractEventLoop | None = None
 
     def __init__(
         self,
@@ -89,7 +95,17 @@ class ExecutionHandler(BaseHandler):
         state: State,
     ) -> None:
         self._api_origin = api_origin
-        self._buffer = SizeConstrainedBuffer(DEFAULT_MAX_BUFFER_SIZE_BYTES)
+        self._buffer = SizeConstrainedBuffer(
+            DEFAULT_MAX_BUFFER_SIZE_BYTES,
+            on_evict=lambda item_id: logger.warning(
+                "Evicted unacked message from buffer to make room",
+                extra={"request_id": item_id},
+            ),
+            on_reject=lambda item_id: logger.warning(
+                "Message too large for buffer",
+                extra={"request_id": item_id},
+            ),
+        )
         self._comm_handlers = comm_handlers
         self._http_client = http_client
         self._http_client_sync = http_client_sync
@@ -122,33 +138,16 @@ class ExecutionHandler(BaseHandler):
         return None
 
     def close(self) -> None:
-        # Don't close until all pending requests end
+        # Reject new requests from this point forward.
+        self._closing = True
+
+        # Don't close until all pending requests end.
         self._state.pending_request_count.on_value(0, super().close)
 
     async def closed(self) -> None:
         await super().closed()
-        await asyncio.gather(*[t for _, t in self._pending_requests.get_all()])
-        self._pending_requests.clear()
-
-        if self._leaser_extender_task is not None:
-            # Force lease extension to stop
-            self._leaser_extender_task.cancel()
-            try:
-                await self._leaser_extender_task
-            except asyncio.CancelledError:
-                # This is expected since the task is likely calling
-                # `asyncio.sleep` after cancellation.
-                pass
-
-        if self._unacked_msg_flush_poller_task is not None:
-            # Force unacked message flush to stop
-            self._unacked_msg_flush_poller_task.cancel()
-            try:
-                await self._unacked_msg_flush_poller_task
-            except asyncio.CancelledError:
-                # This is expected since the task is likely calling
-                # `asyncio.sleep` after cancellation.
-                pass
+        await async_lib.cancel_and_wait(self._leaser_extender_task)
+        await async_lib.cancel_and_wait(self._unacked_msg_flush_poller_task)
 
     def handle_msg(
         self,
@@ -170,10 +169,23 @@ class ExecutionHandler(BaseHandler):
         self,
         msg: connect_pb2.ConnectMessage,
     ) -> None:
+        if self._closing:
+            self._logger.warning(
+                "Rejecting executor request: handler is closing"
+            )
+            return
+
         self._logger.debug("Received executor request")
 
-        req_data = connect_pb2.GatewayExecutorRequestData()
-        req_data.ParseFromString(msg.payload)
+        req_data = pb_utils.safe_parse(
+            connect_pb2.GatewayExecutorRequestData, msg.payload
+        )
+        if isinstance(req_data, Exception):
+            self._logger.error(
+                "Failed to parse executor request",
+                extra={"error": str(req_data)},
+            )
+            return
 
         comm_handler = self._comm_handlers.get(req_data.app_name)
         if comm_handler is None:
@@ -208,107 +220,182 @@ class ExecutionHandler(BaseHandler):
             3. Send WORKER_REPLY with execution result
         """
 
-        ws = await self._state.ws.wait_for_not_none()
-        err = await ws_utils.safe_send(
-            self._logger,
-            self._state,
-            ws,
-            connect_pb2.ConnectMessage(
-                kind=connect_pb2.GatewayMessageType.WORKER_REQUEST_ACK,
-                payload=connect_pb2.WorkerRequestAckData(
-                    account_id=req_data.account_id,
-                    app_id=req_data.app_id,
-                    env_id=req_data.env_id,
-                    function_slug=req_data.function_slug,
-                    request_id=req_data.request_id,
-                    step_id=req_data.step_id,
-                    system_trace_ctx=req_data.system_trace_ctx,
-                    user_trace_ctx=req_data.user_trace_ctx,
+        try:
+            ws = await self._state.ws.wait_for_not_none()
+            err = await ws_utils.safe_send(
+                self._logger,
+                self._state,
+                ws,
+                connect_pb2.ConnectMessage(
+                    kind=connect_pb2.GatewayMessageType.WORKER_REQUEST_ACK,
+                    payload=connect_pb2.WorkerRequestAckData(
+                        account_id=req_data.account_id,
+                        app_id=req_data.app_id,
+                        env_id=req_data.env_id,
+                        function_slug=req_data.function_slug,
+                        request_id=req_data.request_id,
+                        step_id=req_data.step_id,
+                        system_trace_ctx=req_data.system_trace_ctx,
+                        user_trace_ctx=req_data.user_trace_ctx,
+                    ).SerializeToString(),
                 ).SerializeToString(),
-            ).SerializeToString(),
-        )
-        if err is None:
-            comm_res = await comm_handler.post(
-                comm_lib.CommRequest(
-                    body=req_data.request_payload,
-                    headers={},
-                    is_connect=True,
-                    public_path=None,
-                    query_params={
-                        server_lib.QueryParamKey.FUNCTION_ID.value: req_data.function_slug,
-                        server_lib.QueryParamKey.STEP_ID.value: req_data.step_id,
-                    },
-                    raw_request=req_data,
-                    request_url="",
-                    serve_origin=None,
-                    serve_path=None,
+            )
+            if err is None:
+                if self._main_loop is None:
+                    raise Exception("_main_loop not set")
+
+                # Run the Inngest function on the main thread.
+                future = asyncio.run_coroutine_threadsafe(
+                    comm_handler.post(
+                        comm_lib.CommRequest(
+                            body=req_data.request_payload,
+                            headers={},
+                            is_connect=True,
+                            public_path=None,
+                            query_params={
+                                server_lib.QueryParamKey.FUNCTION_ID.value: req_data.function_slug,
+                                server_lib.QueryParamKey.STEP_ID.value: req_data.step_id,
+                            },
+                            raw_request=req_data,
+                            request_url="",
+                            serve_origin=None,
+                            serve_path=None,
+                        )
+                    ),
+                    self._main_loop,
                 )
+                comm_res = await asyncio.wrap_future(future)
+            else:
+                self._logger.error(
+                    "Execution failed", extra={"error": str(err)}
+                )
+                comm_res = comm_lib.CommResponse.from_error(self._logger, err)
+
+            body = comm_res.body_bytes()
+            if isinstance(body, Exception):
+                raise body
+
+            status: connect_pb2.SDKResponseStatus
+            if comm_res.status_code == 200:
+                # Function-level success.
+                status = connect_pb2.SDKResponseStatus.DONE
+            elif comm_res.status_code == 206:
+                # Step-level success.
+                status = connect_pb2.SDKResponseStatus.NOT_COMPLETED
+            elif comm_res.status_code == 500:
+                # Error.
+                status = connect_pb2.SDKResponseStatus.ERROR
+            else:
+                # Unreachable.
+                status = connect_pb2.SDKResponseStatus.ERROR
+                self._logger.error(
+                    "Unexpected status code",
+                    extra={"status_code": comm_res.status_code},
+                )
+
+            reply_payload = connect_pb2.SDKResponse(
+                account_id=req_data.account_id,
+                app_id=req_data.app_id,
+                body=body,
+                env_id=req_data.env_id,
+                no_retry=comm_res.no_retry,
+                request_id=req_data.request_id,
+                request_version=comm_res.request_version,
+                retry_after=comm_res.retry_after,
+                sdk_version=comm_res.sdk_version,
+                status=status,
+                system_trace_ctx=req_data.system_trace_ctx,
+                user_trace_ctx=req_data.user_trace_ctx,
+            ).SerializeToString()
+
+            # Add the reply to the buffer in case we need to flush it later.
+            self._buffer.add(req_data.request_id, reply_payload)
+
+            self._logger.debug("Sending execution reply")
+            err = await ws_utils.safe_send(
+                self._logger,
+                self._state,
+                ws,
+                connect_pb2.ConnectMessage(
+                    kind=connect_pb2.GatewayMessageType.WORKER_REPLY,
+                    payload=reply_payload,
+                ).SerializeToString(),
             )
-        else:
-            self._logger.error("Execution failed", extra={"error": str(err)})
-            comm_res = comm_lib.CommResponse.from_error(self._logger, err)
-
-        body = comm_res.body_bytes()
-        if isinstance(body, Exception):
-            raise body
-
-        status: connect_pb2.SDKResponseStatus
-        if comm_res.status_code == 200:
-            # Function-level success.
-            status = connect_pb2.SDKResponseStatus.DONE
-        elif comm_res.status_code == 206:
-            # Step-level success.
-            status = connect_pb2.SDKResponseStatus.NOT_COMPLETED
-        elif comm_res.status_code == 500:
-            # Error.
-            status = connect_pb2.SDKResponseStatus.ERROR
-        else:
-            # Unreachable.
-            status = connect_pb2.SDKResponseStatus.ERROR
+            if err is not None:
+                self._logger.error(
+                    "Failed to send execution reply", extra={"error": str(err)}
+                )
+        except Exception as e:
             self._logger.error(
-                "Unexpected status code",
-                extra={"status_code": comm_res.status_code},
+                "Unhandled error in _execute_request",
+                extra={
+                    "error": str(e),
+                    "request_id": req_data.request_id,
+                },
             )
 
-        reply_payload = connect_pb2.SDKResponse(
-            account_id=req_data.account_id,
-            app_id=req_data.app_id,
-            body=body,
-            env_id=req_data.env_id,
-            no_retry=comm_res.no_retry,
-            request_id=req_data.request_id,
-            request_version=comm_res.request_version,
-            retry_after=comm_res.retry_after,
-            sdk_version=comm_res.sdk_version,
-            status=status,
-            system_trace_ctx=req_data.system_trace_ctx,
-            user_trace_ctx=req_data.user_trace_ctx,
-        ).SerializeToString()
+            # Build a minimal error reply so the server doesn't hang.
+            # Use a generic message to avoid leaking internal details.
+            error_body = comm_lib.CommResponse.from_error_code(
+                server_lib.ErrorCode.UNKNOWN,
+                "internal error",
+            ).body_bytes()
+            if isinstance(error_body, Exception):
+                self._logger.error(
+                    "Failed to serialize error reply",
+                    extra={"error": str(error_body)},
+                )
+                return
 
-        # Add the reply to the buffer in case we need to flush it later.
-        self._buffer.add(req_data.request_id, reply_payload)
+            error_reply = connect_pb2.SDKResponse(
+                account_id=req_data.account_id,
+                app_id=req_data.app_id,
+                body=error_body,
+                env_id=req_data.env_id,
+                request_id=req_data.request_id,
+                status=connect_pb2.SDKResponseStatus.ERROR,
+            ).SerializeToString()
 
-        self._logger.debug("Sending execution reply")
-        err = await ws_utils.safe_send(
-            self._logger,
-            self._state,
-            ws,
-            connect_pb2.ConnectMessage(
-                kind=connect_pb2.GatewayMessageType.WORKER_REPLY,
-                payload=reply_payload,
-            ).SerializeToString(),
-        )
-        if err is not None:
-            self._logger.error(
-                "Failed to send execution reply", extra={"error": str(err)}
+            # Non-blocking read of current WS to avoid hanging.
+            current_ws = self._state.ws.value
+            if current_ws is None:
+                self._logger.error(
+                    "Cannot send error reply: no WebSocket connection",
+                    extra={"request_id": req_data.request_id},
+                )
+                return
+
+            send_err = await ws_utils.safe_send(
+                self._logger,
+                self._state,
+                current_ws,
+                connect_pb2.ConnectMessage(
+                    kind=connect_pb2.GatewayMessageType.WORKER_REPLY,
+                    payload=error_reply,
+                ).SerializeToString(),
             )
+            if send_err is not None:
+                self._logger.error(
+                    "Failed to send error reply",
+                    extra={
+                        "error": str(send_err),
+                        "request_id": req_data.request_id,
+                    },
+                )
 
     def _handle_lease_extend_ack(
         self,
         msg: connect_pb2.ConnectMessage,
     ) -> None:
-        req_data = connect_pb2.WorkerRequestExtendLeaseAckData()
-        req_data.ParseFromString(msg.payload)
+        req_data = pb_utils.safe_parse(
+            connect_pb2.WorkerRequestExtendLeaseAckData, msg.payload
+        )
+        if isinstance(req_data, Exception):
+            self._logger.error(
+                "Failed to parse lease extend ack",
+                extra={"error": str(req_data)},
+            )
+            return
 
         pending_req = self._pending_requests.get(req_data.request_id)
         if pending_req is None:
@@ -343,8 +430,15 @@ class ExecutionHandler(BaseHandler):
         received the execution reply.
         """
 
-        req_data = connect_pb2.WorkerReplyAckData()
-        req_data.ParseFromString(msg.payload)
+        req_data = pb_utils.safe_parse(
+            connect_pb2.WorkerReplyAckData, msg.payload
+        )
+        if isinstance(req_data, Exception):
+            self._logger.error(
+                "Failed to parse worker reply ack",
+                extra={"error": str(req_data)},
+            )
+            return
 
         self._logger.debug(
             "Received worker reply ack",

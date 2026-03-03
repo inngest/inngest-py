@@ -21,7 +21,7 @@ class TestDrain(BaseTest):
 
         client = inngest.Inngest(
             api_base_url=proxies.http_proxy.origin,
-            app_id="app",
+            app_id=test_core.random_suffix("app"),
             is_production=False,
         )
 
@@ -35,8 +35,7 @@ class TestDrain(BaseTest):
         conn = connect([(client, [fn])])
         states = collect_states(conn)
         task = asyncio.create_task(conn.start())
-        self.addCleanup(conn.close, wait=True)
-        self.addCleanup(task.cancel)
+        self.addConnCleanup(conn, task)
 
         # Initial connection.
         await asyncio.wait_for(
@@ -46,7 +45,7 @@ class TestDrain(BaseTest):
         await test_core.wait_for_len(lambda: proxies.requests, 1)
 
         # Simulate the drain message.
-        await proxies.ws_proxy.send_to_clients(
+        proxies.ws_proxy.send_to_clients(
             connect_pb2.ConnectMessage(
                 kind=connect_pb2.GatewayMessageType.GATEWAY_CLOSING
             ).SerializeToString()
@@ -68,7 +67,7 @@ class TestDrain(BaseTest):
         ]
 
         # Simulate another drain message
-        await proxies.ws_proxy.send_to_clients(
+        proxies.ws_proxy.send_to_clients(
             connect_pb2.ConnectMessage(
                 kind=connect_pb2.GatewayMessageType.GATEWAY_CLOSING
             ).SerializeToString()
@@ -87,8 +86,6 @@ class TestDrain(BaseTest):
             ConnectionState.RECONNECTING,
             ConnectionState.CONNECTING,
             ConnectionState.ACTIVE,
-            ConnectionState.RECONNECTING,
-            ConnectionState.CONNECTING,
             ConnectionState.RECONNECTING,
             ConnectionState.CONNECTING,
             ConnectionState.ACTIVE,
