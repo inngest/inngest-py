@@ -139,11 +139,16 @@ class TestWaitForExecutionRequest(BaseTest):
         await test_core.wait_for_truthy(lambda: api_called)
         await conn.close()
         await task
-        assert states == [
-            ConnectionState.CONNECTING,
+
+        # CLOSING and CLOSED can appear in either order because the on_change
+        # callbacks fire outside the ValueWatcher lock. The worker thread may
+        # react to CLOSING and set CLOSED before the main thread's CLOSING
+        # callback runs.
+        assert states[0] == ConnectionState.CONNECTING
+        assert set(states[1:]) == {
             ConnectionState.CLOSING,
             ConnectionState.CLOSED,
-        ]
+        }
 
     @pytest.mark.timeout(30, method="thread")
     async def test_wait_for_execution_request(self) -> None:
