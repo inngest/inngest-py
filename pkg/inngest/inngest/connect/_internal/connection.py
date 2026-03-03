@@ -342,9 +342,5 @@ def _shutdown_loop(loop: asyncio.AbstractEventLoop) -> None:
         pending = asyncio.all_tasks(loop)
         for t in pending:
             t.cancel()
-        if pending:
-            loop.run_until_complete(
-                asyncio.gather(*pending, return_exceptions=True)
-            )
     finally:
         loop.close()
