@@ -317,9 +317,13 @@ class WorkerConnectionImpl(WorkerConnection):
             self._state.conn_state.value = ConnectionState.CLOSING
 
         if self._loop is not None:
-            self._loop.call_soon_threadsafe(
-                self._isolated_worker.schedule_close
-            )
+            try:
+                self._loop.call_soon_threadsafe(
+                    self._isolated_worker.schedule_close
+                )
+            except RuntimeError:
+                # Loop already closed (worker thread exited on its own).
+                pass
 
     async def closed(self) -> None:
         await self._state.conn_state.wait_for(ConnectionState.CLOSED)
