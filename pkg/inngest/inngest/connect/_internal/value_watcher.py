@@ -95,6 +95,45 @@ class ValueWatcher(typing.Generic[T]):
                 # the rest.
                 pass
 
+    def set_if(
+        self,
+        new_value: T,
+        condition: typing.Callable[[T], bool],
+    ) -> bool:
+        """
+        Atomically set the value only if the current value satisfies the
+        condition. Returns True if the value was set.
+        """
+
+        with self._lock:
+            if not condition(self._value):
+                return False
+
+            if new_value == self._value:
+                return True
+
+            old_value = self._value
+            self._value = new_value
+
+            queues = list(self._watch_queues)
+            callbacks = list(self._on_changes)
+
+        for loop, queue in queues:
+            try:
+                loop.call_soon_threadsafe(
+                    queue.put_nowait, (old_value, new_value)
+                )
+            except RuntimeError:
+                pass
+
+        for on_change in callbacks:
+            try:
+                on_change(old_value, new_value)
+            except Exception:
+                pass
+
+        return True
+
     def on_change(self, callback: typing.Callable[[T, T], None]) -> None:
         """
         Add a callback that's called when the value changes.

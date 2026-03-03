@@ -88,7 +88,6 @@ class WorkerConnection(typing.Protocol):
 
 
 class WorkerConnectionImpl(WorkerConnection):
-    _close_lock = threading.Lock()
     _loop: asyncio.AbstractEventLoop | None = None
     _thread: threading.Thread | None = None
 
@@ -277,8 +276,10 @@ class WorkerConnectionImpl(WorkerConnection):
                 thread_exc = e
                 # Ensure CLOSED is reached even if run() raised
                 # before its try/finally block.
-                if self._state.conn_state.value != ConnectionState.CLOSED:
-                    self._state.conn_state.value = ConnectionState.CLOSED
+                self._state.conn_state.set_if(
+                    ConnectionState.CLOSED,
+                    lambda v: v != ConnectionState.CLOSED,
+                )
             finally:
                 _shutdown_loop(self._loop)
 
@@ -306,15 +307,14 @@ class WorkerConnectionImpl(WorkerConnection):
         Must be sync since it's called in signal handlers.
         """
 
-        with self._close_lock:
-            if self._state.conn_state.value in (
-                ConnectionState.CLOSING,
-                ConnectionState.CLOSED,
-            ):
-                # Already closed or closing.
-                return
-
-            self._state.conn_state.value = ConnectionState.CLOSING
+        did_set = self._state.conn_state.set_if(
+            ConnectionState.CLOSING,
+            lambda v: v
+            not in (ConnectionState.CLOSING, ConnectionState.CLOSED),
+        )
+        if not did_set:
+            # Already closed or closing.
+            return
 
         if self._loop is not None:
             try:
