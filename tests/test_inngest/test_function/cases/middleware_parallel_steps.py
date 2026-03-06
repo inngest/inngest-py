@@ -132,15 +132,6 @@ def create(
                     output=None,
                     step=middleware_lib.TransformOutputStepInfo(
                         id="converge",
-                        op=server_lib.Opcode.PLANNED,
-                        opts=None,
-                    ),
-                ),
-                inngest.TransformOutputResult(
-                    error=None,
-                    output=None,
-                    step=middleware_lib.TransformOutputStepInfo(
-                        id="converge",
                         op=server_lib.Opcode.STEP_RUN,
                         opts=None,
                     ),
