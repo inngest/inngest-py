@@ -20,7 +20,7 @@ class TestReconnect(BaseTest):
 
         client = inngest.Inngest(
             api_base_url=proxies.http_proxy.origin,
-            app_id="app",
+            app_id=test_core.random_suffix("app"),
             is_production=False,
         )
 
@@ -34,8 +34,7 @@ class TestReconnect(BaseTest):
         conn = connect([(client, [fn])])
         states = collect_states(conn)
         task = asyncio.create_task(conn.start())
-        self.addCleanup(conn.close, wait=True)
-        self.addCleanup(task.cancel)
+        self.addConnCleanup(conn, task)
 
         # Initial connection.
         await asyncio.wait_for(
@@ -44,7 +43,7 @@ class TestReconnect(BaseTest):
         )
         await test_core.wait_for_len(lambda: proxies.requests, 1)
 
-        await proxies.ws_proxy.close_with_code()
+        proxies.ws_proxy.close_with_code()
 
         # Wait for reconnect request and new connection to be established
         await test_core.wait_for_len(lambda: proxies.requests, 2)
@@ -72,7 +71,7 @@ class TestReconnect(BaseTest):
 
         client = inngest.Inngest(
             api_base_url=proxies.http_proxy.origin,
-            app_id="app",
+            app_id=test_core.random_suffix("app"),
             is_production=False,
         )
 
@@ -86,22 +85,24 @@ class TestReconnect(BaseTest):
         conn = connect([(client, [fn])])
         states = collect_states(conn)
         task = asyncio.create_task(conn.start())
-        self.addCleanup(conn.close, wait=True)
-        self.addCleanup(task.cancel)
+        self.addConnCleanup(conn, task)
 
         # Initial connection.
-        await conn.wait_for_state(ConnectionState.ACTIVE)
+        await asyncio.wait_for(
+            conn.wait_for_state(ConnectionState.ACTIVE),
+            timeout=2,
+        )
         await test_core.wait_for_len(lambda: proxies.requests, 1)
 
         # Abort all WS conns. This avoids graceful shutdown.
-        await proxies.ws_proxy.abort_conns()
-
-        # Ensure we enter the reconnecting state.
-        await conn.wait_for_state(ConnectionState.RECONNECTING)
+        proxies.ws_proxy.abort_conns()
 
         # Post-reconnect connection.
         await test_core.wait_for_len(lambda: proxies.requests, 2)
-        await conn.wait_for_state(ConnectionState.ACTIVE)
+        await asyncio.wait_for(
+            conn.wait_for_state(ConnectionState.ACTIVE),
+            timeout=2,
+        )
 
         assert states == [
             ConnectionState.CONNECTING,
@@ -123,7 +124,7 @@ class TestReconnect(BaseTest):
 
         client = inngest.Inngest(
             api_base_url=proxies.http_proxy.origin,
-            app_id="app",
+            app_id=test_core.random_suffix("app"),
             is_production=False,
         )
 
@@ -137,8 +138,7 @@ class TestReconnect(BaseTest):
         conn = connect([(client, [fn])])
         states = collect_states(conn)
         task = asyncio.create_task(conn.start())
-        self.addCleanup(conn.close, wait=True)
-        self.addCleanup(task.cancel)
+        self.addConnCleanup(conn, task)
 
         # Initial connection.
         await asyncio.wait_for(
@@ -148,7 +148,7 @@ class TestReconnect(BaseTest):
         await test_core.wait_for_len(lambda: proxies.requests, 1)
 
         # Send invalid frame to trigger ConnectionClosedError
-        await proxies.ws_proxy.send_invalid_frame()
+        proxies.ws_proxy.send_invalid_frame()
 
         # Wait for reconnect request and new connection to be established
         await test_core.wait_for_len(lambda: proxies.requests, 2)

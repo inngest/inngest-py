@@ -40,8 +40,7 @@ class TestConcurrentSyncFunctions(BaseTest):
 
         conn = connect([(client, [fn])])
         task = asyncio.create_task(conn.start())
-        self.addCleanup(conn.close, wait=True)
-        self.addCleanup(task.cancel)
+        self.addConnCleanup(conn, task)
         await conn.wait_for_state(ConnectionState.ACTIVE)
 
         # Trigger the function and wait for it to complete.

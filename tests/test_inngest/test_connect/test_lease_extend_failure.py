@@ -42,8 +42,7 @@ class TestLeaseExtendFailure(BaseTest):
 
         conn = connect([(client, [fn])])
         task = asyncio.create_task(conn.start())
-        self.addCleanup(conn.close, wait=True)
-        self.addCleanup(task.cancel)
+        self.addConnCleanup(conn, task)
 
         await conn.wait_for_state(ConnectionState.ACTIVE)
         await test_core.wait_for_len(lambda: proxies.requests, 1)
@@ -56,7 +55,7 @@ class TestLeaseExtendFailure(BaseTest):
         assert request_id != ""
 
         # Failed lease extension payload
-        await proxies.ws_proxy.send_to_clients(
+        proxies.ws_proxy.send_to_clients(
             connect_pb2.ConnectMessage(
                 kind=connect_pb2.GatewayMessageType.WORKER_REQUEST_EXTEND_LEASE_ACK,
                 payload=connect_pb2.WorkerRequestExtendLeaseAckData(

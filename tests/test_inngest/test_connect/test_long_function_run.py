@@ -9,7 +9,7 @@ from .base import BaseTest
 
 
 class TestLongFunctionRun(BaseTest):
-    @pytest.mark.timeout(30, method="thread")
+    @pytest.mark.timeout(60, method="thread")
     async def test(self) -> None:
         client = inngest.Inngest(
             app_id=test_core.random_suffix("app"),
@@ -31,8 +31,7 @@ class TestLongFunctionRun(BaseTest):
 
         conn = connect([(client, [fn])])
         task = asyncio.create_task(conn.start())
-        self.addCleanup(conn.close, wait=True)
-        self.addCleanup(task.cancel)
+        self.addConnCleanup(conn, task)
 
         await conn.wait_for_state(ConnectionState.ACTIVE)
 

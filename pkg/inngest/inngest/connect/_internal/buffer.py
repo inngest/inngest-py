@@ -1,6 +1,7 @@
 import collections
 import dataclasses
 import time
+import typing
 
 
 @dataclasses.dataclass
@@ -26,18 +27,27 @@ class SizeConstrainedBuffer:
     across connection interruptions.
     """
 
-    def __init__(self, max_size_bytes: int):
+    def __init__(
+        self,
+        max_size_bytes: int,
+        on_evict: typing.Callable[[str], None] | None = None,
+        on_reject: typing.Callable[[str], None] | None = None,
+    ):
         """
         Initialize the buffer with a maximum size constraint.
 
         Args:
             max_size_bytes: Maximum total size of all items' data.
+            on_evict: Existing item is evicted to make room for a new one.
+            on_reject: New item is rejected because it exceeds the max buffer size by itself.
         """
 
         self._current_size = 0
         self._items: collections.OrderedDict[str, _BufferItem] = (
             collections.OrderedDict()
         )
+        self._on_evict = on_evict
+        self._on_reject = on_reject
 
         self._max_size_bytes = max_size_bytes
         if self._max_size_bytes <= 0:
@@ -54,6 +64,8 @@ class SizeConstrainedBuffer:
         item_size = len(data)
 
         if item_size > self._max_size_bytes:
+            if self._on_reject is not None:
+                self._on_reject(item_id)
             return False
 
         # Remove existing item with same ID if it exists.
@@ -70,6 +82,8 @@ class SizeConstrainedBuffer:
             # Remove oldest item.
             _, oldest_item = self._items.popitem(last=False)
             self._current_size -= len(oldest_item.data)
+            if self._on_evict is not None:
+                self._on_evict(oldest_item.id)
 
         # Add new item.
         item = _BufferItem(

@@ -23,12 +23,13 @@ class TestHeartbeatHandle(unittest.IsolatedAsyncioTestCase):
         mock_ws = _MockWS()
 
         handler = HeartbeatHandler(
+            heartbeat_interval_sec=1,
             logger=unittest.mock.Mock(),
             state=State(
-                conn_id=None,
+                conn_id=ValueWatcher(None),
                 conn_init=ValueWatcher(None),
                 conn_state=ValueWatcher(ConnectionState.ACTIVE),
-                exclude_gateways=[],
+                exclude_gateways=ValueWatcher([]),
                 extend_lease_interval=ValueWatcher(None),
                 fatal_error=ValueWatcher(None),
                 init_handshake_complete=ValueWatcher(True),

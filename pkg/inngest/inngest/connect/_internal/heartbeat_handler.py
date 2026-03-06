@@ -2,9 +2,8 @@ import asyncio
 
 from inngest._internal import types
 
-from . import connect_pb2, ws_utils
+from . import async_lib, connect_pb2, ws_utils
 from .base_handler import BaseHandler
-from .consts import HEARTBEAT_INTERVAL_SEC
 from .models import State
 
 
@@ -16,7 +15,6 @@ class HeartbeatHandler(BaseHandler):
         1. Sending periodic WORKER_HEARTBEAT messages to the server
         2. Receiving GATEWAY_HEARTBEAT messages from the server
 
-    The heartbeat interval is defined in consts.py (HEARTBEAT_INTERVAL_SEC).
     Heartbeats only begin after the initial handshake is complete.
 
     Graceful Shutdown:
@@ -30,7 +28,9 @@ class HeartbeatHandler(BaseHandler):
         self,
         logger: types.Logger,
         state: State,
+        heartbeat_interval_sec: int,
     ) -> None:
+        self._heartbeat_interval_sec = heartbeat_interval_sec
         self._logger = logger
         self._state = state
 
@@ -54,13 +54,7 @@ class HeartbeatHandler(BaseHandler):
         await self._state.pending_request_count.wait_for(0)
 
         if self._heartbeat_sender_task is not None:
-            self._heartbeat_sender_task.cancel()
-            try:
-                await self._heartbeat_sender_task
-            except asyncio.CancelledError:
-                # This is expected since the task is likely calling
-                # `asyncio.sleep` after cancellation.
-                pass
+            await async_lib.cancel_and_wait(self._heartbeat_sender_task)
 
     async def _heartbeat_sender(
         self,
@@ -90,7 +84,7 @@ class HeartbeatHandler(BaseHandler):
                     "Error sending heartbeat", extra={"error": str(err)}
                 )
 
-            await asyncio.sleep(HEARTBEAT_INTERVAL_SEC)
+            await asyncio.sleep(self._heartbeat_interval_sec)
 
         self._logger.debug("Heartbeater task stopped")
 

@@ -4,20 +4,11 @@ Main orchestrator for the Connect WebSocket connection.
 This module provides the primary entry point for establishing and managing
 persistent WebSocket connections between the SDK and the Inngest server.
 
-Architecture:
-    The connection uses a handler pipeline pattern where incoming WebSocket
-    messages are dispatched to all registered handlers. Each handler is
-    responsible for a specific concern:
-
-    - ConnInitHandler: Bootstraps the connection via REST API
-    - InitHandshakeHandler: Performs the WebSocket handshake protocol
-    - ExecutionHandler: Processes function execution requests
-    - HeartbeatHandler: Maintains keep-alive with the server
-    - DrainHandler: Handles graceful shutdown signals from the server
-
-Reconnection:
-    The connection automatically reconnects on disconnect unless explicitly
-    closed. Fatal errors (e.g. authentication failure) prevent reconnection.
+Thread ownership:
+    This module contains only main-thread concerns: public API, signal
+    handling, thread creation, and bridging into the internal thread.
+    Internal-thread logic (WebSocket lifecycle, message handling, shutdown
+    coordination) lives in `isolated_worker.py`.
 """
 
 from __future__ import annotations
@@ -29,28 +20,23 @@ import threading
 import typing
 
 import httpx
-import websockets
 
 import inngest
-from inngest._internal import comm_lib, const, net, server_lib, types
+from inngest._internal import comm_lib, const, net, server_lib
 
-from . import async_lib, connect_pb2
-from .base_handler import BaseHandler
 from .configs_lib import get_max_worker_concurrency
 from .conn_init_starter import ConnInitHandler
 from .consts import (
     DEFAULT_SHUTDOWN_SIGNALS,
     FRAMEWORK,
-    MAX_MESSAGE_SIZE,
-    POST_CONNECT_SETTLE_SEC,
-    PROTOCOL,
-    RECONNECTION_DELAY_SEC,
+    HEARTBEAT_INTERVAL_SEC,
 )
 from .drain_handler import DrainHandler
 from .errors import UnreachableError
 from .execution_handler import ExecutionHandler
 from .heartbeat_handler import HeartbeatHandler
 from .init_handshake_handler import InitHandshakeHandler
+from .isolated_worker import IsolatedWorker
 from .models import AppConfig, ConnectionState, State
 from .value_watcher import ValueWatcher
 
@@ -62,7 +48,7 @@ class WorkerConnection(typing.Protocol):
 
     async def close(self, *, wait: bool = False) -> None:
         """
-        Wait for the connection to be closed.
+        Close the connection.
 
         Args:
         ----
@@ -90,7 +76,7 @@ class WorkerConnection(typing.Protocol):
 
     async def start(self) -> None:
         """
-        Start the connection.
+        Start the connection. Blocks until the connection is closed.
         """
         ...
 
@@ -101,11 +87,9 @@ class WorkerConnection(typing.Protocol):
         ...
 
 
-class _WebSocketWorkerConnection(WorkerConnection):
-    _consumers_closed_task: asyncio.Task[None] | None = None
-    _event_loop_keep_alive_task: asyncio.Task[None] | None = None
-
-    _message_handler_task: asyncio.Task[types.MaybeError[None]] | None = None
+class WorkerConnectionImpl(WorkerConnection):
+    _loop: asyncio.AbstractEventLoop | None = None
+    _thread: threading.Thread | None = None
 
     def __init__(
         self,
@@ -115,10 +99,8 @@ class _WebSocketWorkerConnection(WorkerConnection):
         rewrite_gateway_endpoint: typing.Callable[[str], str] | None = None,
         shutdown_signals: list[signal.Signals] | None = None,
         max_worker_concurrency: int | None = None,
+        _test_only_heartbeat_interval_sec: int = HEARTBEAT_INTERVAL_SEC,
     ) -> None:
-        # Used to ensure that no messages are being handled when we fully close.
-        self._handling_message_count = ValueWatcher(0)
-
         if len(apps) == 0:
             raise Exception("no apps provided")
         default_client = apps[0][0]
@@ -205,13 +187,13 @@ class _WebSocketWorkerConnection(WorkerConnection):
             )
 
         self._state = State(
-            conn_id=None,
+            conn_id=ValueWatcher(None),
             conn_init=ValueWatcher(None),
             conn_state=ValueWatcher(
                 ConnectionState.CONNECTING,
                 on_change=on_conn_state_change,
             ),
-            exclude_gateways=[],
+            exclude_gateways=ValueWatcher([]),
             extend_lease_interval=ValueWatcher(None),
             fatal_error=ValueWatcher(None),
             init_handshake_complete=ValueWatcher(False),
@@ -219,7 +201,18 @@ class _WebSocketWorkerConnection(WorkerConnection):
             ws=ValueWatcher(None),
         )
 
-        self._handlers: list[BaseHandler] = [
+        self._execution_handler = ExecutionHandler(
+            api_origin=self._api_origin,
+            comm_handlers=self._comm_handlers,
+            http_client=self._http_client,
+            http_client_sync=self._http_client_sync,
+            logger=self._logger,
+            state=self._state,
+            signing_key=self._signing_key,
+            signing_key_fallback=self._fallback_signing_key,
+        )
+
+        self._handlers = [
             ConnInitHandler(
                 api_origin=self._api_origin,
                 env=default_client.env,
@@ -231,7 +224,11 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 signing_key_fallback=self._fallback_signing_key,
                 state=self._state,
             ),
-            HeartbeatHandler(self._logger, self._state),
+            HeartbeatHandler(
+                self._logger,
+                self._state,
+                _test_only_heartbeat_interval_sec,
+            ),
             InitHandshakeHandler(
                 self._logger,
                 self._state,
@@ -240,24 +237,22 @@ class _WebSocketWorkerConnection(WorkerConnection):
                 self._instance_id,
                 max_worker_concurrency=self._max_worker_concurrency,
             ),
-            ExecutionHandler(
-                api_origin=self._api_origin,
-                comm_handlers=self._comm_handlers,
-                http_client=self._http_client,
-                http_client_sync=self._http_client_sync,
-                logger=self._logger,
-                state=self._state,
-                signing_key=self._signing_key,
-                signing_key_fallback=self._fallback_signing_key,
-            ),
+            self._execution_handler,
             DrainHandler(self._logger, self._state),
         ]
 
+        self._isolated_worker = IsolatedWorker(
+            handlers=self._handlers,
+            state=self._state,
+            logger=self._logger,
+        )
+
     def get_connection_id(self) -> str:
-        if self._state.conn_id is None:
+        conn_id = self._state.conn_id.value
+        if conn_id is None:
             raise Exception("connection not established")
 
-        return self._state.conn_id
+        return conn_id
 
     def get_state(self) -> ConnectionState:
         return self._state.conn_state.value
@@ -265,120 +260,44 @@ class _WebSocketWorkerConnection(WorkerConnection):
     async def wait_for_state(self, state: ConnectionState) -> None:
         await self._state.conn_state.wait_for(state)
 
-    async def _handle_msg(
-        self,
-        ws: websockets.ClientConnection,
-    ) -> types.MaybeError[None]:
-        disconnect = False
-        try:
-            async for raw_msg in ws:
-                if self._state.conn_init.value is None:
-                    return UnreachableError("Missing conn init")
-
-                if not isinstance(raw_msg, bytes):
-                    self._logger.debug(
-                        "Received non-bytes message", extra={"message": raw_msg}
-                    )
-                    continue
-
-                msg = connect_pb2.ConnectMessage()
-                msg.ParseFromString(raw_msg)
-                self._logger.debug(
-                    "Received message",
-                    extra={
-                        "kind": connect_pb2.GatewayMessageType.Name(msg.kind),
-                        "payload": msg.payload,
-                    },
-                )
-
-                self._handling_message_count.value += 1
-                try:
-                    for h in self._handlers:
-                        h.handle_msg(
-                            msg,
-                            self._state.conn_init.value[0],
-                            self.get_connection_id(),
-                        )
-                finally:
-                    self._handling_message_count.value -= 1
-
-            if ws.close_code is not None:
-                # Normal connection close
-                self._logger.debug(
-                    "Connection closed",
-                    extra={
-                        "close_code": ws.close_code,
-                        "close_reason": ws.close_reason,
-                    },
-                )
-                disconnect = True
-        except websockets.exceptions.ConnectionClosedError as e:
-            self._logger.debug(
-                "Connection closed abnormally", extra={"error": str(e)}
-            )
-            disconnect = True
-        except websockets.exceptions.ConnectionClosedOK:
-            self._logger.debug("Connection closed normally")
-            disconnect = True
-        except Exception as e:
-            self._logger.debug("Connection error", extra={"error": str(e)})
-            disconnect = True
-
-        if disconnect is True:
-            self._state.close_ws()
-        return None
-
     async def start(self) -> None:
-        self._event_loop_keep_alive_task = _event_loop_keep_alive()
+        # User functions execute on the caller's loop (main thread).
+        self._execution_handler._main_loop = asyncio.get_running_loop()
 
-        for h in self._handlers:
-            err = h.start()
-            if isinstance(err, Exception):
-                raise err
+        # Created here so `_close` can call `call_soon_threadsafe` on it
+        # before the thread starts. The loop isn't *run* until `run_connect`.
+        self._loop = asyncio.new_event_loop()
+        thread_exc: Exception | None = None
 
-        self._consumers_closed_task = asyncio.create_task(
-            self._wait_for_consumers_closed(),
-        )
-
-        while self._state.allow_reconnect():
-            gateway_endpoint = await _wait_for_gateway_endpoint(self._state)
-            if isinstance(gateway_endpoint, Exception):
-                # Fatal error.
-                raise gateway_endpoint
-            endpoint, closing = gateway_endpoint
-            if closing:
-                return
-
+        def run_connect() -> None:
+            nonlocal thread_exc
+            if self._loop is None:
+                raise UnreachableError("loop is None")
             try:
-                self._logger.debug(
-                    "Gateway connecting",
-                    extra={"endpoint": endpoint},
-                )
-
-                async with websockets.connect(
-                    endpoint,
-                    max_size=MAX_MESSAGE_SIZE,
-                    subprotocols=[PROTOCOL],
-                ) as ws:
-                    self._logger.debug("Gateway connected")
-                    self._state.ws.value = ws
-                    self._message_handler_task = asyncio.create_task(
-                        self._handle_msg(ws)
-                    )
-
-                    await self._state.conn_init.wait_for_change()
-                    await asyncio.sleep(POST_CONNECT_SETTLE_SEC)
+                self._loop.run_until_complete(self._isolated_worker.run())
             except Exception as e:
-                self._logger.error(
-                    f"Gateway connection error: {e}. Reconnecting..."
+                thread_exc = e
+                # Ensure CLOSED is reached even if run() raised
+                # before its try/finally block.
+                self._state.conn_state.set_if(
+                    ConnectionState.CLOSED,
+                    lambda v: v != ConnectionState.CLOSED,
                 )
-                self._state.close_ws()
-                await asyncio.sleep(RECONNECTION_DELAY_SEC)
-            except asyncio.CancelledError:
-                self._logger.debug("Gateway connection cancelled")
-                break
             finally:
-                self._logger.debug("Gateway connection closed")
+                _shutdown_loop(self._loop)
+
+        self._thread = threading.Thread(target=run_connect, daemon=True)
+        self._thread.start()
+
+        # Block until the connection reaches CLOSED state.
+        await self._state.conn_state.wait_for(ConnectionState.CLOSED)
+        await asyncio.to_thread(self._thread.join)
+
+        await self._http_client.aclose()
+        self._http_client_sync.close()
+
+        if thread_exc is not None:
+            raise thread_exc
 
     async def close(self, *, wait: bool = False) -> None:
         self._close()
@@ -391,110 +310,40 @@ class _WebSocketWorkerConnection(WorkerConnection):
         Must be sync since it's called in signal handlers.
         """
 
-        if self._state.conn_state.value == ConnectionState.CLOSED:
-            # Already closed.
+        did_set = self._state.conn_state.set_if(
+            ConnectionState.CLOSING,
+            lambda v: v
+            not in (ConnectionState.CLOSING, ConnectionState.CLOSED),
+        )
+        if not did_set:
+            # Already closed or closing.
             return
 
-        self._state.conn_state.value = ConnectionState.CLOSING
-
-        ws = self._state.ws.value
-        if ws is not None:
-            result = async_lib.run_sync(
-                ws.send(
-                    connect_pb2.ConnectMessage(
-                        kind=connect_pb2.GatewayMessageType.WORKER_PAUSE,
-                    ).SerializeToString()
-                ),
-            )
-            if isinstance(result, Exception):
-                self._logger.error(
-                    "Failed to send worker pause message",
-                    extra={"error": str(result)},
+        if self._loop is not None:
+            try:
+                self._loop.call_soon_threadsafe(
+                    self._isolated_worker.schedule_close
                 )
-        else:
-            self._logger.warning(
-                "Unable to send worker pause message because the WebSocket connection is not open"
-            )
-
-        # Tell all the handlers to close.
-        for h in self._handlers:
-            h.close()
+            except RuntimeError:
+                # Loop already closed (worker thread exited on its own).
+                pass
 
     async def closed(self) -> None:
-        if self._state.conn_state.value == ConnectionState.CLOSED:
-            # Already closed.
-            return
+        await self._state.conn_state.wait_for(ConnectionState.CLOSED)
 
-        await self._wait_for_consumers_closed()
-        self._state.conn_state.value = ConnectionState.CLOSED
-        self._state.close_ws()
-
-        if self._event_loop_keep_alive_task is not None:
-            self._event_loop_keep_alive_task.cancel()
-
-    async def _wait_for_consumers_closed(self) -> None:
-        """
-        Wait for all consumers to close. The WebSocket connection should not
-        close until then.
-        """
-
-        await asyncio.gather(*[h.closed() for h in self._handlers])
-        await self._handling_message_count.wait_for(0)
-        self._state.conn_init.value = None
+        if self._thread is not None:
+            await asyncio.to_thread(self._thread.join)
 
 
-def _event_loop_keep_alive() -> asyncio.Task[None]:
+def _shutdown_loop(loop: asyncio.AbstractEventLoop) -> None:
     """
-    Create a task whose sole purpose is to keep the event loop alive. Without
-    this, the event loop can go into an idle mode. This isn't a huge deal, but
-    it can make graceful shutdown take ~5 seconds longer.
+    Cancel all remaining tasks on the loop and close it. Called from the worker
+    thread after `run_until_complete` returns.
     """
 
-    async def _keep_alive() -> None:
-        while True:  # noqa: ASYNC110
-            await asyncio.sleep(1)
-
-    return asyncio.create_task(_keep_alive())
-
-
-async def _wait_for_gateway_endpoint(
-    state: State,
-) -> types.MaybeError[tuple[str, bool]]:
-    """
-    Wait for the Gateway endpoint to be set or for the connection to be closing.
-    Returns the Gateway endpoint and a boolean indicating if the connection is
-    closing.
-    """
-
-    done_tasks, _ = await asyncio.wait(
-        (
-            asyncio.create_task(state.conn_init.wait_for_not_none()),
-            asyncio.create_task(
-                state.conn_state.wait_for(ConnectionState.CLOSING)
-            ),
-            asyncio.create_task(state.fatal_error.wait_for_not_none()),
-        ),
-        return_when=asyncio.FIRST_COMPLETED,
-    )
-
-    for t in done_tasks:
-        # Need to cast because Mypy doesn't understand the type (it thinks it's
-        # `object`).
-        r = typing.cast(
-            ConnectionState | tuple[connect_pb2.AuthData, str] | Exception,
-            t.result(),
-        )
-
-        if r is ConnectionState.CLOSING:
-            # We need to shutdown.
-            return ("", True)
-        if isinstance(r, Exception):
-            return r
-        if isinstance(r, ConnectionState):
-            return UnreachableError(
-                "We already checked the only possible ConnectionState"
-            )
-
-        return r[1], False
-
-    return UnreachableError()
+    try:
+        pending = asyncio.all_tasks(loop)
+        for t in pending:
+            t.cancel()
+    finally:
+        loop.close()
