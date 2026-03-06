@@ -132,10 +132,9 @@ def create(
 
         # 7 because we have:
         # - 4 parallel steps
-        # - 1 for planning "after" step
         # - 1 for running "after" step
         # - 1 for the final function return
-        assert state.request_counter == 7
+        assert state.request_counter == 6
 
     fn: list[inngest.Function[typing.Any]]
     if is_sync:
