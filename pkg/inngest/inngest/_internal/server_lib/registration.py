@@ -215,6 +215,10 @@ class TriggerEvent(_BaseConfig):
 
 class SynchronizeRequest(types.BaseModel):
     app_name: str = pydantic.Field(..., serialization_alias="appname")
+    app_version: str | None = pydantic.Field(
+        default=None,
+        serialization_alias="appVersion",
+    )
     capabilities: Capabilities = Capabilities()
     deploy_type: DeployType
     framework: Framework
@@ -230,6 +234,10 @@ class InBandSynchronizeRequest(types.BaseModel):
 
 class InBandSynchronizeResponse(types.BaseModel):
     app_id: str
+    app_version: str | None = pydantic.Field(
+        default=None,
+        serialization_alias="appVersion",
+    )
     env: str | None
     framework: Framework
     functions: list[FunctionConfig]

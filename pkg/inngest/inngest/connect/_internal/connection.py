@@ -37,7 +37,7 @@ from .execution_handler import ExecutionHandler
 from .heartbeat_handler import HeartbeatHandler
 from .init_handshake_handler import InitHandshakeHandler
 from .isolated_worker import IsolatedWorker
-from .models import ConnectionState, State
+from .models import AppConfig, ConnectionState, State
 from .value_watcher import ValueWatcher
 
 
@@ -130,7 +130,7 @@ class WorkerConnectionImpl(WorkerConnection):
             self._fallback_signing_key = default_client.signing_key_fallback
 
         self._comm_handlers: dict[str, comm_lib.CommHandler] = {}
-        self._app_configs: dict[str, list[server_lib.FunctionConfig]] = {}
+        self._app_configs: dict[str, AppConfig] = {}
         for a in apps:
             (client, fns) = a
 
@@ -150,7 +150,10 @@ class WorkerConnectionImpl(WorkerConnection):
             )
             if isinstance(configs, Exception):
                 raise configs
-            self._app_configs[client.app_id] = configs
+            self._app_configs[client.app_id] = AppConfig(
+                functions=configs,
+                version=client.app_version,
+            )
 
             self._comm_handlers[client.app_id] = comm_lib.CommHandler(
                 client=client,

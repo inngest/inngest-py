@@ -65,11 +65,16 @@ class Inngest:
     def signing_key_fallback(self) -> str | None:
         return self._signing_key_fallback
 
+    @property
+    def app_version(self) -> str | None:
+        return self._app_version
+
     def __init__(
         self,
         *,
         api_base_url: str | None = None,
         app_id: str,
+        app_version: str | None = None,
         env: str | None = None,
         event_api_base_url: str | None = None,
         event_key: str | None = None,
@@ -84,23 +89,21 @@ class Inngest:
         Args:
         ----
             api_base_url: Origin for the Inngest REST API.
-            app_id: Unique Inngest ID. Changing this ID will make Inngest think
-                it's a different app.
-            env: Branch environment to use. This is only necessary for branch
-                environments.
+            app_id: Unique Inngest ID. Changing this ID will make Inngest think it's a different app.
+            app_version: Arbitrary version identifier (e.g. a semver string or Git SHA).
+            env: Branch environment to use. This is only necessary for branch environments.
             event_api_base_url: Origin for the Inngest Event API.
             event_key: Inngest event key.
-            is_production: Whether the app is in production. This affects
-                request signature verification and default Inngest server URLs.
+            is_production: Whether the app is in production. This affects request signature verification and default Inngest server URLs.
             logger: Logger to use.
             middleware: List of middleware to use.
-            request_timeout: Timeout configuration for internal http client. int value is in ms. Event sending requests
-                may take longer due to retries.
+            request_timeout: Timeout configuration for internal http client. int value is in ms. Event sending requests may take longer due to retries.
             serializer: Serializes/deserializes function/step output using the output_type argument.
             signing_key: Inngest signing key.
         """
 
         self.app_id = app_id
+        self._app_version = app_version
         self.logger = logger or logging.getLogger(__name__)
         self._mode = _get_mode(self.logger, is_production)
 
