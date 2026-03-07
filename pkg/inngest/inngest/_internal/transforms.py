@@ -106,16 +106,20 @@ def to_duration_str(
             "duration must be at least 1 second"
         )
 
-    if ms < _Duration.minute():
-        return f"{ms // _Duration.second()}s"
-    if ms < _Duration.hour():
-        return f"{ms // _Duration.minute()}m"
-    if ms < _Duration.day():
-        return f"{ms // _Duration.hour()}h"
-    if ms < _Duration.week():
-        return f"{ms // _Duration.day()}d"
+    # Use the largest unit that divides evenly to avoid truncation
+    for unit, suffix in [
+        (_Duration.week(), "w"),
+        (_Duration.day(), "d"),
+        (_Duration.hour(), "h"),
+        (_Duration.minute(), "m"),
+        (_Duration.second(), "s"),
+    ]:
+        if ms % unit == 0:
+            return f"{ms // unit}{suffix}"
 
-    return f"{ms // _Duration.week()}w"
+    return errors.FunctionConfigInvalidError(
+        "duration must be a whole number of seconds"
+    )
 
 
 def to_maybe_duration_str(

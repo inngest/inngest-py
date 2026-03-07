@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Refer to `CONTRIBUTING.md`.
 
+- **Always use `uv` to run Python tools** (e.g. `uv run pytest`, `uv run mypy`). Never use `python -m`, `.venv/bin/`, or bare `pytest`.
+
 ## Architecture
 
 Refer to `CONTRIBUTING.md`.
