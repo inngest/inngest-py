@@ -12,8 +12,25 @@ def test_hash_signing_key() -> None:
 
 
 def test_to_duration_str() -> None:
-    out = transforms.to_duration_str(1000)
-    assert out == "1s"
+    # Exact units
+    assert transforms.to_duration_str(1000) == "1s"
+    assert transforms.to_duration_str(datetime.timedelta(seconds=1)) == "1s"
+    assert transforms.to_duration_str(datetime.timedelta(seconds=30)) == "30s"
+    assert transforms.to_duration_str(datetime.timedelta(minutes=2)) == "2m"
+    assert transforms.to_duration_str(datetime.timedelta(hours=2)) == "2h"
+    assert transforms.to_duration_str(datetime.timedelta(days=3)) == "3d"
+    assert transforms.to_duration_str(datetime.timedelta(weeks=2)) == "2w"
 
-    out = transforms.to_duration_str(datetime.timedelta(minutes=2))
-    assert out == "2m"
+    # Non-exact-unit durations must not truncate
+    assert transforms.to_duration_str(datetime.timedelta(seconds=90)) == "90s"
+    assert transforms.to_duration_str(datetime.timedelta(minutes=90)) == "90m"
+    assert transforms.to_duration_str(datetime.timedelta(hours=36)) == "36h"
+    assert transforms.to_duration_str(datetime.timedelta(days=10)) == "10d"
+    assert (
+        transforms.to_duration_str(datetime.timedelta(minutes=2, seconds=30))
+        == "150s"
+    )
+
+    # Sub-second durations are errors
+    result = transforms.to_duration_str(datetime.timedelta(milliseconds=500))
+    assert isinstance(result, Exception)
