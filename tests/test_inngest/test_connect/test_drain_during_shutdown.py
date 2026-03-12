@@ -9,7 +9,7 @@ from inngest.connect._internal.connection import (
     WorkerConnectionImpl,  # pyright: ignore[reportPrivateUsage]
 )
 
-from .base import BaseTest, collect_states
+from .base import BaseTest
 
 
 class TestDrainDuringGracefulShutdown(BaseTest):

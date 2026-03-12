@@ -1,4 +1,5 @@
 import websockets
+import websockets.exceptions
 
 from inngest._internal import types
 
