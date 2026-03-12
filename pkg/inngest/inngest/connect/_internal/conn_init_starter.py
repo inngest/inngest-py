@@ -40,15 +40,8 @@ class ConnInitHandler(BaseHandler):
         problematic gateways on reconnect.
     """
 
-    _closed_event: asyncio.Event | None = None
     _initial_request_task: asyncio.Task[None] | None = None
     _reconnect_watcher_task: asyncio.Task[None] | None = None
-
-    @property
-    def closed_event(self) -> asyncio.Event:
-        if self._closed_event is None:
-            self._closed_event = asyncio.Event()
-        return self._closed_event
 
     def __init__(
         self,
@@ -63,6 +56,7 @@ class ConnInitHandler(BaseHandler):
         signing_key_fallback: str | None,
         state: State,
     ):
+        super().__init__(logger, state)
         self._api_origin = api_origin
         self._env = env
         self._http_client = http_client
@@ -71,7 +65,6 @@ class ConnInitHandler(BaseHandler):
         self._rewrite_gateway_endpoint = rewrite_gateway_endpoint
         self._signing_key = signing_key
         self._signing_key_fallback = signing_key_fallback
-        self._state = state
 
     def start(self) -> types.MaybeError[None]:
         if self._closed_event is None:
@@ -89,16 +82,7 @@ class ConnInitHandler(BaseHandler):
 
         return None
 
-    def close(self) -> None:
-        self.closed_event.set()
-
-        if self._initial_request_task is not None:
-            self._initial_request_task.cancel()
-        if self._reconnect_watcher_task is not None:
-            self._reconnect_watcher_task.cancel()
-
-    async def closed(self) -> None:
-        await self.closed_event.wait()
+    async def after_close_drained(self) -> None:
         await async_lib.cancel_and_wait(self._initial_request_task)
         await async_lib.cancel_and_wait(self._reconnect_watcher_task)
 
@@ -113,10 +97,7 @@ class ConnInitHandler(BaseHandler):
                 return
 
             await self._state.conn_init.wait_for(None)
-            if self._state.conn_state.value in [
-                ConnectionState.CLOSED,
-                ConnectionState.CLOSING,
-            ]:
+            if self._state.conn_state.value == ConnectionState.CLOSED:
                 return
 
             self._state.conn_state.value = ConnectionState.CONNECTING

@@ -41,10 +41,7 @@ class State:
     ws: ValueWatcher[websockets.ClientConnection | None]
 
     def allow_reconnect(self) -> bool:
-        return self.conn_state.value not in [
-            ConnectionState.CLOSED,
-            ConnectionState.CLOSING,
-        ]
+        return self.conn_state.value != ConnectionState.CLOSED
 
     def close_ws(self) -> None:
         """

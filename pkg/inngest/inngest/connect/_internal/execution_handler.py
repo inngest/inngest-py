@@ -94,6 +94,7 @@ class ExecutionHandler(BaseHandler):
         signing_key_fallback: str | None,
         state: State,
     ) -> None:
+        super().__init__(logger, state)
         self._api_origin = api_origin
         self._buffer = SizeConstrainedBuffer(
             DEFAULT_MAX_BUFFER_SIZE_BYTES,
@@ -112,7 +113,6 @@ class ExecutionHandler(BaseHandler):
         self._logger = logger
         self._signing_key = signing_key
         self._signing_key_fallback = signing_key_fallback
-        self._state = state
 
         # Keep track of pending tasks to support graceful shutdown and lease
         # extensions.
@@ -141,11 +141,9 @@ class ExecutionHandler(BaseHandler):
         # Reject new requests from this point forward.
         self._closing = True
 
-        # Don't close until all pending requests end.
-        self._state.pending_request_count.on_value(0, super().close)
+        super().close()
 
-    async def closed(self) -> None:
-        await super().closed()
+    async def after_close_drained(self) -> None:
         await async_lib.cancel_and_wait(self._leaser_extender_task)
         await async_lib.cancel_and_wait(self._unacked_msg_flush_poller_task)
 
@@ -221,11 +219,10 @@ class ExecutionHandler(BaseHandler):
         """
 
         try:
-            ws = await self._state.ws.wait_for_not_none()
+            await self._state.ws.wait_for_not_none()
             err = await ws_utils.safe_send(
                 self._logger,
                 self._state,
-                ws,
                 connect_pb2.ConnectMessage(
                     kind=connect_pb2.GatewayMessageType.WORKER_REQUEST_ACK,
                     payload=connect_pb2.WorkerRequestAckData(
@@ -315,7 +312,6 @@ class ExecutionHandler(BaseHandler):
             err = await ws_utils.safe_send(
                 self._logger,
                 self._state,
-                ws,
                 connect_pb2.ConnectMessage(
                     kind=connect_pb2.GatewayMessageType.WORKER_REPLY,
                     payload=reply_payload,
@@ -356,19 +352,9 @@ class ExecutionHandler(BaseHandler):
                 status=connect_pb2.SDKResponseStatus.ERROR,
             ).SerializeToString()
 
-            # Non-blocking read of current WS to avoid hanging.
-            current_ws = self._state.ws.value
-            if current_ws is None:
-                self._logger.error(
-                    "Cannot send error reply: no WebSocket connection",
-                    extra={"request_id": req_data.request_id},
-                )
-                return
-
             send_err = await ws_utils.safe_send(
                 self._logger,
                 self._state,
-                current_ws,
                 connect_pb2.ConnectMessage(
                     kind=connect_pb2.GatewayMessageType.WORKER_REPLY,
                     payload=error_reply,
@@ -448,7 +434,7 @@ class ExecutionHandler(BaseHandler):
 
     async def _leaser_extender(self) -> None:
         while self.closed_event.is_set() is False:
-            ws = await self._state.ws.wait_for_not_none()
+            await self._state.ws.wait_for_not_none()
             extend_lease_interval = (
                 await self._state.extend_lease_interval.wait_for_not_none()
             )
@@ -467,7 +453,6 @@ class ExecutionHandler(BaseHandler):
                 err = await ws_utils.safe_send(
                     self._logger,
                     self._state,
-                    ws,
                     connect_pb2.ConnectMessage(
                         kind=connect_pb2.GatewayMessageType.WORKER_REQUEST_EXTEND_LEASE,
                         payload=connect_pb2.WorkerRequestExtendLeaseData(

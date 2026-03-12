@@ -1,5 +1,3 @@
-import asyncio
-
 from inngest._internal import types
 
 from . import connect_pb2
@@ -23,15 +21,13 @@ class DrainHandler(BaseHandler):
     interrupting in-flight work.
     """
 
-    _closed_event: asyncio.Event | None = None
-
     def __init__(
         self,
         logger: types.Logger,
         state: State,
     ) -> None:
+        super().__init__(logger, state)
         self._logger = logger
-        self._state = state
 
     def handle_msg(
         self,

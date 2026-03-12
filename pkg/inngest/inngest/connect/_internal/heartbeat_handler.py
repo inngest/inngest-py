@@ -30,9 +30,9 @@ class HeartbeatHandler(BaseHandler):
         state: State,
         heartbeat_interval_sec: int,
     ) -> None:
+        super().__init__(logger, state)
         self._heartbeat_interval_sec = heartbeat_interval_sec
         self._logger = logger
-        self._state = state
 
     def start(self) -> types.MaybeError[None]:
         err = super().start()
@@ -46,15 +46,8 @@ class HeartbeatHandler(BaseHandler):
 
         return None
 
-    def close(self) -> None:
-        self._state.pending_request_count.on_value(0, super().close)
-
-    async def closed(self) -> None:
-        await super().closed()
-        await self._state.pending_request_count.wait_for(0)
-
-        if self._heartbeat_sender_task is not None:
-            await async_lib.cancel_and_wait(self._heartbeat_sender_task)
+    async def after_close_drained(self) -> None:
+        await async_lib.cancel_and_wait(self._heartbeat_sender_task)
 
     async def _heartbeat_sender(
         self,
@@ -65,15 +58,12 @@ class HeartbeatHandler(BaseHandler):
             # logs
             await self._state.init_handshake_complete.wait_for(True)
 
-            # IMPORTANT: We need to get the WS conn each loop iteration because
-            # it may have changed (e.g. due to a reconnect)
-            ws = await self._state.ws.wait_for_not_none()
+            await self._state.ws.wait_for_not_none()
 
             self._logger.debug("Sending heartbeat")
             err = await ws_utils.safe_send(
                 self._logger,
                 self._state,
-                ws,
                 connect_pb2.ConnectMessage(
                     kind=connect_pb2.GatewayMessageType.WORKER_HEARTBEAT,
                 ).SerializeToString(),
