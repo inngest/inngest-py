@@ -8,7 +8,6 @@ from . import models
 async def safe_send(
     logger: types.Logger,
     state: models.State,
-    ws: websockets.ClientConnection,
     message: bytes,
 ) -> types.MaybeError[None]:
     """
@@ -18,6 +17,9 @@ async def safe_send(
     """
 
     try:
+        ws = state.ws.value
+        if ws is None:
+            return Exception("No WebSocket connection")
         await ws.send(message)
     except websockets.exceptions.ConnectionClosed as e:
         logger.error(f"Error sending message: {e!s}", extra={"error": str(e)})
