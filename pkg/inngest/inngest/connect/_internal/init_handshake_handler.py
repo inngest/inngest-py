@@ -35,7 +35,6 @@ class InitHandshakeHandler(BaseHandler):
         On reconnect, the handshake state is reset and repeated.
     """
 
-    _closed_event: asyncio.Event | None = None
     _send_data_task: asyncio.Task[None] | None = None
     _reconnect_task: asyncio.Task[None] | None = None
 
@@ -48,12 +47,12 @@ class InitHandshakeHandler(BaseHandler):
         instance_id: str,
         max_worker_concurrency: int | None,
     ) -> None:
+        super().__init__(logger, state)
         self._app_configs = app_configs
         self._env = env
         self._instance_id = instance_id
         self._logger = logger
         self._handshake_state = _HandshakeState.AWAITING_HELLO
-        self._state = state
         self._max_worker_concurrency = max_worker_concurrency
 
     def start(self) -> types.MaybeError[None]:
@@ -67,16 +66,7 @@ class InitHandshakeHandler(BaseHandler):
             )
         return None
 
-    def close(self) -> None:
-        super().close()
-
-        if self._send_data_task is not None:
-            self._send_data_task.cancel()
-        if self._reconnect_task is not None:
-            self._reconnect_task.cancel()
-
-    async def closed(self) -> None:
-        await super().closed()
+    async def after_close_drained(self) -> None:
         await async_lib.cancel_and_wait(self._send_data_task)
         await async_lib.cancel_and_wait(self._reconnect_task)
 
@@ -168,7 +158,7 @@ class InitHandshakeHandler(BaseHandler):
         auth_data: connect_pb2.AuthData,
         connection_id: str,
     ) -> None:
-        ws = await self._state.ws.wait_for_not_none()
+        await self._state.ws.wait_for_not_none()
 
         sync_message = _create_sync_message(
             app_configs=self._app_configs,
@@ -188,7 +178,6 @@ class InitHandshakeHandler(BaseHandler):
         err = await ws_utils.safe_send(
             self._logger,
             self._state,
-            ws,
             sync_message.SerializeToString(),
         )
         if err is not None:

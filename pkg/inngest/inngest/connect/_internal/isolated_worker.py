@@ -252,6 +252,10 @@ class IsolatedWorker:
             h.close()
         await self._wait_for_handlers_closed()
 
+        # Signal full shutdown — this exits the run() loop.
+        self._state.conn_state.value = ConnectionState.CLOSED
+        self._state.conn_init.value = None
+
     async def _wait_for_handlers_closed(self) -> None:
         """
         Block until all handlers are closed and no messages are in-flight,
@@ -271,8 +275,6 @@ class IsolatedWorker:
                 "Graceful shutdown timed out waiting for in-flight work to finish",
                 extra={"timeout_sec": GRACEFUL_SHUTDOWN_TIMEOUT_SEC},
             )
-
-        self._state.conn_init.value = None
 
 
 def _event_loop_keep_alive() -> asyncio.Task[None]:
@@ -300,7 +302,7 @@ async def _wait_for_gateway_endpoint(
 
     conn_init_task = asyncio.create_task(state.conn_init.wait_for_not_none())
     closing_task = asyncio.create_task(
-        state.conn_state.wait_for(ConnectionState.CLOSING)
+        state.conn_state.wait_for(ConnectionState.CLOSED)
     )
     fatal_error_task = asyncio.create_task(
         state.fatal_error.wait_for_not_none()
