@@ -8,6 +8,7 @@ import pytest
 import test_core
 from inngest.connect import ConnectionState, connect
 from inngest.connect._internal import connect_pb2
+from inngest.connect._internal.connect import connect_test_overrides
 from test_core import http_proxy
 
 from .base import BaseTest, collect_states
@@ -185,7 +186,9 @@ class TestWaitForExecutionRequest(BaseTest):
             state.after_sleep = True
 
         # Start app
-        conn = connect([(client, [fn])])
+        with connect_test_overrides(extend_lease_interval=5):
+            conn = connect([(client, [fn])])
+
         task = asyncio.create_task(conn.start())
         self.addConnCleanup(conn, task)
         await conn.wait_for_state(ConnectionState.ACTIVE)

@@ -3,9 +3,9 @@ import asyncio
 import inngest
 import pytest
 import test_core
-from inngest.connect import ConnectionState
+from inngest.connect import ConnectionState, connect
 from inngest.connect._internal import connect_pb2
-from inngest.connect._internal.connection import WorkerConnectionImpl
+from inngest.connect._internal.connect import connect_test_overrides
 
 from .base import BaseTest
 
@@ -37,12 +37,8 @@ class TestHeartbeatDuringBlock(BaseTest):
         async def fn(ctx: inngest.Context) -> None:
             pass
 
-        # Directly use `WorkerConnectionImpl` instead of `connect` because we
-        # want to override the heartbeat interval (to make the test faster).
-        conn = WorkerConnectionImpl(
-            [(client, [fn])],
-            _test_only_heartbeat_interval_sec=1,
-        )
+        with connect_test_overrides(heartbeat_interval_sec=1):
+            conn = connect([(client, [fn])])
 
         task = asyncio.create_task(conn.start())
         self.addConnCleanup(conn, task)

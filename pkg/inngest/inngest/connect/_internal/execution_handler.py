@@ -76,7 +76,7 @@ class ExecutionHandler(BaseHandler):
     """
 
     _closing = False
-    _leaser_extender_task: asyncio.Task[None] | None = None
+    _lease_extender_task: asyncio.Task[None] | None = None
     _unacked_msg_flush_poller_task: asyncio.Task[None] | None = None
 
     # Caller's (main) event loop. User functions are dispatched here so they
@@ -125,9 +125,9 @@ class ExecutionHandler(BaseHandler):
         if err is not None:
             return err
 
-        if self._leaser_extender_task is None:
-            self._leaser_extender_task = asyncio.create_task(
-                self._leaser_extender()
+        if self._lease_extender_task is None:
+            self._lease_extender_task = asyncio.create_task(
+                self._lease_extender()
             )
 
         if self._unacked_msg_flush_poller_task is None:
@@ -144,7 +144,7 @@ class ExecutionHandler(BaseHandler):
         super().close()
 
     async def after_close_drained(self) -> None:
-        await async_lib.cancel_and_wait(self._leaser_extender_task)
+        await async_lib.cancel_and_wait(self._lease_extender_task)
         await async_lib.cancel_and_wait(self._unacked_msg_flush_poller_task)
 
     def handle_msg(
@@ -432,7 +432,7 @@ class ExecutionHandler(BaseHandler):
         )
         self._buffer.delete(req_data.request_id)
 
-    async def _leaser_extender(self) -> None:
+    async def _lease_extender(self) -> None:
         while self.closed_event.is_set() is False:
             await self._state.ws.wait_for_not_none()
             extend_lease_interval = (
