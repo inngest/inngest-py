@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import contextlib
+import contextvars
+import dataclasses
 import signal
 import typing
 
@@ -27,10 +30,55 @@ def connect(
         shutdown_signals: A list of graceful shutdown signals to handle. Defaults to [SIGTERM, SIGINT].
         max_worker_concurrency: The maximum number of worker concurrency to use. Defaults to None.
     """
+
+    overrides = _get_test_overrides()
+
     return WorkerConnectionImpl(
         apps=apps,
         instance_id=instance_id,
         rewrite_gateway_endpoint=rewrite_gateway_endpoint,
         shutdown_signals=shutdown_signals,
         max_worker_concurrency=max_worker_concurrency,
+        _test_only_extend_lease_interval=overrides.extend_lease_interval,
+        _test_only_heartbeat_interval_sec=overrides.heartbeat_interval_sec,
     )
+
+
+@dataclasses.dataclass
+class _TestOverrides:
+    extend_lease_interval: int | None = None
+    heartbeat_interval_sec: int | None = None
+
+
+_test_overides_context_var = contextvars.ContextVar[_TestOverrides](
+    "test_overrides"
+)
+
+
+@contextlib.contextmanager
+def connect_test_overrides(
+    *,
+    extend_lease_interval: int | None = None,
+    heartbeat_interval_sec: int | None = None,
+) -> typing.Generator[None, None, None]:
+    """
+    Set test overrides for the `connect` function.
+    """
+
+    token = _test_overides_context_var.set(
+        _TestOverrides(
+            extend_lease_interval=extend_lease_interval,
+            heartbeat_interval_sec=heartbeat_interval_sec,
+        )
+    )
+    try:
+        yield
+    finally:
+        _test_overides_context_var.reset(token)
+
+
+def _get_test_overrides() -> _TestOverrides:
+    try:
+        return _test_overides_context_var.get()
+    except LookupError:
+        return _TestOverrides()

@@ -99,7 +99,8 @@ class WorkerConnectionImpl(WorkerConnection):
         rewrite_gateway_endpoint: typing.Callable[[str], str] | None = None,
         shutdown_signals: list[signal.Signals] | None = None,
         max_worker_concurrency: int | None = None,
-        _test_only_heartbeat_interval_sec: int = HEARTBEAT_INTERVAL_SEC,
+        _test_only_heartbeat_interval_sec: int | None = None,
+        _test_only_extend_lease_interval: int | None = None,
     ) -> None:
         if len(apps) == 0:
             raise Exception("no apps provided")
@@ -227,7 +228,7 @@ class WorkerConnectionImpl(WorkerConnection):
             HeartbeatHandler(
                 self._logger,
                 self._state,
-                _test_only_heartbeat_interval_sec,
+                _test_only_heartbeat_interval_sec or HEARTBEAT_INTERVAL_SEC,
             ),
             InitHandshakeHandler(
                 self._logger,
@@ -236,6 +237,7 @@ class WorkerConnectionImpl(WorkerConnection):
                 default_client.env,
                 self._instance_id,
                 max_worker_concurrency=self._max_worker_concurrency,
+                _test_only_extend_lease_interval=_test_only_extend_lease_interval,
             ),
             self._execution_handler,
             DrainHandler(self._logger, self._state),

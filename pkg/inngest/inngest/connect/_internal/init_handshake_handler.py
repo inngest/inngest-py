@@ -46,6 +46,7 @@ class InitHandshakeHandler(BaseHandler):
         env: str | None,
         instance_id: str,
         max_worker_concurrency: int | None,
+        _test_only_extend_lease_interval: int | None = None,
     ) -> None:
         super().__init__(logger, state)
         self._app_configs = app_configs
@@ -54,6 +55,7 @@ class InitHandshakeHandler(BaseHandler):
         self._logger = logger
         self._handshake_state = _HandshakeState.AWAITING_HELLO
         self._max_worker_concurrency = max_worker_concurrency
+        self._test_only_extend_lease_interval = _test_only_extend_lease_interval
 
     def start(self) -> types.MaybeError[None]:
         err = super().start()
@@ -132,19 +134,26 @@ class InitHandshakeHandler(BaseHandler):
                 )
                 return
 
-            extend_lease_interval = _duration_str_to_sec(
-                req_data.extend_lease_interval
-            )
-            if isinstance(extend_lease_interval, Exception):
-                self._logger.error(
-                    "Failed to parse extend_lease_interval",
+            if self._test_only_extend_lease_interval is not None:
+                self._state.extend_lease_interval.value = (
+                    self._test_only_extend_lease_interval
                 )
             else:
-                self._state.extend_lease_interval.value = extend_lease_interval
-                self._logger.debug(
-                    "Set extend lease interval",
-                    extra={"value": extend_lease_interval},
+                extend_lease_interval = _duration_str_to_sec(
+                    req_data.extend_lease_interval
                 )
+                if isinstance(extend_lease_interval, Exception):
+                    self._logger.error(
+                        "Failed to parse extend_lease_interval",
+                    )
+                else:
+                    self._state.extend_lease_interval.value = (
+                        extend_lease_interval
+                    )
+                    self._logger.debug(
+                        "Set extend lease interval",
+                        extra={"value": extend_lease_interval},
+                    )
 
             self._logger.debug("Handshake: AWAITING_READY -> COMPLETE")
             self._handshake_state = _HandshakeState.COMPLETE
