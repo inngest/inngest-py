@@ -226,6 +226,7 @@ class ExecutionHandler(BaseHandler):
             "_execute_request ack",
             req_data.run_id,
             req_data.request_id,
+            self._state.conn_id.value,
             file=sys.stderr,
         )
 
@@ -237,6 +238,7 @@ class ExecutionHandler(BaseHandler):
                 "got WS",
                 req_data.run_id,
                 req_data.request_id,
+                self._state.conn_id.value,
                 int(time.monotonic() - start),
                 file=sys.stderr,
             )
@@ -264,6 +266,7 @@ class ExecutionHandler(BaseHandler):
                 "sent ACK",
                 req_data.run_id,
                 req_data.request_id,
+                self._state.conn_id.value,
                 int(time.monotonic() - start),
                 err is None,
                 file=sys.stderr,
@@ -358,6 +361,7 @@ class ExecutionHandler(BaseHandler):
                 "error in _execute_request",
                 req_data.run_id,
                 req_data.request_id,
+                self._state.conn_id.value,
                 file=sys.stderr,
             )
             self._logger.error(
