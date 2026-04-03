@@ -1,6 +1,8 @@
 import asyncio
+import time
 import typing
 import urllib.parse
+from datetime import datetime
 
 import httpx
 
@@ -219,7 +221,16 @@ class ExecutionHandler(BaseHandler):
         """
 
         try:
+            start = time.monotonic()
             await self._state.ws.wait_for_not_none()
+            duration = int(time.monotonic() - start)
+            if duration > 60:
+                print(
+                    datetime.now().isoformat(),
+                    req_data.run_id,
+                    "long ack",
+                    duration,
+                )
             err = await ws_utils.safe_send(
                 self._logger,
                 self._state,
