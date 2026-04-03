@@ -34,7 +34,7 @@ dev = [
     "structlog==25.2.0",
     "test_core",
     "toml==0.10.2",
-    "tornado==6.4",
+    "tornado==6.5.5",
     "types-protobuf==5.29.1.20250315",
     "types-psutil==7.0.0.20250401",
     "types-toml==0.10.8.7",
