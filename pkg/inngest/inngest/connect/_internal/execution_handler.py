@@ -220,17 +220,24 @@ class ExecutionHandler(BaseHandler):
             3. Send WORKER_REPLY with execution result
         """
 
+        print(
+            datetime.now().isoformat(),
+            "_execute_request ack",
+            req_data.run_id,
+            req_data.request_id,
+        )
         try:
             start = time.monotonic()
             await self._state.ws.wait_for_not_none()
-            duration = int(time.monotonic() - start)
-            if duration > 60:
-                print(
-                    datetime.now().isoformat(),
-                    req_data.run_id,
-                    "long ack",
-                    duration,
-                )
+            print(
+                datetime.now().isoformat(),
+                "got WS",
+                req_data.run_id,
+                req_data.request_id,
+                int(time.monotonic() - start),
+            )
+
+            start = time.monotonic()
             err = await ws_utils.safe_send(
                 self._logger,
                 self._state,
@@ -247,6 +254,14 @@ class ExecutionHandler(BaseHandler):
                         user_trace_ctx=req_data.user_trace_ctx,
                     ).SerializeToString(),
                 ).SerializeToString(),
+            )
+            print(
+                datetime.now().isoformat(),
+                "sent ACK",
+                req_data.run_id,
+                req_data.request_id,
+                int(time.monotonic() - start),
+                err is None,
             )
             if err is None:
                 if self._main_loop is None:
@@ -333,6 +348,12 @@ class ExecutionHandler(BaseHandler):
                     "Failed to send execution reply", extra={"error": str(err)}
                 )
         except Exception as e:
+            print(
+                datetime.now().isoformat(),
+                "error in _execute_request",
+                req_data.run_id,
+                req_data.request_id,
+            )
             self._logger.error(
                 "Unhandled error in _execute_request",
                 extra={
