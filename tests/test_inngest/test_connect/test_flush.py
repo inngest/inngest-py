@@ -5,6 +5,7 @@ import inngest
 import pytest
 import test_core
 from inngest.connect import ConnectionState, connect
+from inngest.connect._internal.connect import connect_test_overrides
 
 from .base import BaseTest
 
@@ -45,8 +46,10 @@ class TestFlush(BaseTest):
 
             return "hi"
 
-        # Startup.
-        conn = connect([(client, [fn])])
+        with connect_test_overrides(extend_lease_interval=5):
+            # Startup.
+            conn = connect([(client, [fn])])
+
         task = asyncio.create_task(conn.start())
         self.addConnCleanup(conn, task)
         await conn.wait_for_state(ConnectionState.ACTIVE)
@@ -103,8 +106,10 @@ class TestFlush(BaseTest):
             state.run_id = ctx.run_id
             return "hi"
 
-        # Startup.
-        conn = connect([(client, [fn])])
+        with connect_test_overrides(extend_lease_interval=5):
+            # Startup.
+            conn = connect([(client, [fn])])
+
         task = asyncio.create_task(conn.start())
         self.addConnCleanup(conn, task)
         await conn.wait_for_state(ConnectionState.ACTIVE)
@@ -124,7 +129,7 @@ class TestFlush(BaseTest):
         # Wait for the lease to expire. The lease expiration is 5 seconds.
         await asyncio.sleep(6)
 
-        # Ensure the flush API endpoint was called.
+        # Ensure the flush API endpoint was NOT called.
         flush_request_exists = False
         for req in proxies.requests:
             if req.path == "/v0/connect/flush":

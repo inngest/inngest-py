@@ -39,8 +39,8 @@ def connect(
         rewrite_gateway_endpoint=rewrite_gateway_endpoint,
         shutdown_signals=shutdown_signals,
         max_worker_concurrency=max_worker_concurrency,
-        _test_only_extend_lease_interval=overrides.extend_lease_interval,
-        _test_only_heartbeat_interval_sec=overrides.heartbeat_interval_sec,
+        extend_lease_interval=overrides.extend_lease_interval,
+        heartbeat_interval_sec=overrides.heartbeat_interval_sec,
     )
 
 

@@ -91,6 +91,7 @@ class WorkerConnectionImpl(WorkerConnection):
     _loop: asyncio.AbstractEventLoop | None = None
     _thread: threading.Thread | None = None
 
+    # ruff: noqa: D417
     def __init__(
         self,
         apps: list[tuple[inngest.Inngest, list[inngest.Function[typing.Any]]]],
@@ -99,9 +100,16 @@ class WorkerConnectionImpl(WorkerConnection):
         rewrite_gateway_endpoint: typing.Callable[[str], str] | None = None,
         shutdown_signals: list[signal.Signals] | None = None,
         max_worker_concurrency: int | None = None,
-        _test_only_heartbeat_interval_sec: int | None = None,
-        _test_only_extend_lease_interval: int | None = None,
+        heartbeat_interval_sec: int | None = None,
+        extend_lease_interval: int | None = None,
     ) -> None:
+        """
+        Args:
+        ----
+            heartbeat_interval_sec: Override the heartbeat interval. Only used for testing.
+            extend_lease_interval: Override the extend lease interval. Only used for testing.
+        """
+
         if len(apps) == 0:
             raise Exception("no apps provided")
         default_client = apps[0][0]
@@ -228,7 +236,7 @@ class WorkerConnectionImpl(WorkerConnection):
             HeartbeatHandler(
                 self._logger,
                 self._state,
-                _test_only_heartbeat_interval_sec or HEARTBEAT_INTERVAL_SEC,
+                heartbeat_interval_sec or HEARTBEAT_INTERVAL_SEC,
             ),
             InitHandshakeHandler(
                 self._logger,
@@ -237,7 +245,7 @@ class WorkerConnectionImpl(WorkerConnection):
                 default_client.env,
                 self._instance_id,
                 max_worker_concurrency=self._max_worker_concurrency,
-                _test_only_extend_lease_interval=_test_only_extend_lease_interval,
+                extend_lease_interval=extend_lease_interval,
             ),
             self._execution_handler,
             DrainHandler(self._logger, self._state),

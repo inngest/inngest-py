@@ -38,6 +38,7 @@ class InitHandshakeHandler(BaseHandler):
     _send_data_task: asyncio.Task[None] | None = None
     _reconnect_task: asyncio.Task[None] | None = None
 
+    # ruff: noqa: D417
     def __init__(
         self,
         logger: types.Logger,
@@ -46,8 +47,14 @@ class InitHandshakeHandler(BaseHandler):
         env: str | None,
         instance_id: str,
         max_worker_concurrency: int | None,
-        _test_only_extend_lease_interval: int | None = None,
+        extend_lease_interval: int | None = None,
     ) -> None:
+        """
+        Args:
+        ----
+            extend_lease_interval: Override the extend lease interval. Only used for testing.
+        """
+
         super().__init__(logger, state)
         self._app_configs = app_configs
         self._env = env
@@ -55,7 +62,7 @@ class InitHandshakeHandler(BaseHandler):
         self._logger = logger
         self._handshake_state = _HandshakeState.AWAITING_HELLO
         self._max_worker_concurrency = max_worker_concurrency
-        self._test_only_extend_lease_interval = _test_only_extend_lease_interval
+        self._extend_lease_interval = extend_lease_interval
 
     def start(self) -> types.MaybeError[None]:
         err = super().start()
@@ -134,9 +141,9 @@ class InitHandshakeHandler(BaseHandler):
                 )
                 return
 
-            if self._test_only_extend_lease_interval is not None:
+            if self._extend_lease_interval is not None:
                 self._state.extend_lease_interval.value = (
-                    self._test_only_extend_lease_interval
+                    self._extend_lease_interval
                 )
             else:
                 extend_lease_interval = _duration_str_to_sec(

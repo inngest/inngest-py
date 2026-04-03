@@ -1,9 +1,6 @@
 import asyncio
-import sys
-import time
 import typing
 import urllib.parse
-from datetime import datetime
 
 import httpx
 
@@ -221,29 +218,8 @@ class ExecutionHandler(BaseHandler):
             3. Send WORKER_REPLY with execution result
         """
 
-        print(
-            datetime.now().isoformat(),
-            "_execute_request ack",
-            req_data.run_id,
-            req_data.request_id,
-            self._state.conn_id.value,
-            file=sys.stderr,
-        )
-
         try:
-            start = time.monotonic()
             await self._state.ws.wait_for_not_none()
-            print(
-                datetime.now().isoformat(),
-                "got WS",
-                req_data.run_id,
-                req_data.request_id,
-                self._state.conn_id.value,
-                int(time.monotonic() - start),
-                file=sys.stderr,
-            )
-
-            start = time.monotonic()
             err = await ws_utils.safe_send(
                 self._logger,
                 self._state,
@@ -260,16 +236,6 @@ class ExecutionHandler(BaseHandler):
                         user_trace_ctx=req_data.user_trace_ctx,
                     ).SerializeToString(),
                 ).SerializeToString(),
-            )
-            print(
-                datetime.now().isoformat(),
-                "sent ACK",
-                req_data.run_id,
-                req_data.request_id,
-                self._state.conn_id.value,
-                int(time.monotonic() - start),
-                err is None,
-                file=sys.stderr,
             )
             if err is None:
                 if self._main_loop is None:
@@ -356,14 +322,6 @@ class ExecutionHandler(BaseHandler):
                     "Failed to send execution reply", extra={"error": str(err)}
                 )
         except Exception as e:
-            print(
-                datetime.now().isoformat(),
-                "error in _execute_request",
-                req_data.run_id,
-                req_data.request_id,
-                self._state.conn_id.value,
-                file=sys.stderr,
-            )
             self._logger.error(
                 "Unhandled error in _execute_request",
                 extra={
