@@ -1,4 +1,5 @@
 import asyncio
+import sys
 import time
 import typing
 import urllib.parse
@@ -225,7 +226,9 @@ class ExecutionHandler(BaseHandler):
             "_execute_request ack",
             req_data.run_id,
             req_data.request_id,
+            file=sys.stderr,
         )
+
         try:
             start = time.monotonic()
             await self._state.ws.wait_for_not_none()
@@ -235,6 +238,7 @@ class ExecutionHandler(BaseHandler):
                 req_data.run_id,
                 req_data.request_id,
                 int(time.monotonic() - start),
+                file=sys.stderr,
             )
 
             start = time.monotonic()
@@ -262,6 +266,7 @@ class ExecutionHandler(BaseHandler):
                 req_data.request_id,
                 int(time.monotonic() - start),
                 err is None,
+                file=sys.stderr,
             )
             if err is None:
                 if self._main_loop is None:
@@ -353,6 +358,7 @@ class ExecutionHandler(BaseHandler):
                 "error in _execute_request",
                 req_data.run_id,
                 req_data.request_id,
+                file=sys.stderr,
             )
             self._logger.error(
                 "Unhandled error in _execute_request",
