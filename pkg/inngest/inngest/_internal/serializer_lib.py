@@ -30,13 +30,28 @@ class Serializer(typing.Protocol):
 
 
 class PydanticSerializer(Serializer):
+    def __init__(self) -> None:
+        # TypeAdapter registers types in Pydantic's internal global registry on
+        # every instantiation, and those entries are never freed. Caching
+        # prevents unbounded memory growth in long-running workers.
+        self._cache: dict[object, pydantic.TypeAdapter[object]] = {}
+
+    def _get_adapter(self, typ: object) -> pydantic.TypeAdapter[object]:
+        try:
+            adapter = self._cache.get(typ)
+        except TypeError:
+            return pydantic.TypeAdapter(typ)
+        if adapter is None:
+            adapter = pydantic.TypeAdapter(typ)
+            self._cache[typ] = adapter
+        return adapter
+
     def serialize(self, obj: object, typ: object) -> object:
         """
         Serialize a Pydantic object to a JSON object (dict, list, None, etc.).
         """
 
-        adapter = pydantic.TypeAdapter(object)
-        return adapter.dump_python(obj, mode="json")
+        return self._get_adapter(typ).dump_python(obj, mode="json")
 
     def deserialize(self, obj: object, typ: object) -> object:
         """
@@ -44,5 +59,4 @@ class PydanticSerializer(Serializer):
         object.
         """
 
-        adapter = pydantic.TypeAdapter[object](typ)
-        return adapter.validate_python(obj)
+        return self._get_adapter(typ).validate_python(obj)
