@@ -206,6 +206,7 @@ class Singleton(_BaseConfig):
 
 class TriggerCron(_BaseConfig):
     cron: str
+    jitter: str | None = None
 
 
 class TriggerEvent(_BaseConfig):
