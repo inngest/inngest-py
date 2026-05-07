@@ -101,7 +101,9 @@ class TestCommHandlerRequestIDs(unittest.TestCase):
             headers=headers or {},
             is_connect=False,
             public_path=None,
-            query_params={server_lib.QueryParamKey.FUNCTION_ID.value: "test-fn"},
+            query_params={
+                server_lib.QueryParamKey.FUNCTION_ID.value: "test-fn"
+            },
             raw_request=None,
             request_url="",
             serve_origin=None,
