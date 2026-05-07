@@ -64,7 +64,7 @@ class FilteredLogger(_LoggerAdapterBase):
             *args,
             exc_info=exc_info,
             stack_info=stack_info,
-            stacklevel=stacklevel,
+            stacklevel=stacklevel + 2,
             extra=extra,
             **kwargs,
         )
@@ -74,6 +74,8 @@ class FilteredLogger(_LoggerAdapterBase):
         msg: object,
         kwargs: typing.MutableMapping[str, object],
     ) -> tuple[object, typing.MutableMapping[str, object]]:
+        # Preserve caller-supplied "extra"; LoggerAdapter's default process
+        # replaces it with self.extra.
         return msg, kwargs
 
 
@@ -89,6 +91,28 @@ class ContextLogger(_LoggerAdapterBase):
     ) -> None:
         super().__init__(typing.cast(logging.Logger, logger), {})
         self._context_extra = dict(extra)
+
+    def log(
+        self,
+        level: int,
+        msg: object,
+        *args: object,
+        exc_info: _ExcInfo = None,
+        stack_info: bool = False,
+        stacklevel: int = 1,
+        extra: collections.abc.Mapping[str, object] | None = None,
+        **kwargs: object,
+    ) -> None:
+        super().log(
+            level,
+            msg,
+            *args,
+            exc_info=exc_info,
+            stack_info=stack_info,
+            stacklevel=stacklevel + 2,
+            extra=extra,
+            **kwargs,
+        )
 
     def process(
         self,

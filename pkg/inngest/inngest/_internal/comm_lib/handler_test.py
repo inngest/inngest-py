@@ -161,6 +161,8 @@ class TestCommHandlerRequestIDs(unittest.TestCase):
         assert record.__dict__["job_id"] == "job-123"
         assert record.__dict__["run_id"] == "run-123"
         assert record.__dict__["custom"] == "value"
+        assert record.pathname.endswith("handler_test.py")
+        assert record.funcName == "fn"
 
     def test_context_falls_back_to_request_headers(self) -> None:
         logger = logging.getLogger(f"{__name__}.headers")

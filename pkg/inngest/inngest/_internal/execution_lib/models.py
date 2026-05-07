@@ -59,6 +59,16 @@ class CallResult:
 
 @dataclasses.dataclass
 class Context:
+    """
+    Async function execution context.
+
+    Attributes:
+        request_id: Per-outbound SDK request ID. None when an older Executor
+            or nonstandard execution source does not include request metadata.
+        job_id: Stable queue item ID for the current job. None when the
+            execution source does not include a queue job ID.
+    """
+
     attempt: int
     event: server_lib.Event
     events: list[server_lib.Event]
@@ -72,6 +82,16 @@ class Context:
 
 @dataclasses.dataclass
 class ContextSync:
+    """
+    Sync function execution context.
+
+    Attributes:
+        request_id: Per-outbound SDK request ID. None when an older Executor
+            or nonstandard execution source does not include request metadata.
+        job_id: Stable queue item ID for the current job. None when the
+            execution source does not include a queue job ID.
+    """
+
     attempt: int
     event: server_lib.Event
     events: list[server_lib.Event]
