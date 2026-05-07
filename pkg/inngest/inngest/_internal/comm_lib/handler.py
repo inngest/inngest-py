@@ -59,7 +59,7 @@ def _get_context_logger(
 
     # LoggerMiddleware wraps this again to suppress replay logs. Keeping the
     # request metadata adapter inside that wrapper preserves IDs on emitted logs.
-    return log.ContextLogger(logger, extra)
+    return typing.cast(types.Logger, log.ContextLogger(logger, extra))
 
 
 class CommHandler:

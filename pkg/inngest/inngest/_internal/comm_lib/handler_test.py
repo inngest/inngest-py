@@ -205,6 +205,85 @@ class TestCommHandlerRequestIDs(unittest.TestCase):
             "job_id": "job-from-header",
         }
 
+    def test_context_works_with_duck_typed_logger(self) -> None:
+        """
+        Loggers like structlog do not implement the full stdlib Logger
+        contract. The wrappers must call the underlying methods directly.
+        """
+
+        calls: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
+
+        class FakeLogger:
+            def critical(self, *args: object, **kwargs: object) -> None:
+                pass
+
+            def debug(self, *args: object, **kwargs: object) -> None:
+                pass
+
+            def error(self, *args: object, **kwargs: object) -> None:
+                pass
+
+            def exception(self, *args: object, **kwargs: object) -> None:
+                pass
+
+            def fatal(self, *args: object, **kwargs: object) -> None:
+                pass
+
+            def info(self, *args: object, **kwargs: object) -> None:
+                assert "extra" not in kwargs
+                calls.append(("info", args, kwargs))
+
+            def log(self, *args: object, **kwargs: object) -> None:
+                pass
+
+            def warn(self, *args: object, **kwargs: object) -> None:
+                pass
+
+            def warning(self, *args: object, **kwargs: object) -> None:
+                pass
+
+        client = inngest.Inngest(
+            api_base_url="http://foo.bar",
+            app_id="test",
+            is_production=False,
+            logger=FakeLogger(),  # type: ignore[arg-type]
+        )
+
+        @client.create_function(
+            fn_id="fn",
+            trigger=inngest.TriggerEvent(event="test/event"),
+        )
+        def fn(ctx: inngest.ContextSync) -> str:
+            ctx.logger.info("hello world")
+            return "ok"
+
+        comm_handler = comm_lib.CommHandler(
+            client=client,
+            framework=server_lib.Framework.FAST_API,
+            functions=[fn],
+            streaming=None,
+        )
+
+        res = comm_handler.post_sync(
+            self._create_request(
+                body_ctx={
+                    "request_id": "req-1",
+                    "job_id": "job-1",
+                }
+            )
+        )
+
+        assert res.status_code == 200
+        hello_calls = [c for c in calls if c[1] == ("hello world",)]
+        assert len(hello_calls) == 1
+        method, _, kwargs = hello_calls[0]
+        assert method == "info"
+        assert kwargs == {
+            "run_id": "run-123",
+            "request_id": "req-1",
+            "job_id": "job-1",
+        }
+
     def test_context_treats_empty_headers_as_missing(self) -> None:
         logger = logging.getLogger(f"{__name__}.empty")
         seen: dict[str, object] = {}
