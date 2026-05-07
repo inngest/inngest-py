@@ -241,9 +241,11 @@ class ExecutionHandler(BaseHandler):
                 if self._main_loop is None:
                     raise Exception("_main_loop not set")
 
-                headers = {
-                    server_lib.HeaderKey.REQUEST_ID.value: req_data.request_id,
-                }
+                headers: dict[str, str] = {}
+                if req_data.request_id:
+                    headers[server_lib.HeaderKey.REQUEST_ID.value] = (
+                        req_data.request_id
+                    )
                 if req_data.job_id:
                     headers[server_lib.HeaderKey.JOB_ID.value] = req_data.job_id
 

@@ -30,24 +30,18 @@ from .models import CommRequest, CommResponse
 from .utils import parse_query_params, wrap_handler, wrap_handler_sync
 
 
-def _get_request_id(
+def _resolve_request_metadata(
     request: server_lib.ServerRequest,
     req: CommRequest,
+    *,
+    body_attr: str,
+    header_key: server_lib.HeaderKey,
 ) -> str | None:
-    if request.ctx.request_id:
-        return request.ctx.request_id
+    body_value = getattr(request.ctx, body_attr)
+    if isinstance(body_value, str) and body_value:
+        return body_value
 
-    return req.headers.get(server_lib.HeaderKey.REQUEST_ID.value)
-
-
-def _get_job_id(
-    request: server_lib.ServerRequest,
-    req: CommRequest,
-) -> str | None:
-    if request.ctx.job_id:
-        return request.ctx.job_id
-
-    return req.headers.get(server_lib.HeaderKey.JOB_ID.value)
+    return req.headers.get(header_key.value) or None
 
 
 def _get_context_logger(
@@ -63,7 +57,9 @@ def _get_context_logger(
     if job_id:
         extra["job_id"] = job_id
 
-    return typing.cast(types.Logger, log.ContextLogger(logger, extra))
+    # LoggerMiddleware wraps this again to suppress replay logs. Keeping the
+    # request metadata adapter inside that wrapper preserves IDs on emitted logs.
+    return log.ContextLogger(logger, extra)
 
 
 class CommHandler:
@@ -200,8 +196,18 @@ class CommHandler:
 
             return Exception("events not in request")
 
-        request_id = _get_request_id(request, req)
-        job_id = _get_job_id(request, req)
+        request_id = _resolve_request_metadata(
+            request,
+            req,
+            body_attr="request_id",
+            header_key=server_lib.HeaderKey.REQUEST_ID,
+        )
+        job_id = _resolve_request_metadata(
+            request,
+            req,
+            body_attr="job_id",
+            header_key=server_lib.HeaderKey.JOB_ID,
+        )
         memos = step_lib.StepMemos.from_raw(steps)
 
         if fn.is_handler_async:
@@ -369,8 +375,18 @@ class CommHandler:
 
             return Exception("events not in request")
 
-        request_id = _get_request_id(request, req)
-        job_id = _get_job_id(request, req)
+        request_id = _resolve_request_metadata(
+            request,
+            req,
+            body_attr="request_id",
+            header_key=server_lib.HeaderKey.REQUEST_ID,
+        )
+        job_id = _resolve_request_metadata(
+            request,
+            req,
+            body_attr="job_id",
+            header_key=server_lib.HeaderKey.JOB_ID,
+        )
         memos = step_lib.StepMemos.from_raw(steps)
 
         call_res = fn.call_sync(

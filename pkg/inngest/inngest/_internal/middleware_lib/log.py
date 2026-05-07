@@ -32,4 +32,4 @@ class LoggerMiddleware(MiddlewareSync):
     ) -> None:
         if self._filtered_logger is None:
             self._filtered_logger = log.FilteredLogger(ctx.logger)
-        ctx.logger = self._filtered_logger  # type: ignore
+        ctx.logger = self._filtered_logger
