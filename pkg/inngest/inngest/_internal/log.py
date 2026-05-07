@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import typing
 from contextvars import ContextVar
 
 from . import types
@@ -45,3 +46,36 @@ class FilteredLogger:
             return lambda *args, **kwargs: None
 
         return getattr(self._logger, name)
+
+
+class ContextLogger:
+    """
+    Wrapper that adds execution metadata to log records.
+    """
+
+    _proxied_methods = FilteredLogger._proxied_methods
+
+    def __init__(
+        self,
+        logger: types.Logger,
+        extra: typing.Mapping[str, str],
+    ) -> None:
+        self._logger = logger
+        self._extra = dict(extra)
+
+    def __getattr__(self, name: str) -> object:
+        attr = typing.cast(
+            typing.Callable[..., object], getattr(self._logger, name)
+        )
+        if name not in self._proxied_methods:
+            return attr
+
+        def wrapper(*args: object, **kwargs: object) -> object:
+            extra = dict(self._extra)
+            existing = kwargs.get("extra")
+            if isinstance(existing, dict):
+                extra.update(existing)
+            kwargs["extra"] = extra
+            return attr(*args, **kwargs)
+
+        return wrapper

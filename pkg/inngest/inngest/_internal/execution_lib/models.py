@@ -66,6 +66,8 @@ class Context:
     logger: types.Logger
     run_id: str
     step: step_lib.Step
+    request_id: str | None = None
+    job_id: str | None = None
 
 
 @dataclasses.dataclass
@@ -77,6 +79,8 @@ class ContextSync:
     logger: types.Logger
     run_id: str
     step: step_lib.StepSync
+    request_id: str | None = None
+    job_id: str | None = None
 
 
 FunctionHandlerAsync: typing.TypeAlias = typing.Callable[

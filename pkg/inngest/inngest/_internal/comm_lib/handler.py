@@ -17,6 +17,7 @@ from inngest._internal import (
     errors,
     execution_lib,
     function,
+    log,
     middleware_lib,
     net,
     server_lib,
@@ -27,6 +28,42 @@ from inngest._internal import (
 
 from .models import CommRequest, CommResponse
 from .utils import parse_query_params, wrap_handler, wrap_handler_sync
+
+
+def _get_request_id(
+    request: server_lib.ServerRequest,
+    req: CommRequest,
+) -> str | None:
+    if request.ctx.request_id:
+        return request.ctx.request_id
+
+    return req.headers.get(server_lib.HeaderKey.REQUEST_ID.value)
+
+
+def _get_job_id(
+    request: server_lib.ServerRequest,
+    req: CommRequest,
+) -> str | None:
+    if request.ctx.job_id:
+        return request.ctx.job_id
+
+    return req.headers.get(server_lib.HeaderKey.JOB_ID.value)
+
+
+def _get_context_logger(
+    logger: types.Logger,
+    *,
+    job_id: str | None,
+    request_id: str | None,
+    run_id: str,
+) -> types.Logger:
+    extra = {"run_id": run_id}
+    if request_id:
+        extra["request_id"] = request_id
+    if job_id:
+        extra["job_id"] = job_id
+
+    return typing.cast(types.Logger, log.ContextLogger(logger, extra))
 
 
 class CommHandler:
@@ -163,6 +200,8 @@ class CommHandler:
 
             return Exception("events not in request")
 
+        request_id = _get_request_id(request, req)
+        job_id = _get_job_id(request, req)
         memos = step_lib.StepMemos.from_raw(steps)
 
         if fn.is_handler_async:
@@ -175,7 +214,12 @@ class CommHandler:
                         event=request.event,
                         events=events,
                         group=step_lib.Group(),
-                        logger=self._client.logger,
+                        logger=_get_context_logger(
+                            self._client.logger,
+                            job_id=job_id,
+                            request_id=request_id,
+                            run_id=request.ctx.run_id,
+                        ),
                         run_id=request.ctx.run_id,
                         step=step_lib.Step(
                             self._client,
@@ -190,6 +234,8 @@ class CommHandler:
                             step_lib.StepIDCounter(),
                             params.step_id,
                         ),
+                        request_id=request_id,
+                        job_id=job_id,
                     ),
                     params.fn_id,
                     middleware,
@@ -216,7 +262,12 @@ class CommHandler:
                     event=request.event,
                     events=events,
                     group=step_lib.GroupSync(),
-                    logger=self._client.logger,
+                    logger=_get_context_logger(
+                        self._client.logger,
+                        job_id=job_id,
+                        request_id=request_id,
+                        run_id=request.ctx.run_id,
+                    ),
                     run_id=request.ctx.run_id,
                     step=step_lib.StepSync(
                         self._client,
@@ -231,6 +282,8 @@ class CommHandler:
                         step_lib.StepIDCounter(),
                         params.step_id,
                     ),
+                    request_id=request_id,
+                    job_id=job_id,
                 ),
                 params.fn_id,
                 middleware,
@@ -316,6 +369,8 @@ class CommHandler:
 
             return Exception("events not in request")
 
+        request_id = _get_request_id(request, req)
+        job_id = _get_job_id(request, req)
         memos = step_lib.StepMemos.from_raw(steps)
 
         call_res = fn.call_sync(
@@ -325,7 +380,12 @@ class CommHandler:
                 event=request.event,
                 events=events,
                 group=step_lib.GroupSync(),
-                logger=self._client.logger,
+                logger=_get_context_logger(
+                    self._client.logger,
+                    job_id=job_id,
+                    request_id=request_id,
+                    run_id=request.ctx.run_id,
+                ),
                 run_id=request.ctx.run_id,
                 step=step_lib.StepSync(
                     self._client,
@@ -340,6 +400,8 @@ class CommHandler:
                     step_lib.StepIDCounter(),
                     params.step_id,
                 ),
+                request_id=request_id,
+                job_id=job_id,
             ),
             params.fn_id,
             middleware,
