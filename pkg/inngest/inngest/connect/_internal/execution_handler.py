@@ -264,9 +264,13 @@ class ExecutionHandler(BaseHandler):
                 comm_res = await asyncio.wrap_future(future)
             else:
                 self._logger.error(
-                    "Execution failed", extra={"error": str(err)}
+                    "Failed to acknowledge executor request",
+                    extra={
+                        "error": str(err),
+                        "request_id": req_data.request_id,
+                    },
                 )
-                comm_res = comm_lib.CommResponse.from_error(self._logger, err)
+                return
 
             body = comm_res.body_bytes()
             if isinstance(body, Exception):
@@ -484,19 +488,24 @@ class ExecutionHandler(BaseHandler):
         flush_ttl = await self._state.extend_lease_interval.wait_for_not_none()
 
         while self.closed_event.is_set() is False:
-            for request_id, reply_msg in self._buffer.get_older_than(flush_ttl):
-                try:
-                    err = await self._flush_message(reply_msg)
-                    if err is not None:
-                        self._logger.error(
-                            "Failed to flush message", extra={"error": str(err)}
-                        )
-                finally:
-                    # We only attempt to flush once, so we can delete the
-                    # message.
-                    self._buffer.delete(request_id)
-
+            await self._flush_ready_messages(flush_ttl)
             await asyncio.sleep(1)
+
+    async def _flush_ready_messages(self, flush_ttl: int | float) -> None:
+        for request_id, reply_msg in self._buffer.get_older_than(flush_ttl):
+            err = await self._flush_message(reply_msg)
+            if err is None:
+                self._buffer.delete(request_id)
+                continue
+
+            self._logger.error(
+                "Failed to flush message",
+                extra={
+                    "error": str(err),
+                    "request_id": request_id,
+                },
+            )
+            self._buffer.touch(request_id)
 
     async def _flush_message(self, msg: bytes) -> types.MaybeError[None]:
         """

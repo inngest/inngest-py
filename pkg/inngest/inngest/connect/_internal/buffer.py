@@ -131,3 +131,15 @@ class SizeConstrainedBuffer:
                 result.append((item.id, item.data))
 
         return result
+
+    def touch(self, item_id: str) -> bool:
+        """
+        Refresh an item's timestamp so it is retried after the next TTL window.
+        """
+
+        item = self._items.get(item_id)
+        if item is None:
+            return False
+
+        item.timestamp = time.time()
+        return True
