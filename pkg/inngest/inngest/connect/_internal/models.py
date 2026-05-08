@@ -48,10 +48,28 @@ class State:
         Close the WebSocket connection
         """
 
+        self.close_ws_if_current(None)
+
+    def close_ws_if_current(
+        self,
+        ws: websockets.ClientConnection | None,
+    ) -> bool:
+        """
+        Clear the WebSocket if it is still current.
+
+        Args:
+            ws: If provided, only clear the WebSocket when it still matches this
+                connection. If omitted, always clear it.
+        """
+
+        if ws is not None and self.ws.value is not ws:
+            return False
+
         if self.allow_reconnect():
             self.conn_state.value = ConnectionState.RECONNECTING
         self.conn_init.value = None
         self.ws.value = None
+        return True
 
 
 class ConnectionState(enum.Enum):
