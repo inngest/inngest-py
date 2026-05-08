@@ -17,7 +17,6 @@ from inngest._internal import (
     errors,
     execution_lib,
     function,
-    log,
     middleware_lib,
     net,
     server_lib,
@@ -181,12 +180,7 @@ class CommHandler:
                         events=events,
                         group=step_lib.Group(),
                         job_id=job_id,
-                        logger=_get_context_logger(
-                            self._client.logger,
-                            job_id=job_id,
-                            request_id=request_id,
-                            run_id=request.ctx.run_id,
-                        ),
+                        logger=self._client.logger,
                         request_id=request_id,
                         run_id=request.ctx.run_id,
                         step=step_lib.Step(
@@ -229,12 +223,7 @@ class CommHandler:
                     events=events,
                     group=step_lib.GroupSync(),
                     job_id=job_id,
-                    logger=_get_context_logger(
-                        self._client.logger,
-                        job_id=job_id,
-                        request_id=request_id,
-                        run_id=request.ctx.run_id,
-                    ),
+                    logger=self._client.logger,
                     request_id=request_id,
                     run_id=request.ctx.run_id,
                     step=step_lib.StepSync(
@@ -349,12 +338,7 @@ class CommHandler:
                 events=events,
                 group=step_lib.GroupSync(),
                 job_id=job_id,
-                logger=_get_context_logger(
-                    self._client.logger,
-                    job_id=job_id,
-                    request_id=request_id,
-                    run_id=request.ctx.run_id,
-                ),
+                logger=self._client.logger,
                 request_id=request_id,
                 run_id=request.ctx.run_id,
                 step=step_lib.StepSync(
@@ -816,24 +800,3 @@ def get_function_configs(
     if len(configs) == 0:
         return errors.FunctionConfigInvalidError("no functions found")
     return configs
-
-
-def _get_context_logger(
-    logger: types.Logger,
-    *,
-    job_id: str | None,
-    request_id: str | None,
-    run_id: str,
-) -> types.Logger:
-    # Inngest-injected metadata is namespaced under "inngest.*" so it cannot
-    # collide with user-supplied "extra" keys. This means callers can safely
-    # use names like "run_id" for their own purposes without being clobbered.
-    extra = {"inngest.run_id": run_id}
-    if request_id:
-        extra["inngest.request_id"] = request_id
-    if job_id:
-        extra["inngest.job_id"] = job_id
-
-    # LoggerMiddleware wraps this again to suppress replay logs. Keeping the
-    # request metadata adapter inside that wrapper preserves IDs on emitted logs.
-    return typing.cast(types.Logger, log.ContextLogger(logger, extra))

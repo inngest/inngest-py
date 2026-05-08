@@ -138,58 +138,6 @@ class TestCommHandlerRequestIDs(unittest.TestCase):
             "request_id": "req-from-header",
         }
 
-    def test_logger_extra(self) -> None:
-        class FakeLogger:
-            def __init__(self) -> None:
-                self.info_calls: list[tuple[object, dict[str, object]]] = []
-
-            def debug(self, *args: object, **kwargs: object) -> None:
-                pass
-
-            def info(self, *args: object, **kwargs: object) -> None:
-                self.info_calls.append((args, kwargs))
-
-        logger = FakeLogger()
-        client = inngest.Inngest(
-            api_base_url="http://foo.bar",
-            app_id="test",
-            is_production=False,
-            logger=logger,  # type: ignore[arg-type]
-        )
-
-        @client.create_function(
-            fn_id="fn",
-            trigger=inngest.TriggerEvent(event="test/event"),
-        )
-        def fn(ctx: inngest.ContextSync) -> None:
-            ctx.logger.info("hello world")
-
-        comm_handler = comm_lib.CommHandler(
-            client=client,
-            framework=server_lib.Framework.FAST_API,
-            functions=[fn],
-            streaming=None,
-        )
-
-        res = comm_handler.post_sync(
-            self._create_request(
-                headers={
-                    server_lib.HeaderKey.JOB_ID.value: "job-1",
-                    server_lib.HeaderKey.REQUEST_ID.value: "req-1",
-                }
-            )
-        )
-
-        assert res.status_code == 200
-        hello_calls = [c for c in logger.info_calls if c[0] == ("hello world",)]
-        assert len(hello_calls) == 1
-        _, kwargs = hello_calls[0]
-        assert kwargs["extra"] == {
-            "inngest.job_id": "job-1",
-            "inngest.request_id": "req-1",
-            "inngest.run_id": "run-123",
-        }
-
     def test_empty_headers(self) -> None:
         """
         Empty headers become None

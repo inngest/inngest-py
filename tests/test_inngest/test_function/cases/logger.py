@@ -1,3 +1,5 @@
+import logging
+
 import inngest
 import test_core.helper
 from inngest._internal import server_lib
@@ -10,18 +12,13 @@ class _State(base.BaseState):
     step_raise: bool = False
 
 
-class StatefulLogger:
-    """
-    Fake logger that stores calls to its methods. We can use this to assert
-    that logger methods are properly called (e.g. no duplicates).
-
-    Intentionally does NOT inherit from logging.Logger. This mirrors the
-    structlog / loguru / custom-logger case where client.logger is duck-typed
-    and does not implement the full stdlib Logger contract (no isEnabledFor,
-    getEffectiveLevel, hasHandlers, etc.).
+class StatefulLogger(logging.Logger):
+    """Fake logger that stores calls to its methods. We can use this to assert that
+    logger methods are properly called (e.g. no duplicates).
     """
 
     def __init__(self) -> None:
+        super().__init__("test")
         self.info_calls: list[object] = []
 
     def info(self, msg: object, *args: object, **kwargs: object) -> None:
@@ -111,9 +108,7 @@ def create(
         ctx.logger.info("function end")
 
     async def run_test(self: base.TestClass) -> None:
-        # The cast deliberately mirrors what users do when passing a
-        # non-stdlib logger (structlog, loguru, etc.) to inngest.Inngest.
-        self.client.set_logger(_logger)  # type: ignore[arg-type]
+        self.client.set_logger(_logger)
         self.client.send_sync(inngest.Event(name=event_name))
         run_id = await state.wait_for_run_id()
         await test_core.helper.client.wait_for_run_status(

@@ -68,8 +68,8 @@ class Context:
         events: The events that triggered the function. Can be >=1 with batching.
         group: Helpers for grouping steps.
         logger: Idempotent logger (wraps client logger).
-        job_id: Stable queue item ID for the current job.
-        request_id: Per-outbound SDK request ID.
+        job_id: Queue job ID.
+        request_id: ID of request sent to SDK.
         run_id: Function run ID.
         step: Step methods.
     """
@@ -96,8 +96,8 @@ class ContextSync:
         events: The events that triggered the function. Can be >=1 with batching.
         group: Helpers for grouping steps.
         logger: Idempotent logger (wraps client logger).
-        job_id: Stable queue item ID for the current job.
-        request_id: Per-outbound SDK request ID.
+        job_id: Queue job ID.
+        request_id: ID of request sent to SDK.
         run_id: Function run ID.
         step: Step methods.
     """
