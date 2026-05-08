@@ -3,7 +3,6 @@ from __future__ import annotations
 import datetime
 import json
 import logging
-import types as py_types
 import unittest
 
 import inngest
@@ -71,18 +70,15 @@ class TestCommHandlerRequestIDs(unittest.TestCase):
     def _create_request(
         self,
         *,
-        body_ctx: dict[str, object] | None = None,
         headers: dict[str, str] | None = None,
     ) -> comm_lib.CommRequest:
-        ctx = {
-            "attempt": 0,
-            "disable_immediate_execution": False,
-            "run_id": "run-123",
-            "stack": {"stack": []},
-            **(body_ctx or {}),
-        }
         body = {
-            "ctx": ctx,
+            "ctx": {
+                "attempt": 0,
+                "disable_immediate_execution": False,
+                "run_id": "run-123",
+                "stack": {"stack": []},
+            },
             "event": {"name": "test/event", "data": {}},
             "events": [{"name": "test/event", "data": {}}],
             "steps": {},
@@ -102,69 +98,7 @@ class TestCommHandlerRequestIDs(unittest.TestCase):
             serve_path=None,
         )
 
-    def test_context_exposes_request_and_job_ids_from_body(self) -> None:
-        logger = logging.getLogger(f"{__name__}.body")
-        seen: dict[str, object] = {}
-        client = inngest.Inngest(
-            api_base_url="http://foo.bar",
-            app_id="test",
-            is_production=False,
-            logger=logger,
-        )
-
-        @client.create_function(
-            fn_id="fn",
-            trigger=inngest.TriggerEvent(event="test/event"),
-        )
-        def fn(ctx: inngest.ContextSync) -> str:
-            seen["request_id"] = ctx.request_id
-            seen["job_id"] = ctx.job_id
-            ctx.logger.info(
-                "hello",
-                extra=py_types.MappingProxyType(
-                    {
-                        "custom": "value",
-                        "job_id": "wrong-job",
-                        "request_id": "wrong-request",
-                        "run_id": "wrong-run",
-                    }
-                ),
-            )
-            return "ok"
-
-        comm_handler = comm_lib.CommHandler(
-            client=client,
-            framework=server_lib.Framework.FAST_API,
-            functions=[fn],
-            streaming=None,
-        )
-
-        with self.assertLogs(logger, level=logging.DEBUG) as cm:
-            res = comm_handler.post_sync(
-                self._create_request(
-                    body_ctx={
-                        "request_id": "01ARZ3NDEKTSV4RRFFQ69G5FAV",
-                        "job_id": "job-123",
-                    }
-                )
-            )
-
-        assert res.status_code == 200
-        assert seen == {
-            "request_id": "01ARZ3NDEKTSV4RRFFQ69G5FAV",
-            "job_id": "job-123",
-        }
-        records = [r for r in cm.records if r.getMessage() == "hello"]
-        assert len(records) == 1
-        record = records[0]
-        assert record.__dict__["request_id"] == "01ARZ3NDEKTSV4RRFFQ69G5FAV"
-        assert record.__dict__["job_id"] == "job-123"
-        assert record.__dict__["run_id"] == "run-123"
-        assert record.__dict__["custom"] == "value"
-        assert record.pathname.endswith("handler_test.py")
-        assert record.funcName == "fn"
-
-    def test_context_falls_back_to_request_headers(self) -> None:
+    def test_ctx(self) -> None:
         logger = logging.getLogger(f"{__name__}.headers")
         seen: dict[str, object] = {}
         client = inngest.Inngest(
@@ -178,10 +112,9 @@ class TestCommHandlerRequestIDs(unittest.TestCase):
             fn_id="fn",
             trigger=inngest.TriggerEvent(event="test/event"),
         )
-        def fn(ctx: inngest.ContextSync) -> str:
-            seen["request_id"] = ctx.request_id
+        def fn(ctx: inngest.ContextSync) -> None:
             seen["job_id"] = ctx.job_id
-            return "ok"
+            seen["request_id"] = ctx.request_id
 
         comm_handler = comm_lib.CommHandler(
             client=client,
@@ -193,69 +126,43 @@ class TestCommHandlerRequestIDs(unittest.TestCase):
         res = comm_handler.post_sync(
             self._create_request(
                 headers={
-                    server_lib.HeaderKey.REQUEST_ID.value: "req-from-header",
                     server_lib.HeaderKey.JOB_ID.value: "job-from-header",
+                    server_lib.HeaderKey.REQUEST_ID.value: "req-from-header",
                 }
             )
         )
 
         assert res.status_code == 200
         assert seen == {
-            "request_id": "req-from-header",
             "job_id": "job-from-header",
+            "request_id": "req-from-header",
         }
 
-    def test_context_works_with_duck_typed_logger(self) -> None:
-        """
-        Loggers like structlog do not implement the full stdlib Logger
-        contract. The wrappers must call the underlying methods directly.
-        """
-
-        calls: list[tuple[str, tuple[object, ...], dict[str, object]]] = []
-
+    def test_logger_extra(self) -> None:
         class FakeLogger:
-            def critical(self, *args: object, **kwargs: object) -> None:
-                pass
+            def __init__(self) -> None:
+                self.info_calls: list[tuple[object, dict[str, object]]] = []
 
             def debug(self, *args: object, **kwargs: object) -> None:
                 pass
 
-            def error(self, *args: object, **kwargs: object) -> None:
-                pass
-
-            def exception(self, *args: object, **kwargs: object) -> None:
-                pass
-
-            def fatal(self, *args: object, **kwargs: object) -> None:
-                pass
-
             def info(self, *args: object, **kwargs: object) -> None:
-                assert "extra" not in kwargs
-                calls.append(("info", args, kwargs))
+                self.info_calls.append((args, kwargs))
 
-            def log(self, *args: object, **kwargs: object) -> None:
-                pass
-
-            def warn(self, *args: object, **kwargs: object) -> None:
-                pass
-
-            def warning(self, *args: object, **kwargs: object) -> None:
-                pass
-
+        logger = FakeLogger()
         client = inngest.Inngest(
             api_base_url="http://foo.bar",
             app_id="test",
             is_production=False,
-            logger=FakeLogger(),  # type: ignore[arg-type]
+            logger=logger,  # type: ignore[arg-type]
         )
 
         @client.create_function(
             fn_id="fn",
             trigger=inngest.TriggerEvent(event="test/event"),
         )
-        def fn(ctx: inngest.ContextSync) -> str:
+        def fn(ctx: inngest.ContextSync) -> None:
             ctx.logger.info("hello world")
-            return "ok"
 
         comm_handler = comm_lib.CommHandler(
             client=client,
@@ -266,25 +173,28 @@ class TestCommHandlerRequestIDs(unittest.TestCase):
 
         res = comm_handler.post_sync(
             self._create_request(
-                body_ctx={
-                    "request_id": "req-1",
-                    "job_id": "job-1",
+                headers={
+                    server_lib.HeaderKey.JOB_ID.value: "job-1",
+                    server_lib.HeaderKey.REQUEST_ID.value: "req-1",
                 }
             )
         )
 
         assert res.status_code == 200
-        hello_calls = [c for c in calls if c[1] == ("hello world",)]
+        hello_calls = [c for c in logger.info_calls if c[0] == ("hello world",)]
         assert len(hello_calls) == 1
-        method, _, kwargs = hello_calls[0]
-        assert method == "info"
-        assert kwargs == {
-            "run_id": "run-123",
-            "request_id": "req-1",
-            "job_id": "job-1",
+        _, kwargs = hello_calls[0]
+        assert kwargs["extra"] == {
+            "inngest.job_id": "job-1",
+            "inngest.request_id": "req-1",
+            "inngest.run_id": "run-123",
         }
 
-    def test_context_treats_empty_headers_as_missing(self) -> None:
+    def test_empty_headers(self) -> None:
+        """
+        Empty headers become None
+        """
+
         logger = logging.getLogger(f"{__name__}.empty")
         seen: dict[str, object] = {}
         client = inngest.Inngest(
@@ -298,10 +208,9 @@ class TestCommHandlerRequestIDs(unittest.TestCase):
             fn_id="fn",
             trigger=inngest.TriggerEvent(event="test/event"),
         )
-        def fn(ctx: inngest.ContextSync) -> str:
-            seen["request_id"] = ctx.request_id
+        def fn(ctx: inngest.ContextSync) -> None:
             seen["job_id"] = ctx.job_id
-            return "ok"
+            seen["request_id"] = ctx.request_id
 
         comm_handler = comm_lib.CommHandler(
             client=client,
@@ -313,11 +222,11 @@ class TestCommHandlerRequestIDs(unittest.TestCase):
         res = comm_handler.post_sync(
             self._create_request(
                 headers={
-                    server_lib.HeaderKey.REQUEST_ID.value: "",
                     server_lib.HeaderKey.JOB_ID.value: "",
+                    server_lib.HeaderKey.REQUEST_ID.value: "",
                 }
             )
         )
 
         assert res.status_code == 200
-        assert seen == {"request_id": None, "job_id": None}
+        assert seen == {"job_id": None, "request_id": None}

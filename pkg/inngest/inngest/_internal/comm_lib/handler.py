@@ -30,38 +30,6 @@ from .models import CommRequest, CommResponse
 from .utils import parse_query_params, wrap_handler, wrap_handler_sync
 
 
-def _resolve_request_metadata(
-    request: server_lib.ServerRequest,
-    req: CommRequest,
-    *,
-    body_attr: str,
-    header_key: server_lib.HeaderKey,
-) -> str | None:
-    body_value = getattr(request.ctx, body_attr)
-    if isinstance(body_value, str) and body_value:
-        return body_value
-
-    return req.headers.get(header_key.value) or None
-
-
-def _get_context_logger(
-    logger: types.Logger,
-    *,
-    job_id: str | None,
-    request_id: str | None,
-    run_id: str,
-) -> types.Logger:
-    extra = {"run_id": run_id}
-    if request_id:
-        extra["request_id"] = request_id
-    if job_id:
-        extra["job_id"] = job_id
-
-    # LoggerMiddleware wraps this again to suppress replay logs. Keeping the
-    # request metadata adapter inside that wrapper preserves IDs on emitted logs.
-    return typing.cast(types.Logger, log.ContextLogger(logger, extra))
-
-
 class CommHandler:
     _base_url: str
     _client: client_lib.Inngest
@@ -196,17 +164,9 @@ class CommHandler:
 
             return Exception("events not in request")
 
-        request_id = _resolve_request_metadata(
-            request,
-            req,
-            body_attr="request_id",
-            header_key=server_lib.HeaderKey.REQUEST_ID,
-        )
-        job_id = _resolve_request_metadata(
-            request,
-            req,
-            body_attr="job_id",
-            header_key=server_lib.HeaderKey.JOB_ID,
+        job_id = req.headers.get(server_lib.HeaderKey.JOB_ID.value) or None
+        request_id = (
+            req.headers.get(server_lib.HeaderKey.REQUEST_ID.value) or None
         )
         memos = step_lib.StepMemos.from_raw(steps)
 
@@ -220,12 +180,14 @@ class CommHandler:
                         event=request.event,
                         events=events,
                         group=step_lib.Group(),
+                        job_id=job_id,
                         logger=_get_context_logger(
                             self._client.logger,
                             job_id=job_id,
                             request_id=request_id,
                             run_id=request.ctx.run_id,
                         ),
+                        request_id=request_id,
                         run_id=request.ctx.run_id,
                         step=step_lib.Step(
                             self._client,
@@ -240,8 +202,6 @@ class CommHandler:
                             step_lib.StepIDCounter(),
                             params.step_id,
                         ),
-                        request_id=request_id,
-                        job_id=job_id,
                     ),
                     params.fn_id,
                     middleware,
@@ -268,12 +228,14 @@ class CommHandler:
                     event=request.event,
                     events=events,
                     group=step_lib.GroupSync(),
+                    job_id=job_id,
                     logger=_get_context_logger(
                         self._client.logger,
                         job_id=job_id,
                         request_id=request_id,
                         run_id=request.ctx.run_id,
                     ),
+                    request_id=request_id,
                     run_id=request.ctx.run_id,
                     step=step_lib.StepSync(
                         self._client,
@@ -288,8 +250,6 @@ class CommHandler:
                         step_lib.StepIDCounter(),
                         params.step_id,
                     ),
-                    request_id=request_id,
-                    job_id=job_id,
                 ),
                 params.fn_id,
                 middleware,
@@ -375,17 +335,9 @@ class CommHandler:
 
             return Exception("events not in request")
 
-        request_id = _resolve_request_metadata(
-            request,
-            req,
-            body_attr="request_id",
-            header_key=server_lib.HeaderKey.REQUEST_ID,
-        )
-        job_id = _resolve_request_metadata(
-            request,
-            req,
-            body_attr="job_id",
-            header_key=server_lib.HeaderKey.JOB_ID,
+        job_id = req.headers.get(server_lib.HeaderKey.JOB_ID.value) or None
+        request_id = (
+            req.headers.get(server_lib.HeaderKey.REQUEST_ID.value) or None
         )
         memos = step_lib.StepMemos.from_raw(steps)
 
@@ -396,12 +348,14 @@ class CommHandler:
                 event=request.event,
                 events=events,
                 group=step_lib.GroupSync(),
+                job_id=job_id,
                 logger=_get_context_logger(
                     self._client.logger,
                     job_id=job_id,
                     request_id=request_id,
                     run_id=request.ctx.run_id,
                 ),
+                request_id=request_id,
                 run_id=request.ctx.run_id,
                 step=step_lib.StepSync(
                     self._client,
@@ -416,8 +370,6 @@ class CommHandler:
                     step_lib.StepIDCounter(),
                     params.step_id,
                 ),
-                request_id=request_id,
-                job_id=job_id,
             ),
             params.fn_id,
             middleware,
@@ -864,3 +816,24 @@ def get_function_configs(
     if len(configs) == 0:
         return errors.FunctionConfigInvalidError("no functions found")
     return configs
+
+
+def _get_context_logger(
+    logger: types.Logger,
+    *,
+    job_id: str | None,
+    request_id: str | None,
+    run_id: str,
+) -> types.Logger:
+    # Inngest-injected metadata is namespaced under "inngest.*" so it cannot
+    # collide with user-supplied "extra" keys. This means callers can safely
+    # use names like "run_id" for their own purposes without being clobbered.
+    extra = {"inngest.run_id": run_id}
+    if request_id:
+        extra["inngest.request_id"] = request_id
+    if job_id:
+        extra["inngest.job_id"] = job_id
+
+    # LoggerMiddleware wraps this again to suppress replay logs. Keeping the
+    # request metadata adapter inside that wrapper preserves IDs on emitted logs.
+    return typing.cast(types.Logger, log.ContextLogger(logger, extra))

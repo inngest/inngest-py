@@ -56,8 +56,10 @@ class HeaderKey(enum.Enum):
     FRAMEWORK = "x-inngest-framework"
     JOB_ID = "x-inngest-job-id"
     NO_RETRY = "x-inngest-no-retry"
+
     # Intentionally not x-inngest-prefixed; this matches the Executor header.
     REQUEST_ID = "x-request-id"
+
     REQUEST_VERSION = "x-inngest-req-version"
     RETRY_AFTER = "retry-after"
     SDK = "x-inngest-sdk"

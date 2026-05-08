@@ -63,21 +63,26 @@ class Context:
     Async function execution context.
 
     Attributes:
-        request_id: Per-outbound SDK request ID. None when an older Executor
-            or nonstandard execution source does not include request metadata.
-        job_id: Stable queue item ID for the current job. None when the
-            execution source does not include a queue job ID.
+        attempt: Attempt number (0-indexed). Retries are >= 1.
+        event: The event that triggered the function.
+        events: The events that triggered the function. Can be >=1 with batching.
+        group: Helpers for grouping steps.
+        logger: Idempotent logger (wraps client logger).
+        job_id: Stable queue item ID for the current job.
+        request_id: Per-outbound SDK request ID.
+        run_id: Function run ID.
+        step: Step methods.
     """
 
     attempt: int
     event: server_lib.Event
     events: list[server_lib.Event]
     group: step_lib.Group
+    job_id: str | None
     logger: types.Logger
+    request_id: str | None
     run_id: str
     step: step_lib.Step
-    request_id: str | None = None
-    job_id: str | None = None
 
 
 @dataclasses.dataclass
@@ -86,21 +91,26 @@ class ContextSync:
     Sync function execution context.
 
     Attributes:
-        request_id: Per-outbound SDK request ID. None when an older Executor
-            or nonstandard execution source does not include request metadata.
-        job_id: Stable queue item ID for the current job. None when the
-            execution source does not include a queue job ID.
+        attempt: Attempt number (0-indexed). Retries are >= 1.
+        event: The event that triggered the function.
+        events: The events that triggered the function. Can be >=1 with batching.
+        group: Helpers for grouping steps.
+        logger: Idempotent logger (wraps client logger).
+        job_id: Stable queue item ID for the current job.
+        request_id: Per-outbound SDK request ID.
+        run_id: Function run ID.
+        step: Step methods.
     """
 
     attempt: int
     event: server_lib.Event
     events: list[server_lib.Event]
     group: step_lib.GroupSync
+    job_id: str | None
     logger: types.Logger
+    request_id: str | None
     run_id: str
     step: step_lib.StepSync
-    request_id: str | None = None
-    job_id: str | None = None
 
 
 FunctionHandlerAsync: typing.TypeAlias = typing.Callable[

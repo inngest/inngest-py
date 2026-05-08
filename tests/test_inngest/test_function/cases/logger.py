@@ -15,9 +15,10 @@ class StatefulLogger:
     Fake logger that stores calls to its methods. We can use this to assert
     that logger methods are properly called (e.g. no duplicates).
 
-    Intentionally does not inherit from logging.Logger. This mirrors structlog,
-    loguru, and custom logger cases where users pass duck-typed loggers without
-    the full stdlib Logger contract.
+    Intentionally does NOT inherit from logging.Logger. This mirrors the
+    structlog / loguru / custom-logger case where client.logger is duck-typed
+    and does not implement the full stdlib Logger contract (no isEnabledFor,
+    getEffectiveLevel, hasHandlers, etc.).
     """
 
     def __init__(self) -> None:
@@ -110,6 +111,8 @@ def create(
         ctx.logger.info("function end")
 
     async def run_test(self: base.TestClass) -> None:
+        # The cast deliberately mirrors what users do when passing a
+        # non-stdlib logger (structlog, loguru, etc.) to inngest.Inngest.
         self.client.set_logger(_logger)  # type: ignore[arg-type]
         self.client.send_sync(inngest.Event(name=event_name))
         run_id = await state.wait_for_run_id()

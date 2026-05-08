@@ -89,7 +89,9 @@ def trigger(
                 event=event[0],
                 events=event,
                 group=step_lib.Group(),
+                job_id=None,
                 logger=logger,
+                request_id=None,
                 run_id=request.ctx.run_id,
                 step=step_lib.Step(
                     client,
@@ -124,7 +126,9 @@ def trigger(
                 event=event[0],
                 events=event,
                 group=step_lib.GroupSync(),
+                job_id=None,
                 logger=logger,
+                request_id=None,
                 run_id=request.ctx.run_id,
                 step=step_lib.StepSync(
                     client,
