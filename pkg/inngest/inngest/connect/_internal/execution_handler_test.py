@@ -1,7 +1,6 @@
 import logging
 import typing
 import unittest
-from unittest import mock
 
 import httpx
 import websockets
@@ -9,70 +8,77 @@ import websockets
 from inngest._internal import comm_lib, net
 
 from . import connect_pb2
-from . import ws_utils as ws_utils_module
 from .execution_handler import ExecutionHandler
 from .models import ConnectionState, State
 from .value_watcher import ValueWatcher
 
 
-class _FakeCommHandler:
-    called = False
-
-    async def post(
-        self,
-        req: comm_lib.CommRequest,
-    ) -> comm_lib.CommResponse:
-        self.called = True
-        raise AssertionError("post should not be called")
-
-
 class _FakeWS:
+    def __init__(self) -> None:
+        self.sent: list[bytes] = []
+
     async def send(self, message: bytes) -> None:
-        pass
+        self.sent.append(message)
 
 
-class _TestExecutionHandler(ExecutionHandler):
-    flush_results: list[Exception | None]
-
-    async def _flush_message(self, msg: bytes) -> Exception | None:
-        return self.flush_results.pop(0)
-
-
-def _state() -> State:
-    return State(
-        conn_id=ValueWatcher(None),
-        conn_init=ValueWatcher(None),
-        conn_state=ValueWatcher(ConnectionState.ACTIVE),
-        exclude_gateways=ValueWatcher([]),
-        extend_lease_interval=ValueWatcher(1),
-        fatal_error=ValueWatcher(None),
-        init_handshake_complete=ValueWatcher(True),
-        pending_request_count=ValueWatcher(0),
-        ws=ValueWatcher(typing.cast(websockets.ClientConnection, _FakeWS())),
-    )
+class _FakeState(State):
+    def __init__(self, ws: _FakeWS) -> None:
+        super().__init__(
+            conn_id=ValueWatcher(None),
+            conn_init=ValueWatcher(None),
+            conn_state=ValueWatcher(ConnectionState.ACTIVE),
+            exclude_gateways=ValueWatcher([]),
+            extend_lease_interval=ValueWatcher(1),
+            fatal_error=ValueWatcher(None),
+            init_handshake_complete=ValueWatcher(True),
+            pending_request_count=ValueWatcher(0),
+            ws=ValueWatcher(typing.cast(websockets.ClientConnection, ws)),
+        )
 
 
-def _handler() -> _TestExecutionHandler:
-    handler = _TestExecutionHandler(
-        api_origin="http://127.0.0.1",
-        comm_handlers={},
-        http_client=typing.cast(net.ThreadAwareAsyncHTTPClient, object()),
-        http_client_sync=typing.cast(httpx.Client, object()),
-        logger=logging.getLogger(__name__),
-        signing_key=None,
-        signing_key_fallback=None,
-        state=_state(),
-    )
-    handler.flush_results = []
-    return handler
+class _FakeExecutionHandler(ExecutionHandler):
+    def __init__(self, ws: _FakeWS | None = None) -> None:
+        super().__init__(
+            api_origin="http://127.0.0.1",
+            comm_handlers={},
+            http_client=typing.cast(net.ThreadAwareAsyncHTTPClient, object()),
+            http_client_sync=typing.cast(httpx.Client, object()),
+            logger=logging.getLogger(__name__),
+            signing_key=None,
+            signing_key_fallback=None,
+            state=_FakeState(ws or _FakeWS()),
+        )
 
 
 class TestExecutionHandler(unittest.IsolatedAsyncioTestCase):
     async def test_ack_failure_abandons_request_without_error_reply(
         self,
     ) -> None:
-        handler = _handler()
-        comm_handler = _FakeCommHandler()
+        """
+        If there's an error when sending the execution request ack, then we
+        don't process the execution request and we don't buffer.
+        """
+
+        class WS(_FakeWS):
+            async def send(self, message: bytes) -> None:
+                await super().send(message)
+                raise OSError("connection reset by peer")
+
+        ws = WS()
+        handler = _FakeExecutionHandler(ws)
+
+        class CommHandler:
+            called = False
+
+            async def post(
+                self,
+                req: comm_lib.CommRequest,
+            ) -> comm_lib.CommResponse:
+                print("yo")
+                self.called = True
+                raise Exception("unreachable")
+
+        comm_handler = CommHandler()
         req_data = connect_pb2.GatewayExecutorRequestData(
             account_id="account",
             app_id="app",
@@ -80,33 +86,34 @@ class TestExecutionHandler(unittest.IsolatedAsyncioTestCase):
             function_slug="fn",
             request_id="req",
         )
-        send_calls: list[bytes] = []
 
-        async def fail_ack(
-            logger: object,
-            state: State,
-            message: bytes,
-        ) -> Exception | None:
-            send_calls.append(message)
-            return OSError("connection reset by peer")
+        await handler._execute_request(
+            req_data,
+            typing.cast(comm_lib.CommHandler, comm_handler),
+        )
 
-        with mock.patch.object(
-            ws_utils_module,
-            "safe_send",
-            fail_ack,
-        ):
-            await handler._execute_request(
-                req_data,
-                typing.cast(comm_lib.CommHandler, comm_handler),
-            )
+        # We attempted to send the execution request ack
+        assert len(ws.sent) == 1
+        msg = connect_pb2.ConnectMessage()
+        msg.ParseFromString(ws.sent[0])
+        assert msg.kind == connect_pb2.GatewayMessageType.WORKER_REQUEST_ACK
 
-        assert len(send_calls) == 1
+        # CommHandler was not called since the ack failed to send
         assert comm_handler.called is False
-        assert handler._buffer.get(req_data.request_id) is None
+
+        # Nothing buffered
+        assert handler._buffer.length() == 0
 
     async def test_failed_flush_keeps_message_for_retry(self) -> None:
-        handler = _handler()
-        handler.flush_results = [Exception("temporary failure")]
+        """
+        If a message flush fails then the buffer retains the message.
+        """
+
+        class Handler(_FakeExecutionHandler):
+            async def _flush_message(self, msg: bytes) -> Exception | None:
+                return Exception("temporary failure")
+
+        handler = Handler()
         handler._buffer.add("req", b"reply")
 
         await handler._flush_ready_messages(0)
@@ -114,8 +121,16 @@ class TestExecutionHandler(unittest.IsolatedAsyncioTestCase):
         assert handler._buffer.get("req") == b"reply"
 
     async def test_successful_flush_deletes_message(self) -> None:
-        handler = _handler()
-        handler.flush_results = [None]
+        """
+        If a message flush succeeds then the buffer deletes the message.
+        """
+
+        class Handler(_FakeExecutionHandler):
+            async def _flush_message(self, msg: bytes) -> Exception | None:
+                return None
+
+        handler = Handler()
+
         handler._buffer.add("req", b"reply")
 
         await handler._flush_ready_messages(0)

@@ -132,6 +132,13 @@ class SizeConstrainedBuffer:
 
         return result
 
+    def length(self) -> int:
+        """
+        Get number of items in buffer.
+        """
+
+        return len(self._items)
+
     def touch(self, item_id: str) -> bool:
         """
         Refresh an item's timestamp so it is retried after the next TTL window.
