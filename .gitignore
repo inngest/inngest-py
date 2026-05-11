@@ -2,6 +2,7 @@
 .venv/
 
 # Build and tools
+.idea/
 *.egg-info/
 .mypy_cache/
 .pytest_cache/

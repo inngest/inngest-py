@@ -142,7 +142,7 @@ class GatewayConnectionReadyData(_message.Message):
     def __init__(self, heartbeat_interval: _Optional[str] = ..., extend_lease_interval: _Optional[str] = ...) -> None: ...
 
 class GatewayExecutorRequestData(_message.Message):
-    __slots__ = ("request_id", "account_id", "env_id", "app_id", "app_name", "function_id", "function_slug", "step_id", "request_payload", "system_trace_ctx", "user_trace_ctx", "run_id", "lease_id")
+    __slots__ = ("request_id", "account_id", "env_id", "app_id", "app_name", "function_id", "function_slug", "step_id", "request_payload", "system_trace_ctx", "user_trace_ctx", "run_id", "lease_id", "job_id")
     REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
     ACCOUNT_ID_FIELD_NUMBER: _ClassVar[int]
     ENV_ID_FIELD_NUMBER: _ClassVar[int]
@@ -156,6 +156,7 @@ class GatewayExecutorRequestData(_message.Message):
     USER_TRACE_CTX_FIELD_NUMBER: _ClassVar[int]
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
     LEASE_ID_FIELD_NUMBER: _ClassVar[int]
+    JOB_ID_FIELD_NUMBER: _ClassVar[int]
     request_id: str
     account_id: str
     env_id: str
@@ -169,7 +170,8 @@ class GatewayExecutorRequestData(_message.Message):
     user_trace_ctx: bytes
     run_id: str
     lease_id: str
-    def __init__(self, request_id: _Optional[str] = ..., account_id: _Optional[str] = ..., env_id: _Optional[str] = ..., app_id: _Optional[str] = ..., app_name: _Optional[str] = ..., function_id: _Optional[str] = ..., function_slug: _Optional[str] = ..., step_id: _Optional[str] = ..., request_payload: _Optional[bytes] = ..., system_trace_ctx: _Optional[bytes] = ..., user_trace_ctx: _Optional[bytes] = ..., run_id: _Optional[str] = ..., lease_id: _Optional[str] = ...) -> None: ...
+    job_id: str
+    def __init__(self, request_id: _Optional[str] = ..., account_id: _Optional[str] = ..., env_id: _Optional[str] = ..., app_id: _Optional[str] = ..., app_name: _Optional[str] = ..., function_id: _Optional[str] = ..., function_slug: _Optional[str] = ..., step_id: _Optional[str] = ..., request_payload: _Optional[bytes] = ..., system_trace_ctx: _Optional[bytes] = ..., user_trace_ctx: _Optional[bytes] = ..., run_id: _Optional[str] = ..., lease_id: _Optional[str] = ..., job_id: _Optional[str] = ...) -> None: ...
 
 class WorkerRequestAckData(_message.Message):
     __slots__ = ("request_id", "account_id", "env_id", "app_id", "function_slug", "step_id", "system_trace_ctx", "user_trace_ctx", "run_id")

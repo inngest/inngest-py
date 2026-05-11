@@ -163,6 +163,10 @@ class CommHandler:
 
             return Exception("events not in request")
 
+        job_id = req.headers.get(server_lib.HeaderKey.JOB_ID.value) or None
+        request_id = (
+            req.headers.get(server_lib.HeaderKey.REQUEST_ID.value) or None
+        )
         memos = step_lib.StepMemos.from_raw(steps)
 
         if fn.is_handler_async:
@@ -175,7 +179,9 @@ class CommHandler:
                         event=request.event,
                         events=events,
                         group=step_lib.Group(),
+                        job_id=job_id,
                         logger=self._client.logger,
+                        request_id=request_id,
                         run_id=request.ctx.run_id,
                         step=step_lib.Step(
                             self._client,
@@ -216,7 +222,9 @@ class CommHandler:
                     event=request.event,
                     events=events,
                     group=step_lib.GroupSync(),
+                    job_id=job_id,
                     logger=self._client.logger,
+                    request_id=request_id,
                     run_id=request.ctx.run_id,
                     step=step_lib.StepSync(
                         self._client,
@@ -316,6 +324,10 @@ class CommHandler:
 
             return Exception("events not in request")
 
+        job_id = req.headers.get(server_lib.HeaderKey.JOB_ID.value) or None
+        request_id = (
+            req.headers.get(server_lib.HeaderKey.REQUEST_ID.value) or None
+        )
         memos = step_lib.StepMemos.from_raw(steps)
 
         call_res = fn.call_sync(
@@ -325,7 +337,9 @@ class CommHandler:
                 event=request.event,
                 events=events,
                 group=step_lib.GroupSync(),
+                job_id=job_id,
                 logger=self._client.logger,
+                request_id=request_id,
                 run_id=request.ctx.run_id,
                 step=step_lib.StepSync(
                     self._client,
