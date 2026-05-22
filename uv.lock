@@ -399,16 +399,16 @@ wheels = [
 
 [[package]]
 name = "django"
-version = "5.1.14"
+version = "5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "asgiref" },
     { name = "sqlparse" },
     { name = "tzdata", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6e/f9/284077f0e61f633e5279518a9ac5924ade4bef12bc841174ca48c57f2438/django-5.1.14.tar.gz", hash = "sha256:b98409fb31fdd6e8c3a6ba2eef3415cc5c0020057b43b21ba7af6eff5f014831", size = 10720998, upload-time = "2025-11-05T14:07:56.294Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/be/a6/46e250737d46e955e048f6bbc2948fb22f0de3f3ab828d3803070dc1260e/Django-5.0.tar.gz", hash = "sha256:7d29e14dfbc19cb6a95a4bd669edbde11f5d4c6a71fdaa42c2d40b6846e807f7", size = 10585390, upload-time = "2023-12-04T13:12:50.251Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e3/67/8839eb1d70b5688b7375dce24ccf216e6ab25ee9e6361f22973520d13cd4/django-5.1.14-py3-none-any.whl", hash = "sha256:2a4b9c20404fd1bf50aaaa5542a19d860594cba1354f688f642feb271b91df27", size = 8260068, upload-time = "2025-11-05T14:07:53.26Z" },
+    { url = "https://files.pythonhosted.org/packages/ba/c7/61b02c0ef9e129080a8c2bffefb3cb2b9ddddece4c44dc473c1c4f0647c1/Django-5.0-py3-none-any.whl", hash = "sha256:3a9fd52b8dbeae335ddf4a9dfa6c6a0853a1122f1fb071a8d5eca979f73a05c8", size = 8136382, upload-time = "2023-12-04T13:12:41.502Z" },
 ]
 
 [[package]]
@@ -655,7 +655,7 @@ requires-dist = [
     { name = "boto3-stubs", extras = ["s3"], marker = "extra == 'dev'", specifier = "==1.35.46" },
     { name = "build", marker = "extra == 'dev'", specifier = "==1.0.3" },
     { name = "cryptography", marker = "extra == 'dev'", specifier = "==42.0.5" },
-    { name = "django", marker = "extra == 'dev'", specifier = "==5.1.14" },
+    { name = "django", marker = "extra == 'dev'", specifier = "==5.0" },
     { name = "django-types", marker = "extra == 'dev'", specifier = "==0.19.1" },
     { name = "fastapi", marker = "extra == 'dev'", specifier = "==0.110.0" },
     { name = "flask", marker = "extra == 'dev'", specifier = "==3.0.0" },
