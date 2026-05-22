@@ -11,7 +11,7 @@ requires-python = ">=3.10"
 
 [project.optional-dependencies]
 dev = [
-    "Django==5.0",
+    "Django==5.1.14",
     "Flask==3.0.0",
     "boto3-stubs[s3]==1.35.46",
     "boto3==1.35.47",
