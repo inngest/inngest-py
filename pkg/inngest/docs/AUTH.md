@@ -23,7 +23,7 @@ When the Inngest server sends an execution request, the SDK validates the reques
 
 GET and POST require a valid signature at the `wrap_handler` level (`require_signature=True`) in cloud mode, returning 401 for unsigned or invalid requests. In dev mode, signature validation is skipped for every HTTP method.
 
-PUT app sync requests use `require_signature=False` by default. This preserves compatibility with unauthenticated out-of-band sync requests.
+PUT app sync requests also use `require_signature=False` by default. This preserves compatibility with unauthenticated out-of-band sync requests. Users can opt out by setting `INNGEST_ENABLE_UNAUTHED_SYNC=false` or passing `enable_unauthed_sync=False` to `serve()`, which makes cloud-mode PUT sync reject unsigned or invalidly signed requests with 401. Dev mode ignores this opt-out because the Dev Server does not send signed requests.
 
 Cloud in-band sync still requires a signed PUT, since the response carries a signed body that the server validates. Dev mode falls back to out-of-band sync because the Dev Server does not sign requests.
 

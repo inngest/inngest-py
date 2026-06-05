@@ -100,11 +100,14 @@ class TestAuth(base.TestCase):
         self,
         client: inngest.Inngest,
         fns: list[inngest.Function[typing.Any]],
+        *,
+        enable_unauthed_sync: bool | None = None,
     ) -> None:
         inngest.flask.serve(
             self.app,
             client,
             fns,
+            enable_unauthed_sync=enable_unauthed_sync,
         )
 
 

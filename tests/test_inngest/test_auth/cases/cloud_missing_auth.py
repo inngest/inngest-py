@@ -25,6 +25,10 @@ def create_cases(framework: server_lib.Framework) -> list[base.Case]:
             name=f"{_TEST_NAME}_put_with_out_of_band",
             run_test=_put_out_of_band(framework),
         ),
+        base.Case(
+            name=f"{_TEST_NAME}_put_with_out_of_band_with_disable_option",
+            run_test=_put_out_of_band_disable_option(framework),
+        ),
     ]
 
 
@@ -98,5 +102,24 @@ def _put_out_of_band(
         res = base.run_out_of_band_put(self)
 
         base.assert_out_of_band_sync_succeeded(res, mock_cloud)
+
+    return run_test
+
+
+def _put_out_of_band_disable_option(
+    framework: server_lib.Framework,
+) -> typing.Callable[[base.TestCase], None]:
+    def run_test(self: base.TestCase) -> None:
+        base.serve_app(
+            self,
+            framework,
+            enable_unauthed_sync=False,
+            is_production=True,
+            name=f"{_TEST_NAME}-put-out-of-band-disable-option",
+        )
+
+        res = base.run_out_of_band_put(self)
+
+        base.assert_unauthorized_response(res)
 
     return run_test

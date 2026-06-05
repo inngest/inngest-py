@@ -32,6 +32,7 @@ def _get(
         base.serve_app(
             self,
             framework,
+            enable_unauthed_sync=False,
             is_production=False,
             name=f"{_TEST_NAME}-get",
         )
@@ -51,6 +52,7 @@ def _post(
         app = base.serve_app(
             self,
             framework,
+            enable_unauthed_sync=False,
             is_production=False,
             name=f"{_TEST_NAME}-post",
         )
@@ -71,6 +73,7 @@ def _put(
         base.serve_app(
             self,
             framework,
+            enable_unauthed_sync=False,
             is_production=False,
             mock_cloud=mock_cloud,
             name=f"{_TEST_NAME}-put",
