@@ -7,13 +7,13 @@ How the SDK responds to GET requests with app metadata. This is typically used f
 
 ## Overview
 
-The GET handler on `CommHandler` returns an inspection response. This is used by the Dev Server for auto-discovery and by the Inngest dashboard for diagnostics. The response shape depends on whether the request is signed.
+The GET handler on `CommHandler` returns an inspection response. This is used by the Dev Server for auto-discovery and by the Inngest dashboard for diagnostics. In cloud mode, the request must be signed. In dev mode, signature validation is skipped.
 
 Models live in `_internal/server_lib/inspection.py`.
 
 ## Unauthenticated Response
 
-Returned when the request has no valid signature. Exposes only non-sensitive metadata. Notably, this must not include signing key hashes. Even though they are hashes and not raw keys, the hashed signing key can be a Bearer token to authenticate requests to the Inngest API.
+Returned in dev mode when the request has no valid signature. Exposes only non-sensitive metadata. Notably, this must not include signing key hashes. Even though they are hashes and not raw keys, the hashed signing key can be a Bearer token to authenticate requests to the Inngest API.
 
 ## Authenticated Response
 

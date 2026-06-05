@@ -63,6 +63,7 @@ class HeaderKey(enum.Enum):
     REQUEST_VERSION = "x-inngest-req-version"
     RETRY_AFTER = "retry-after"
     SDK = "x-inngest-sdk"
+    SDK_HANDLED = "x-inngest-sdk-handled"
     SERVER_KIND = "x-inngest-server-kind"
     SERVER_TIMING = "server-timing"
     SIGNATURE = "x-inngest-signature"

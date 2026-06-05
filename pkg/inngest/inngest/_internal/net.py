@@ -623,6 +623,9 @@ def validate_request_sig(
         signing_key_fallback: Fallback signing key.
     """
 
+    if mode == server_lib.ServerKind.DEV_SERVER:
+        return None
+
     canonicalized = transforms.canonicalize(body)
     if isinstance(canonicalized, Exception):
         return canonicalized
