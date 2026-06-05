@@ -46,11 +46,6 @@ class CommHandler:
         functions: list[function.Function[typing.Any]],
         streaming: const.Streaming | None,
     ) -> None:
-        # In-band syncing is opt-out.
-        self._allow_in_band_sync = not env_lib.is_false(
-            const.EnvKey.ALLOW_IN_BAND_SYNC,
-        )
-
         self._client = client
         self._http_client = client._http_client
         self._mode = client._mode
@@ -444,7 +439,6 @@ class CommHandler:
         if (
             req.headers.get(server_lib.HeaderKey.SYNC_KIND.value)
             == server_lib.SyncKind.IN_BAND.value
-            and self._allow_in_band_sync
         ):
             err: Exception | None = None
             if isinstance(request_signing_key, Exception):
@@ -475,7 +469,6 @@ class CommHandler:
         if (
             req.headers.get(server_lib.HeaderKey.SYNC_KIND.value)
             == server_lib.SyncKind.IN_BAND.value
-            and self._allow_in_band_sync
         ):
             err: Exception | None = None
             if isinstance(request_signing_key, Exception):
