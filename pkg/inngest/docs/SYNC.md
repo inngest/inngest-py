@@ -18,15 +18,15 @@ The SDK responds directly to the PUT request with all function configs and app m
 2. SDK verifies the request signature (required for in-band sync).
 3. SDK responds with an `InBandSynchronizeResponse`.
 
-In-band sync is enabled by default. It can be disabled via `INNGEST_ALLOW_IN_BAND_SYNC=false`, which forces out-of-band sync.
+In-band sync is always allowed when the request includes the in-band sync header.
 
 ## Out-of-Band Sync
 
-The SDK makes a separate HTTP POST to the Inngest API's `/fn/register` endpoint. Used as a fallback when in-band sync is disabled.
+The SDK makes a separate HTTP POST to the Inngest API's `/fn/register` endpoint. Used when the incoming PUT does not request in-band sync.
 
 **Request flow:**
 
-1. Inngest server sends PUT (without in-band header, or in-band is disabled).
+1. Inngest server sends PUT without the in-band sync header.
 2. SDK builds a `SynchronizeRequest` with app metadata and function configs.
 3. SDK POSTs this to `{api_origin}/fn/register`, authenticated with the signing key hash as a Bearer token (see [AUTH.md](AUTH.md)).
 4. SDK forwards the API's response back to the original PUT caller.
