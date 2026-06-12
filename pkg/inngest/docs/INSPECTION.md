@@ -21,4 +21,6 @@ Returned when the request has a valid signature. Includes everything in the unau
 
 ## Server Kind Mismatch
 
-If the request comes from a Dev Server but the SDK is in production mode (or vice versa), the GET handler returns 403 with an empty body. This is a DX concern, since apps were mistakenly syncing with Inngest Cloud when the Dev Server sent a PUT request.
+Cloud-mode GET requests must be signed before the handler inspects server kind. Unsigned requests, including Dev Server auto-discovery requests against a production SDK, return the generic 401 response.
+
+If a GET request reaches the handler and its server kind does not match the SDK mode, the handler returns 403 with an empty body. This is a DX concern, since apps were mistakenly syncing with Inngest Cloud when the Dev Server sent a PUT request.

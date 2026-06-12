@@ -14,6 +14,10 @@ def create_cases(framework: server_lib.Framework) -> list[base.Case]:
             run_test=_get(framework),
         ),
         base.Case(
+            name=f"{_TEST_NAME}_get_malformed_signature",
+            run_test=_get_malformed_signature(framework),
+        ),
+        base.Case(
             name=f"{_TEST_NAME}_post",
             run_test=_post(framework),
         ),
@@ -36,6 +40,28 @@ def _get(
         )
 
         res = base.run_get(self, signing_key=base.WRONG_SIGNING_KEY)
+
+        base.assert_unauthorized_response(res)
+
+    return run_test
+
+
+def _get_malformed_signature(
+    framework: server_lib.Framework,
+) -> typing.Callable[[base.TestCase], None]:
+    def run_test(self: base.TestCase) -> None:
+        base.serve_app(
+            self,
+            framework,
+            is_production=True,
+            name=f"{_TEST_NAME}-get-malformed-signature",
+        )
+
+        res = self.get(
+            headers={
+                server_lib.HeaderKey.SIGNATURE.value: "t=bad&s=invalid",
+            },
+        )
 
         base.assert_unauthorized_response(res)
 

@@ -401,8 +401,9 @@ class CommHandler:
             server_kind = None
 
         if server_kind is not None and server_kind != self._mode:
-            # Tell Dev Server to leave the app alone since it's in production
-            # mode.
+            # Reject authenticated/validated inspection from the wrong server
+            # kind. Unsigned cloud-mode GETs are rejected by the wrapper before
+            # reaching this branch.
             return CommResponse(
                 body={},
                 status_code=403,
