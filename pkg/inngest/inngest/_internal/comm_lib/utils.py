@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import http
 import typing
 
 from inngest._internal import net, server_lib, types
@@ -74,7 +73,8 @@ def wrap_handler(
             self: CommHandler,
             req: CommRequest,
         ) -> CommResponse:
-            request_signing_key = None
+            request_signing_key: types.MaybeError[str | None] = None
+            res: CommResponse | None = None
             with req.timings.comm_handler, req.timings.async_block:
                 if req.is_connect is False:
                     # Connect uses WebSockets so there isn't a request signature
@@ -93,29 +93,37 @@ def wrap_handler(
                         isinstance(request_signing_key, Exception)
                         and require_signature
                     ):
-                        return CommResponse.from_error(
+                        res = CommResponse.unauthorized(
                             self._client.logger,
                             request_signing_key,
-                            status=http.HTTPStatus.UNAUTHORIZED,
                         )
 
-                res = await method(
-                    self,
-                    req,
-                    request_signing_key,
-                )
-                if isinstance(res, Exception):
-                    res = CommResponse.from_error(self._client.logger, res)
+                if res is None:
+                    method_res = await method(
+                        self,
+                        req,
+                        request_signing_key,
+                    )
+                    if isinstance(method_res, Exception):
+                        res = CommResponse.from_error(
+                            self._client.logger, method_res
+                        )
+                    else:
+                        res = method_res
 
-            res.headers = {
-                **res.headers,
-                **net.create_headers(
-                    env=self._client.env,
-                    framework=self._framework,
-                    server_kind=self._client._mode,
-                ),
-                server_lib.HeaderKey.SERVER_TIMING.value: req.timings.to_header(),
-            }
+            if res.include_inngest_headers:
+                res.headers = {
+                    **res.headers,
+                    **net.create_headers(
+                        env=self._client.env,
+                        framework=self._framework,
+                        server_kind=self._client._mode,
+                    ),
+                }
+            res.headers[server_lib.HeaderKey.SDK_HANDLED.value] = "true"
+            res.headers[server_lib.HeaderKey.SERVER_TIMING.value] = (
+                req.timings.to_header()
+            )
 
             if isinstance(request_signing_key, str):
                 err = res.sign(request_signing_key)
@@ -153,7 +161,8 @@ def wrap_handler_sync(
             self: CommHandler,
             req: CommRequest,
         ) -> CommResponse:
-            request_signing_key = None
+            request_signing_key: types.MaybeError[str | None] = None
+            res: CommResponse | None = None
             with req.timings.comm_handler:
                 if req.is_connect is False:
                     # Connect uses WebSockets so there isn't a request signature
@@ -172,29 +181,37 @@ def wrap_handler_sync(
                         isinstance(request_signing_key, Exception)
                         and require_signature
                     ):
-                        return CommResponse.from_error(
+                        res = CommResponse.unauthorized(
                             self._client.logger,
                             request_signing_key,
-                            status=http.HTTPStatus.UNAUTHORIZED,
                         )
 
-                res = method(
-                    self,
-                    req,
-                    request_signing_key,
-                )
-                if isinstance(res, Exception):
-                    res = CommResponse.from_error(self._client.logger, res)
+                if res is None:
+                    method_res = method(
+                        self,
+                        req,
+                        request_signing_key,
+                    )
+                    if isinstance(method_res, Exception):
+                        res = CommResponse.from_error(
+                            self._client.logger, method_res
+                        )
+                    else:
+                        res = method_res
 
-            res.headers = {
-                **res.headers,
-                **net.create_headers(
-                    env=self._client.env,
-                    framework=self._framework,
-                    server_kind=self._client._mode,
-                ),
-                server_lib.HeaderKey.SERVER_TIMING.value: req.timings.to_header(),
-            }
+            if res.include_inngest_headers:
+                res.headers = {
+                    **res.headers,
+                    **net.create_headers(
+                        env=self._client.env,
+                        framework=self._framework,
+                        server_kind=self._client._mode,
+                    ),
+                }
+            res.headers[server_lib.HeaderKey.SDK_HANDLED.value] = "true"
+            res.headers[server_lib.HeaderKey.SERVER_TIMING.value] = (
+                req.timings.to_header()
+            )
 
             if isinstance(request_signing_key, str):
                 err = res.sign(request_signing_key)

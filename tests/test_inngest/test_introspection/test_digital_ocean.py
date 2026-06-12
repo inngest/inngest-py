@@ -31,8 +31,8 @@ class TestIntrospection(base.BaseTestIntrospection):
             )
         )
         res = app_client.get(digital_ocean_simulator.FULL_PATH)
-        assert res.status_code == 200
-        assert res.json == self.expected_unauthed_body
+        assert res.status_code == 401
+        assert res.json == {"message": "Unauthorized"}
         assert res.headers.get(server_lib.HeaderKey.SIGNATURE.value) is None
 
     def test_cloud_mode_with_signature(self) -> None:

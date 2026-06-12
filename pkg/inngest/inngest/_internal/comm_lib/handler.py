@@ -387,7 +387,7 @@ class CommHandler:
 
         return errors.FunctionNotFoundError(f"function {fn_id} not found")
 
-    @wrap_handler_sync(require_signature=False)
+    @wrap_handler_sync()
     def get_sync(
         self,
         req: CommRequest,
@@ -401,8 +401,9 @@ class CommHandler:
             server_kind = None
 
         if server_kind is not None and server_kind != self._mode:
-            # Tell Dev Server to leave the app alone since it's in production
-            # mode.
+            # Reject authenticated/validated inspection from the wrong server
+            # kind. Unsigned cloud-mode GETs are rejected by the wrapper before
+            # reaching this branch.
             return CommResponse(
                 body={},
                 status_code=403,
@@ -425,6 +426,15 @@ class CommHandler:
             status_code=200,
         )
 
+    def _is_cloud_in_band_sync(self, req: CommRequest) -> bool:
+        if self._mode != server_lib.ServerKind.CLOUD:
+            return False
+
+        return (
+            req.headers.get(server_lib.HeaderKey.SYNC_KIND.value)
+            == server_lib.SyncKind.IN_BAND.value
+        )
+
     @wrap_handler(require_signature=False)
     async def put(
         self: CommHandler,
@@ -436,23 +446,25 @@ class CommHandler:
         self._client.logger.debug("Syncing app")
         syncer = Syncer(logger=self._client.logger)
 
-        if (
-            req.headers.get(server_lib.HeaderKey.SYNC_KIND.value)
-            == server_lib.SyncKind.IN_BAND.value
-        ):
-            err: Exception | None = None
-            if isinstance(request_signing_key, Exception):
-                err = request_signing_key
-            elif request_signing_key is None:
-                err = Exception("request must be signed for in-band sync")
-            if err is not None:
-                return CommResponse.from_error(
+        # Cloud in-band sync returns signed app metadata directly in this
+        # response, so it always requires a valid request signature. Dev mode
+        # falls through to out-of-band sync because the Dev Server does not sign
+        # requests.
+        if self._is_cloud_in_band_sync(req):
+            if not isinstance(request_signing_key, str):
+                in_band_auth_error = (
+                    request_signing_key
+                    if isinstance(request_signing_key, Exception)
+                    else Exception("request must be signed for in-band sync")
+                )
+                return CommResponse.unauthorized(
                     self._client.logger,
-                    err,
-                    status=http.HTTPStatus.UNAUTHORIZED,
+                    in_band_auth_error,
                 )
             return syncer.in_band(self, req, request_signing_key)
 
+        # Out-of-band sync registers via a separate authenticated SDK-to-API
+        # request, so the incoming PUT may be unsigned.
         return await syncer.out_of_band(self, req)
 
     @wrap_handler_sync(require_signature=False)
@@ -466,24 +478,26 @@ class CommHandler:
         self._client.logger.debug("Syncing app")
         syncer = Syncer(logger=self._client.logger)
 
-        if (
-            req.headers.get(server_lib.HeaderKey.SYNC_KIND.value)
-            == server_lib.SyncKind.IN_BAND.value
-        ):
-            err: Exception | None = None
-            if isinstance(request_signing_key, Exception):
-                err = request_signing_key
-            elif request_signing_key is None:
-                err = Exception("request must be signed for in-band sync")
-            if err is not None:
-                return CommResponse.from_error(
+        # Cloud in-band sync returns signed app metadata directly in this
+        # response, so it always requires a valid request signature. Dev mode
+        # falls through to out-of-band sync because the Dev Server does not sign
+        # requests.
+        if self._is_cloud_in_band_sync(req):
+            if not isinstance(request_signing_key, str):
+                in_band_auth_error = (
+                    request_signing_key
+                    if isinstance(request_signing_key, Exception)
+                    else Exception("request must be signed for in-band sync")
+                )
+                return CommResponse.unauthorized(
                     self._client.logger,
-                    err,
-                    status=http.HTTPStatus.UNAUTHORIZED,
+                    in_band_auth_error,
                 )
 
             return syncer.in_band(self, req, request_signing_key)
 
+        # Out-of-band sync registers via a separate authenticated SDK-to-API
+        # request, so the incoming PUT may be unsigned.
         return syncer.out_of_band_sync(self, req)
 
 

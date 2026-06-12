@@ -45,12 +45,14 @@ class CommResponse:
         *,
         body: object = None,
         headers: dict[str, str] | None = None,
+        include_inngest_headers: bool = True,
         stream: typing.Callable[[], typing.AsyncGenerator[bytes, None]]
         | None = None,
         status_code: int = http.HTTPStatus.OK.value,
     ) -> None:
         self.headers = headers or {}
         self.body = body
+        self.include_inngest_headers = include_inngest_headers
         self.status_code = status_code
         self.stream = stream
 
@@ -231,6 +233,25 @@ class CommResponse:
                 server_lib.HeaderKey.CONTENT_TYPE.value: "application/json",
             },
             status_code=status.value,
+        )
+
+    @classmethod
+    def unauthorized(
+        cls,
+        logger: types.Logger,
+        err: Exception,
+    ) -> CommResponse:
+        if errors.is_quiet(err) is False:
+            logger.error(f"unauthorized: {err!s}")
+
+        return cls(
+            body={"message": "Unauthorized"},
+            headers={
+                server_lib.HeaderKey.CONTENT_TYPE.value: "application/json",
+                server_lib.HeaderKey.SDK_HANDLED.value: "true",
+            },
+            include_inngest_headers=False,
+            status_code=http.HTTPStatus.UNAUTHORIZED.value,
         )
 
     @classmethod
