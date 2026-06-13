@@ -118,6 +118,7 @@ class TestCommHandlerRequestIDs(unittest.TestCase):
 
         comm_handler = comm_lib.CommHandler(
             client=client,
+            enable_unauthed_sync=None,
             framework=server_lib.Framework.FAST_API,
             functions=[fn],
             streaming=None,
@@ -162,6 +163,7 @@ class TestCommHandlerRequestIDs(unittest.TestCase):
 
         comm_handler = comm_lib.CommHandler(
             client=client,
+            enable_unauthed_sync=None,
             framework=server_lib.Framework.FAST_API,
             functions=[fn],
             streaming=None,

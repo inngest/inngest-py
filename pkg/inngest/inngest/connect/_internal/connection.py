@@ -166,6 +166,7 @@ class WorkerConnectionImpl(WorkerConnection):
 
             self._comm_handlers[client.app_id] = comm_lib.CommHandler(
                 client=client,
+                enable_unauthed_sync=None,
                 framework=FRAMEWORK,
                 functions=fns,
                 streaming=const.Streaming.DISABLE,  # Probably doesn't make sense for Connect.

@@ -18,7 +18,7 @@ The SDK responds directly to the PUT request with all function configs and app m
 2. SDK verifies the request signature (required for in-band sync).
 3. SDK responds with an `InBandSynchronizeResponse`.
 
-In-band sync is always allowed when the request includes the in-band sync header.
+In-band sync is always allowed when the SDK is in cloud mode and the request includes the in-band sync header.
 
 ## Out-of-Band Sync
 
@@ -30,6 +30,8 @@ The SDK makes a separate HTTP POST to the Inngest API's `/fn/register` endpoint.
 2. SDK builds a `SynchronizeRequest` with app metadata and function configs.
 3. SDK POSTs this to `{api_origin}/fn/register`, authenticated with the signing key hash as a Bearer token (see [AUTH.md](AUTH.md)).
 4. SDK forwards the API's response back to the original PUT caller.
+
+Unsigned out-of-band sync PUTs are allowed by default. Users can disable them in cloud mode with `INNGEST_ENABLE_UNAUTHED_SYNC=false` or `serve(enable_unauthed_sync=False)`. Dev mode ignores this opt-out because the Dev Server does not send signed requests.
 
 ## Function Configs
 

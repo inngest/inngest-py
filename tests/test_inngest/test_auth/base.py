@@ -55,6 +55,8 @@ class TestCase(unittest.TestCase):
         self,
         client: inngest.Inngest,
         fns: list[inngest.Function[typing.Any]],
+        *,
+        enable_unauthed_sync: bool | None = None,
     ) -> None:
         raise NotImplementedError()
 

@@ -23,6 +23,7 @@ class EnvKey(enum.Enum):
 
     EVENT_API_BASE_URL = "INNGEST_EVENT_API_BASE_URL"
     EVENT_KEY = "INNGEST_EVENT_KEY"
+    ENABLE_UNAUTHED_SYNC = "INNGEST_ENABLE_UNAUTHED_SYNC"
     ENV = "INNGEST_ENV"
 
     # The ThreadPoolExecutor max_workers arg. If set to 0, the thread pool will

@@ -23,6 +23,7 @@ def serve(
     client: client_lib.Inngest,
     functions: list[function.Function[typing.Any]],
     *,
+    enable_unauthed_sync: bool | None = None,
     public_path: str | None = None,
     serve_origin: str | None = None,
     serve_path: str | None = None,
@@ -36,6 +37,7 @@ def serve(
         app: FastAPI app.
         client: Inngest client.
         functions: List of functions to serve.
+        enable_unauthed_sync: Controls whether unsigned app sync PUT requests are allowed in cloud mode. Defaults to the INNGEST_ENABLE_UNAUTHED_SYNC env var, or True when unset.
         public_path: Path that the Inngest server sends requests to. This is only necessary if the SDK is behind a proxy that rewrites the path.
         serve_origin: Origin for serving Inngest functions. This is typically only useful during Docker-based development.
         serve_path: Path for serving Inngest functions. This is only useful if you don't want serve Inngest at the /api/inngest path.
@@ -44,6 +46,7 @@ def serve(
 
     handler = comm_lib.CommHandler(
         client=client,
+        enable_unauthed_sync=enable_unauthed_sync,
         framework=FRAMEWORK,
         functions=functions,
         streaming=streaming,

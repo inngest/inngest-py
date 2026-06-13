@@ -42,6 +42,7 @@ class CommHandler:
         self,
         *,
         client: client_lib.Inngest,
+        enable_unauthed_sync: bool | None,
         framework: server_lib.Framework,
         functions: list[function.Function[typing.Any]],
         streaming: const.Streaming | None,
@@ -52,6 +53,16 @@ class CommHandler:
         self._api_origin = client.api_origin
         self._fns = {fn.get_id(): fn for fn in functions}
         self._framework = framework
+
+        if self._mode == server_lib.ServerKind.DEV_SERVER:
+            self._enable_unauthed_sync = True
+        elif enable_unauthed_sync is None:
+            # TODO(v0.6): Make unauthenticated out-of-band sync PUTs opt-in.
+            self._enable_unauthed_sync = not env_lib.is_false(
+                const.EnvKey.ENABLE_UNAUTHED_SYNC,
+            )
+        else:
+            self._enable_unauthed_sync = enable_unauthed_sync
 
         if streaming is None:
             streaming = env_lib.get_streaming(const.EnvKey.STREAMING)
@@ -435,6 +446,25 @@ class CommHandler:
             == server_lib.SyncKind.IN_BAND.value
         )
 
+    def _get_out_of_band_sync_auth_error(
+        self,
+        request_signing_key: types.MaybeError[str | None],
+    ) -> Exception | None:
+        """
+        Return an auth error when out-of-band sync requires a valid signature.
+        """
+
+        if self._enable_unauthed_sync:
+            return None
+        if isinstance(request_signing_key, str):
+            return None
+        if isinstance(request_signing_key, Exception):
+            return request_signing_key
+
+        return errors.HeaderMissingError(
+            "request must be signed when unauthenticated sync is disabled"
+        )
+
     @wrap_handler(require_signature=False)
     async def put(
         self: CommHandler,
@@ -464,7 +494,17 @@ class CommHandler:
             return syncer.in_band(self, req, request_signing_key)
 
         # Out-of-band sync registers via a separate authenticated SDK-to-API
-        # request, so the incoming PUT may be unsigned.
+        # request, so the incoming PUT may be unsigned unless disabled by
+        # config.
+        out_of_band_auth_error = self._get_out_of_band_sync_auth_error(
+            request_signing_key,
+        )
+        if out_of_band_auth_error is not None:
+            return CommResponse.unauthorized(
+                self._client.logger,
+                out_of_band_auth_error,
+            )
+
         return await syncer.out_of_band(self, req)
 
     @wrap_handler_sync(require_signature=False)
@@ -497,7 +537,17 @@ class CommHandler:
             return syncer.in_band(self, req, request_signing_key)
 
         # Out-of-band sync registers via a separate authenticated SDK-to-API
-        # request, so the incoming PUT may be unsigned.
+        # request, so the incoming PUT may be unsigned unless disabled by
+        # config.
+        out_of_band_auth_error = self._get_out_of_band_sync_auth_error(
+            request_signing_key,
+        )
+        if out_of_band_auth_error is not None:
+            return CommResponse.unauthorized(
+                self._client.logger,
+                out_of_band_auth_error,
+            )
+
         return syncer.out_of_band_sync(self, req)
 
 

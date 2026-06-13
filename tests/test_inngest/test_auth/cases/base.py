@@ -41,6 +41,7 @@ def serve_app(
     test_case: TestCase,
     framework: server_lib.Framework,
     *,
+    enable_unauthed_sync: bool | None = None,
     is_production: bool,
     mock_cloud: MockCloud | None = None,
     name: str,
@@ -65,6 +66,7 @@ def serve_app(
     test_case.serve(
         client,
         [fn],
+        enable_unauthed_sync=enable_unauthed_sync,
     )
 
     return ServedApp(fn_id=fn.id)
