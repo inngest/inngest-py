@@ -12,7 +12,6 @@ VERSION: typing.Final = importlib.metadata.version("inngest")
 
 
 class EnvKey(enum.Enum):
-    ALLOW_IN_BAND_SYNC = "INNGEST_ALLOW_IN_BAND_SYNC"
     API_BASE_URL = "INNGEST_API_BASE_URL"
 
     # Sets both API and EVENT base URLs. API_BASE_URL and EVENT_API_BASE_URL
@@ -24,6 +23,7 @@ class EnvKey(enum.Enum):
 
     EVENT_API_BASE_URL = "INNGEST_EVENT_API_BASE_URL"
     EVENT_KEY = "INNGEST_EVENT_KEY"
+    ENABLE_UNAUTHED_SYNC = "INNGEST_ENABLE_UNAUTHED_SYNC"
     ENV = "INNGEST_ENV"
 
     # The ThreadPoolExecutor max_workers arg. If set to 0, the thread pool will

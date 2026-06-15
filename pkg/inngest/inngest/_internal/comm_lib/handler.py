@@ -42,21 +42,27 @@ class CommHandler:
         self,
         *,
         client: client_lib.Inngest,
+        enable_unauthed_sync: bool | None,
         framework: server_lib.Framework,
         functions: list[function.Function[typing.Any]],
         streaming: const.Streaming | None,
     ) -> None:
-        # In-band syncing is opt-out.
-        self._allow_in_band_sync = not env_lib.is_false(
-            const.EnvKey.ALLOW_IN_BAND_SYNC,
-        )
-
         self._client = client
         self._http_client = client._http_client
         self._mode = client._mode
         self._api_origin = client.api_origin
         self._fns = {fn.get_id(): fn for fn in functions}
         self._framework = framework
+
+        if self._mode == server_lib.ServerKind.DEV_SERVER:
+            self._enable_unauthed_sync = True
+        elif enable_unauthed_sync is None:
+            # TODO(v0.6): Make unauthenticated out-of-band sync PUTs opt-in.
+            self._enable_unauthed_sync = not env_lib.is_false(
+                const.EnvKey.ENABLE_UNAUTHED_SYNC,
+            )
+        else:
+            self._enable_unauthed_sync = enable_unauthed_sync
 
         if streaming is None:
             streaming = env_lib.get_streaming(const.EnvKey.STREAMING)
@@ -163,6 +169,10 @@ class CommHandler:
 
             return Exception("events not in request")
 
+        job_id = req.headers.get(server_lib.HeaderKey.JOB_ID.value) or None
+        request_id = (
+            req.headers.get(server_lib.HeaderKey.REQUEST_ID.value) or None
+        )
         memos = step_lib.StepMemos.from_raw(steps)
 
         if fn.is_handler_async:
@@ -175,7 +185,9 @@ class CommHandler:
                         event=request.event,
                         events=events,
                         group=step_lib.Group(),
+                        job_id=job_id,
                         logger=self._client.logger,
+                        request_id=request_id,
                         run_id=request.ctx.run_id,
                         step=step_lib.Step(
                             self._client,
@@ -216,7 +228,9 @@ class CommHandler:
                     event=request.event,
                     events=events,
                     group=step_lib.GroupSync(),
+                    job_id=job_id,
                     logger=self._client.logger,
+                    request_id=request_id,
                     run_id=request.ctx.run_id,
                     step=step_lib.StepSync(
                         self._client,
@@ -316,6 +330,10 @@ class CommHandler:
 
             return Exception("events not in request")
 
+        job_id = req.headers.get(server_lib.HeaderKey.JOB_ID.value) or None
+        request_id = (
+            req.headers.get(server_lib.HeaderKey.REQUEST_ID.value) or None
+        )
         memos = step_lib.StepMemos.from_raw(steps)
 
         call_res = fn.call_sync(
@@ -325,7 +343,9 @@ class CommHandler:
                 event=request.event,
                 events=events,
                 group=step_lib.GroupSync(),
+                job_id=job_id,
                 logger=self._client.logger,
+                request_id=request_id,
                 run_id=request.ctx.run_id,
                 step=step_lib.StepSync(
                     self._client,
@@ -378,7 +398,7 @@ class CommHandler:
 
         return errors.FunctionNotFoundError(f"function {fn_id} not found")
 
-    @wrap_handler_sync(require_signature=False)
+    @wrap_handler_sync()
     def get_sync(
         self,
         req: CommRequest,
@@ -392,8 +412,9 @@ class CommHandler:
             server_kind = None
 
         if server_kind is not None and server_kind != self._mode:
-            # Tell Dev Server to leave the app alone since it's in production
-            # mode.
+            # Reject authenticated/validated inspection from the wrong server
+            # kind. Unsigned cloud-mode GETs are rejected by the wrapper before
+            # reaching this branch.
             return CommResponse(
                 body={},
                 status_code=403,
@@ -416,6 +437,34 @@ class CommHandler:
             status_code=200,
         )
 
+    def _is_cloud_in_band_sync(self, req: CommRequest) -> bool:
+        if self._mode != server_lib.ServerKind.CLOUD:
+            return False
+
+        return (
+            req.headers.get(server_lib.HeaderKey.SYNC_KIND.value)
+            == server_lib.SyncKind.IN_BAND.value
+        )
+
+    def _get_out_of_band_sync_auth_error(
+        self,
+        request_signing_key: types.MaybeError[str | None],
+    ) -> Exception | None:
+        """
+        Return an auth error when out-of-band sync requires a valid signature.
+        """
+
+        if self._enable_unauthed_sync:
+            return None
+        if isinstance(request_signing_key, str):
+            return None
+        if isinstance(request_signing_key, Exception):
+            return request_signing_key
+
+        return errors.HeaderMissingError(
+            "request must be signed when unauthenticated sync is disabled"
+        )
+
     @wrap_handler(require_signature=False)
     async def put(
         self: CommHandler,
@@ -427,23 +476,34 @@ class CommHandler:
         self._client.logger.debug("Syncing app")
         syncer = Syncer(logger=self._client.logger)
 
-        if (
-            req.headers.get(server_lib.HeaderKey.SYNC_KIND.value)
-            == server_lib.SyncKind.IN_BAND.value
-            and self._allow_in_band_sync
-        ):
-            err: Exception | None = None
-            if isinstance(request_signing_key, Exception):
-                err = request_signing_key
-            elif request_signing_key is None:
-                err = Exception("request must be signed for in-band sync")
-            if err is not None:
-                return CommResponse.from_error(
+        # Cloud in-band sync returns signed app metadata directly in this
+        # response, so it always requires a valid request signature. Dev mode
+        # falls through to out-of-band sync because the Dev Server does not sign
+        # requests.
+        if self._is_cloud_in_band_sync(req):
+            if not isinstance(request_signing_key, str):
+                in_band_auth_error = (
+                    request_signing_key
+                    if isinstance(request_signing_key, Exception)
+                    else Exception("request must be signed for in-band sync")
+                )
+                return CommResponse.unauthorized(
                     self._client.logger,
-                    err,
-                    status=http.HTTPStatus.UNAUTHORIZED,
+                    in_band_auth_error,
                 )
             return syncer.in_band(self, req, request_signing_key)
+
+        # Out-of-band sync registers via a separate authenticated SDK-to-API
+        # request, so the incoming PUT may be unsigned unless disabled by
+        # config.
+        out_of_band_auth_error = self._get_out_of_band_sync_auth_error(
+            request_signing_key,
+        )
+        if out_of_band_auth_error is not None:
+            return CommResponse.unauthorized(
+                self._client.logger,
+                out_of_band_auth_error,
+            )
 
         return await syncer.out_of_band(self, req)
 
@@ -458,24 +518,35 @@ class CommHandler:
         self._client.logger.debug("Syncing app")
         syncer = Syncer(logger=self._client.logger)
 
-        if (
-            req.headers.get(server_lib.HeaderKey.SYNC_KIND.value)
-            == server_lib.SyncKind.IN_BAND.value
-            and self._allow_in_band_sync
-        ):
-            err: Exception | None = None
-            if isinstance(request_signing_key, Exception):
-                err = request_signing_key
-            elif request_signing_key is None:
-                err = Exception("request must be signed for in-band sync")
-            if err is not None:
-                return CommResponse.from_error(
+        # Cloud in-band sync returns signed app metadata directly in this
+        # response, so it always requires a valid request signature. Dev mode
+        # falls through to out-of-band sync because the Dev Server does not sign
+        # requests.
+        if self._is_cloud_in_band_sync(req):
+            if not isinstance(request_signing_key, str):
+                in_band_auth_error = (
+                    request_signing_key
+                    if isinstance(request_signing_key, Exception)
+                    else Exception("request must be signed for in-band sync")
+                )
+                return CommResponse.unauthorized(
                     self._client.logger,
-                    err,
-                    status=http.HTTPStatus.UNAUTHORIZED,
+                    in_band_auth_error,
                 )
 
             return syncer.in_band(self, req, request_signing_key)
+
+        # Out-of-band sync registers via a separate authenticated SDK-to-API
+        # request, so the incoming PUT may be unsigned unless disabled by
+        # config.
+        out_of_band_auth_error = self._get_out_of_band_sync_auth_error(
+            request_signing_key,
+        )
+        if out_of_band_auth_error is not None:
+            return CommResponse.unauthorized(
+                self._client.logger,
+                out_of_band_auth_error,
+            )
 
         return syncer.out_of_band_sync(self, req)
 

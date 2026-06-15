@@ -59,22 +59,56 @@ class CallResult:
 
 @dataclasses.dataclass
 class Context:
+    """
+    Async function execution context.
+
+    Attributes:
+        attempt: Attempt number (0-indexed). Retries are >= 1.
+        event: The event that triggered the function.
+        events: The events that triggered the function. Can be >=1 with batching.
+        group: Helpers for grouping steps.
+        logger: Idempotent logger (wraps client logger).
+        job_id: Queue job ID.
+        request_id: ID of request sent to SDK.
+        run_id: Function run ID.
+        step: Step methods.
+    """
+
     attempt: int
     event: server_lib.Event
     events: list[server_lib.Event]
     group: step_lib.Group
+    job_id: str | None
     logger: types.Logger
+    request_id: str | None
     run_id: str
     step: step_lib.Step
 
 
 @dataclasses.dataclass
 class ContextSync:
+    """
+    Sync function execution context.
+
+    Attributes:
+        attempt: Attempt number (0-indexed). Retries are >= 1.
+        event: The event that triggered the function.
+        events: The events that triggered the function. Can be >=1 with batching.
+        group: Helpers for grouping steps.
+        logger: Idempotent logger (wraps client logger).
+        job_id: Queue job ID.
+        request_id: ID of request sent to SDK.
+        run_id: Function run ID.
+        step: Step methods.
+    """
+
     attempt: int
     event: server_lib.Event
     events: list[server_lib.Event]
     group: step_lib.GroupSync
+    job_id: str | None
     logger: types.Logger
+    request_id: str | None
     run_id: str
     step: step_lib.StepSync
 

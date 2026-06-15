@@ -573,7 +573,11 @@ def _validate_sig(
     else:
         parsed = urllib.parse.parse_qs(sig_header)
         if "t" in parsed:
-            timestamp = int(parsed["t"][0])
+            timestamp = transforms.to_int(parsed["t"][0])
+            if isinstance(timestamp, Exception):
+                return Exception(
+                    f"{server_lib.HeaderKey.SIGNATURE.value} header is malformed"
+                )
         if "s" in parsed:
             signature = parsed["s"][0]
 
@@ -622,6 +626,9 @@ def validate_request_sig(
         signing_key: Primary signing key.
         signing_key_fallback: Fallback signing key.
     """
+
+    if mode == server_lib.ServerKind.DEV_SERVER:
+        return None
 
     canonicalized = transforms.canonicalize(body)
     if isinstance(canonicalized, Exception):

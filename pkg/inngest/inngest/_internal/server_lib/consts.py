@@ -54,10 +54,16 @@ class HeaderKey(enum.Enum):
     EVENT_ID_SEED = "x-inngest-event-id-seed"
     EXPECTED_SERVER_KIND = "x-inngest-expected-server-kind"
     FRAMEWORK = "x-inngest-framework"
+    JOB_ID = "x-inngest-job-id"
     NO_RETRY = "x-inngest-no-retry"
+
+    # Intentionally not x-inngest-prefixed; this matches the Executor header.
+    REQUEST_ID = "x-request-id"
+
     REQUEST_VERSION = "x-inngest-req-version"
     RETRY_AFTER = "retry-after"
     SDK = "x-inngest-sdk"
+    SDK_HANDLED = "x-inngest-sdk-handled"
     SERVER_KIND = "x-inngest-server-kind"
     SERVER_TIMING = "server-timing"
     SIGNATURE = "x-inngest-signature"

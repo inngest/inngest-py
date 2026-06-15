@@ -241,12 +241,20 @@ class ExecutionHandler(BaseHandler):
                 if self._main_loop is None:
                     raise Exception("_main_loop not set")
 
+                headers: dict[str, str] = {}
+                if req_data.request_id:
+                    headers[server_lib.HeaderKey.REQUEST_ID.value] = (
+                        req_data.request_id
+                    )
+                if req_data.job_id:
+                    headers[server_lib.HeaderKey.JOB_ID.value] = req_data.job_id
+
                 # Run the Inngest function on the main thread.
                 future = asyncio.run_coroutine_threadsafe(
                     comm_handler.post(
                         comm_lib.CommRequest(
                             body=req_data.request_payload,
-                            headers={},
+                            headers=headers,
                             is_connect=True,
                             public_path=None,
                             query_params={

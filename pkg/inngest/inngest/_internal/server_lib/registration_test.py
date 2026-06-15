@@ -149,10 +149,26 @@ def test_serialization() -> None:
             "mode": "skip",
         },
         "triggers": [
-            {"cron": "foo"},
+            {"cron": "foo", "jitter": None},
             {
                 "event": "foo",
                 "expression": "foo",
             },
         ],
     }
+
+
+def test_cron_trigger_with_jitter() -> None:
+    trigger = TriggerCron(cron="*/5 * * * *", jitter="30s")
+    data = trigger.to_dict()
+    if isinstance(data, Exception):
+        raise data
+    assert data == {"cron": "*/5 * * * *", "jitter": "30s"}
+
+
+def test_cron_trigger_without_jitter() -> None:
+    trigger = TriggerCron(cron="*/5 * * * *")
+    data = trigger.to_dict()
+    if isinstance(data, Exception):
+        raise data
+    assert data == {"cron": "*/5 * * * *", "jitter": None}

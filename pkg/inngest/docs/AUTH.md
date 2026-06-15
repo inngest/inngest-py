@@ -21,7 +21,13 @@ When the Inngest server sends an execution request, the SDK validates the reques
 2. If that fails and a fallback key exists, retry validation with the fallback key.
 3. If both fail and the handler requires a signature, return 401 immediately.
 
-Only POST requires a valid signature at the `wrap_handler` level (`require_signature=True`). GET and PUT use `require_signature=False`, meaning `wrap_handler` won't reject unsigned requests. However, PUT enforces signing itself for in-band sync (returns 401 if the request isn't signed). Out-of-band sync and GET work without a signature, though GET returns a limited response when unsigned (see [INSPECTION.md](INSPECTION.md)).
+GET and POST require a valid signature at the `wrap_handler` level (`require_signature=True`) in cloud mode, returning 401 for unsigned or invalid requests. In dev mode, signature validation is skipped for every HTTP method.
+
+PUT app sync requests also use `require_signature=False` by default. This preserves compatibility with unauthenticated out-of-band sync requests. Users can opt out by setting `INNGEST_ENABLE_UNAUTHED_SYNC=false` or passing `enable_unauthed_sync=False` to `serve()`, which makes cloud-mode PUT sync reject unsigned or invalidly signed requests with 401. Dev mode ignores this opt-out because the Dev Server does not send signed requests.
+
+Cloud in-band sync still requires a signed PUT, since the response carries a signed body that the server validates. Dev mode falls back to out-of-band sync because the Dev Server does not sign requests.
+
+All auth failures intentionally return the same minimal 401 response body: `{"message":"Unauthorized"}`. The response does not include SDK version, framework, environment, expected server kind, error code, or validation details.
 
 Connect requests skip signature verification entirely because they use WebSocket-level auth rather than per-request signatures.
 
