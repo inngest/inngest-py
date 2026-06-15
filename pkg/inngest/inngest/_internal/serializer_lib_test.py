@@ -11,6 +11,10 @@ class _User(pydantic.BaseModel):
     age: int
 
 
+class _Admin(_User):
+    role: str
+
+
 class _Address(pydantic.BaseModel):
     street: str
     city: str
@@ -32,6 +36,25 @@ class TestPydanticSerializer_serialize(unittest.TestCase):
     def test_pydantic_model(self) -> None:
         user = _User(name="Alice", age=30)
         result = self.s.serialize(user, object)
+        assert result == {"name": "Alice", "age": 30}
+
+    def test_pydantic_model_subclass_uses_declared_type(self) -> None:
+        """
+        The declared type is the durable round-trip schema for both
+        serialization and deserialization. Therefore, if a subclass is returned
+        while the declared output type is a base class, subclass-only fields may
+        be excluded during serialization.
+
+        This might seem odd during serialization because we know what the
+        subclass is. However, during deserialization we only know the declared
+        type, so we're unable to reconstruct using the subclass.
+
+        In other words, this test is highlighting that the declared type is the
+        exact type.
+        """
+
+        admin = _Admin(name="Alice", age=30, role="admin")
+        result = self.s.serialize(admin, _User)
         assert result == {"name": "Alice", "age": 30}
 
     def test_nested_model(self) -> None:
