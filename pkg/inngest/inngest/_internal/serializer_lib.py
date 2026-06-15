@@ -1,6 +1,10 @@
+import collections
+import threading
 import typing
 
 import pydantic
+
+_PYDANTIC_CACHE_MAX_SIZE = 512
 
 
 class Serializer(typing.Protocol):
@@ -31,20 +35,12 @@ class Serializer(typing.Protocol):
 
 class PydanticSerializer(Serializer):
     def __init__(self) -> None:
-        # TypeAdapter registers types in Pydantic's internal global registry on
-        # every instantiation, and those entries are never freed. Caching
-        # prevents unbounded memory growth in long-running workers.
-        self._cache: dict[object, pydantic.TypeAdapter[object]] = {}
+        self._adapter_cache = _PydanticTypeAdapterCache(
+            _PYDANTIC_CACHE_MAX_SIZE
+        )
 
     def _get_adapter(self, typ: object) -> pydantic.TypeAdapter[object]:
-        try:
-            adapter = self._cache.get(typ)
-        except TypeError:
-            return pydantic.TypeAdapter(typ)
-        if adapter is None:
-            adapter = pydantic.TypeAdapter(typ)
-            self._cache[typ] = adapter
-        return adapter
+        return self._adapter_cache.get(typ)
 
     def serialize(self, obj: object, typ: object) -> object:
         """
@@ -60,3 +56,51 @@ class PydanticSerializer(Serializer):
         """
 
         return self._get_adapter(typ).validate_python(obj)
+
+
+class _PydanticTypeAdapterCache:
+    """
+    Necessary because TypeAdapter registers types in Pydantic's internal global
+    registry on every instantiation, and those entries are never freed. Bounded
+    caching prevents repeated adapter creation for common stable types without
+    strongly retaining arbitrary runtime-generated types forever.
+    """
+
+    def __init__(self, max_size: int) -> None:
+        self._items: collections.OrderedDict[
+            typing.Hashable,
+            pydantic.TypeAdapter[object],
+        ] = collections.OrderedDict()
+        self._lock = threading.Lock()
+        self._max_size = max_size
+
+    def __len__(self) -> int:
+        with self._lock:
+            return len(self._items)
+
+    def get(self, typ: object) -> pydantic.TypeAdapter[object]:
+        key = self._get_key(typ)
+        with self._lock:
+            adapter = self._items.get(key)
+            if adapter is None:
+                adapter = pydantic.TypeAdapter(typ)
+                self._items[key] = adapter
+                if len(self._items) > self._max_size:
+                    self._items.popitem(last=False)
+            else:
+                self._items.move_to_end(key)
+            return adapter
+
+    def _get_key(self, typ: object) -> typing.Hashable:
+        try:
+            hash(typ)
+            return typing.cast(typing.Hashable, typ)
+        except TypeError:
+            # This is reachable for typing objects that include unhashable
+            # metadata, e.g. `Annotated[int, {"key": "value"}]`.
+            #
+            # The identity key is safe for cache correctness because the cached
+            # TypeAdapter retains the original type object while the entry is
+            # present, so Python cannot reuse that object ID for a different
+            # type before this cache entry is evicted.
+            return ("id", id(typ))

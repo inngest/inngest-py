@@ -1,8 +1,10 @@
 import datetime
+import typing
 import unittest
 
 import pydantic
 
+from inngest._internal import serializer_lib
 from inngest._internal.serializer_lib import PydanticSerializer
 
 
@@ -149,35 +151,66 @@ class TestPydanticSerializer_deserialize(unittest.TestCase):
         assert self.s.deserialize(None, object) is None
 
 
-class TestPydanticSerializer_adapter_cache(unittest.TestCase):
+class TestTypeAdapterCache(unittest.TestCase):
     def setUp(self) -> None:
-        self.s = PydanticSerializer()
+        self.cache = serializer_lib._PydanticTypeAdapterCache(
+            serializer_lib._PYDANTIC_CACHE_MAX_SIZE
+        )
 
     def test_same_class_returns_cached(self) -> None:
-        a1 = self.s._get_adapter(_User)
-        a2 = self.s._get_adapter(_User)
+        a1 = self.cache.get(_User)
+        a2 = self.cache.get(_User)
         assert a1 is a2
 
     def test_object_type_returns_cached(self) -> None:
-        a1 = self.s._get_adapter(object)
-        a2 = self.s._get_adapter(object)
+        a1 = self.cache.get(object)
+        a2 = self.cache.get(object)
         assert a1 is a2
 
     def test_generic_alias_returns_cached(self) -> None:
-        a1 = self.s._get_adapter(list[int])
-        a2 = self.s._get_adapter(list[int])
+        a1 = self.cache.get(list[int])
+        a2 = self.cache.get(list[int])
         assert a1 is a2
 
+    def test_unhashable_annotated_metadata_returns_cached(self) -> None:
+        metadata = {"key": "value"}
+        typ = typing.Annotated[int, metadata]
+
+        a1 = self.cache.get(typ)
+        a2 = self.cache.get(typ)
+        assert a1 is a2
+
+    def test_cache_size_is_bounded(self) -> None:
+        for i in range(serializer_lib._PYDANTIC_CACHE_MAX_SIZE + 1):
+            model = pydantic.create_model(
+                f"_DynamicModel{i}",
+                value=(int, ...),
+            )
+            self.cache.get(model)
+
+        assert len(self.cache) == serializer_lib._PYDANTIC_CACHE_MAX_SIZE
+
+    def test_cache_size_is_bounded_for_annotated_fields(self) -> None:
+        for i in range(serializer_lib._PYDANTIC_CACHE_MAX_SIZE + 1):
+            typ = typing.Annotated[int, pydantic.Field(gt=i)]
+            self.cache.get(typ)
+
+        assert len(self.cache) == serializer_lib._PYDANTIC_CACHE_MAX_SIZE
+
     def test_different_types_return_different_adapters(self) -> None:
-        a1 = self.s._get_adapter(_User)
-        a2 = self.s._get_adapter(_Address)
+        a1 = self.cache.get(_User)
+        a2 = self.cache.get(_Address)
         assert a1 is not a2
 
     def test_different_instances_have_separate_caches(self) -> None:
-        s1 = PydanticSerializer()
-        s2 = PydanticSerializer()
-        a1 = s1._get_adapter(_User)
-        a2 = s2._get_adapter(_User)
+        c1 = serializer_lib._PydanticTypeAdapterCache(
+            serializer_lib._PYDANTIC_CACHE_MAX_SIZE
+        )
+        c2 = serializer_lib._PydanticTypeAdapterCache(
+            serializer_lib._PYDANTIC_CACHE_MAX_SIZE
+        )
+        a1 = c1.get(_User)
+        a2 = c2.get(_User)
         assert a1 is not a2
 
 
