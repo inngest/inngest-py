@@ -206,8 +206,13 @@ class _Client:
                 event = inngest.Event.model_validate_json(payloads[0])
 
                 if actual_status == expected_status.value:
-                    # Handle some seeming eventual consistency in the run output
-                    if run["output"] is not None:
+                    # Handle some seeming eventual consistency in the run
+                    # output. Completed and failed runs should not be missing
+                    # output
+                    if (
+                        run["output"] is not None
+                        or actual_status == "CANCELLED"
+                    ):
                         return _Run(
                             event=event,
                             id=run_id,
