@@ -40,4 +40,5 @@ class TestLongFunctionRun(BaseTest):
         await test_core.helper.client.wait_for_run_status(
             await state.wait_for_run_id(),
             test_core.helper.RunStatus.COMPLETED,
+            timeout=30,
         )
