@@ -14,7 +14,9 @@ from .base import BaseTest
 
 class TestLeaseExtendFailure(BaseTest):
     @pytest.mark.timeout(10, method="thread")
-    async def test_lease_extend_failure_allows_execution_to_finish(self) -> None:
+    async def test_lease_extend_failure_allows_execution_to_finish(
+        self,
+    ) -> None:
         """Test that a lease extension nack does not cancel the execution."""
 
         proxies = await self.create_proxies()
