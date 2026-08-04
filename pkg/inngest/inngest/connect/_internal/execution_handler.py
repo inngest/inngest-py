@@ -119,6 +119,10 @@ class ExecutionHandler(BaseHandler):
         self._pending_requests = _PendingRequestManager(
             state.pending_request_count
         )
+        # A rejected lease extension must stop renewals without cancelling the
+        # user function. Keeping the request pending also keeps graceful
+        # shutdown blocked until the function can produce and buffer its reply.
+        self._lease_extension_stopped: set[str] = set()
 
     def start(self) -> types.MaybeError[None]:
         err = super().start()
@@ -197,12 +201,17 @@ class ExecutionHandler(BaseHandler):
         task = asyncio.create_task(
             self._execute_request(req_data, comm_handler)
         )
+        self._lease_extension_stopped.discard(req_data.request_id)
         self._pending_requests.add(req_data.request_id, req_data, task)
 
         # Remove the task when it completes.
         task.add_done_callback(
-            lambda _: self._pending_requests.pop(req_data.request_id)
+            lambda _: self._finish_request(req_data.request_id)
         )
+
+    def _finish_request(self, request_id: str) -> None:
+        self._lease_extension_stopped.discard(request_id)
+        self._pending_requests.pop(request_id)
 
     async def _execute_request(
         self,
@@ -403,17 +412,18 @@ class ExecutionHandler(BaseHandler):
             # Each lease extension ack includes a new lease ID. If we don't use the
             # new lease ID the next time we extend, we'll have a bad time.
             pending_req[0].lease_id = req_data.new_lease_id
+            self._lease_extension_stopped.discard(req_data.request_id)
         else:
             # A null new_lease_id indicates that the lease extension failed. This can happen
             # if the lease was expired, deleted, or taken over by another worker, so we should
-            # stop trying to extend it.
+            # stop trying to extend it. Do not cancel the user function: it may
+            # still complete and its reply can be delivered over WebSocket or
+            # through the buffered HTTP fallback.
             self._logger.debug(
-                "Unable to extend lease",
+                "Unable to extend lease; allowing execution to finish",
                 extra={"request_id": req_data.request_id},
             )
-            # Cancelling the task will trigger the done callback to remove it from
-            # the pending requests.
-            pending_req[1].cancel()
+            self._lease_extension_stopped.add(req_data.request_id)
 
     def _handle_worker_reply_ack(
         self,
@@ -458,6 +468,9 @@ class ExecutionHandler(BaseHandler):
             )
 
             for req_data, _ in self._pending_requests.get_all():
+                if req_data.request_id in self._lease_extension_stopped:
+                    continue
+
                 err = await ws_utils.safe_send(
                     self._logger,
                     self._state,

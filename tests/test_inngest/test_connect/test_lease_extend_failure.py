@@ -14,8 +14,10 @@ from .base import BaseTest
 
 class TestLeaseExtendFailure(BaseTest):
     @pytest.mark.timeout(10, method="thread")
-    async def test_lease_extend_failure_removes_pending_request(self) -> None:
-        """Test that a lease extension nack removes the pending request."""
+    async def test_lease_extend_failure_allows_execution_to_finish(
+        self,
+    ) -> None:
+        """Test that a lease extension nack does not cancel the execution."""
 
         proxies = await self.create_proxies()
 
@@ -38,7 +40,7 @@ class TestLeaseExtendFailure(BaseTest):
             nonlocal run_task
             run_task = asyncio.current_task()
             state.run_id = ctx.run_id
-            await asyncio.sleep(5)
+            await asyncio.sleep(2)
 
         conn = connect([(client, [fn])])
         task = asyncio.create_task(conn.start())
@@ -66,8 +68,11 @@ class TestLeaseExtendFailure(BaseTest):
         )
 
         await test_core.wait_for_truthy(
-            lambda: run_task is not None and run_task.cancelled()
+            lambda: run_task is not None and run_task.done()
         )
+        assert run_task is not None
+        assert not run_task.cancelled()
+        assert run_task.exception() is None
 
 
 def get_request_id(requests: list[bytes]) -> str:
