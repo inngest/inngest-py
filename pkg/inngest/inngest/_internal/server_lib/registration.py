@@ -156,6 +156,7 @@ class Throttle(_BaseConfig):
     limit: int
     period: int | datetime.timedelta
     burst: int | None = 1
+    scope: typing.Literal["account", "env", "fn"] | None = None
 
     @pydantic.field_serializer("period")
     def serialize_period(
@@ -168,6 +169,16 @@ class Throttle(_BaseConfig):
         if isinstance(out, Exception):
             raise out
         return out
+
+    @pydantic.model_serializer(mode="wrap")
+    def serialize_model(
+        self,
+        handler: pydantic.SerializerFunctionWrapHandler,
+    ) -> dict[str, object]:
+        data = typing.cast(dict[str, object], handler(self))
+        if self.scope is None:
+            data.pop("scope", None)
+        return data
 
 
 class Timeouts(_BaseConfig):
