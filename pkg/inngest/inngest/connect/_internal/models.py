@@ -53,6 +53,12 @@ class State:
         self.conn_init.value = None
         self.ws.value = None
 
+        # The handshake is tied to the socket's lifetime: once the socket is
+        # gone, "handshake complete" is stale. Reset it so heartbeat sends wait
+        # for the new connection's handshake instead of racing it (which the
+        # gateway rejects with connect_worker_hello_invalid_msg).
+        self.init_handshake_complete.value = False
+
 
 class ConnectionState(enum.Enum):
     """
