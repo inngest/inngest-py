@@ -12,6 +12,7 @@ from inngest._internal import (
     errors,
     execution_lib,
     middleware_lib,
+    run_context,
     server_lib,
     types,
 )
@@ -169,7 +170,10 @@ class Function(typing.Generic[types.T]):
         if not execution_lib.is_function_handler_async(handler):
             raise errors.UnreachableError("handler is not async")
 
-        with execution_lib.set_step_context(ctx.step):
+        with (
+            execution_lib.set_step_context(ctx.step),
+            run_context.use_run(client, ctx),
+        ):
             call_res = await ctx.step._execution.run(
                 client,
                 ctx,
@@ -220,7 +224,10 @@ class Function(typing.Generic[types.T]):
         if not execution_lib.is_function_handler_sync(handler):
             raise errors.UnreachableError("handler is not sync")
 
-        with execution_lib.set_step_context(ctx.step):
+        with (
+            execution_lib.set_step_context(ctx.step),
+            run_context.use_run(client, ctx),
+        ):
             # We don't need to pass a thread pool here because the sync handler
             # is not used by Connect.
             call_res = ctx.step._execution.run(

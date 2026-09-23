@@ -22,6 +22,7 @@ from inngest._internal import (
     net,
     serializer_lib,
     server_lib,
+    sessions,
     types,
 )
 
@@ -400,8 +401,7 @@ class Inngest:
             skip_middleware: Whether to skip middleware.
         """
 
-        if not isinstance(events, list):
-            events = [events]
+        events = sessions.stamp_events(events, only_if_absent=True)
 
         middleware = None
         if not skip_middleware:
@@ -472,8 +472,7 @@ class Inngest:
             skip_middleware: Whether to skip middleware.
         """
 
-        if not isinstance(events, list):
-            events = [events]
+        events = sessions.stamp_events(events, only_if_absent=True)
 
         middleware = None
         if not skip_middleware:
