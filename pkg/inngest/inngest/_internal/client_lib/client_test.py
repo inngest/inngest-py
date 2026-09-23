@@ -1,3 +1,4 @@
+import json
 import os
 import unittest
 
@@ -231,10 +232,12 @@ class Test(unittest.TestCase):
         assert not isinstance(req_list, Exception)
         assert req_list.url.path == "/e/test-key"
 
-        events_tuple = (
-            server_lib.Event(name="test/event.3", data={"c": 3}),
-        )
+        events_tuple = (server_lib.Event(name="test/event.3", data={"c": 3}),)
         req_tuple = client._build_send_request(events_tuple)
         assert not isinstance(req_tuple, Exception)
         assert req_tuple.url.path == "/e/test-key"
-
+        payload = json.loads(req_tuple.content)
+        assert isinstance(payload, list)
+        assert len(payload) == 1
+        assert payload[0]["name"] == "test/event.3"
+        assert payload[0]["data"] == {"c": 3}

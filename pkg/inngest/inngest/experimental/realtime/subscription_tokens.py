@@ -19,6 +19,11 @@ async def get_subscription_token(
     The token can be used by a client to subscribe to realtime events,
     including front-end applications using the @inngest/realtime npm package.
     """
+    if isinstance(topics, (str, bytes)):
+        raise TypeError(
+            "topics must be a sequence of strings, not a string or bytes"
+        )
+
     data = []
     for topic in topics:
         data.append(
@@ -56,6 +61,10 @@ def get_subscription_token_sync(
     The token can be used by a client to subscribe to realtime events,
     including front-end applications using the @inngest/realtime npm package.
     """
+    if isinstance(topics, (str, bytes)):
+        raise TypeError(
+            "topics must be a sequence of strings, not a string or bytes"
+        )
     data = []
     for topic in topics:
         data.append(
