@@ -269,7 +269,7 @@ class StepSync(base.StepBase):
             try:
                 result = client_models.SendEventsResult(
                     ids=self._client.send_sync(
-                        events,
+                        _events,
                         # Skip middleware since we're already running it above. Without
                         # this, we'll double-call middleware hooks
                         skip_middleware=True,

@@ -280,7 +280,7 @@ class Step(base.StepBase):
                 result = client_models.SendEventsResult(
                     ids=(
                         await self._client.send(
-                            events,
+                            _events,
                             # Skip middleware since we're already running it above. Without
                             # this, we'll double-call middleware hooks
                             skip_middleware=True,

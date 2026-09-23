@@ -78,6 +78,6 @@ def get_subscription_token_sync(
     # Return a dictionary ready to be used by the @inngest/realtime npm package
     return {
         "channel": channel,
-        "topics": topics,
+        "topics": list(topics),
         "key": response_data.jwt,
     }
