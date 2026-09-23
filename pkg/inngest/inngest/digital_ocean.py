@@ -4,6 +4,7 @@ DigitalOcean integration for Inngest
 
 from __future__ import annotations
 
+import collections.abc
 import json
 import typing
 import urllib.parse
@@ -23,7 +24,7 @@ FRAMEWORK = server_lib.Framework.DIGITAL_OCEAN
 
 def serve(
     client: client_lib.Inngest,
-    functions: list[function.Function[typing.Any]],
+    functions: collections.abc.Sequence[function.Function[typing.Any]],
     *,
     enable_unauthed_sync: bool | None = None,
     public_path: str | None = None,
@@ -169,7 +170,7 @@ def serve(
 
 
 def _get_first(
-    items: list[types.T] | None,
+    items: collections.abc.Sequence[types.T] | None,
 ) -> types.T | None:
     if items is None or len(items) == 0:
         return None

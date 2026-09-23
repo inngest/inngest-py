@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import collections.abc
 import dataclasses
 import typing
 import unittest.mock
@@ -20,9 +21,23 @@ from .consts import Status, Timeout
 from .errors import UnstubbedStepError
 
 
+def _normalize_event_list(
+    event: inngest.Event | collections.abc.Sequence[inngest.Event],
+) -> list[inngest.Event]:
+    if isinstance(event, inngest.Event):
+        return [event]
+    if isinstance(event, (list, tuple)):
+        return list(event)
+    if isinstance(event, collections.abc.Sequence) and not isinstance(
+        event, (str, bytes)
+    ):
+        return list(event)
+    return [event]
+
+
 def trigger(
     fn: inngest.Function[typing.Any],
-    event: inngest.Event | list[inngest.Event],
+    event: inngest.Event | collections.abc.Sequence[inngest.Event],
     client: Inngest,
     *,
     step_stubs: dict[str, object] | None = None,
@@ -38,9 +53,8 @@ def trigger(
         step_stubs: Static step stubs. Keys are step IDs and values are stubs.
     """
 
-    if not isinstance(event, list):
-        event = [event]
-    elif len(event) == 0:
+    event = _normalize_event_list(event)
+    if len(event) == 0:
         raise Exception("Must provide at least 1 event")
 
     if step_stubs is None:

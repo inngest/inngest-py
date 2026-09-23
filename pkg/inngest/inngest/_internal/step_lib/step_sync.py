@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import collections.abc
 import datetime
 import typing
 
@@ -235,7 +236,7 @@ class StepSync(base.StepBase):
     def send_event(
         self,
         step_id: str,
-        events: server_lib.Event | list[server_lib.Event],
+        events: server_lib.Event | collections.abc.Sequence[server_lib.Event],
     ) -> list[str]:
         """
         Send an event or list of events.
@@ -247,8 +248,14 @@ class StepSync(base.StepBase):
         """
 
         def fn() -> list[str]:
-            if isinstance(events, list):
-                _events = events
+            if isinstance(events, server_lib.Event):
+                _events = [events]
+            elif isinstance(events, (list, tuple)):
+                _events = list(events)
+            elif isinstance(events, collections.abc.Sequence) and not isinstance(
+                events, (str, bytes)
+            ):
+                _events = list(events)
             else:
                 _events = [events]
 
@@ -262,7 +269,7 @@ class StepSync(base.StepBase):
             try:
                 result = client_models.SendEventsResult(
                     ids=self._client.send_sync(
-                        events,
+                        _events,
                         # Skip middleware since we're already running it above. Without
                         # this, we'll double-call middleware hooks
                         skip_middleware=True,

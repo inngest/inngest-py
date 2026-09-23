@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import collections.abc
 import datetime
 import logging
 import os
@@ -80,7 +81,10 @@ class Inngest:
         event_key: str | None = None,
         is_production: bool | None = None,
         logger: types.Logger | None = None,
-        middleware: list[middleware_lib.UninitializedMiddleware] | None = None,
+        middleware: (
+            collections.abc.Sequence[middleware_lib.UninitializedMiddleware]
+            | None
+        ) = None,
         request_timeout: int | datetime.timedelta | None = None,
         serializer: serializer_lib.Serializer | None = None,
         signing_key: str | None = None,
@@ -110,7 +114,7 @@ class Inngest:
         # TODO: Delete this during next major version bump
         self.is_production = self._mode == server_lib.ServerKind.CLOUD
 
-        self.middleware = middleware or []
+        self.middleware = list(middleware) if middleware else []
         self._event_key = event_key or os.getenv(const.EnvKey.EVENT_KEY.value)
 
         self._signing_key = signing_key or os.getenv(
@@ -157,7 +161,7 @@ class Inngest:
 
     def _build_send_request(
         self,
-        events: list[server_lib.Event],
+        events: collections.abc.Sequence[server_lib.Event],
     ) -> types.MaybeError[httpx.Request]:
         event_key: str
         if self._event_key is not None:
@@ -210,12 +214,17 @@ class Inngest:
         self,
         *,
         batch_events: server_lib.Batch | None = None,
-        cancel: list[server_lib.Cancel] | None = None,
-        concurrency: list[server_lib.Concurrency] | None = None,
+        cancel: collections.abc.Sequence[server_lib.Cancel] | None = None,
+        concurrency: (
+            collections.abc.Sequence[server_lib.Concurrency] | None
+        ) = None,
         debounce: server_lib.Debounce | None = None,
         fn_id: str,
         idempotency: str | None = None,
-        middleware: list[middleware_lib.UninitializedMiddleware] | None = None,
+        middleware: (
+            collections.abc.Sequence[middleware_lib.UninitializedMiddleware]
+            | None
+        ) = None,
         name: str | None = None,
         on_failure: execution_lib.FunctionHandlerAsync[typing.Any]
         | execution_lib.FunctionHandlerSync[typing.Any]
@@ -229,7 +238,9 @@ class Inngest:
         singleton: server_lib.Singleton | None = None,
         trigger: server_lib.TriggerCron
         | server_lib.TriggerEvent
-        | list[server_lib.TriggerCron | server_lib.TriggerEvent],
+        | collections.abc.Sequence[
+            server_lib.TriggerCron | server_lib.TriggerEvent
+        ],
     ) -> typing.Callable[
         [
             execution_lib.FunctionHandlerAsync[types.T]
@@ -267,7 +278,12 @@ class Inngest:
             func: execution_lib.FunctionHandlerAsync[types.T]
             | execution_lib.FunctionHandlerSync[types.T],
         ) -> function.Function[types.T]:
-            triggers = trigger if isinstance(trigger, list) else [trigger]
+            triggers = (
+                list(trigger)
+                if isinstance(trigger, (list, tuple, collections.abc.Sequence))
+                and not isinstance(trigger, (str, bytes))
+                else [trigger]
+            )
 
             return function.Function(
                 function.FunctionOpts(
@@ -387,7 +403,7 @@ class Inngest:
 
     async def send(
         self,
-        events: server_lib.Event | list[server_lib.Event],
+        events: server_lib.Event | collections.abc.Sequence[server_lib.Event],
         *,
         skip_middleware: bool = False,
     ) -> list[str]:
@@ -400,8 +416,16 @@ class Inngest:
             skip_middleware: Whether to skip middleware.
         """
 
-        if not isinstance(events, list):
-            events = [events]
+        if isinstance(events, server_lib.Event):
+            events_list = [events]
+        elif isinstance(events, (list, tuple)):
+            events_list = list(events)
+        elif isinstance(events, collections.abc.Sequence) and not isinstance(
+            events, (str, bytes)
+        ):
+            events_list = list(events)
+        else:
+            events_list = [events]
 
         middleware = None
         if not skip_middleware:
@@ -410,11 +434,11 @@ class Inngest:
                 raw_request=None,
                 timings=None,
             )
-            err = await middleware.before_send_events(events)
+            err = await middleware.before_send_events(events_list)
             if isinstance(err, Exception):
                 raise err
 
-        req = self._build_send_request(events)
+        req = self._build_send_request(events_list)
         if isinstance(req, Exception):
             raise req
 
@@ -459,7 +483,7 @@ class Inngest:
 
     def send_sync(
         self,
-        events: server_lib.Event | list[server_lib.Event],
+        events: server_lib.Event | collections.abc.Sequence[server_lib.Event],
         *,
         skip_middleware: bool = False,
     ) -> list[str]:
@@ -472,8 +496,16 @@ class Inngest:
             skip_middleware: Whether to skip middleware.
         """
 
-        if not isinstance(events, list):
-            events = [events]
+        if isinstance(events, server_lib.Event):
+            events_list = [events]
+        elif isinstance(events, (list, tuple)):
+            events_list = list(events)
+        elif isinstance(events, collections.abc.Sequence) and not isinstance(
+            events, (str, bytes)
+        ):
+            events_list = list(events)
+        else:
+            events_list = [events]
 
         middleware = None
         if not skip_middleware:
@@ -482,11 +514,11 @@ class Inngest:
                 raw_request=None,
                 timings=None,
             )
-            err = middleware.before_send_events_sync(events)
+            err = middleware.before_send_events_sync(events_list)
             if isinstance(err, Exception):
                 raise err
 
-        req = self._build_send_request(events)
+        req = self._build_send_request(events_list)
         if isinstance(req, Exception):
             raise req
 

@@ -14,6 +14,7 @@ Thread ownership:
 from __future__ import annotations
 
 import asyncio
+import collections.abc
 import signal
 import socket
 import threading
@@ -94,11 +95,16 @@ class WorkerConnectionImpl(WorkerConnection):
     # ruff: noqa: D417
     def __init__(
         self,
-        apps: list[tuple[inngest.Inngest, list[inngest.Function[typing.Any]]]],
+        apps: collections.abc.Sequence[
+            tuple[
+                inngest.Inngest,
+                collections.abc.Sequence[inngest.Function[typing.Any]],
+            ]
+        ],
         *,
         instance_id: str | None = None,
         rewrite_gateway_endpoint: typing.Callable[[str], str] | None = None,
-        shutdown_signals: list[signal.Signals] | None = None,
+        shutdown_signals: collections.abc.Sequence[signal.Signals] | None = None,
         max_worker_concurrency: int | None = None,
         heartbeat_interval_sec: int | None = None,
         extend_lease_interval: int | None = None,

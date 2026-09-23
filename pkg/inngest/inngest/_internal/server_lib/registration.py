@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import collections.abc
 import datetime
 import typing
 
@@ -96,8 +97,8 @@ class FunctionConfig(_BaseConfig):
     batch_events: Batch | None = pydantic.Field(
         ..., serialization_alias="batchEvents"
     )
-    cancel: list[Cancel] | None
-    concurrency: list[Concurrency] | None
+    cancel: collections.abc.Sequence[Cancel] | None = None
+    concurrency: collections.abc.Sequence[Concurrency] | None = None
     debounce: Debounce | None
     id: str
     idempotency: str | None
@@ -110,7 +111,7 @@ class FunctionConfig(_BaseConfig):
     throttle: Throttle | None
     timeouts: Timeouts | None
     singleton: Singleton | None
-    triggers: list[TriggerCron | TriggerEvent]
+    triggers: collections.abc.Sequence[TriggerCron | TriggerEvent]
 
 
 class Priority(_BaseConfig):
