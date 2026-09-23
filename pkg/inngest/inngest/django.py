@@ -2,6 +2,7 @@
 Django integration for Inngest.
 """
 
+import collections.abc
 import http
 import json
 import typing
@@ -26,7 +27,7 @@ FRAMEWORK = server_lib.Framework.DJANGO
 
 def serve(
     client: client_lib.Inngest,
-    functions: list[function.Function[typing.Any]],
+    functions: collections.abc.Sequence[function.Function[typing.Any]],
     *,
     enable_unauthed_sync: bool | None = None,
     public_path: str | None = None,

@@ -1,3 +1,4 @@
+import collections.abc
 import typing
 from urllib.parse import urljoin
 
@@ -11,7 +12,7 @@ class _TokenResponse(types.BaseModel):
 async def get_subscription_token(
     client: client_lib.Inngest,
     channel: str,
-    topics: list[str],
+    topics: collections.abc.Sequence[str],
 ) -> typing.Mapping[str, object]:
     """
     Create a subscription token for a given channel and topics.
@@ -40,7 +41,7 @@ async def get_subscription_token(
     # Return a dictionary ready to be used by the @inngest/realtime npm package
     return {
         "channel": channel,
-        "topics": topics,
+        "topics": list(topics),
         "key": response_data.jwt,
     }
 
@@ -48,7 +49,7 @@ async def get_subscription_token(
 def get_subscription_token_sync(
     client: client_lib.Inngest,
     channel: str,
-    topics: list[str],
+    topics: collections.abc.Sequence[str],
 ) -> typing.Mapping[str, object]:
     """
     Create a subscription token for a given channel and topics synchronously.

@@ -212,3 +212,29 @@ class Test(unittest.TestCase):
         )
         assert client.api_origin == "https://example.com"
         assert client.event_api_origin == "https://example.com"
+
+    def test_build_send_request_with_sequence(self) -> None:
+        """
+        Test that _build_send_request handles list and tuple sequences of events.
+        """
+        client = client_lib.Inngest(
+            app_id="test",
+            event_key="test-key",
+            is_production=False,
+        )
+
+        events_list = [
+            server_lib.Event(name="test/event.1", data={"a": 1}),
+            server_lib.Event(name="test/event.2", data={"b": 2}),
+        ]
+        req_list = client._build_send_request(events_list)
+        assert not isinstance(req_list, Exception)
+        assert req_list.url.path == "/e/test-key"
+
+        events_tuple = (
+            server_lib.Event(name="test/event.3", data={"c": 3}),
+        )
+        req_tuple = client._build_send_request(events_tuple)
+        assert not isinstance(req_tuple, Exception)
+        assert req_tuple.url.path == "/e/test-key"
+

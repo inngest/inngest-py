@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import collections.abc
 import contextlib
 import contextvars
 import dataclasses
@@ -12,11 +13,16 @@ from .connection import WorkerConnection, WorkerConnectionImpl
 
 
 def connect(
-    apps: list[tuple[inngest.Inngest, list[inngest.Function[typing.Any]]]],
+    apps: collections.abc.Sequence[
+        tuple[
+            inngest.Inngest,
+            collections.abc.Sequence[inngest.Function[typing.Any]],
+        ]
+    ],
     *,
     instance_id: str | None = None,
     rewrite_gateway_endpoint: typing.Callable[[str], str] | None = None,
-    shutdown_signals: list[signal.Signals] | None = None,
+    shutdown_signals: collections.abc.Sequence[signal.Signals] | None = None,
     max_worker_concurrency: int | None = None,
 ) -> WorkerConnection:
     """

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import collections.abc
 import dataclasses
 import threading
 import typing
@@ -167,11 +168,18 @@ class ResponseInterrupt(BaseException):
 
     def __init__(
         self,
-        responses: StepResponse | list[StepResponse],
+        responses: StepResponse | collections.abc.Sequence[StepResponse],
     ) -> None:
-        if not isinstance(responses, list):
-            responses = [responses]
-        self.responses = responses
+        if isinstance(responses, StepResponse):
+            self.responses = [responses]
+        elif isinstance(responses, (list, tuple)):
+            self.responses = list(responses)
+        elif isinstance(responses, collections.abc.Sequence) and not isinstance(
+            responses, (str, bytes)
+        ):
+            self.responses = list(responses)
+        else:
+            self.responses = [responses]
 
     def set_step_info(self, step_info: StepInfo) -> None:
         """

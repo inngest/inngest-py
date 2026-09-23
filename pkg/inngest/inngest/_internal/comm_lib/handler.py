@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import collections.abc
 import concurrent.futures
 import functools
 import http
@@ -44,7 +45,7 @@ class CommHandler:
         client: client_lib.Inngest,
         enable_unauthed_sync: bool | None,
         framework: server_lib.Framework,
-        functions: list[function.Function[typing.Any]],
+        functions: collections.abc.Sequence[function.Function[typing.Any]],
         streaming: const.Streaming | None,
     ) -> None:
         self._client = client

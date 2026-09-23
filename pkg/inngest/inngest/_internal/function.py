@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import collections.abc
 import dataclasses
 import inspect
 import typing
@@ -30,8 +31,8 @@ class FunctionOpts(types.BaseModel):
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
     batch_events: server_lib.Batch | None
-    cancel: list[server_lib.Cancel] | None
-    concurrency: list[server_lib.Concurrency] | None
+    cancel: collections.abc.Sequence[server_lib.Cancel] | None = None
+    concurrency: collections.abc.Sequence[server_lib.Concurrency] | None = None
     debounce: server_lib.Debounce | None
 
     # Unique within an environment
@@ -69,7 +70,9 @@ class Function(typing.Generic[types.T]):
     )
     _on_failure_fn_id: str | None = None
     _opts: FunctionOpts
-    _triggers: list[server_lib.TriggerCron | server_lib.TriggerEvent]
+    _triggers: collections.abc.Sequence[
+        server_lib.TriggerCron | server_lib.TriggerEvent
+    ]
 
     @property
     def id(self) -> str:
@@ -107,17 +110,27 @@ class Function(typing.Generic[types.T]):
         opts: FunctionOpts,
         trigger: server_lib.TriggerCron
         | server_lib.TriggerEvent
-        | list[server_lib.TriggerCron | server_lib.TriggerEvent],
+        | collections.abc.Sequence[
+            server_lib.TriggerCron | server_lib.TriggerEvent
+        ],
         handler: execution_lib.FunctionHandlerAsync[types.T]
         | execution_lib.FunctionHandlerSync[types.T],
         output_type: object = types.EmptySentinel,
-        middleware: list[middleware_lib.UninitializedMiddleware] | None = None,
+        middleware: (
+            collections.abc.Sequence[middleware_lib.UninitializedMiddleware]
+            | None
+        ) = None,
     ) -> None:
         self._handler = handler
-        self._middleware = middleware or []
+        self._middleware = list(middleware) if middleware else []
         self._opts = opts
         self._output_type = output_type
-        self._triggers = trigger if isinstance(trigger, list) else [trigger]
+        self._triggers = (
+            list(trigger)
+            if isinstance(trigger, (list, tuple, collections.abc.Sequence))
+            and not isinstance(trigger, (str, bytes))
+            else [trigger]
+        )
 
         if opts.on_failure is not None:
             if (

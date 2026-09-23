@@ -1,5 +1,6 @@
 """FastAPI integration for Inngest."""
 
+import collections.abc
 import json
 import typing
 
@@ -21,7 +22,7 @@ FRAMEWORK = server_lib.Framework.FAST_API
 def serve(
     app: fastapi.FastAPI,
     client: client_lib.Inngest,
-    functions: list[function.Function[typing.Any]],
+    functions: collections.abc.Sequence[function.Function[typing.Any]],
     *,
     enable_unauthed_sync: bool | None = None,
     public_path: str | None = None,
