@@ -20,6 +20,7 @@ from inngest._internal import (
     function,
     middleware_lib,
     net,
+    scores,
     serializer_lib,
     server_lib,
     sessions,
@@ -394,6 +395,47 @@ class Inngest:
             raise errors.BodyInvalidError("step data is not an object")
 
         return data
+
+    async def score(
+        self,
+        *,
+        name: str,
+        value: scores.ScoreValue,
+        run_id: str | None = None,
+        step_id: str | None = None,
+    ) -> None:
+        """
+        EXPERIMENTAL: Merge a score onto a run or step.
+
+        Provide run_id explicitly, including when scoring from a function.
+        Omit step_id to score the run itself.
+        """
+        scores.validate_score(name, value, run_id, step_id)
+        await scores.write(
+            self,
+            kind="inngest.score",
+            values={name: {"value": value}},
+            run_id=run_id,
+            step_id=step_id,
+        )
+
+    def score_sync(
+        self,
+        *,
+        name: str,
+        value: scores.ScoreValue,
+        run_id: str | None = None,
+        step_id: str | None = None,
+    ) -> None:
+        """EXPERIMENTAL: Synchronous version of score()."""
+        scores.validate_score(name, value, run_id, step_id)
+        scores.write_sync(
+            self,
+            kind="inngest.score",
+            values={name: {"value": value}},
+            run_id=run_id,
+            step_id=step_id,
+        )
 
     async def send(
         self,
