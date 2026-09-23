@@ -437,6 +437,60 @@ class Inngest:
             step_id=step_id,
         )
 
+    async def score_experiment(
+        self,
+        *,
+        experiment: scores.ExperimentRef,
+        name: str,
+        value: scores.ScoreValue,
+        run_id: str,
+        step_id: str | None = None,
+    ) -> None:
+        """
+        EXPERIMENTAL: Attach attribution before a score on the same target.
+
+        Pass the original run_id for delayed scores and inside step callbacks.
+        The current experiment detail view surfaces run-scoped scores only.
+        Attribution and scoring are two non-atomic, retryable merge writes.
+        """
+        scores.validate_score(name, value, run_id, step_id)
+        experiment = scores.ExperimentRef.model_validate(experiment)
+        await scores.write(
+            self,
+            kind="inngest.experiment",
+            values={
+                "name": experiment.experiment_name,
+                "variant": experiment.variant,
+            },
+            run_id=run_id,
+            step_id=step_id,
+        )
+        await self.score(name=name, value=value, run_id=run_id, step_id=step_id)
+
+    def score_experiment_sync(
+        self,
+        *,
+        experiment: scores.ExperimentRef,
+        name: str,
+        value: scores.ScoreValue,
+        run_id: str,
+        step_id: str | None = None,
+    ) -> None:
+        """EXPERIMENTAL: Synchronous version of score_experiment()."""
+        scores.validate_score(name, value, run_id, step_id)
+        experiment = scores.ExperimentRef.model_validate(experiment)
+        scores.write_sync(
+            self,
+            kind="inngest.experiment",
+            values={
+                "name": experiment.experiment_name,
+                "variant": experiment.variant,
+            },
+            run_id=run_id,
+            step_id=step_id,
+        )
+        self.score_sync(name=name, value=value, run_id=run_id, step_id=step_id)
+
     async def send(
         self,
         events: server_lib.Event | list[server_lib.Event],

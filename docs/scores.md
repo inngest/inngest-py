@@ -27,3 +27,5 @@ Run it through async, sync, and Connect serving:
 ```sh
 uv run pytest tests/test_inngest/test_function/test_fast_api.py tests/test_inngest/test_function/test_flask.py tests/test_inngest/test_function/test_connect.py -k score_completed_run -v
 ```
+
+For variant selection and attributed scores, see [Experiments](experiments.md).

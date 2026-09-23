@@ -5,10 +5,28 @@ import re
 import typing
 import urllib.parse
 
+import pydantic
+
+from inngest._internal import types
+
 if typing.TYPE_CHECKING:
     from inngest._internal import client_lib
 
 ScoreValue: typing.TypeAlias = bool | int | float
+
+
+class ExperimentRef(types.BaseModel):
+    """Serializable attribution returned by group.experiment()."""
+
+    experiment_name: str
+    variant: str
+
+    @pydantic.field_validator("experiment_name", "variant")
+    @classmethod
+    def _nonempty(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Experiment name and variant must be non-empty")
+        return value
 
 
 def validate_score(

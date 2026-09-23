@@ -17,7 +17,7 @@ import dataclasses
 import typing
 
 if typing.TYPE_CHECKING:
-    from inngest._internal import execution_lib
+    from inngest._internal import execution_lib, step_lib
 
 
 @dataclasses.dataclass
@@ -29,8 +29,22 @@ class RunContext:
     ctx: execution_lib.Context | execution_lib.ContextSync
 
 
+@dataclasses.dataclass
+class ExperimentContext:
+    """Attribution for steps discovered in a variant callback."""
+
+    opts: dict[str, object]
+    found_step: bool = False
+
+
 current_run = contextvars.ContextVar[RunContext | None](
     "inngest_run", default=None
+)
+current_step: contextvars.ContextVar[step_lib.StepInfo | None] = (
+    contextvars.ContextVar("inngest_step", default=None)
+)
+current_experiment = contextvars.ContextVar[ExperimentContext | None](
+    "inngest_experiment", default=None
 )
 
 
@@ -56,3 +70,11 @@ def get_sessions() -> dict[str, str] | None:
 
     run = current_run.get()
     return run.ctx.sessions if run is not None else None
+
+
+def prepare_step(step: step_lib.StepInfo) -> None:
+    """Attach experiment attribution during discovery, including replay."""
+    experiment = current_experiment.get()
+    if experiment is not None:
+        experiment.found_step = True
+        step.opts = {**(step.opts or {}), **experiment.opts}
