@@ -71,8 +71,7 @@ class Context:
         job_id: Queue job ID.
         request_id: ID of request sent to SDK.
         run_id: Function run ID.
-        sessions: Initialized once from shared triggering-event sessions. Mutable
-            afterward; outgoing sends read its current values.
+        sessions: Initialized once from shared triggering-event sessions. Mutable afterward; outgoing sends read its current values.
         step: Step methods.
     """
 
@@ -105,8 +104,7 @@ class ContextSync:
         job_id: Queue job ID.
         request_id: ID of request sent to SDK.
         run_id: Function run ID.
-        sessions: Initialized once from shared triggering-event sessions. Mutable
-            afterward; outgoing sends read its current values.
+        sessions: Initialized once from shared triggering-event sessions. Mutable afterward; outgoing sends read its current values.
         step: Step methods.
     """
 

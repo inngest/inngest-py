@@ -14,6 +14,8 @@ wait_for = base.wait_for
 class TestClass(typing.Protocol):
     client: inngest.Inngest
 
+    def subTest(self, **params: object) -> typing.ContextManager[None]: ...
+
     def addCleanup(
         self,
         function: typing.Callable[..., typing.Any],

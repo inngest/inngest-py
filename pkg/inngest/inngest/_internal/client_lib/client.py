@@ -412,7 +412,8 @@ class Inngest:
 
         # A step may already have stamped propagation and run send middleware.
         events = sessions.stamp_events(
-            events, preserve_existing_propagation=True
+            events,
+            preserve_existing_propagation=True,
         )
 
         middleware = None
@@ -486,7 +487,8 @@ class Inngest:
 
         # A step may already have stamped propagation and run send middleware.
         events = sessions.stamp_events(
-            events, preserve_existing_propagation=True
+            events,
+            preserve_existing_propagation=True,
         )
 
         middleware = None
