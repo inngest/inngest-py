@@ -268,13 +268,12 @@ class Step(base.StepBase):
             events: An event or list of events to send.
         """
 
-        # Snapshot before middleware; client.send preserves this layer afterward.
-        outgoing = sessions.stamp_events(events)
-
         async def fn() -> list[str]:
-            _events = outgoing
+            # Validate inside the durable callback so failures belong to this
+            # step and completed sends replay without validating again.
+            outgoing = sessions.stamp_events(events)
 
-            middleware_err = await self._middleware.before_send_events(_events)
+            middleware_err = await self._middleware.before_send_events(outgoing)
             if isinstance(middleware_err, Exception):
                 raise middleware_err
 

@@ -76,7 +76,7 @@ def create(
             name=event_name,
             meta={"sessions": {"user": "alice", "conversation": "chat-2"}},
         )
-        cases = [
+        cases: list[tuple[str, list[inngest.Event], dict[str, str]]] = [
             ("different conversations", [first, second], {"user": "alice"}),
             ("reversed order", [second, first], {"user": "alice"}),
             (
