@@ -5,7 +5,14 @@ import typing
 
 import typing_extensions
 
-from inngest._internal import errors, server_lib, transforms, types
+from inngest._internal import (
+    errors,
+    run_context,
+    server_lib,
+    sessions,
+    transforms,
+    types,
+)
 from inngest._internal.client_lib import models as client_models
 
 from . import base
@@ -48,6 +55,7 @@ class StepSync(base.StepBase):
         data: typing.Mapping[str, object] | None = None,
         timeout: int | datetime.timedelta | None = None,
         v: str | None = None,
+        meta: sessions.EventMeta | None = None,
     ) -> types.T:
         """
         Invoke an Inngest function with data. Returns the result of the returned
@@ -64,6 +72,7 @@ class StepSync(base.StepBase):
             data: Will become `event.data` in the invoked function. Must be JSON serializable.
             timeout: The maximum number of milliseconds to wait for the function to complete.
             v: Will become `event.v` in the invoked function.
+            meta: Session overrides for the invoked function's event.
         """
 
         output = self.invoke_by_id(
@@ -73,6 +82,7 @@ class StepSync(base.StepBase):
             data=data,
             timeout=timeout,
             v=v,
+            meta=meta,
         )
 
         output = self._client._deserialize(output, function._output_type)
@@ -88,6 +98,7 @@ class StepSync(base.StepBase):
         data: typing.Mapping[str, object] | None = None,
         timeout: int | datetime.timedelta | None = None,
         v: str | None = None,
+        meta: sessions.EventMeta | None = None,
     ) -> object:
         """
         Invoke an Inngest function with data. Returns the result of the returned
@@ -108,6 +119,7 @@ class StepSync(base.StepBase):
             data: Will become `event.data` in the invoked function. Must be JSON serializable.
             timeout: The maximum number of milliseconds to wait for the function to complete.
             v: Will become `event.v` in the invoked function.
+            meta: Session overrides for the invoked function's event.
         """
 
         if app_id is None:
@@ -119,11 +131,16 @@ class StepSync(base.StepBase):
         if isinstance(timeout_str, Exception):
             raise timeout_str
 
+        # Invokes bypass client.send: stamp_meta validates and normalizes their
+        # metadata here, immediately before constructing the outgoing payload.
         opts = base.InvokeOpts(
             function_id=f"{app_id}-{function_id}",
             payload=base.InvokeOptsPayload(
                 data=data,
                 v=v,
+                meta=sessions.stamp_meta(
+                    meta, inherited_sessions=run_context.get_sessions()
+                ),
             ),
             timeout=timeout_str,
         ).to_dict()
@@ -247,12 +264,11 @@ class StepSync(base.StepBase):
         """
 
         def fn() -> list[str]:
-            if isinstance(events, list):
-                _events = events
-            else:
-                _events = [events]
+            # Validate inside the durable callback so failures belong to this
+            # step and completed sends replay without validating again.
+            outgoing = sessions.stamp_events(events)
 
-            middleware_err = self._middleware.before_send_events_sync(_events)
+            middleware_err = self._middleware.before_send_events_sync(outgoing)
             if isinstance(middleware_err, Exception):
                 raise middleware_err
 
@@ -262,7 +278,7 @@ class StepSync(base.StepBase):
             try:
                 result = client_models.SendEventsResult(
                     ids=self._client.send_sync(
-                        events,
+                        outgoing,
                         # Skip middleware since we're already running it above. Without
                         # this, we'll double-call middleware hooks
                         skip_middleware=True,

@@ -4,7 +4,7 @@ import typing
 
 import pydantic
 
-from inngest._internal import types
+from inngest._internal import sessions, types
 
 
 class Event(types.BaseModel):
@@ -12,6 +12,12 @@ class Event(types.BaseModel):
     id: str = ""
     name: str
     ts: int = 0
+    meta: sessions.EventMeta | None = None
+
+    @pydantic.field_validator("meta", mode="before")
+    @classmethod
+    def _normalize_meta(cls, value: object) -> sessions.EventMeta | None:
+        return sessions.normalize_meta(value)
 
     @pydantic.field_validator("data", mode="before")
     @classmethod

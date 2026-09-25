@@ -26,6 +26,7 @@ from ._internal.server_lib import (
     TriggerCron,
     TriggerEvent,
 )
+from ._internal.sessions import EventMeta
 from ._internal.step_lib import Step, StepMemos, StepSync
 from ._internal.types import JSON
 
@@ -37,6 +38,7 @@ __all__ = [
     "ContextSync",
     "Debounce",
     "Event",
+    "EventMeta",
     "Function",
     "Inngest",
     "JSON",
