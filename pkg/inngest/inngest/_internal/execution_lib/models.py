@@ -71,7 +71,8 @@ class Context:
         job_id: Queue job ID.
         request_id: ID of request sent to SDK.
         run_id: Function run ID.
-        sessions: Session IDs shared by every triggering event; propagated to child events.
+        sessions: Initialized once from shared triggering-event sessions. Mutable
+            afterward; outgoing sends read its current values.
         step: Step methods.
     """
 
@@ -84,10 +85,10 @@ class Context:
     request_id: str | None
     run_id: str
     step: step_lib.Step
-    sessions: dict[str, str] = dataclasses.field(default_factory=dict)
+    sessions: dict[str, str] = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
-        self.sessions = sessions.reduce_sessions(self.events)
+        self.sessions = sessions.get_shared_sessions(self.events)
 
 
 @dataclasses.dataclass
@@ -104,7 +105,8 @@ class ContextSync:
         job_id: Queue job ID.
         request_id: ID of request sent to SDK.
         run_id: Function run ID.
-        sessions: Session IDs shared by every triggering event; propagated to child events.
+        sessions: Initialized once from shared triggering-event sessions. Mutable
+            afterward; outgoing sends read its current values.
         step: Step methods.
     """
 
@@ -117,10 +119,10 @@ class ContextSync:
     request_id: str | None
     run_id: str
     step: step_lib.StepSync
-    sessions: dict[str, str] = dataclasses.field(default_factory=dict)
+    sessions: dict[str, str] = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
-        self.sessions = sessions.reduce_sessions(self.events)
+        self.sessions = sessions.get_shared_sessions(self.events)
 
 
 FunctionHandlerAsync: typing.TypeAlias = typing.Callable[

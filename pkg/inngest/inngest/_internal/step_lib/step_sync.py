@@ -5,7 +5,14 @@ import typing
 
 import typing_extensions
 
-from inngest._internal import errors, server_lib, sessions, transforms, types
+from inngest._internal import (
+    errors,
+    run_context,
+    server_lib,
+    sessions,
+    transforms,
+    types,
+)
 from inngest._internal.client_lib import models as client_models
 
 from . import base
@@ -124,12 +131,16 @@ class StepSync(base.StepBase):
         if isinstance(timeout_str, Exception):
             raise timeout_str
 
+        # Invokes bypass client.send: stamp_meta validates and normalizes their
+        # metadata here, immediately before constructing the outgoing payload.
         opts = base.InvokeOpts(
             function_id=f"{app_id}-{function_id}",
             payload=base.InvokeOptsPayload(
                 data=data,
                 v=v,
-                meta=sessions.stamp_meta(meta),
+                meta=sessions.stamp_meta(
+                    meta, inherited_sessions=run_context.get_sessions()
+                ),
             ),
             timeout=timeout_str,
         ).to_dict()
@@ -252,6 +263,7 @@ class StepSync(base.StepBase):
             events: An event or list of events to send.
         """
 
+        # Snapshot before middleware; client.send preserves this layer afterward.
         outgoing = sessions.stamp_events(events)
 
         def fn() -> list[str]:

@@ -172,7 +172,8 @@ class Function(typing.Generic[types.T]):
 
         with (
             execution_lib.set_step_context(ctx.step),
-            run_context.use_run(client, ctx),
+            # Bind for execution and its hooks, but not the response hooks below.
+            run_context.use_run(ctx),
         ):
             call_res = await ctx.step._execution.run(
                 client,
@@ -226,7 +227,8 @@ class Function(typing.Generic[types.T]):
 
         with (
             execution_lib.set_step_context(ctx.step),
-            run_context.use_run(client, ctx),
+            # Bind for execution and its hooks, but not the response hooks below.
+            run_context.use_run(ctx),
         ):
             # We don't need to pass a thread pool here because the sync handler
             # is not used by Connect.

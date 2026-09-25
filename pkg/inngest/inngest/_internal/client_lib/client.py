@@ -187,10 +187,19 @@ class Inngest:
 
         body = []
         for event in events:
-            d = event.to_dict()
+            # Send middleware may mutate metadata after Event validation. Check
+            # it before JSON serialization (which can turn non-finite IDs into
+            # null), using a shallow copy so payloads and callers are untouched.
+            try:
+                meta = sessions.normalize_meta(event.meta)
+            except ValueError as err:
+                return err
+            d = event.model_copy(update={"meta": meta}).to_dict()
             if isinstance(d, Exception):
                 return d
 
+            if meta is None:
+                d.pop("meta", None)
             if d.get("id") == "":
                 del d["id"]
             if d.get("ts") == 0:
@@ -401,7 +410,10 @@ class Inngest:
             skip_middleware: Whether to skip middleware.
         """
 
-        events = sessions.stamp_events(events, only_if_absent=True)
+        # A step may already have stamped propagation and run send middleware.
+        events = sessions.stamp_events(
+            events, preserve_existing_propagation=True
+        )
 
         middleware = None
         if not skip_middleware:
@@ -472,7 +484,10 @@ class Inngest:
             skip_middleware: Whether to skip middleware.
         """
 
-        events = sessions.stamp_events(events, only_if_absent=True)
+        # A step may already have stamped propagation and run send middleware.
+        events = sessions.stamp_events(
+            events, preserve_existing_propagation=True
+        )
 
         middleware = None
         if not skip_middleware:
