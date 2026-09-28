@@ -17,7 +17,7 @@ import dataclasses
 import typing
 
 if typing.TYPE_CHECKING:
-    from inngest._internal import execution_lib
+    from inngest._internal import client_lib, execution_lib
 
 
 @dataclasses.dataclass
@@ -27,6 +27,7 @@ class RunContext:
     """
 
     ctx: execution_lib.Context | execution_lib.ContextSync
+    client: client_lib.Inngest
 
 
 current_run = contextvars.ContextVar[RunContext | None](
@@ -37,22 +38,30 @@ current_run = contextvars.ContextVar[RunContext | None](
 @contextlib.contextmanager
 def use_run(
     ctx: execution_lib.Context | execution_lib.ContextSync,
+    client: client_lib.Inngest,
 ) -> typing.Iterator[None]:
     """
     Bind a run without leaking state across requests or threads.
     """
 
-    token = current_run.set(RunContext(ctx))
+    token = current_run.set(RunContext(ctx, client))
     try:
         yield
     finally:
         current_run.reset(token)
 
 
-def get_sessions() -> dict[str, str] | None:
+def get_sessions(
+    *, client: client_lib.Inngest | None = None
+) -> dict[str, str] | None:
     """
     Read the active context's mutable sessions at call time, if bound.
+
+    Client sends pass their client to restrict inheritance to the run's owner.
+    Step tools already belong to the run and do not need this check.
     """
 
     run = current_run.get()
-    return run.ctx.sessions if run is not None else None
+    if run is None or (client is not None and run.client is not client):
+        return None
+    return run.ctx.sessions

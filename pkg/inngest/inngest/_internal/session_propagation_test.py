@@ -103,6 +103,51 @@ class SessionHarness:
 
 
 class TestSessionPropagation(unittest.TestCase):
+    def test_only_owning_client_inherits_sessions(self) -> None:
+        """
+        Sending through another client must not carry the current conversation
+        into an unrelated app or environment. Even clients with the same app ID
+        are separate instances. Explicit sessions on those sends still work.
+        """
+        for mode, is_sync in [("async", False), ("sync", True)]:
+            with self.subTest(mode=mode):
+                owner = SessionHarness()
+                other = SessionHarness()
+
+                def events() -> list[inngest.Event]:
+                    return [
+                        inngest.Event(name="automatic"),
+                        inngest.Event(
+                            name="explicit",
+                            meta={"sessions": {"conversation": "other-chat"}},
+                        ),
+                    ]
+
+                def sync(ctx: inngest.ContextSync) -> None:
+                    other.client.send_sync(events())
+                    owner.client.send_sync(inngest.Event(name="owned"))
+
+                async def async_fn(ctx: inngest.Context) -> None:
+                    await other.client.send(events())
+                    await owner.client.send(inngest.Event(name="owned"))
+
+                fn = owner.client.create_function(
+                    fn_id="fn", trigger=inngest.TriggerEvent(event="start")
+                )(sync if is_sync else async_fn)
+                status, _ = asyncio.run(owner.request(fn))
+                assert status == 200
+                assert len(other.requests) == 1
+                sent = json.loads(other.requests[0].content)
+                assert "meta" not in sent[0]
+                assert sent[1]["meta"] == {
+                    "sessions": {"conversation": "other-chat"}
+                }
+                assert len(owner.requests) == 1
+                owned = json.loads(owner.requests[0].content)
+                assert owned[0]["meta"] == {
+                    "propagated_sessions": {"conversation": "chat-1"}
+                }
+
     def test_send_middleware_change_isolation(self) -> None:
         """
         A handler sends the same event object four times. Send middleware

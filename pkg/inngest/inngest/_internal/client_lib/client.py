@@ -20,6 +20,7 @@ from inngest._internal import (
     function,
     middleware_lib,
     net,
+    run_context,
     serializer_lib,
     server_lib,
     sessions,
@@ -417,6 +418,7 @@ class Inngest:
             # again could restore sessions that their middleware removed.
             events = sessions.stamp_events(
                 events,
+                inherited_sessions=run_context.get_sessions(client=self),
                 preserve_existing_propagation=True,
             )
             middleware = middleware_lib.MiddlewareManager.from_client(
@@ -493,6 +495,7 @@ class Inngest:
             # again could restore sessions that their middleware removed.
             events = sessions.stamp_events(
                 events,
+                inherited_sessions=run_context.get_sessions(client=self),
                 preserve_existing_propagation=True,
             )
             middleware = middleware_lib.MiddlewareManager.from_client(
