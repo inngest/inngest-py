@@ -105,12 +105,12 @@ class SessionHarness:
 class TestSessionPropagation(unittest.TestCase):
     def test_send_middleware_change_isolation(self) -> None:
         """
-        A handler uses step.send_event to send the same event object twice. Both
-        outgoing events inherit its conversation, then send middleware changes
-        the conversation on only the first event. The client must preserve that
-        change when the step delegates the send to it.
+        A handler sends the same event object four times. Send middleware
+        changes one child's conversation, removes another's inherited sessions,
+        clears a third's metadata, and leaves the fourth alone. The client must
+        preserve these edits when the step delegates the send to it.
 
-        That change must not affect the second event, the handler's
+        These changes must not affect the untouched event, the handler's
         ctx.sessions, or the original event object. Otherwise, changing one
         child's session could unexpectedly assign other work to the wrong
         conversation.
@@ -129,17 +129,21 @@ class TestSessionPropagation(unittest.TestCase):
                         meta = events[0].meta
                         assert meta is not None
                         meta["propagated_sessions"]["conversation"] = "changed"
+                        removed_meta = events[1].meta
+                        assert removed_meta is not None
+                        removed_meta.pop("propagated_sessions")
+                        events[2].meta = None
                         assert parent_sessions == {"conversation": "chat-1"}
 
                 def sync(ctx: inngest.ContextSync) -> None:
                     nonlocal parent_sessions
                     parent_sessions = ctx.sessions
-                    ctx.step.send_event("children", [outgoing, outgoing])
+                    ctx.step.send_event("children", [outgoing] * 4)
 
                 async def async_fn(ctx: inngest.Context) -> None:
                     nonlocal parent_sessions
                     parent_sessions = ctx.sessions
-                    await ctx.step.send_event("children", [outgoing, outgoing])
+                    await ctx.step.send_event("children", [outgoing] * 4)
 
                 harness.client.add_middleware(Middleware)
                 fn = harness.client.create_function(
@@ -150,11 +154,13 @@ class TestSessionPropagation(unittest.TestCase):
                 assert operations[0]["data"] == ["event-id"]
                 assert len(harness.requests) == 1
                 sent = json.loads(harness.requests[0].content)
-                assert len(sent) == 2
+                assert len(sent) == 4
                 assert sent[0]["meta"]["propagated_sessions"] == {
                     "conversation": "changed"
                 }
-                assert sent[1]["meta"]["propagated_sessions"] == {
+                assert "meta" not in sent[1]
+                assert "meta" not in sent[2]
+                assert sent[3]["meta"]["propagated_sessions"] == {
                     "conversation": "chat-1"
                 }
                 assert parent_sessions == {"conversation": "chat-1"}
