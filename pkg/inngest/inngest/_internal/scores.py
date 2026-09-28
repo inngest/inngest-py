@@ -66,6 +66,10 @@ async def write(
     response = await client._http_client.post(*request)
     if isinstance(response, Exception):
         raise response
+    if response.is_redirect:
+        raise Exception(
+            f"Score write was not confirmed: HTTP {response.status_code} redirect is not followed"
+        )
 
 
 def write_sync(
@@ -83,3 +87,7 @@ def write_sync(
     response = client._http_client.post_sync(*request)
     if isinstance(response, Exception):
         raise response
+    if response.is_redirect:
+        raise Exception(
+            f"Score write was not confirmed: HTTP {response.status_code} redirect is not followed"
+        )
