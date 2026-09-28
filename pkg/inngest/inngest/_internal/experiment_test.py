@@ -10,7 +10,7 @@ import pytest
 import inngest
 from inngest.experimental import experiment
 
-from . import comm_lib, net, run_context, server_lib, transforms
+from . import comm_lib, net, run_context, server_lib
 
 
 class Harness:
@@ -110,7 +110,7 @@ class Harness:
 @pytest.mark.parametrize("is_sync", [False, True])
 def test_experiment_discovery_replay_and_scoring(is_sync: bool) -> None:
     harness = Harness()
-    selected = "control"
+    select = experiment.fixed("control")
     calls: list[str] = []
 
     def sync(ctx: inngest.ContextSync) -> str:
@@ -124,7 +124,7 @@ def test_experiment_discovery_replay_and_scoring(is_sync: bool) -> None:
                 "control": lambda: ctx.step.run("control", work),
                 "variant": lambda: ctx.step.run("variant", work),
             },
-            select=experiment.fixed(selected),
+            select=select,
         )
         ctx.step.run(
             "score",
@@ -148,7 +148,7 @@ def test_experiment_discovery_replay_and_scoring(is_sync: bool) -> None:
                 "control": lambda: ctx.step.run("control", work),
                 "variant": lambda: ctx.step.run("variant", work),
             },
-            select=experiment.fixed(selected),
+            select=select,
         )
         await ctx.step.run(
             "score",
@@ -166,7 +166,7 @@ def test_experiment_discovery_replay_and_scoring(is_sync: bool) -> None:
     )(sync if is_sync else async_fn)
 
     async def check() -> None:
-        nonlocal selected
+        nonlocal select
         memos: dict[str, object] = {}
         status, ops = await harness.request(fn)
         assert status == 206
@@ -179,13 +179,12 @@ def test_experiment_discovery_replay_and_scoring(is_sync: bool) -> None:
             "available_variants": ["control", "variant"],
         }
         memos[selection["id"]] = {"data": selection["data"]}
-        selected = (
-            "variant"  # Changed configuration must not reassign this run.
-        )
+        # A deployment changes both strategy and assignment. Existing runs must
+        # keep their original variant and report how it was actually selected.
+        select = experiment.bucket("bob")
         _, ops = await harness.request(fn, memos=memos)
         assert ops[0]["displayName"] == "control"
         assert ops[0]["opts"] == {
-            "experimentStepID": "",
             "experimentName": "model",
             "variant": "control",
             "selectionStrategy": "fixed",
@@ -253,8 +252,22 @@ def test_bucket_fixtures_and_validation() -> None:
     for invalid in invalid_weights:
         with pytest.raises(ValueError):
             experiment.bucket("alice", weights=invalid)
+        # Direct construction must not bypass validation and later divide by
+        # zero or produce an invalid assignment.
+        with pytest.raises(ValueError):
+            experiment.Selection("bucket", "alice", tuple(invalid.items()))
     with pytest.raises(ValueError):
         experiment.bucket("")
+    with pytest.raises(ValueError):
+        experiment.Selection("bucket", "")
+    with pytest.raises(ValueError):
+        experiment.Selection("fixed", "")
+    with pytest.raises(ValueError):
+        experiment.Selection("fixed", "control", (("control", 1),))
+    with pytest.raises(ValueError):
+        experiment.Selection(
+            "bucket", "alice", (("control", 1), ("control", 2))
+        )
 
 
 def test_experiment_requires_durable_variant() -> None:
@@ -270,9 +283,10 @@ def test_experiment_requires_durable_variant() -> None:
             select=experiment.fixed("control"),
         )
 
+    _, selection = asyncio.run(harness.request(fn))
     status, body = asyncio.run(
         harness.request(
-            fn, memos={transforms.hash_step_id("model"): {"data": "control"}}
+            fn, memos={selection[0]["id"]: {"data": selection[0]["data"]}}
         )
     )
     assert status == 500

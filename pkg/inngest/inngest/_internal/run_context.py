@@ -40,6 +40,7 @@ class ExperimentContext:
 current_run = contextvars.ContextVar[RunContext | None](
     "inngest_run", default=None
 )
+# ReportedStep binds this for nesting checks and metadata attribution.
 current_step: contextvars.ContextVar[step_lib.StepInfo | None] = (
     contextvars.ContextVar("inngest_step", default=None)
 )

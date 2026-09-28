@@ -8,6 +8,7 @@ is identical to TypeScript's locale-sorted variant names.
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import hashlib
 import math
@@ -44,11 +45,36 @@ class ExperimentResult(typing.Generic[T]):
 
 @dataclasses.dataclass(frozen=True)
 class Selection:
-    """A validated, immutable selection strategy."""
+    """
+    Return type of fixed() and bucket(), available for type annotations.
+
+    Use those factories to create selectors. Construction and fields are
+    implementation details.
+    """
 
     strategy: typing.Literal["fixed", "bucket"]
     value: str
     weights: tuple[tuple[str, float], ...] | None = None
+
+    def __post_init__(self) -> None:
+        """Validate direct construction and snapshot weights before use."""
+        if self.strategy not in ("fixed", "bucket"):
+            raise ValueError("Selection strategy must be fixed or bucket")
+        if not _valid_name(self.value):
+            raise ValueError("Selection value must be a non-empty string")
+        if self.weights is None:
+            return
+        if self.strategy != "bucket":
+            raise ValueError("Only bucket selection accepts weights")
+        weights = tuple((name, weight) for name, weight in self.weights)
+        if any(not _valid_weight(weight) for _, weight in weights):
+            raise ValueError("Weights must be finite non-negative numbers")
+        if len(dict(weights)) != len(weights):
+            raise ValueError("Variant weights must have unique names")
+        total = sum(weight for _, weight in weights)
+        if not math.isfinite(total) or total <= 0:
+            raise ValueError("Weights must have a finite positive total")
+        object.__setattr__(self, "weights", weights)
 
     def choose(self, names: list[str]) -> str:
         """Select a known variant with TypeScript-compatible bucket hashing."""
@@ -95,8 +121,6 @@ class Selection:
 
 def fixed(variant: str) -> Selection:
     """Always select a named variant; useful for controlled comparisons."""
-    if not _valid_name(variant):
-        raise ValueError("Variant must be a non-empty string")
     return Selection("fixed", variant)
 
 
@@ -104,17 +128,9 @@ def bucket(
     value: str, *, weights: typing.Mapping[str, float] | None = None
 ) -> Selection:
     """Assign a stable user ID to a variant, optionally using relative weights."""
-    if not _valid_name(value):
-        raise ValueError("Bucket key must be a non-empty string")
-    snapshot = None
-    if weights is not None:
-        if any(not _valid_weight(weight) for weight in weights.values()):
-            raise ValueError("Weights must be finite non-negative numbers")
-        total = sum(weights.values())
-        if not math.isfinite(total) or total <= 0:
-            raise ValueError("Weights must have a finite positive total")
-        snapshot = tuple(weights.items())
-    return Selection("bucket", value, snapshot)
+    return Selection(
+        "bucket", value, tuple(weights.items()) if weights is not None else None
+    )
 
 
 def _validate(
@@ -129,13 +145,17 @@ def _validate(
         raise ValueError("Experiments require named variant callbacks")
     if run_context.current_run.get() is None:
         raise ValueError("Experiments require an Inngest function execution")
+    if run_context.current_experiment.get() is not None:
+        raise errors.NonRetriableError("Nested experiments are not supported")
     if run_context.current_step.get() is not None:
         raise errors.NonRetriableError(
             "Experiments cannot be nested inside a step callback"
         )
 
 
-def _select(experiment_id: str, names: list[str], select: Selection) -> str:
+def _select(
+    experiment_id: str, names: list[str], select: Selection
+) -> dict[str, str]:
     selected = select.choose(names)
     step = run_context.current_step.get()
     if step is None:
@@ -156,20 +176,31 @@ def _select(experiment_id: str, names: list[str], select: Selection) -> str:
             "values": values,
         }
     )
-    return selected
+    # Keep attribution tied to the original selection across configuration changes.
+    return {"variant": selected, "strategy": select.strategy}
 
 
+@contextlib.contextmanager
 def _variant_context(
-    experiment_id: str, selected: str, select: Selection, hashed_id: str
-) -> run_context.ExperimentContext:
-    return run_context.ExperimentContext(
+    experiment_id: str, selected: str, strategy: str
+) -> typing.Iterator[None]:
+    """Bind variant attribution and require durable work on normal completion."""
+    ctx = run_context.ExperimentContext(
         {
-            "experimentStepID": hashed_id,
             "experimentName": experiment_id,
             "variant": selected,
-            "selectionStrategy": select.strategy,
+            "selectionStrategy": strategy,
         }
     )
+    token = run_context.current_experiment.set(ctx)
+    try:
+        yield
+        if not ctx.found_step:
+            raise errors.NonRetriableError(
+                "Experiment variants must invoke step tools to avoid replaying side effects"
+            )
+    finally:
+        run_context.current_experiment.reset(token)
 
 
 async def _run(
@@ -183,38 +214,25 @@ async def _run(
     run = run_context.current_run.get()
     if run is None or not isinstance(run.ctx.step, Step):
         raise ValueError("Async experiments require an async function")
-    hashed_id = ""
 
-    async def choose() -> str:
-        nonlocal hashed_id
-        selected = _select(experiment_id, list(variants), select)
-        step = run_context.current_step.get()
-        if step is not None:
-            hashed_id = step.id
-        return selected
+    async def choose() -> dict[str, str]:
+        return _select(experiment_id, list(variants), select)
 
-    selected = await run.ctx.step._run(
+    assignment = await run.ctx.step._run(
         experiment_id, choose, step_type="group.experiment"
     )
+    selected = assignment["variant"]
     if selected not in variants:
         raise errors.NonRetriableError(
             f"Memoized experiment variant {selected!r} is no longer defined"
         )
-    ctx = _variant_context(experiment_id, selected, select, hashed_id)
-    token = run_context.current_experiment.set(ctx)
-    try:
+    with _variant_context(experiment_id, selected, assignment["strategy"]):
         result = await variants[selected]()
-        if not ctx.found_step:
-            raise errors.NonRetriableError(
-                "Experiment variants must invoke step tools to avoid replaying side effects"
-            )
         return ExperimentResult(
             result,
             selected,
             ExperimentRef(experiment_name=experiment_id, variant=selected),
         )
-    finally:
-        run_context.current_experiment.reset(token)
 
 
 def _run_sync(
@@ -228,38 +246,25 @@ def _run_sync(
     run = run_context.current_run.get()
     if run is None or not isinstance(run.ctx.step, StepSync):
         raise ValueError("Sync experiments require a sync function")
-    hashed_id = ""
 
-    def choose() -> str:
-        nonlocal hashed_id
-        selected = _select(experiment_id, list(variants), select)
-        step = run_context.current_step.get()
-        if step is not None:
-            hashed_id = step.id
-        return selected
+    def choose() -> dict[str, str]:
+        return _select(experiment_id, list(variants), select)
 
-    selected = run.ctx.step._run(
+    assignment = run.ctx.step._run(
         experiment_id, choose, step_type="group.experiment"
     )
+    selected = assignment["variant"]
     if selected not in variants:
         raise errors.NonRetriableError(
             f"Memoized experiment variant {selected!r} is no longer defined"
         )
-    ctx = _variant_context(experiment_id, selected, select, hashed_id)
-    token = run_context.current_experiment.set(ctx)
-    try:
+    with _variant_context(experiment_id, selected, assignment["strategy"]):
         result = variants[selected]()
-        if not ctx.found_step:
-            raise errors.NonRetriableError(
-                "Experiment variants must invoke step tools to avoid replaying side effects"
-            )
         return ExperimentResult(
             result,
             selected,
             ExperimentRef(experiment_name=experiment_id, variant=selected),
         )
-    finally:
-        run_context.current_experiment.reset(token)
 
 
-__all__ = ["ExperimentRef", "ExperimentResult", "Selection", "bucket", "fixed"]
+__all__ = ["ExperimentRef", "ExperimentResult", "bucket", "fixed"]

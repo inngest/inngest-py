@@ -137,12 +137,7 @@ FunctionHandlerAsync: typing.TypeAlias = typing.Callable[
 FunctionHandlerSync: typing.TypeAlias = typing.Callable[[ContextSync], types.T]
 
 
-# Context variable to detect nested steps.
-_in_step = contextvars.ContextVar("in_step", default=False)
-
-
 class ReportedStep:
-    _in_step_token: contextvars.Token[bool] | None = None
     _current_step_token: contextvars.Token[step_lib.StepInfo | None] | None = (
         None
     )
@@ -160,19 +155,16 @@ class ReportedStep:
         self._done_signal = asyncio.Future[None]()
 
     async def __aenter__(self) -> ReportedStep:
-        if _in_step.get() is True:
+        if run_context.current_step.get() is not None:
             self.info.op = server_lib.Opcode.STEP_ERROR
             raise step_lib.NestedStepInterrupt()
-        self._in_step_token = _in_step.set(True)
         self._current_step_token = run_context.current_step.set(self.info)
         return self
 
     async def __aexit__(self, *args: object) -> None:
-        if self._in_step_token is None:
-            raise errors.UnreachableError("missing in_step token")
-        _in_step.reset(self._in_step_token)
-        if self._current_step_token is not None:
-            run_context.current_step.reset(self._current_step_token)
+        if self._current_step_token is None:
+            raise errors.UnreachableError("missing current_step token")
+        run_context.current_step.reset(self._current_step_token)
         self._done_signal.set_result(None)
 
     async def release(self) -> None:
@@ -199,7 +191,6 @@ class ReportedStep:
 
 
 class ReportedStepSync:
-    _in_step_token: contextvars.Token[bool] | None = None
     _current_step_token: contextvars.Token[step_lib.StepInfo | None] | None = (
         None
     )
@@ -211,18 +202,15 @@ class ReportedStepSync:
         self.skip = False
 
     def __enter__(self) -> ReportedStepSync:
-        if _in_step.get() is True:
+        if run_context.current_step.get() is not None:
             raise step_lib.NestedStepInterrupt()
-        self._in_step_token = _in_step.set(True)
         self._current_step_token = run_context.current_step.set(self.info)
         return self
 
     def __exit__(self, *args: object) -> None:
-        if self._in_step_token is None:
-            raise errors.UnreachableError("missing in_step token")
-        _in_step.reset(self._in_step_token)
-        if self._current_step_token is not None:
-            run_context.current_step.reset(self._current_step_token)
+        if self._current_step_token is None:
+            raise errors.UnreachableError("missing current_step token")
+        run_context.current_step.reset(self._current_step_token)
 
 
 class UserError(Exception):

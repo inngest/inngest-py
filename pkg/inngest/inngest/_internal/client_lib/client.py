@@ -452,6 +452,8 @@ class Inngest:
         Pass the original run_id for delayed scores and inside step callbacks.
         The current experiment detail view surfaces run-scoped scores only.
         Attribution and scoring are two non-atomic, retryable merge writes.
+        Each target supports one experiment assignment. A different assignment
+        can silently reattribute existing scores; conflicts are not detected.
         """
         scores.validate_score(name, value, run_id, step_id)
         experiment = scores.ExperimentRef.model_validate(experiment)
@@ -476,7 +478,12 @@ class Inngest:
         run_id: str,
         step_id: str | None = None,
     ) -> None:
-        """EXPERIMENTAL: Synchronous version of score_experiment()."""
+        """
+        EXPERIMENTAL: Synchronous version of score_experiment().
+
+        Each target supports one experiment assignment. A different assignment
+        can silently reattribute existing scores; conflicts are not detected.
+        """
         scores.validate_score(name, value, run_id, step_id)
         experiment = scores.ExperimentRef.model_validate(experiment)
         scores.write_sync(
