@@ -401,7 +401,7 @@ class Inngest:
         *,
         name: str,
         value: scores.ScoreValue,
-        run_id: str | None = None,
+        run_id: str,
         step_id: str | None = None,
     ) -> None:
         """
@@ -424,7 +424,7 @@ class Inngest:
         *,
         name: str,
         value: scores.ScoreValue,
-        run_id: str | None = None,
+        run_id: str,
         step_id: str | None = None,
     ) -> None:
         """EXPERIMENTAL: Synchronous version of score()."""

@@ -16,7 +16,7 @@ def validate_score(
 ) -> None:
     """Reject scores that the metadata backend cannot aggregate."""
     for field, identifier in (("run_id", run_id), ("step_id", step_id)):
-        if identifier is not None and (
+        if (field == "run_id" or identifier is not None) and (
             not isinstance(identifier, str) or not identifier.strip()
         ):
             raise ValueError(f"{field} must be a non-empty string")
@@ -37,12 +37,10 @@ def prepare_update(
     *,
     kind: str,
     values: dict[str, object],
-    run_id: str | None,
+    run_id: str,
     step_id: str | None,
-) -> tuple[str, dict[str, object]] | None:
+) -> tuple[str, dict[str, object]]:
     """Build an explicitly targeted authenticated metadata API update."""
-    if run_id is None:
-        raise ValueError("No run context available; provide run_id")
     target: dict[str, object] = {"run_id": run_id}
     if step_id is not None:
         target["step_id"] = step_id
@@ -58,17 +56,16 @@ async def write(
     *,
     kind: str,
     values: dict[str, object],
-    run_id: str | None,
+    run_id: str,
     step_id: str | None,
 ) -> None:
-    """Write metadata via the opcode or authenticated API."""
+    """Write metadata via the authenticated API."""
     request = prepare_update(
         client, kind=kind, values=values, run_id=run_id, step_id=step_id
     )
-    if request is not None:
-        response = await client._http_client.post(*request)
-        if isinstance(response, Exception):
-            raise response
+    response = await client._http_client.post(*request)
+    if isinstance(response, Exception):
+        raise response
 
 
 def write_sync(
@@ -76,14 +73,13 @@ def write_sync(
     *,
     kind: str,
     values: dict[str, object],
-    run_id: str | None,
+    run_id: str,
     step_id: str | None,
 ) -> None:
     """Synchronous metadata writer."""
     request = prepare_update(
         client, kind=kind, values=values, run_id=run_id, step_id=step_id
     )
-    if request is not None:
-        response = client._http_client.post_sync(*request)
-        if isinstance(response, Exception):
-            raise response
+    response = client._http_client.post_sync(*request)
+    if isinstance(response, Exception):
+        raise response
