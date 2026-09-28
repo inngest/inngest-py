@@ -20,6 +20,7 @@ from inngest._internal import (
     function,
     middleware_lib,
     net,
+    run_context,
     scores,
     serializer_lib,
     server_lib,
@@ -510,17 +511,19 @@ class Inngest:
         Args:
         ----
             events: An event or list of events to send.
-            skip_middleware: Whether to skip middleware.
+            skip_middleware: Skip send middleware and automatic session inheritance. Step sends use this after preparing events and running middleware.
         """
 
-        # A step may already have stamped propagation and run send middleware.
-        events = sessions.stamp_events(
-            events,
-            preserve_existing_propagation=True,
-        )
-
+        events = events if isinstance(events, list) else [events]
         middleware = None
         if not skip_middleware:
+            # Step sends already stamped sessions and ran middleware. Stamping
+            # again could restore sessions that their middleware removed.
+            events = sessions.stamp_events(
+                events,
+                inherited_sessions=run_context.get_sessions(client=self),
+                preserve_existing_propagation=True,
+            )
             middleware = middleware_lib.MiddlewareManager.from_client(
                 self,
                 raw_request=None,
@@ -585,17 +588,19 @@ class Inngest:
         Args:
         ----
             events: An event or list of events to send.
-            skip_middleware: Whether to skip middleware.
+            skip_middleware: Skip send middleware and automatic session inheritance. Step sends use this after preparing events and running middleware.
         """
 
-        # A step may already have stamped propagation and run send middleware.
-        events = sessions.stamp_events(
-            events,
-            preserve_existing_propagation=True,
-        )
-
+        events = events if isinstance(events, list) else [events]
         middleware = None
         if not skip_middleware:
+            # Step sends already stamped sessions and ran middleware. Stamping
+            # again could restore sessions that their middleware removed.
+            events = sessions.stamp_events(
+                events,
+                inherited_sessions=run_context.get_sessions(client=self),
+                preserve_existing_propagation=True,
+            )
             middleware = middleware_lib.MiddlewareManager.from_client(
                 self,
                 raw_request=None,

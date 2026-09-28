@@ -286,7 +286,9 @@ class Step(base.StepBase):
         async def fn() -> list[str]:
             # Validate inside the durable callback so failures belong to this
             # step and completed sends replay without validating again.
-            outgoing = sessions.stamp_events(events)
+            outgoing = sessions.stamp_events(
+                events, inherited_sessions=run_context.get_sessions()
+            )
 
             middleware_err = await self._middleware.before_send_events(outgoing)
             if isinstance(middleware_err, Exception):
