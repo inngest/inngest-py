@@ -38,6 +38,8 @@ Register both handlers with your framework's Inngest adapter, then call `start_c
 
 `ctx.sessions` starts with sessions shared by the triggering events. Handlers and middleware can mutate it to control inheritance for subsequent sends and invokes. Changes do not affect the current run's server-recorded sessions. Client sends outside execution have no implicit sessions.
 
+Only the client instance serving the run automatically inherits its sessions. Sends through another client, even with the same app ID, require explicit `meta.sessions` to attach sessions.
+
 Set defaults before parallel work, for example `ctx.sessions["user"] = user_id`. Use `meta.sessions` for overrides specific to one child. Context sessions are also mutable in the TypeScript SDK.
 
 Known limitation: [invalid session metadata can break replay of a completed invoke](session-invoke-replay.md). Valid, deterministic metadata is unaffected.

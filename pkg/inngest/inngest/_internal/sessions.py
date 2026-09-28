@@ -18,8 +18,6 @@ import typing
 import jcs
 import typing_extensions
 
-from inngest._internal import run_context
-
 if typing.TYPE_CHECKING:
     from inngest._internal import server_lib
 
@@ -144,8 +142,8 @@ def stamp_meta(
     """
     Copy explicit inputs into outgoing metadata without merging its layers.
 
-    The client preserves propagation already stamped by a step, including any
-    changes made by the step's send middleware before the client is called.
+    With preserve_existing_propagation, explicit propagated metadata takes
+    precedence over the active run's sessions.
     """
     if inherited_sessions is None or (
         preserve_existing_propagation
@@ -162,16 +160,15 @@ def stamp_meta(
 def stamp_events(
     events: server_lib.Event | list[server_lib.Event],
     *,
+    inherited_sessions: dict[str, str] | None,
     preserve_existing_propagation: bool = False,
 ) -> list[server_lib.Event]:
     """
-    Snapshot the current ``ctx.sessions`` at send time into copied metadata.
+    Copy the supplied sessions into outgoing event metadata.
 
-    Steps stamp before send middleware runs. The client's second stamp must
-    preserve that propagation, including middleware edits. Event payloads are
-    shared rather than deep-copied.
+    Steps stamp before send middleware runs, then tell the client to skip both
+    stamping and middleware. Event payloads are shared rather than deep-copied.
     """
-    inherited_sessions = run_context.get_sessions()
     return [
         event.model_copy(
             update={
