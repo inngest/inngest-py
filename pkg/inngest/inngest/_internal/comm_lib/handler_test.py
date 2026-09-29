@@ -7,6 +7,7 @@ import unittest
 
 import inngest
 from inngest._internal import comm_lib, errors, server_lib
+from inngest.experimental import create_defer
 
 from .handler import get_function_configs
 
@@ -67,6 +68,48 @@ class Test_get_function_configs(unittest.TestCase):
 
 
 class TestCommHandlerRequestIDs(unittest.TestCase):
+    def test_defer_preserves_retry_after(self) -> None:
+        """
+        Scheduling a child must not shorten the parent's requested retry delay.
+        Check the response header without waiting for the server to retry.
+        """
+
+        retry_at = datetime.datetime(2030, 1, 1, tzinfo=datetime.timezone.utc)
+
+        @create_defer(client, fn_id="child")
+        def child(ctx: inngest.ContextSync) -> None:
+            pass
+
+        for schedule_child in (False, True):
+            with self.subTest(schedule_child=schedule_child):
+
+                @client.create_function(
+                    fn_id="fn",
+                    trigger=inngest.TriggerEvent(event="test/event"),
+                )
+                def fn(ctx: inngest.ContextSync) -> None:
+                    if schedule_child:
+                        ctx.defer("child", function=child, data={})
+
+                    raise inngest.RetryAfterError("try later", retry_at)
+
+                handler = comm_lib.CommHandler(
+                    client=client,
+                    enable_unauthed_sync=None,
+                    framework=server_lib.Framework.FAST_API,
+                    functions=[fn, child],
+                    streaming=None,
+                )
+                try:
+                    response = handler.post_sync(self._create_request())
+                    assert response.status_code == 500
+                    assert response.headers.get("retry-after") == (
+                        "2030-01-01T00:00:00.000Z"
+                    )
+                finally:
+                    if handler._thread_pool is not None:
+                        handler._thread_pool.shutdown()
+
     def _create_request(
         self,
         *,

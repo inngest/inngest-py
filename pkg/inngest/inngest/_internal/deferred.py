@@ -1,5 +1,8 @@
 """
-Buffer defer operations until the parent's next execution response.
+Buffer defer operations until the next step or successful completion response.
+
+Step responses persist buffered operations for replay. Parent failures discard
+the buffer: the protocol cannot send defers with a function-level error.
 """
 
 from __future__ import annotations
@@ -9,7 +12,7 @@ import dataclasses
 import json
 import typing
 
-from inngest._internal import errors, run_context, sessions, transforms
+from inngest._internal import run_context, sessions, transforms
 
 if typing.TYPE_CHECKING:
     from inngest._internal import execution_lib
@@ -18,7 +21,9 @@ if typing.TYPE_CHECKING:
 
 @dataclasses.dataclass(frozen=True)
 class DeferredParent:
-    """The run that scheduled this deferred function."""
+    """
+    The run that scheduled this deferred function.
+    """
 
     fn_slug: str
     run_id: str
@@ -26,12 +31,19 @@ class DeferredParent:
 
 
 class DeferHandle:
-    """Cancel a scheduled defer while the server still allows cancellation."""
+    """
+    Cancel a scheduled defer while the server still allows cancellation.
+    """
 
     def __init__(self, abort: typing.Callable[[], None]) -> None:
         self._abort = abort
 
     def abort(self) -> None:
+        """
+        Cancel from the parent handler, outside step callbacks.
+
+        Unsupported calls are logged and skipped without failing the parent.
+        """
         self._abort()
 
 
@@ -110,14 +122,21 @@ def add(
                 active = run_context.current_run.get()
                 if active is None or active.ctx is not ctx:
                     raise ValueError("abort requires the parent execution")
+                if run_context.current_step.get() is not None:
+                    # A memoized callback will not repeat its local cancellation
+                    # on replay. Require cancellation in the parent handler.
+                    raise ValueError(
+                        "abort is not supported inside a step callback; "
+                        "call abort after the step returns"
+                    )
                 if hashed_id in prior and not prior[hashed_id].abortable:
                     return
                 abort_id = transforms.hash_step_id(f"{hashed_id}:abort")
                 if abort_id in ctx._defer_seen:
                     return
                 if ctx._defer_ops.pop(hashed_id, None) is not None:
-                    # Nothing reached the server yet. Cancel locally instead
-                    # of repeatedly emitting an abort on each parent replay.
+                    # Nothing reached the server. The parent handler repeats
+                    # this cancellation on replay, unlike a step callback.
                     ctx._defer_seen.add(abort_id)
                     return
                 ctx._defer_ops[abort_id] = step_lib.StepInfo(
@@ -147,13 +166,36 @@ def attach(
     result: execution_lib.CallResult,
 ) -> execution_lib.CallResult:
     """
-    Ship deferred work alongside steps, completion, or a parent error.
+    Validate completion before attaching defers; preserve parent failures.
     """
 
     from inngest._internal import execution_lib, server_lib, step_lib
+    from inngest._internal.comm_lib.models import _prep_call_result
 
     if not ctx._defer_ops:
         return result
+
+    if result.multi is None and result.step is None:
+        if result.error is None:
+            # Use the response serializer's validation before wrapping output
+            # in RunComplete, so invalid output follows the same failure path.
+            prepared = _prep_call_result(result)
+            if isinstance(prepared, Exception):
+                result = execution_lib.CallResult(error=prepared)
+        if result.error is not None:
+            # StepFailed would replay the parent rather than terminate it.
+            # Keep the original error and retry policy, sacrificing only the
+            # operations the server has not yet accepted.
+            ctx._defer_ops.clear()
+            _log(
+                ctx,
+                ValueError(
+                    "parent failed before buffered defer operations could be sent; "
+                    "buffered schedules and cancellations were discarded"
+                ),
+            )
+            return result
+
     pending = [
         execution_lib.CallResult(step=op, output=None)
         for op in ctx._defer_ops.values()
@@ -163,20 +205,12 @@ def attach(
         return execution_lib.CallResult(multi=[*pending, *result.multi])
     if result.step is not None:
         return execution_lib.CallResult(multi=[*pending, result])
-    opcode = server_lib.Opcode.RUN_COMPLETE
-    if result.error is not None:
-        opcode = (
-            server_lib.Opcode.STEP_ERROR
-            if errors.is_retriable(result.error)
-            else server_lib.Opcode.STEP_FAILED
-        )
     terminal = execution_lib.CallResult(
-        error=result.error,
         output=result.output,
         step=step_lib.StepInfo(
             id=transforms.hash_step_id("complete"),
             display_name="complete",
-            op=opcode,
+            op=server_lib.Opcode.RUN_COMPLETE,
         ),
     )
     return execution_lib.CallResult(multi=[*pending, terminal])
