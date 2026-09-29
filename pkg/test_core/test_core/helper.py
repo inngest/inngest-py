@@ -83,6 +83,12 @@ class _Client:
         if not isinstance(history, list):
             raise Exception("unexpected response")
 
+        # TODO: Delete this. It's a hack to deal with a GraphQL change in Dev
+        # Server 1.45.0. Starting in that version, we duplicate each step in the
+        # response. Therefore, we need to double the index.
+        if index is not None:
+            index = index * 2
+
         expected = 1 if index is None else index + 1
         found = 0
         output_id: str | None = None

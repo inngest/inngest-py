@@ -10,6 +10,7 @@ from inngest._internal import (
     client_lib,
     middleware_lib,
     server_lib,
+    sessions,
     transforms,
     types,
 )
@@ -202,6 +203,16 @@ class InvokeOpts(types.BaseModel):
 class InvokeOptsPayload(types.BaseModel):
     data: object
     v: str | None
+    meta: sessions.EventMeta | None = None
+
+    @pydantic.model_serializer(mode="wrap")
+    def _serialize(
+        self, handler: pydantic.SerializerFunctionWrapHandler
+    ) -> dict[str, object]:
+        data: dict[str, object] = handler(self)
+        if self.meta is None:
+            data.pop("meta", None)
+        return data
 
 
 class WaitForEventOpts(types.BaseModel):
