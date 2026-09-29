@@ -30,6 +30,10 @@ Defer IDs must be unique within a run. Replays do not schedule previously accept
 
 Inputs must be JSON-serializable dictionaries. The SDK snapshots them at the call site. Invalid targets, IDs, input data, or session metadata are logged and skipped instead of failing the parent. A skipped call returns a harmless abort handle. Deferred-handler failures affect the deferred run, not the parent.
 
+**Encryption limitation:** `ctx.defer()` sends input in plaintext even when `EncryptionMiddleware` is configured, including fields normally protected by that middleware. Do not pass data that relies on middleware encryption to deferred functions yet.
+
+TODO: Apply configured encryption to deferred input before sending it, with coverage for encrypted outgoing data and decrypted child input.
+
 Call `handle.abort()` in the parent handler, outside step callbacks, to cancel a scheduled defer. Repeated aborts are harmless. Once the server marks the defer as no longer abortable, abort does nothing. Calls inside step callbacks are logged and skipped because replay skips completed callbacks. If cancellation depends on a step's result, return that decision from the step and call `abort()` afterward.
 
 Scheduling and cancellation are buffered until the next step or successful completion response. If the parent fails before that response, including by returning unserializable output, buffered operations are logged and discarded. Previously accepted children still run, and previously accepted children with discarded cancellations remain scheduled. The parent's error and retry policy are preserved. This is a current Python SDK limitation. To ensure a schedule or cancellation reaches the server before later work can fail, complete a step after making the call.
