@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import unittest
 import unittest.mock
@@ -94,6 +95,53 @@ class TestConnInitHandler(unittest.IsolatedAsyncioTestCase):
             handler.close()
             await handler.closed()
         assert calls == outage_attempts + 1
+
+    async def test_close_stops_retries_during_outage(self) -> None:
+        """
+        Closing the handler while /v0/connect/start keeps failing ends the
+        retry loop and lets the handler finish closing.
+        """
+
+        calls = 0
+
+        async def fake_fetch(
+            *args: object, **kwargs: object
+        ) -> httpx.Response | Exception:
+            nonlocal calls
+            calls += 1
+            return httpx.Response(503)
+
+        state = _new_state()
+        handler = _new_handler(state)
+
+        with (
+            unittest.mock.patch.object(
+                net, "fetch_with_auth_fallback", fake_fetch
+            ),
+            unittest.mock.patch(
+                "inngest.connect._internal.conn_init_starter.CONN_INIT_RETRY_INTERVAL_SEC",
+                0.01,
+            ),
+        ):
+            handler.start()
+
+            def assertion() -> None:
+                assert calls >= 3
+
+            await test_core.wait_for(
+                assertion, timeout=datetime.timedelta(seconds=10)
+            )
+
+            handler.close()
+            await asyncio.wait_for(handler.closed(), timeout=5)
+
+            # No more requests after the handler closed.
+            calls_at_close = calls
+            await asyncio.sleep(0.1)
+            assert calls == calls_at_close
+
+        assert state.fatal_error.value is None
+        assert state.conn_init.value is None
 
     async def test_unauthorized_is_fatal(self) -> None:
         async def fake_fetch(
