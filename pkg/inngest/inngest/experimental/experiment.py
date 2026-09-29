@@ -84,7 +84,7 @@ class Selection:
             if any(
                 re.fullmatch(r"[a-z][a-z0-9]*", name) is None for name in names
             ):
-                raise ValueError(
+                raise errors.NonRetriableError(
                     "Bucket variant names must use lowercase ASCII letters and digits, starting with a letter"
                 )
             weights = (
@@ -93,7 +93,7 @@ class Selection:
                 else dict.fromkeys(names, 1.0)
             )
             if set(weights) != set(names):
-                raise ValueError(
+                raise errors.NonRetriableError(
                     "Experiment weights must match the variant names"
                 )
             entries = sorted(weights.items())
