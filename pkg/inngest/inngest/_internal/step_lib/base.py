@@ -239,6 +239,16 @@ class StepInfo(types.BaseModel):
     op: server_lib.Opcode
     opts: dict[str, object] | None = None
     userland: StepUserlandInfo | None = None
+    metadata: list[dict[str, object]] = pydantic.Field(default_factory=list)
+
+    @pydantic.model_serializer(mode="wrap")
+    def _serialize(
+        self, handler: pydantic.SerializerFunctionWrapHandler
+    ) -> dict[str, object]:
+        data: dict[str, object] = handler(self)
+        if not self.metadata:
+            data.pop("metadata", None)
+        return data
 
     def set_parallel_mode(self, parallel_mode: server_lib.ParallelMode) -> None:
         if parallel_mode != server_lib.ParallelMode.RACE:

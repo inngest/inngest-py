@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import contextvars
 import typing
 
@@ -5,11 +7,28 @@ from inngest._internal import server_lib, types
 
 from .base import ResponseInterrupt, SkipInterrupt, StepResponse
 
+if typing.TYPE_CHECKING:
+    from inngest.experimental import experiment
+
 # Create a context variable to track if we're in a parallel group.
 in_parallel = contextvars.ContextVar("in_parallel", default=False)
 
 
 class Group:
+    async def experiment(
+        self,
+        experiment_id: str,
+        *,
+        variants: typing.Mapping[
+            str, typing.Callable[[], typing.Awaitable[types.T]]
+        ],
+        select: experiment.Selection,
+    ) -> experiment.ExperimentResult[types.T]:
+        """EXPERIMENTAL: Memoize assignment, then discover the variant's steps."""
+        from inngest.experimental import experiment
+
+        return await experiment._run(experiment_id, variants, select)
+
     async def parallel(
         self,
         callables: tuple[typing.Callable[[], typing.Awaitable[types.T]], ...],
@@ -52,6 +71,18 @@ class Group:
 
 
 class GroupSync:
+    def experiment(
+        self,
+        experiment_id: str,
+        *,
+        variants: typing.Mapping[str, typing.Callable[[], types.T]],
+        select: experiment.Selection,
+    ) -> experiment.ExperimentResult[types.T]:
+        """EXPERIMENTAL: Synchronous experiment orchestration."""
+        from inngest.experimental import experiment
+
+        return experiment._run_sync(experiment_id, variants, select)
+
     def parallel(
         self,
         callables: tuple[typing.Callable[[], types.T], ...],

@@ -183,6 +183,20 @@ class Step(base.StepBase):
             output_type: Only set if returning a non-JSON-serializable object. Related to the client's serializer argument.
         """
 
+        return await self._run(
+            step_id, handler, *handler_args, output_type=output_type
+        )
+
+    async def _run(
+        self,
+        step_id: str,
+        handler: typing.Callable[
+            [typing_extensions.Unpack[types.TTuple]], typing.Awaitable[types.T]
+        ],
+        *handler_args: typing_extensions.Unpack[types.TTuple],
+        output_type: object = types.EmptySentinel,
+        step_type: str | None = None,
+    ) -> types.T:
         parsed_step_id = self._parse_step_id(step_id)
 
         step_info = base.StepInfo(
@@ -190,6 +204,7 @@ class Step(base.StepBase):
             id=parsed_step_id.hashed,
             name=parsed_step_id.user_facing,
             op=server_lib.Opcode.STEP_RUN,
+            opts={"type": step_type} if step_type is not None else None,
             userland=parsed_step_id.userland_info(),
         )
 

@@ -3,7 +3,14 @@ from __future__ import annotations
 import asyncio
 import typing
 
-from inngest._internal import errors, server_lib, step_lib, transforms, types
+from inngest._internal import (
+    errors,
+    run_context,
+    server_lib,
+    step_lib,
+    transforms,
+    types,
+)
 from inngest._internal.execution_lib import BaseExecution, BaseExecutionSync
 
 from .models import (
@@ -57,6 +64,7 @@ class ExecutionV0(BaseExecution):
         self,
         step_info: step_lib.StepInfo,
     ) -> ReportedStep:
+        run_context.prepare_step(step_info)
         step_signal = asyncio.Future[ReportedStep]()
 
         step = ReportedStep(step_signal, step_info)
@@ -207,6 +215,7 @@ class ExecutionV0Sync(BaseExecutionSync):
         self,
         step_info: step_lib.StepInfo,
     ) -> ReportedStepSync:
+        run_context.prepare_step(step_info)
         step = ReportedStepSync(step_info)
 
         memo = self._memos.pop(step.info.id)
