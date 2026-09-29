@@ -1,10 +1,13 @@
 """
 Abort prevents children from running, before sending and after replay.
 
+Aborting inside a step is rejected with a log message: replay skips that
+callback. Calling abort after the step returns cancels the child reliably.
 Repeated aborts are harmless; an uncancelled child confirms delivery works.
 """
 
 import asyncio
+from unittest import mock
 
 import inngest
 import test_core.helper
@@ -41,7 +44,14 @@ def create(
         shipped = ctx.defer(
             "shipped", function=target, data={"label": "cancelled"}
         )
-        ctx.step.run("checkpoint", lambda: None)
+
+        def checkpoint() -> None:
+            with mock.patch.object(ctx.logger, "error") as log:
+                shipped.abort()
+                log.assert_called_once()
+                assert "call abort after the step returns" in str(log.call_args)
+
+        ctx.step.run("checkpoint", checkpoint)
         shipped.abort()
         shipped.abort()
         ctx.defer("kept", function=target, data={"label": "kept"})
@@ -58,7 +68,10 @@ def create(
         )
 
         async def checkpoint() -> None:
-            pass
+            with mock.patch.object(ctx.logger, "error") as log:
+                shipped.abort()
+                log.assert_called_once()
+                assert "call abort after the step returns" in str(log.call_args)
 
         await ctx.step.run("checkpoint", checkpoint)
         shipped.abort()

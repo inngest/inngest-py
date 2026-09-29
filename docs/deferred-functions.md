@@ -1,6 +1,6 @@
 # Deferred functions
 
-Deferred functions run independent work after the parent run finishes, including when the parent fails. They have their own retries and steps. The parent does not wait for their results.
+Deferred functions run independent work after the parent run finishes. They have their own retries and steps. The parent does not wait for their results.
 
 ```python
 import inngest
@@ -30,7 +30,11 @@ Defer IDs must be unique within a run. Replays do not schedule previously accept
 
 Inputs must be JSON-serializable dictionaries. The SDK snapshots them at the call site. Invalid targets, IDs, input data, or session metadata are logged and skipped instead of failing the parent. A skipped call returns a harmless abort handle. Deferred-handler failures affect the deferred run, not the parent.
 
-Call `handle.abort()` during the parent execution to cancel a scheduled defer. Repeated aborts are harmless. Once the server marks the defer as no longer abortable, abort does nothing.
+Call `handle.abort()` in the parent handler, outside step callbacks, to cancel a scheduled defer. Repeated aborts are harmless. Once the server marks the defer as no longer abortable, abort does nothing. Calls inside step callbacks are logged and skipped because replay skips completed callbacks. If cancellation depends on a step's result, return that decision from the step and call `abort()` afterward.
+
+Scheduling and cancellation are buffered until the next step or successful completion response. If the parent fails before that response, including by returning unserializable output, buffered operations are logged and discarded. Previously accepted children still run, and previously accepted children with discarded cancellations remain scheduled. The parent's error and retry policy are preserved. This is a current Python SDK limitation. To ensure a schedule or cancellation reaches the server before later work can fail, complete a step after making the call.
+
+TODO: Send buffered defers on parent failure without causing an extra parent execution or changing retry behavior. TypeScript sends them alongside `StepError` or `StepFailed`, but that approach caused extra parent executions in the Python integration test. TypeScript's corresponding test checks child delivery, not the number of parent executions.
 
 Deferred runs inherit `ctx.sessions`. Use `meta.sessions` for explicit overrides or removals, as with event sends. Pass `experiment=selected.experiment_ref` to carry an experiment assignment to the deferred handler; this does not write scores automatically.
 

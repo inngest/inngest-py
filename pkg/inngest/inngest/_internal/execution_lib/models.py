@@ -117,7 +117,12 @@ class Context:
         meta: EventMeta | None = None,
         experiment: ExperimentRef | None = None,
     ) -> DeferHandle:
-        """Schedule independent work after this run ends; invalid calls log and skip."""
+        """
+        Schedule independent work after this run ends; invalid calls log and skip.
+
+        Buffered work is discarded if this execution fails before sending it.
+        Call the returned handle's abort() outside step callbacks.
+        """
         from inngest._internal import deferred
 
         return deferred.add(
@@ -180,7 +185,12 @@ class ContextSync:
         meta: EventMeta | None = None,
         experiment: ExperimentRef | None = None,
     ) -> DeferHandle:
-        """Schedule independent work after this run ends; invalid calls log and skip."""
+        """
+        Schedule independent work after this run ends; invalid calls log and skip.
+
+        Buffered work is discarded if this execution fails before sending it.
+        Call the returned handle's abort() outside step callbacks.
+        """
         from inngest._internal import deferred
 
         return deferred.add(
