@@ -91,7 +91,9 @@ def create(
             attribution = {
                 span["name"]: item
                 for span in data["run"]["trace"]["childrenSpans"]
-                for item in (span["metadata"] or [])
+                for item in typing.cast(
+                    list[dict[str, typing.Any]], span["metadata"] or []
+                )
                 if item["kind"] == "inngest.experiment"
             }
             for name in ("first", "second"):
