@@ -76,6 +76,9 @@ class InternalEvents(enum.Enum):
 
 
 class Opcode(enum.Enum):
+    DEFER_ADD = "DeferAdd"
+    DEFER_ABORT = "DeferAbort"
+    RUN_COMPLETE = "RunComplete"
     AI_GATEWAY = "AIGateway"
     INVOKE = "InvokeFunction"
     PLANNED = "StepPlanned"
