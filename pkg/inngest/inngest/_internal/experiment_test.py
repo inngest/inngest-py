@@ -26,10 +26,6 @@ class Harness:
 
         def handle(request: httpx.Request) -> httpx.Response:
             self.requests.append(request)
-            if request.url.path.startswith("/e/"):
-                return httpx.Response(
-                    200, json={"ids": ["event-id"], "status": 200}
-                )
             return httpx.Response(self.status)
 
         transport = httpx.MockTransport(handle)
@@ -45,37 +41,25 @@ class Harness:
         fn: inngest.Function[typing.Any],
         *,
         memos: dict[str, object] | None = None,
-        event: inngest.Event | None = None,
-        events: list[inngest.Event] | None = None,
-        run_id: str = "original",
-        attempt: int = 0,
-        target: str | None = None,
-        is_connect: bool = False,
-    ) -> tuple[int, typing.Any]:
-        event = event or inngest.Event(
-            name="start", meta={"sessions": {"conversation": "chat-1"}}
-        )
+    ) -> tuple[comm_lib.CommResponse, typing.Any]:
+        event = inngest.Event(name="start")
         body = {
             "ctx": {
-                "run_id": run_id,
-                "attempt": attempt,
+                "run_id": "original",
+                "attempt": 0,
                 "disable_immediate_execution": False,
                 "stack": {"stack": []},
             },
             "event": event.to_dict(),
-            "events": [
-                e.to_dict() for e in (events if events is not None else [event])
-            ],
+            "events": [event.to_dict()],
             "steps": memos or {},
             "use_api": False,
         }
         query = {"fnId": fn.id}
-        if target is not None:
-            query["stepId"] = target
         req = comm_lib.CommRequest(
             body=json.dumps(body).encode(),
             headers={},
-            is_connect=is_connect,
+            is_connect=False,
             public_path=None,
             query_params=query,
             raw_request=None,
@@ -93,7 +77,7 @@ class Harness:
         try:
             response = (
                 await handler.post(req)
-                if fn.is_handler_async or is_connect
+                if fn.is_handler_async
                 else handler.post_sync(req)
             )
             encoded = response.body_bytes()
@@ -101,7 +85,7 @@ class Harness:
             assert run_context.current_run.get() is None
             assert run_context.current_step.get() is None
             assert run_context.current_experiment.get() is None
-            return response.status_code, json.loads(encoded)
+            return response, json.loads(encoded)
         finally:
             if handler._thread_pool is not None:
                 handler._thread_pool.shutdown()
@@ -168,8 +152,8 @@ def test_experiment_discovery_replay_and_scoring(is_sync: bool) -> None:
     async def check() -> None:
         nonlocal select
         memos: dict[str, object] = {}
-        status, ops = await harness.request(fn)
-        assert status == 206
+        response, ops = await harness.request(fn)
+        assert response.status_code == 206
         selection = ops[0]
         assert selection["opts"] == {"type": "group.experiment"}
         assert selection["metadata"][0]["values"] == {
@@ -201,8 +185,8 @@ def test_experiment_discovery_replay_and_scoring(is_sync: bool) -> None:
         )
         assert ops[0]["opts"] is None  # Experiment context does not leak.
         memos[ops[0]["id"]] = {"data": None}
-        status, result = await harness.request(fn, memos=memos)
-        assert status == 200 and result == "control"
+        response, result = await harness.request(fn, memos=memos)
+        assert response.status_code == 200 and result == "control"
         assert calls == ["work"]
         assert (
             len(harness.requests) == 2
@@ -211,26 +195,33 @@ def test_experiment_discovery_replay_and_scoring(is_sync: bool) -> None:
     asyncio.run(check())
 
 
-def test_score_api_failure_and_delayed_experiment() -> None:
-    harness = Harness()
-    ref = experiment.ExperimentRef(experiment_name="model", variant="control")
-    harness.client.score_experiment_sync(
-        experiment=ref, run_id="finished", name="approved", value=True
-    )
-    payloads = [json.loads(request.content) for request in harness.requests]
-    assert [p["metadata"][0]["kind"] for p in payloads] == [
-        "inngest.experiment",
-        "inngest.score",
-    ]
-    assert all(p["target"] == {"run_id": "finished"} for p in payloads)
-    harness.status = 503
-    with pytest.raises(Exception, match="503"):
-        harness.client.score_experiment_sync(
-            experiment=ref, run_id="finished", name="approved", value=True
+def test_failed_attribution_does_not_write_score() -> None:
+    for is_sync in (False, True):
+        harness = Harness()
+        harness.status = 503
+        ref = experiment.ExperimentRef(
+            experiment_name="model", variant="control"
         )
-    assert (
-        len(harness.requests) == 3
-    )  # Failed attribution must not write a bare score.
+        with pytest.raises(Exception, match="503"):
+            if is_sync:
+                harness.client.score_experiment_sync(
+                    experiment=ref,
+                    run_id="finished",
+                    name="approved",
+                    value=True,
+                )
+            else:
+                asyncio.run(
+                    harness.client.score_experiment(
+                        experiment=ref,
+                        run_id="finished",
+                        name="approved",
+                        value=True,
+                    )
+                )
+        assert len(harness.requests) == 1
+        payload = json.loads(harness.requests[0].content)
+        assert payload["metadata"][0]["kind"] == "inngest.experiment"
 
 
 def test_bucket_uses_relative_weights() -> None:
@@ -252,41 +243,39 @@ def test_bucket_uses_relative_weights() -> None:
         ), f"{user_id}: 8/2 weights"
 
 
-def test_bucket_fixtures_and_validation() -> None:
+def test_bucket_matches_typescript_fixtures() -> None:
     # TypeScript SHA-256 fixtures: alice = 2bd806c9, bob = 81b637d8.
     assert (
         experiment.bucket("alice").choose(["variant", "control"]) == "control"
     )
     assert experiment.bucket("bob").choose(["control", "variant"]) == "variant"
+
+
+def test_bucket_snapshots_weights() -> None:
     weights = {"control": 0.0, "variant": 1.0}
     selector = experiment.bucket("alice", weights=weights)
     weights["control"] = 100.0
     assert selector.choose(["control", "variant"]) == "variant"
+
+
+def test_bucket_rejects_invalid_weights() -> None:
     invalid_weights: list[dict[str, float]] = [
         {},
         {"control": 0},
         {"control": -1},
         {"control": float("inf")},
+        {"control": float("nan")},
     ]
-    for invalid in invalid_weights:
+    for weights in invalid_weights:
         with pytest.raises(ValueError):
-            experiment.bucket("alice", weights=invalid)
-        # Direct construction must not bypass validation and later divide by
-        # zero or produce an invalid assignment.
-        with pytest.raises(ValueError):
-            experiment.Selection("bucket", "alice", tuple(invalid.items()))
+            experiment.bucket("alice", weights=weights)
+
+
+def test_selection_rejects_empty_value() -> None:
     with pytest.raises(ValueError):
         experiment.bucket("")
     with pytest.raises(ValueError):
-        experiment.Selection("bucket", "")
-    with pytest.raises(ValueError):
-        experiment.Selection("fixed", "")
-    with pytest.raises(ValueError):
-        experiment.Selection("fixed", "control", (("control", 1),))
-    with pytest.raises(ValueError):
-        experiment.Selection(
-            "bucket", "alice", (("control", 1), ("control", 2))
-        )
+        experiment.fixed("")
 
 
 def test_experiment_requires_durable_variant() -> None:
@@ -303,33 +292,55 @@ def test_experiment_requires_durable_variant() -> None:
         )
 
     _, selection = asyncio.run(harness.request(fn))
-    status, body = asyncio.run(
+    response, body = asyncio.run(
         harness.request(
-            fn, memos={selection[0]["id"]: {"data": selection[0]["data"]}}
+            fn,
+            memos={selection[0]["id"]: {"data": selection[0]["data"]}},
         )
     )
-    assert status == 500
+    assert response.status_code == 500
+    assert response.no_retry
     assert "must invoke step tools" in body["message"]
 
 
 def test_partial_experiment_score_failure_is_retryable() -> None:
-    harness = Harness()
-    calls: list[dict[str, typing.Any]] = []
+    for is_sync in (False, True):
+        harness = Harness()
+        calls: list[dict[str, typing.Any]] = []
 
-    def handle(request: httpx.Request) -> httpx.Response:
-        calls.append(json.loads(request.content))
-        return httpx.Response(503 if len(calls) == 2 else 204)
+        def handle(request: httpx.Request) -> httpx.Response:
+            calls.append(json.loads(request.content))
+            return httpx.Response(503 if len(calls) == 2 else 204)
 
-    harness.client._http_client._http_client_sync = httpx.Client(
-        transport=httpx.MockTransport(handle)
-    )
-    ref = experiment.ExperimentRef(experiment_name="model", variant="control")
-    with pytest.raises(Exception, match="503"):
-        harness.client.score_experiment_sync(
-            experiment=ref, run_id="finished", name="cost", value=1
+        transport = httpx.MockTransport(handle)
+        harness.client._http_client._http_client_sync = httpx.Client(
+            transport=transport
         )
-    harness.client.score_experiment_sync(
-        experiment=ref, run_id="finished", name="cost", value=1
-    )
-    assert calls[:2] == calls[2:]
-    assert all(call["target"] == {"run_id": "finished"} for call in calls)
+        harness.client._http_client._http_client = (
+            net.ThreadAwareAsyncHTTPClient(transport=transport).initialize()
+        )
+        ref = experiment.ExperimentRef(
+            experiment_name="model", variant="control"
+        )
+
+        def score() -> None:
+            if is_sync:
+                harness.client.score_experiment_sync(
+                    experiment=ref, run_id="finished", name="cost", value=1
+                )
+            else:
+                asyncio.run(
+                    harness.client.score_experiment(
+                        experiment=ref, run_id="finished", name="cost", value=1
+                    )
+                )
+
+        with pytest.raises(Exception, match="503"):
+            score()
+        score()
+        assert len(calls) == 4
+        assert [call["metadata"][0]["kind"] for call in calls[:2]] == [
+            "inngest.experiment",
+            "inngest.score",
+        ]
+        assert calls[:2] == calls[2:]

@@ -22,6 +22,7 @@ def create(
     event_name = base.create_event_name(framework, test_name)
     state = base.BaseState()
     inner_ran = False
+    attempts: list[int] = []
 
     def work() -> None:
         nonlocal inner_ran
@@ -29,6 +30,7 @@ def create(
 
     def sync(ctx: inngest.ContextSync) -> None:
         state.run_id = ctx.run_id
+        attempts.append(ctx.attempt)
         ctx.group.experiment(
             "outer",
             variants={
@@ -43,6 +45,7 @@ def create(
 
     async def async_fn(ctx: inngest.Context) -> None:
         state.run_id = ctx.run_id
+        attempts.append(ctx.attempt)
 
         async def async_work() -> None:
             work()
@@ -63,7 +66,7 @@ def create(
 
     fn = client.create_function(
         fn_id=test_name,
-        retries=0,
+        retries=1,
         trigger=inngest.TriggerEvent(event=event_name),
     )(sync if is_sync else async_fn)
 
@@ -79,5 +82,6 @@ def create(
             in json.loads(run.output)["message"]
         )
         assert not inner_ran
+        assert set(attempts) == {0}  # Rejection must bypass configured retries.
 
     return base.Case(fn=fn, name=test_name, run_test=run_test)
