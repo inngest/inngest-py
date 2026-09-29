@@ -48,6 +48,7 @@ uv run pytest tests/test_inngest/test_function/test_fast_api.py::TestFunctions::
 ## Architecture
 
 For session behavior and propagation examples, see [Sessions](docs/sessions.md).
+For scoring completed runs and individual steps, see [Scores](docs/scores.md).
 
 **Monorepo Structure:**
 
