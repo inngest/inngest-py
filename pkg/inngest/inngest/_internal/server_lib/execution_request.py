@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pydantic
+
 from inngest._internal import types
 
 from .event import Event
@@ -11,6 +13,11 @@ class ServerRequest(types.BaseModel):
     events: list[Event] | None = None
     steps: dict[str, object]
     use_api: bool
+    defers: dict[str, DeferredState] = pydantic.Field(default_factory=dict)
+
+
+class DeferredState(types.BaseModel):
+    abortable: bool = True
 
 
 class ServerRequestCtx(types.BaseModel):

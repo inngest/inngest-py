@@ -14,6 +14,12 @@ from inngest._internal import (
     types,
 )
 
+if typing.TYPE_CHECKING:
+    from inngest._internal.deferred import DeferHandle, DeferredParent
+    from inngest._internal.scores import ExperimentRef
+    from inngest._internal.sessions import EventMeta
+    from inngest.experimental.deferred import DeferredFunction
+
 
 @dataclasses.dataclass
 class CallResult:
@@ -92,6 +98,41 @@ class Context:
     run_id: str
     step: step_lib.Step
     sessions: dict[str, str] = dataclasses.field(init=False)
+    parents: list[DeferredParent] = dataclasses.field(
+        default_factory=list, init=False
+    )
+    _defer_ops: dict[str, step_lib.StepInfo] = dataclasses.field(
+        default_factory=dict, init=False, repr=False
+    )
+    _defer_seen: set[str] = dataclasses.field(
+        default_factory=set, init=False, repr=False
+    )
+
+    def defer(
+        self,
+        defer_id: str,
+        *,
+        function: DeferredFunction[typing.Any],
+        data: dict[str, object],
+        meta: EventMeta | None = None,
+        experiment: ExperimentRef | None = None,
+    ) -> DeferHandle:
+        """
+        Schedule independent work after this run ends; invalid calls log and skip.
+
+        Buffered work is discarded if this execution fails before sending it.
+        Inside a step, abort() can only cancel work newly scheduled in that callback.
+        """
+        from inngest._internal import deferred
+
+        return deferred.add(
+            self,
+            defer_id,
+            function=function,
+            data=data,
+            meta=meta,
+            experiment=experiment,
+        )
 
     def __post_init__(self) -> None:
         self.sessions = sessions.get_shared_sessions(self.events)
@@ -125,6 +166,41 @@ class ContextSync:
     run_id: str
     step: step_lib.StepSync
     sessions: dict[str, str] = dataclasses.field(init=False)
+    parents: list[DeferredParent] = dataclasses.field(
+        default_factory=list, init=False
+    )
+    _defer_ops: dict[str, step_lib.StepInfo] = dataclasses.field(
+        default_factory=dict, init=False, repr=False
+    )
+    _defer_seen: set[str] = dataclasses.field(
+        default_factory=set, init=False, repr=False
+    )
+
+    def defer(
+        self,
+        defer_id: str,
+        *,
+        function: DeferredFunction[typing.Any],
+        data: dict[str, object],
+        meta: EventMeta | None = None,
+        experiment: ExperimentRef | None = None,
+    ) -> DeferHandle:
+        """
+        Schedule independent work after this run ends; invalid calls log and skip.
+
+        Buffered work is discarded if this execution fails before sending it.
+        Inside a step, abort() can only cancel work newly scheduled in that callback.
+        """
+        from inngest._internal import deferred
+
+        return deferred.add(
+            self,
+            defer_id,
+            function=function,
+            data=data,
+            meta=meta,
+            experiment=experiment,
+        )
 
     def __post_init__(self) -> None:
         self.sessions = sessions.get_shared_sessions(self.events)

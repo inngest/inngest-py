@@ -9,6 +9,7 @@ import pydantic
 
 from inngest._internal import (
     client_lib,
+    deferred,
     errors,
     execution_lib,
     middleware_lib,
@@ -185,13 +186,13 @@ class Function(typing.Generic[types.T]):
 
         err = await middleware.transform_output(call_res)
         if isinstance(err, Exception):
-            return execution_lib.CallResult(err)
+            return deferred.attach(ctx, execution_lib.CallResult(err))
 
         err = await middleware.before_response()
         if isinstance(err, Exception):
-            return execution_lib.CallResult(err)
+            return deferred.attach(ctx, execution_lib.CallResult(err))
 
-        return call_res
+        return deferred.attach(ctx, call_res)
 
     def call_sync(
         self,
@@ -242,13 +243,13 @@ class Function(typing.Generic[types.T]):
 
         err = middleware.transform_output_sync(call_res)
         if isinstance(err, Exception):
-            return execution_lib.CallResult(err)
+            return deferred.attach(ctx, execution_lib.CallResult(err))
 
         err = middleware.before_response_sync()
         if isinstance(err, Exception):
-            return execution_lib.CallResult(err)
+            return deferred.attach(ctx, execution_lib.CallResult(err))
 
-        return call_res
+        return deferred.attach(ctx, call_res)
 
     def get_config(self, app_url: str) -> _Config:
         fn_id = self._opts.fully_qualified_id
