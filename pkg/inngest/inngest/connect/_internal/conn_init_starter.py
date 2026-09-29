@@ -8,7 +8,7 @@ from inngest._internal import net, server_lib, types
 
 from . import async_lib, connect_pb2
 from .base_handler import BaseHandler
-from .consts import CONN_INIT_RETRY_INTERVAL_SEC, MAX_CONN_INIT_ATTEMPTS
+from .consts import CONN_INIT_RETRY_INTERVAL_SEC
 from .errors import NonRetryableError
 from .models import ConnectionState, State
 
@@ -23,7 +23,7 @@ class ConnInitHandler(BaseHandler):
         - session_token/sync_token: Authentication tokens for the WebSocket
 
     Retry Behavior:
-        - Max attempts: Configurable via MAX_CONN_INIT_ATTEMPTS
+        - Retries indefinitely until the connection is closed
         - Retry interval: Configurable via CONN_INIT_RETRY_INTERVAL_SEC
         - Non-retryable errors (e.g., 401/403) cause immediate failure
 
@@ -109,10 +109,7 @@ class ConnInitHandler(BaseHandler):
             url = urllib.parse.urljoin(self._api_origin, "/v0/connect/start")
 
             attempts = 0
-            while (
-                attempts < MAX_CONN_INIT_ATTEMPTS
-                and self.closed_event.is_set() is False
-            ):
+            while self.closed_event.is_set() is False:
                 if attempts == 0:
                     self._logger.debug(
                         "ConnectionStart request send",
@@ -197,17 +194,19 @@ class ConnInitHandler(BaseHandler):
                     break
                 except NonRetryableError as e:
                     err = e
+                    self._logger.error(
+                        "ConnectionStart request failed",
+                        extra={"error": str(err)},
+                    )
                     break
                 except Exception as e:
                     err = e
+                    self._logger.error(
+                        "ConnectionStart request failed",
+                        extra={"error": str(err)},
+                    )
                 finally:
                     attempts += 1
-
-            if err is not None:
-                self._logger.error(
-                    "ConnectionStart request failed",
-                    extra={"error": str(err)},
-                )
 
     async def _reconnect_watcher(self, closed_event: asyncio.Event) -> None:
         while closed_event.is_set() is False:
