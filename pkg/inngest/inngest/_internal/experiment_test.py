@@ -233,6 +233,25 @@ def test_score_api_failure_and_delayed_experiment() -> None:
     )  # Failed attribution must not write a bare score.
 
 
+def test_bucket_uses_relative_weights() -> None:
+    # With an 80/20 split, charlie selects control and grace selects variant.
+    # Using equivalent 8/2 weights must preserve both assignments.
+    cases = [("charlie", "control"), ("grace", "variant")]
+    for user_id, expected in cases:
+        assert (
+            experiment.bucket(
+                user_id, weights={"control": 80, "variant": 20}
+            ).choose(["control", "variant"])
+            == expected
+        ), f"{user_id}: 80/20 weights"
+        assert (
+            experiment.bucket(
+                user_id, weights={"control": 8, "variant": 2}
+            ).choose(["control", "variant"])
+            == expected
+        ), f"{user_id}: 8/2 weights"
+
+
 def test_bucket_fixtures_and_validation() -> None:
     # TypeScript SHA-256 fixtures: alice = 2bd806c9, bob = 81b637d8.
     assert (
