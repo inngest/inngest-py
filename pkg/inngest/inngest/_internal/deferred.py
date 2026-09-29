@@ -40,7 +40,7 @@ class DeferHandle:
 
     def abort(self) -> None:
         """
-        Cancel from the parent handler, outside step callbacks.
+        Cancel from the parent handler, or the callback that scheduled this work.
 
         Unsupported calls are logged and skipped without failing the parent.
         """
@@ -116,27 +116,34 @@ def add(
         ctx._defer_seen.add(hashed_id)
         valid_id = defer_id
         target_slug = function.id
+        scheduled_step = run_context.current_step.get()
 
         def abort() -> None:
             try:
                 active = run_context.current_run.get()
                 if active is None or active.ctx is not ctx:
                     raise ValueError("abort requires the parent execution")
-                if run_context.current_step.get() is not None:
-                    # A memoized callback will not repeat its local cancellation
-                    # on replay. Require cancellation in the parent handler.
-                    raise ValueError(
-                        "abort is not supported inside a step callback; "
-                        "call abort after the step returns"
-                    )
                 if hashed_id in prior and not prior[hashed_id].abortable:
                     return
                 abort_id = transforms.hash_step_id(f"{hashed_id}:abort")
                 if abort_id in ctx._defer_seen:
                     return
+                active_step = run_context.current_step.get()
+                can_cancel_in_step = (
+                    active_step is scheduled_step
+                    and hashed_id in ctx._defer_ops
+                )
+                if active_step is not None and not can_cancel_in_step:
+                    # Local cancellation is safe when replay skips both the
+                    # add and abort. An add outside this callback would recur.
+                    raise ValueError(
+                        "abort inside a step requires a defer newly scheduled "
+                        "in that same callback; "
+                        "call abort after the step returns"
+                    )
                 if ctx._defer_ops.pop(hashed_id, None) is not None:
-                    # Nothing reached the server. The parent handler repeats
-                    # this cancellation on replay, unlike a step callback.
+                    # Nothing reached the server. On replay the parent repeats
+                    # both calls, or the memoized callback skips both calls.
                     ctx._defer_seen.add(abort_id)
                     return
                 ctx._defer_ops[abort_id] = step_lib.StepInfo(

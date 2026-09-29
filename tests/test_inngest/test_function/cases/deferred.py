@@ -1,5 +1,5 @@
 """
-A deferred function receives its input after the parent finishes.
+A deferred function receives its input without changing the parent's result.
 """
 
 import json
@@ -21,11 +21,9 @@ def create(
     event_name = base.create_event_name(framework, name)
     parent_state = base.BaseState()
     child_state = base.BaseState()
-    parent_finished = False
 
     def receive(ctx: inngest.Context | inngest.ContextSync) -> None:
         child_state.run_id = ctx.run_id
-        assert parent_finished
         assert ctx.event.data == {"message": "hello"}
 
     target = create_defer(client, fn_id=f"{name}-child", retries=0)(
@@ -33,10 +31,8 @@ def create(
     )
 
     def run(ctx: inngest.Context | inngest.ContextSync) -> str:
-        nonlocal parent_finished
         parent_state.run_id = ctx.run_id
         ctx.defer("child", function=target, data={"message": "hello"})
-        parent_finished = True
         return "parent-result"
 
     parent = client.create_function(

@@ -1,8 +1,8 @@
 """
 Abort prevents children from running, before sending and after replay.
 
-Aborting inside a step is rejected with a log message: replay skips that
-callback. Calling abort after the step returns cancels the child reliably.
+Scheduling and cancelling in the same step is safe: replay skips both calls.
+Cancelling a defer created outside that step is rejected; cancel it afterward.
 Repeated aborts are harmless; an uncancelled child confirms delivery works.
 """
 
@@ -48,6 +48,13 @@ def create(
         def checkpoint() -> None:
             with mock.patch.object(ctx.logger, "error") as log:
                 shipped.abort()
+                local = ctx.defer(
+                    "in-step",
+                    function=target,
+                    data={"label": "cancelled-in-step"},
+                )
+                local.abort()
+                local.abort()
                 log.assert_called_once()
                 assert "call abort after the step returns" in str(log.call_args)
 
@@ -70,6 +77,13 @@ def create(
         async def checkpoint() -> None:
             with mock.patch.object(ctx.logger, "error") as log:
                 shipped.abort()
+                local = ctx.defer(
+                    "in-step",
+                    function=target,
+                    data={"label": "cancelled-in-step"},
+                )
+                local.abort()
+                local.abort()
                 log.assert_called_once()
                 assert "call abort after the step returns" in str(log.call_args)
 
