@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import typing
 
 from inngest._internal import (
@@ -11,10 +12,12 @@ from inngest._internal import (
     transforms,
     types,
 )
+from inngest._internal.checkpoint import Checkpointer, Checkpointing
 from inngest._internal.execution_lib import BaseExecution, BaseExecutionSync
 
 from .models import (
     CallResult,
+    CheckpointInterrupt,
     Context,
     ContextSync,
     FunctionHandlerAsync,
@@ -38,12 +41,76 @@ class ExecutionV0(BaseExecution):
         request: server_lib.ServerRequest,
         target_hashed_id: str | None,
         timings: net.ServerTimings,
+        *,
+        is_connect: bool = False,
     ) -> None:
         self._memos = memos
         self._middleware = middleware
         self._request = request
         self._target_hashed_id = target_hashed_id
         self._timings = timings
+        self._is_connect = is_connect
+        self._checkpointer: Checkpointer | None = None
+        self._ctx: Context | ContextSync | None = None
+        self._fn: function.Function[typing.Any] | None = None
+
+    async def complete_step(self, response: step_lib.StepResponse) -> object:
+        # Defer operations must reach the executor with the callback's result;
+        # persisting only the step would lose those operations on crash/replay.
+        if self._ctx is not None and self._ctx._defer_ops:
+            raise step_lib.ResponseInterrupt(response)
+        if self._checkpointer is None or self._checkpointer.expired:
+            raise step_lib.ResponseInterrupt(response)
+
+        result = CallResult.from_responses([response])
+        err = await self._middleware.transform_output(result)
+        if isinstance(err, Exception):
+            raise CheckpointInterrupt(CallResult(err))
+        result.output_transformed = True
+        if result.multi is None:
+            raise errors.UnreachableError("missing checkpoint result")
+        item = result.multi[0]
+        if item.error is not None:
+            raise CheckpointInterrupt(result)
+        wire = response.step.to_dict()
+        if isinstance(wire, Exception):
+            raise CheckpointInterrupt(CallResult(wire))
+        wire["data"] = item.output
+        encoded = transforms.dump_json(wire)
+        if isinstance(encoded, Exception):
+            raise CheckpointInterrupt(CallResult(encoded))
+        if not await self._checkpointer.persist(wire):
+            raise CheckpointInterrupt(result)
+        # The queue item is reused: checkpoint success starts the next step's
+        # retry budget at zero, both internally and in the user-visible context.
+        self._request.ctx.attempt = 0
+        if self._ctx is None:
+            raise errors.UnreachableError("missing checkpoint context")
+        self._ctx.attempt = 0
+        # Rehydrate through input middleware just as the next executor request
+        # would. In particular, encryption must be undone before user code sees
+        # the result, and output-changing middleware must affect fresh/replayed
+        # results identically. Only the new memo is transformed again.
+        if self._fn is None:
+            raise errors.UnreachableError("missing checkpoint function")
+        memos = step_lib.StepMemos.from_raw(
+            {response.step.id: {"data": json.loads(encoded)["data"]}}
+        )
+        err = await self._middleware.transform_input(self._ctx, self._fn, memos)
+        if isinstance(err, Exception):
+            raise CheckpointInterrupt(CallResult(err))
+        memo = memos.pop(response.step.id)
+        if isinstance(memo, types.EmptySentinel):
+            raise CheckpointInterrupt(
+                CallResult(errors.UnreachableError("missing checkpoint memo"))
+            )
+        if memo.error is not None:
+            raise errors.StepError(
+                message=memo.error.message,
+                name=memo.error.name,
+                stack=memo.error.stack,
+            )
+        return memo.data
 
     def _handle_skip(
         self,
@@ -114,6 +181,16 @@ class ExecutionV0(BaseExecution):
                 step_lib.StepResponse(step=step_info)
             )
 
+        if (
+            step_info.op == server_lib.Opcode.STEP_RUN
+            and self._checkpointer is not None
+            and self._checkpointer.expired
+        ):
+            step_info.op = server_lib.Opcode.PLANNED
+            raise step_lib.ResponseInterrupt(
+                step_lib.StepResponse(step=step_info)
+            )
+
         if step_info.op == server_lib.Opcode.STEP_RUN:
             return step
 
@@ -127,6 +204,23 @@ class ExecutionV0(BaseExecution):
         fn: function.Function[types.T],
         output_type: object = types.EmptySentinel,
     ) -> CallResult:
+        self._ctx = ctx
+        self._fn = fn
+        config = fn._opts.checkpointing
+        if (
+            isinstance(config, Checkpointing)
+            and not self._is_connect
+            # Executor versions can retain the original attempt in memory
+            # despite resetting the queue item during a checkpoint. Yield the
+            # successful retried step normally to give the next step its budget.
+            and self._request.ctx.attempt == 0
+            and self._target_hashed_id is None
+            and not self._request.ctx.disable_immediate_execution
+            and self._request.ctx.fn_id
+            and self._request.ctx.qi_id
+        ):
+            self._checkpointer = Checkpointer(client, self._request, config)
+
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
         middleware_err = await self._middleware.transform_input(
@@ -157,6 +251,11 @@ class ExecutionV0(BaseExecution):
                 return CallResult(err)
 
             return CallResult(output=output)
+        except CheckpointInterrupt as interrupt:
+            err = await self._middleware.after_execution()
+            if isinstance(err, Exception):
+                return CallResult(err)
+            return interrupt.result
         except step_lib.ResponseInterrupt as interrupt:
             err = await self._middleware.after_execution()
             if isinstance(err, Exception):
@@ -189,12 +288,76 @@ class ExecutionV0Sync(BaseExecutionSync):
         request: server_lib.ServerRequest,
         target_hashed_id: str | None,
         timings: net.ServerTimings,
+        *,
+        is_connect: bool = False,
     ) -> None:
         self._memos = memos
         self._middleware = middleware
         self._request = request
         self._target_hashed_id = target_hashed_id
         self._timings = timings
+        self._is_connect = is_connect
+        self._checkpointer: Checkpointer | None = None
+        self._ctx: Context | ContextSync | None = None
+        self._fn: function.Function[typing.Any] | None = None
+
+    def complete_step(self, response: step_lib.StepResponse) -> object:
+        # Defer operations must reach the executor with the callback's result;
+        # persisting only the step would lose those operations on crash/replay.
+        if self._ctx is not None and self._ctx._defer_ops:
+            raise step_lib.ResponseInterrupt(response)
+        if self._checkpointer is None or self._checkpointer.expired:
+            raise step_lib.ResponseInterrupt(response)
+
+        result = CallResult.from_responses([response])
+        err = self._middleware.transform_output_sync(result)
+        if isinstance(err, Exception):
+            raise CheckpointInterrupt(CallResult(err))
+        result.output_transformed = True
+        if result.multi is None:
+            raise errors.UnreachableError("missing checkpoint result")
+        item = result.multi[0]
+        if item.error is not None:
+            raise CheckpointInterrupt(result)
+        wire = response.step.to_dict()
+        if isinstance(wire, Exception):
+            raise CheckpointInterrupt(CallResult(wire))
+        wire["data"] = item.output
+        encoded = transforms.dump_json(wire)
+        if isinstance(encoded, Exception):
+            raise CheckpointInterrupt(CallResult(encoded))
+        if not self._checkpointer.persist_sync(wire):
+            raise CheckpointInterrupt(result)
+        # The queue item is reused: checkpoint success starts the next step's
+        # retry budget at zero, both internally and in the user-visible context.
+        self._request.ctx.attempt = 0
+        if self._ctx is None:
+            raise errors.UnreachableError("missing checkpoint context")
+        self._ctx.attempt = 0
+        # Rehydrate through input middleware just as the next executor request
+        # would. In particular, encryption must be undone before user code sees
+        # the result, and output-changing middleware must affect fresh/replayed
+        # results identically. Only the new memo is transformed again.
+        if self._fn is None:
+            raise errors.UnreachableError("missing checkpoint function")
+        memos = step_lib.StepMemos.from_raw(
+            {response.step.id: {"data": json.loads(encoded)["data"]}}
+        )
+        err = self._middleware.transform_input_sync(self._ctx, self._fn, memos)
+        if isinstance(err, Exception):
+            raise CheckpointInterrupt(CallResult(err))
+        memo = memos.pop(response.step.id)
+        if isinstance(memo, types.EmptySentinel):
+            raise CheckpointInterrupt(
+                CallResult(errors.UnreachableError("missing checkpoint memo"))
+            )
+        if memo.error is not None:
+            raise errors.StepError(
+                message=memo.error.message,
+                name=memo.error.name,
+                stack=memo.error.stack,
+            )
+        return memo.data
 
     def _handle_skip(
         self,
@@ -262,6 +425,16 @@ class ExecutionV0Sync(BaseExecutionSync):
                 step_lib.StepResponse(step=step_info)
             )
 
+        if (
+            step_info.op == server_lib.Opcode.STEP_RUN
+            and self._checkpointer is not None
+            and self._checkpointer.expired
+        ):
+            step_info.op = server_lib.Opcode.PLANNED
+            raise step_lib.ResponseInterrupt(
+                step_lib.StepResponse(step=step_info)
+            )
+
         if step_info.op == server_lib.Opcode.STEP_RUN:
             return step
 
@@ -277,6 +450,23 @@ class ExecutionV0Sync(BaseExecutionSync):
     ) -> CallResult:
         # Give middleware the opportunity to change some of params passed to the
         # user's handler.
+        self._ctx = ctx
+        self._fn = fn
+        config = fn._opts.checkpointing
+        if (
+            isinstance(config, Checkpointing)
+            and not self._is_connect
+            # Executor versions can retain the original attempt in memory
+            # despite resetting the queue item during a checkpoint. Yield the
+            # successful retried step normally to give the next step its budget.
+            and self._request.ctx.attempt == 0
+            and self._target_hashed_id is None
+            and not self._request.ctx.disable_immediate_execution
+            and self._request.ctx.fn_id
+            and self._request.ctx.qi_id
+        ):
+            self._checkpointer = Checkpointer(client, self._request, config)
+
         middleware_err = self._middleware.transform_input_sync(
             ctx, fn, self._memos
         )
@@ -303,6 +493,11 @@ class ExecutionV0Sync(BaseExecutionSync):
                 return CallResult(err)
 
             return CallResult(output=output)
+        except CheckpointInterrupt as interrupt:
+            err = self._middleware.after_execution_sync()
+            if isinstance(err, Exception):
+                return CallResult(err)
+            return interrupt.result
         except step_lib.ResponseInterrupt as interrupt:
             err = self._middleware.after_execution_sync()
             if isinstance(err, Exception):

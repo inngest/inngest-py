@@ -229,12 +229,6 @@ class Step(base.StepBase):
 
                 output = self._client._serialize(output, output_type)  # type: ignore[assignment]
 
-                raise base.ResponseInterrupt(
-                    base.StepResponse(
-                        output=output,
-                        step=step_info,
-                    )
-                )
             except (errors.NonRetriableError, errors.RetryAfterError) as err:
                 # Bubble up these error types to the function level
                 raise err
@@ -268,6 +262,11 @@ class Step(base.StepBase):
                         step=step_info,
                     )
                 )
+
+            checkpoint_output = await self._execution.complete_step(
+                base.StepResponse(output=output, step=step_info)
+            )
+            return self._client._deserialize(checkpoint_output, output_type)  # type: ignore[return-value]
 
     async def send_event(
         self,

@@ -36,6 +36,9 @@ class CallResult:
     # Step metadata (e.g. user-specified ID)
     step: step_lib.StepInfo | None = None
 
+    # Checkpoint fallback has already applied output middleware.
+    output_transformed: bool = False
+
     @property
     def is_empty(self) -> bool:
         return all(
@@ -287,6 +290,13 @@ class ReportedStepSync:
         if self._current_step_token is None:
             raise errors.UnreachableError("missing current_step token")
         run_context.current_step.reset(self._current_step_token)
+
+
+class CheckpointInterrupt(BaseException):
+    """Yield a prepared result without transforming its output twice."""
+
+    def __init__(self, result: CallResult) -> None:
+        self.result = result
 
 
 class UserError(Exception):
