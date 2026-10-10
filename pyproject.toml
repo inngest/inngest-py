@@ -19,6 +19,7 @@ dev = [
     "cryptography==42.0.5",
     "django-types==0.19.1",
     "fastapi==0.110.0",
+    "hypothesis==6.168.1",
     "inngest[connect]",
     "inngest_encryption",
     "moto[s3,server]==5.0.18",

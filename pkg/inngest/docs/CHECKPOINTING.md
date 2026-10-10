@@ -91,10 +91,12 @@ waits, parallel branches, per-step retry budgets, runtime yielding, encryption,
 function failure after persistence, and actual worker termination/restart on
 both sides of the persistence boundary. Faults and test effects are synthetic.
 
-The optional Hypothesis suite is deliberately named outside pytest's default
-test-file patterns and adds no runtime or CI dependency:
+The Hypothesis replay-model tests run as part of `make utest` and the existing
+unit-test CI job, with 200 generated examples per handler mode by default.
+Hypothesis is a workspace development dependency, not an SDK runtime dependency.
+For a larger local run, from `pkg/inngest`:
 
-    CHECKPOINT_PROPERTY_EXAMPLES=1000 uv run --with hypothesis==6.168.1 --with pytest==9.0.3 pytest tools/checkpoint_properties.py -q --hypothesis-show-statistics
+    CHECKPOINT_PROPERTY_EXAMPLES=1000 uv run pytest inngest/_internal/checkpoint_properties_test.py -q --hypothesis-show-statistics
 
 It generates nested JSON values, repeated step names, transport failure
 sequences, lost worker responses and reversible middleware transformations.

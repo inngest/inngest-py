@@ -1,11 +1,4 @@
-"""
-Optional replay model tests; deliberately outside pytest's default filename pattern.
-
-uv run --with hypothesis==6.168.1 --with pytest==9.0.3 pytest tools/checkpoint_properties.py -q
-"""
-
-# This optional test lives outside the regular tests directory.
-# ruff: noqa: S101, C901, D103
+"""Property-based checkpoint replay tests against an independent durable model."""
 
 import asyncio
 import collections
@@ -15,10 +8,11 @@ import typing
 from unittest import mock
 
 import httpx
-import inngest
 import pytest
 from hypothesis import given, note, settings
 from hypothesis import strategies as st
+
+import inngest
 from inngest._internal import net, server_lib
 from inngest._internal.checkpoint import Checkpointer
 from inngest._internal.checkpoint_test import request
