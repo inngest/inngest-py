@@ -21,6 +21,8 @@ class DeferredState(types.BaseModel):
 
 
 class ServerRequestCtx(types.BaseModel):
+    fn_id: str | None = None
+    qi_id: str | None = None
     attempt: int
     disable_immediate_execution: bool
     max_attempts: int | None = None

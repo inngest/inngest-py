@@ -266,7 +266,14 @@ class StepUserlandInfo:
     index: int | None
 
 
+class StepTiming(types.BaseModel):
+    # Server interval contract: Unix start and monotonic duration, in nanoseconds.
+    a: int
+    b: int
+
+
 class StepResponse(types.BaseModel):
     output: object = None
+    timing: StepTiming | None = pydantic.Field(default=None, exclude=True)
     original_error: object = pydantic.Field(default=None, exclude=True)
     step: StepInfo

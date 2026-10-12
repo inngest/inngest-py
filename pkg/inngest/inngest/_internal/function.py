@@ -17,6 +17,7 @@ from inngest._internal import (
     server_lib,
     types,
 )
+from inngest._internal.checkpoint import Checkpointing
 
 
 @dataclasses.dataclass
@@ -32,6 +33,7 @@ class FunctionOpts(types.BaseModel):
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
     batch_events: server_lib.Batch | None
+    checkpointing: Checkpointing | bool = False
     cancel: list[server_lib.Cancel] | None
     concurrency: list[server_lib.Concurrency] | None
     debounce: server_lib.Debounce | None
@@ -184,7 +186,11 @@ class Function(typing.Generic[types.T]):
                 output_type,
             )
 
-        err = await middleware.transform_output(call_res)
+        err = (
+            None
+            if call_res.output_transformed
+            else await middleware.transform_output(call_res)
+        )
         if isinstance(err, Exception):
             return deferred.attach(ctx, execution_lib.CallResult(err))
 
@@ -241,7 +247,11 @@ class Function(typing.Generic[types.T]):
                 output_type,
             )
 
-        err = middleware.transform_output_sync(call_res)
+        err = (
+            None
+            if call_res.output_transformed
+            else middleware.transform_output_sync(call_res)
+        )
         if isinstance(err, Exception):
             return deferred.attach(ctx, execution_lib.CallResult(err))
 
@@ -276,6 +286,16 @@ class Function(typing.Generic[types.T]):
             runtime_type = "ws"
 
         main = server_lib.FunctionConfig(
+            checkpoint=(
+                {
+                    "batch_steps": 1,
+                    "batch_interval": "0s",
+                    "max_runtime": f"{self._opts.checkpointing.max_runtime.total_seconds():.6f}s",
+                }
+                if isinstance(self._opts.checkpointing, Checkpointing)
+                and runtime_type == "http"
+                else None
+            ),
             batch_events=self._opts.batch_events,
             cancel=self._opts.cancel,
             concurrency=self._opts.concurrency,

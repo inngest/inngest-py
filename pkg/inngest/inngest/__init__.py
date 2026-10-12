@@ -1,5 +1,6 @@
 """Public entrypoint for the Inngest SDK."""
 
+from ._internal.checkpoint import Checkpointing
 from ._internal.client_lib import Inngest, SendEventsResult
 from ._internal.const import Streaming
 from ._internal.errors import NonRetriableError, RetryAfterError, StepError
@@ -31,6 +32,7 @@ from ._internal.step_lib import Step, StepMemos, StepSync
 from ._internal.types import JSON
 
 __all__ = [
+    "Checkpointing",
     "Batch",
     "Cancel",
     "Concurrency",
