@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import time
 import typing
 
 import typing_extensions
@@ -220,6 +221,8 @@ class StepSync(base.StepBase):
             elif not isinstance(step.output, types.EmptySentinel):
                 return self._client._deserialize(step.output, output_type)  # type: ignore[return-value]
 
+            started_ns = time.time_ns()
+            monotonic_started_ns = time.monotonic_ns()
             try:
                 output = handler(*handler_args)
                 output = self._client._serialize(output, output_type)  # type: ignore[assignment]
@@ -259,7 +262,14 @@ class StepSync(base.StepBase):
                 )
 
             checkpoint_output = self._execution.complete_step(
-                base.StepResponse(output=output, step=step_info)
+                base.StepResponse(
+                    output=output,
+                    step=step_info,
+                    timing=base.StepTiming(
+                        a=started_ns,
+                        b=time.monotonic_ns() - monotonic_started_ns,
+                    ),
+                )
             )
             return self._client._deserialize(checkpoint_output, output_type)  # type: ignore[return-value]
 

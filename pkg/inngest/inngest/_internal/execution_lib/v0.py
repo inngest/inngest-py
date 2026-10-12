@@ -76,6 +76,8 @@ class ExecutionV0(BaseExecution):
         if isinstance(wire, Exception):
             raise CheckpointInterrupt(CallResult(wire))
         wire["data"] = item.output
+        if response.timing is not None:
+            wire["timing"] = response.timing.model_dump()
         encoded = transforms.dump_json(wire)
         if isinstance(encoded, Exception):
             raise CheckpointInterrupt(CallResult(encoded))
@@ -323,6 +325,8 @@ class ExecutionV0Sync(BaseExecutionSync):
         if isinstance(wire, Exception):
             raise CheckpointInterrupt(CallResult(wire))
         wire["data"] = item.output
+        if response.timing is not None:
+            wire["timing"] = response.timing.model_dump()
         encoded = transforms.dump_json(wire)
         if isinstance(encoded, Exception):
             raise CheckpointInterrupt(CallResult(encoded))

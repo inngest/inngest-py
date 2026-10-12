@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import hashlib
 import json
+import time
 import typing
 from unittest import mock
 
@@ -83,6 +84,13 @@ def test_execution(sync: bool, scenario: str) -> None:
     def transport(req: httpx.Request) -> httpx.Response:
         requests.append(req)
         body = json.loads(req.content)
+        for step in body["steps"]:
+            timing = step["timing"]
+            assert isinstance(timing["a"], int)
+            assert isinstance(timing["b"], int)
+            assert invocation_started_ns <= timing["a"] <= time.time_ns()
+            assert 0 <= timing["b"] < 10_000_000_000
+            assert timing["a"] + timing["b"] <= time.time_ns()
         assert body["fn_id"] == "05bb848e-3cc7-4870-b2a0-18881cd9c40a"
         assert body["qi_id"] == "queue-reference"
         assert req.headers["x-inngest-env"] == "test-branch"
@@ -200,6 +208,8 @@ def test_execution(sync: bool, scenario: str) -> None:
             "fnId": "test-fn",
             "stepId": hashlib.sha1(b"a").hexdigest(),
         }
+
+    invocation_started_ns = time.time_ns()
 
     # A runtime already consumed before a new step must plan, not execute it.
     with mock.patch(

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import inspect
+import time
 import typing
 
 import typing_extensions
@@ -216,6 +217,8 @@ class Step(base.StepBase):
             elif not isinstance(step.output, types.EmptySentinel):
                 return self._client._deserialize(step.output, output_type)  # type: ignore[return-value]
 
+            started_ns = time.time_ns()
+            monotonic_started_ns = time.monotonic_ns()
             try:
                 if inspect.iscoroutinefunction(handler):
                     output = await handler(*handler_args)
@@ -264,7 +267,14 @@ class Step(base.StepBase):
                 )
 
             checkpoint_output = await self._execution.complete_step(
-                base.StepResponse(output=output, step=step_info)
+                base.StepResponse(
+                    output=output,
+                    step=step_info,
+                    timing=base.StepTiming(
+                        a=started_ns,
+                        b=time.monotonic_ns() - monotonic_started_ns,
+                    ),
+                )
             )
             return self._client._deserialize(checkpoint_output, output_type)  # type: ignore[return-value]
 
