@@ -201,8 +201,9 @@ class SendEventsError(Error):
         ----
             message: Error message
             ids: Event IDs in the same order as the sent events, with an
-                empty string for each event that failed to send. Empty if
-                the request failed before any event was processed
+                empty string for each event that failed to send. May be empty
+                if the request failed before any event was processed or no
+                response was received. Without a response, delivery is unknown.
         """
 
         super().__init__(message)
