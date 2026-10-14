@@ -200,7 +200,9 @@ class SendEventsError(Error):
         Args:
         ----
             message: Error message
-            ids: List of event IDs that successfully sent
+            ids: Event IDs in the same order as the sent events, with an
+                empty string for each event that failed to send. Empty if
+                the request failed before any event was processed
         """
 
         super().__init__(message)
