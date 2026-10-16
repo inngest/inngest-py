@@ -78,6 +78,7 @@ class AuthenticatedHTTPClient:
         req = self.build_httpx_request(
             "GET",
             url,
+            timeout=self._default_timeout,
             headers={
                 # Default headers
                 **create_headers(
@@ -132,6 +133,7 @@ class AuthenticatedHTTPClient:
         req = self.build_httpx_request(
             "GET",
             url,
+            timeout=self._default_timeout,
             headers={
                 # Default headers
                 **create_headers(
