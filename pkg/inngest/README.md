@@ -40,6 +40,10 @@ Python 3.10 is the minimum version we support.
 
 [Quick start guide](https://www.inngest.com/docs/getting-started/quick-start/python)
 
+For opt-in sequential HTTP checkpointing, see the
+[checkpointing guide](docs/CHECKPOINTING.md), including compatibility
+limits and replay tests.
+
 ## Examples
 
 > 💡 You can mix `async` and non-`async` functions in the same app!

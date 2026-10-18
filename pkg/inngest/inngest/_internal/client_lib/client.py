@@ -27,6 +27,7 @@ from inngest._internal import (
     sessions,
     types,
 )
+from inngest._internal.checkpoint import Checkpointing
 
 from . import models
 from .utils import get_api_origin, get_event_api_origin
@@ -78,6 +79,7 @@ class Inngest:
         api_base_url: str | None = None,
         app_id: str,
         app_version: str | None = None,
+        checkpointing: Checkpointing | bool = False,
         env: str | None = None,
         event_api_base_url: str | None = None,
         event_key: str | None = None,
@@ -94,6 +96,7 @@ class Inngest:
             api_base_url: Origin for the Inngest REST API.
             app_id: Unique Inngest ID. Changing this ID will make Inngest think it's a different app.
             app_version: Arbitrary version identifier (e.g. a semver string or Git SHA).
+            checkpointing: Enable sequential HTTP checkpointing. Disabled by default.
             env: Branch environment to use. This is only necessary for branch environments.
             event_api_base_url: Origin for the Inngest Event API.
             event_key: Inngest event key.
@@ -105,6 +108,9 @@ class Inngest:
             signing_key: Inngest signing key.
         """
 
+        self._checkpointing = (
+            Checkpointing() if checkpointing is True else checkpointing
+        )
         self.app_id = app_id
         self._app_version = app_version
         self.logger = logger or logging.getLogger(__name__)
@@ -223,6 +229,7 @@ class Inngest:
         *,
         batch_events: server_lib.Batch | None = None,
         cancel: list[server_lib.Cancel] | None = None,
+        checkpointing: Checkpointing | bool | None = None,
         concurrency: list[server_lib.Concurrency] | None = None,
         debounce: server_lib.Debounce | None = None,
         fn_id: str,
@@ -256,6 +263,7 @@ class Inngest:
         ----
             batch_events: Event batching config.
             cancel: Run cancellation config.
+            checkpointing: Inherit the client setting (None), disable (False), or enable sequential HTTP checkpointing.
             concurrency: Concurrency config.
             debounce: Debouncing config.
             fn_id: Function ID. Changing this ID will make Inngest think this is a new function.
@@ -285,6 +293,13 @@ class Inngest:
                 function.FunctionOpts(
                     batch_events=batch_events,
                     cancel=cancel,
+                    checkpointing=(
+                        self._checkpointing
+                        if checkpointing is None
+                        else Checkpointing()
+                        if checkpointing is True
+                        else checkpointing
+                    ),
                     concurrency=concurrency,
                     debounce=debounce,
                     fully_qualified_id=fully_qualified_fn_id,

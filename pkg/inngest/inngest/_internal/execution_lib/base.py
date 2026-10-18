@@ -26,6 +26,10 @@ class BaseExecution(typing.Protocol):
     version: str
     _request: server_lib.ServerRequest
 
+    async def complete_step(
+        self, response: step_lib.StepResponse
+    ) -> object: ...
+
     async def report_step(
         self,
         step_info: step_lib.StepInfo,
@@ -44,6 +48,8 @@ class BaseExecution(typing.Protocol):
 class BaseExecutionSync(typing.Protocol):
     version: str
     _request: server_lib.ServerRequest
+
+    def complete_step(self, response: step_lib.StepResponse) -> object: ...
 
     def report_step(
         self,

@@ -93,6 +93,17 @@ class Debounce(_BaseConfig):
 
 
 class FunctionConfig(_BaseConfig):
+    checkpoint: dict[str, object] | None = None
+
+    @pydantic.model_serializer(mode="wrap")
+    def serialize_checkpoint(
+        self, handler: pydantic.SerializerFunctionWrapHandler
+    ) -> dict[str, object]:
+        data: dict[str, object] = handler(self)
+        if self.checkpoint is None:
+            data.pop("checkpoint", None)
+        return data
+
     batch_events: Batch | None = pydantic.Field(
         ..., serialization_alias="batchEvents"
     )
