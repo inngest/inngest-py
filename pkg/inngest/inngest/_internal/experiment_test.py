@@ -176,9 +176,18 @@ def test_experiment_discovery_replay_and_scoring(is_sync: bool) -> None:
         memos[ops[0]["id"]] = {"data": ops[0]["data"]}
         _, ops = await harness.request(fn, memos=memos)
         updates = [json.loads(request.content) for request in harness.requests]
-        assert [update["metadata"][0]["kind"] for update in updates] == [
-            "inngest.experiment",
-            "inngest.score",
+        assert [update["metadata"][0] for update in updates] == [
+            {
+                "kind": "inngest.experiment",
+                "op": "merge",
+                "values": {"name": "model", "variant": "control"},
+            },
+            # Each score gets its own kind, like the TypeScript SDK.
+            {
+                "kind": "inngest.score.cost",
+                "op": "merge",
+                "values": {"value": 0.1},
+            },
         ]
         assert all(
             update["target"] == {"run_id": "original"} for update in updates
@@ -341,6 +350,6 @@ def test_partial_experiment_score_failure_is_retryable() -> None:
         assert len(calls) == 4
         assert [call["metadata"][0]["kind"] for call in calls[:2]] == [
             "inngest.experiment",
-            "inngest.score",
+            "inngest.score.cost",
         ]
         assert calls[:2] == calls[2:]

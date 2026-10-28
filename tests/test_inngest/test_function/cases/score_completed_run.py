@@ -26,11 +26,12 @@ class _Span(pydantic.BaseModel):
     metadata: list[_Metadata]
 
     def scores(self) -> dict[str, object]:
+        # The server stores each score under its own inngest.score.<name>
+        # kind.
         return {
-            name: value
+            entry.kind.removeprefix("inngest.score."): entry.values
             for entry in self.metadata
-            if entry.kind == "inngest.score"
-            for name, value in entry.values.items()
+            if entry.kind.startswith("inngest.score.")
         }
 
 
