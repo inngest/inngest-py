@@ -193,7 +193,7 @@ class CommResponse:
 
         if call_res.error is not None:
             status_code = http.HTTPStatus.INTERNAL_SERVER_ERROR.value
-            if errors.is_retriable(call_res.error) is False:
+            if call_res.final or errors.is_retriable(call_res.error) is False:
                 headers[server_lib.HeaderKey.NO_RETRY.value] = "true"
 
             if isinstance(call_res.error, errors.RetryAfterError):

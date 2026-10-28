@@ -44,6 +44,10 @@ class ExecutionV0(BaseExecution):
         self._request = request
         self._target_hashed_id = target_hashed_id
         self._timings = timings
+        self._failures_are_final = False
+
+    def fail_finally(self) -> None:
+        self._failures_are_final = True
 
     def _handle_skip(
         self,
@@ -165,7 +169,7 @@ class ExecutionV0(BaseExecution):
 
             return CallResult.from_responses(interrupt.responses)
         except UserError as err:
-            return CallResult(err.err)
+            return CallResult(err.err, final=self._failures_are_final)
         except step_lib.SkipInterrupt as err:
             # This should only happen in a non-deterministic scenario, where
             # step targeting is enabled and an unexpected step is encountered.
@@ -196,6 +200,10 @@ class ExecutionV0Sync(BaseExecutionSync):
         self._request = request
         self._target_hashed_id = target_hashed_id
         self._timings = timings
+        self._failures_are_final = False
+
+    def fail_finally(self) -> None:
+        self._failures_are_final = True
 
     def _handle_skip(
         self,
@@ -312,7 +320,7 @@ class ExecutionV0Sync(BaseExecutionSync):
 
             return CallResult.from_responses(interrupt.responses)
         except UserError as err:
-            return CallResult(err.err)
+            return CallResult(err.err, final=self._failures_are_final)
         except step_lib.SkipInterrupt as err:
             # This should only happen in a non-deterministic scenario, where
             # step targeting is enabled and an unexpected step is encountered.

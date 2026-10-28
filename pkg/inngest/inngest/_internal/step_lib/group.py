@@ -53,10 +53,9 @@ class Group:
         ```
 
         Step group_id creates the sandbox and step group_id + ":destroy"
-        destroys it when the block ends. The sandbox stays alive while a
-        retry is coming. When the run fails for good, it's destroyed with a
-        plain API call instead of a step, because a completed step would reset
-        the run's retries.
+        destroys it when the block ends, even when the block raises. A retry
+        couldn't use the destroyed sandbox, so the function's errors are final
+        after that.
 
         Args:
         ----
@@ -170,10 +169,9 @@ class GroupSync:
         ```
 
         Step group_id creates the sandbox and step group_id + ":destroy"
-        destroys it when the block ends. The sandbox stays alive while a
-        retry is coming. When the run fails for good, it's destroyed with a
-        plain API call instead of a step, because a completed step would reset
-        the run's retries.
+        destroys it when the block ends, even when the block raises. A retry
+        couldn't use the destroyed sandbox, so the function's errors are final
+        after that.
 
         Args:
         ----

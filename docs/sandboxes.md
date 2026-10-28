@@ -33,9 +33,9 @@ Synchronous functions use `with` instead of `async with` and drop `await`.
 
 Every operation is a step with the ID you pass, so a replay reuses the recorded result instead of calling the API again. Step `build` creates the sandbox and `build:destroy` destroys it. The defaults are a name no other run shares, `f"{run_id}-build"`, and 2 vCPUs with 2048 MiB.
 
-The block keeps the sandbox alive when a step interrupts it, and when it raises an error that Inngest will retry: the retry replays the recorded create and gets the same sandbox. When the run fails for good (a `StepError`, a `NonRetriableError`, or the last attempt), the sandbox is destroyed with a plain API call rather than a step. A completed step resets the run's attempt count, so a destroy step there would give the failing code another full round of retries. If that call fails, it is logged; the sandbox runs until its runtime limit pauses it.
+The block destroys the sandbox whenever it ends, including when it raises. A retry couldn't use the destroyed sandbox, so after that, an error the function raises is final and isn't retried. A step that fails later still retries as usual. If the destroy fails for good, it is logged and doesn't change the run's result.
 
-Catch errors inside the block, not around it. An error that leaves the block with retries left keeps the sandbox for the retry, so if code outside the block catches it and the run goes on, nothing destroys the sandbox. The TypeScript SDK's `group.sandbox` callback behaves the same way.
+A run that is cancelled or times out inside the block doesn't reach the destroy, so the sandbox runs until its own runtime limit stops it.
 
 `ctx.step.sandbox` is the low-level API. Its `create` needs a stable, job-specific name and a size, and you destroy the sandbox yourself:
 

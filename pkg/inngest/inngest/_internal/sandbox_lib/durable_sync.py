@@ -12,15 +12,14 @@ import contextlib
 import datetime
 import hashlib
 import signal as signal_lib
-import time
 import typing
 
 from inngest._internal import errors, run_context
 
 from . import durable_common as common
-from . import models, ops, validation
+from . import models, validation
 from .client import _Info, _ProcessInfo, _SnapshotInfo
-from .errors import SandboxError, SandboxErrorCode, SandboxValidationError
+from .errors import SandboxError, SandboxValidationError
 from .image import SandboxImage
 from .transport import UploadDataSync
 
@@ -32,7 +31,6 @@ if typing.TYPE_CHECKING:
 _DEFAULT_VCPU: typing.Final = 2
 _DEFAULT_MEMORY_MB: typing.Final = 2048
 _MAX_NAME_CHARACTERS: typing.Final = 255
-_DESTROY_ATTEMPTS: typing.Final = 3
 
 
 def _run(step: StepSync, step_id: str, call: common.Call) -> common.Result:
@@ -807,26 +805,22 @@ class GroupSandboxSync:
         try:
             if self._sandbox is None:
                 return
-            if exc is None:
-                self._destroy_durably(self._sandbox)
-            elif isinstance(exc, Exception) and self._is_final(exc):
-                self._destroy_now(self._sandbox)
-            # Otherwise a step interrupted the block, or a retry is coming.
-            # The function resumes later and replays the memoized create, so
-            # the sandbox must stay alive.
+            # Anything else is a step interrupting the block. The function
+            # resumes later and replays the memoized create, so the sandbox
+            # must stay alive.
+            if exc is None or isinstance(exc, Exception):
+                self._destroy(self._sandbox)
         finally:
             if self._span is not None:
                 self._span.__exit__(exc_type, exc, tb)
 
-    def _is_final(self, err: Exception) -> bool:
-        if not errors.is_retriable(err):
-            return True
-        ctx = self._step._execution._request.ctx
-        return (
-            ctx.max_attempts is not None and ctx.attempt + 1 >= ctx.max_attempts
-        )
+    def _destroy(self, sandbox: DurableSandboxSync) -> None:
+        """
+        Destroy the sandbox in a step whenever the block ends, even on an
+        error. A retry couldn't use the destroyed sandbox, so the function's
+        errors are final from here on.
+        """
 
-    def _destroy_durably(self, sandbox: DurableSandboxSync) -> None:
         try:
             sandbox.destroy(f"{self._id}:destroy")
         except (SandboxError, SandboxValidationError, errors.StepError) as err:
@@ -834,30 +828,4 @@ class GroupSandboxSync:
             self._step._client.logger.warning(
                 f"Sandbox {sandbox.id} couldn't be destroyed: {err}"
             )
-
-    def _destroy_now(self, sandbox: DurableSandboxSync) -> None:
-        """
-        Destroy with a plain API call rather than a step. The run is ending,
-        and a completed step would reset the run's attempt count, giving the
-        failing code another round of retries.
-        """
-
-        transport = self._step._client.sandboxes_sync._transport
-        for attempt in range(_DESTROY_ATTEMPTS):
-            try:
-                transport.run(ops.destroy(sandbox.id))
-                return
-            except SandboxError as err:
-                if err.code == SandboxErrorCode.NOT_FOUND.value:
-                    return
-                if not err.retryable or attempt == _DESTROY_ATTEMPTS - 1:
-                    self._step._client.logger.warning(
-                        f"Sandbox {sandbox.id} couldn't be destroyed: {err}"
-                    )
-                    return
-            except SandboxValidationError as err:
-                self._step._client.logger.warning(
-                    f"Sandbox {sandbox.id} couldn't be destroyed: {err}"
-                )
-                return
-            time.sleep(0.5 * (attempt + 1))
+        self._step._execution.fail_finally()

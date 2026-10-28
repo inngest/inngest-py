@@ -473,33 +473,69 @@ def _raise_non_retriable() -> None:
 
 @pytest.mark.parametrize("is_sync", [False, True])
 @pytest.mark.parametrize(
-    ("fail", "attempt", "destroys"),
-    [
-        # A retry is coming and will replay the create: keep the sandbox.
-        (_raise_value_error, 0, False),
-        # The last attempt: destroy without a step.
-        (_raise_value_error, 3, True),
-        # A non-retriable error ends the run on any attempt.
-        (_raise_non_retriable, 0, True),
-    ],
+    "fail",
+    [_raise_value_error, _raise_non_retriable],
+    ids=["retriable", "final"],
 )
-def test_group_sandbox_on_error(
-    is_sync: bool,
-    fail: typing.Callable[[], None],
-    attempt: int,
-    destroys: bool,
+def test_group_sandbox_destroys_on_error_and_ends_retries(
+    is_sync: bool, fail: typing.Callable[[], None]
 ) -> None:
     h = Harness()
     fn = h.function(*_group_fns(fail), is_sync)
     h.step(fn)
     h.step(fn)
 
-    response, body = h.request(fn, attempt=attempt, max_attempts=4)
-    # The function's own error is reported, not a destroy step.
+    # Even on the first attempt, the error destroys the sandbox in a step.
+    destroy = h.step(fn, attempt=0, max_attempts=4)
+    assert destroy["id"] == hid("box:destroy")
+    assert h.fake.sandboxes == {}
+
+    # A retry couldn't use the destroyed sandbox, so the error is final.
+    response, body = h.request(fn, attempt=0, max_attempts=4)
     assert response.status_code == 500
     assert body["message"] in ("boom", "stop")
-    assert h.fake.count("DELETE /v2/sandboxes/{id}") == (1 if destroys else 0)
-    assert (h.fake.sandboxes == {}) is destroys
+    assert response.headers[server_lib.HeaderKey.NO_RETRY.value] == "true"
+    assert h.fake.count("DELETE /v2/sandboxes/{id}") == 1
+
+
+def test_step_failing_after_group_sandbox_still_retries() -> None:
+    h = Harness()
+
+    async def async_fn(ctx: inngest.Context) -> None:
+        async with ctx.group.sandbox("box"):
+            pass
+
+        async def after() -> None:
+            raise ValueError("temporary")
+
+        await ctx.step.run("after", after)
+
+    fn = h.function(async_fn, lambda ctx: None, is_sync=False)
+    h.step(fn)
+    h.step(fn)
+    response, body = h.request(fn, attempt=0, max_attempts=4)
+    # Only the function body's errors become final, not a step's own.
+    assert response.status_code == 206
+    assert body[0]["id"] == hid("after")
+    assert body[0]["op"] == "StepError"
+    assert server_lib.HeaderKey.NO_RETRY.value not in response.headers
+
+
+def test_error_without_group_sandbox_stays_retriable() -> None:
+    h = Harness()
+
+    async def async_fn(ctx: inngest.Context) -> None:
+        await ctx.step.sandbox.create(
+            "create", name="job", vcpu=1, memory_mb=1024
+        )
+        raise ValueError("boom")
+
+    fn = h.function(async_fn, lambda ctx: None, is_sync=False)
+    h.step(fn)
+    response, _ = h.request(fn, attempt=0, max_attempts=4)
+    assert response.status_code == 500
+    assert server_lib.HeaderKey.NO_RETRY.value not in response.headers
+    assert h.fake.count("DELETE /v2/sandboxes/{id}") == 0
 
 
 @pytest.mark.parametrize(
