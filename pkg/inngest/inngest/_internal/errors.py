@@ -246,11 +246,20 @@ class StepError(Error):
 
         return self._stack
 
+    @property
+    def data(self) -> object:
+        """
+        Returns SDK-defined data stored with the error, if any
+        """
+
+        return self._data
+
     def __init__(
         self,
         message: str,
         name: str,
         stack: str | None,
+        data: object = None,
     ) -> None:
         """
         Args:
@@ -258,16 +267,48 @@ class StepError(Error):
             message: Userland error's message
             name: Userland error's name
             stack: Userland error's stack trace
+            data: SDK-defined data stored with the error
         """
 
         super().__init__(message)
         self._message = message
         self._name = name
         self._stack = stack
+        self._data = data
+
+
+class StepFailureError(Error):
+    """
+    Raise inside a step.run handler to report err with structured data, which
+    a replay reads from StepError.data. A non-retriable failure fails the step
+    immediately instead of retrying it.
+    """
+
+    def __init__(
+        self,
+        err: Exception,
+        *,
+        data: object,
+        is_retriable: bool,
+    ) -> None:
+        super().__init__(str(err))
+        self.err = err
+        self.data = data
+        self.is_retriable = is_retriable
+
+    @property
+    def name(self) -> str:
+        return type(self.err).__name__
+
+    @property
+    def stack(self) -> str | None:
+        return transforms.get_traceback(self.err)
 
 
 def is_retriable(err: Exception) -> bool:
     if isinstance(err, Error):
+        return err.is_retriable
+    if isinstance(err, _Retriable):
         return err.is_retriable
     return True
 
@@ -281,3 +322,13 @@ def is_quiet(err: Exception) -> bool:
 @typing.runtime_checkable
 class _Quietable(typing.Protocol):
     quiet: bool
+
+
+@typing.runtime_checkable
+class _Retriable(typing.Protocol):
+    """
+    Errors outside the Error hierarchy, like SandboxError, set is_retriable to
+    opt out of function retries.
+    """
+
+    is_retriable: bool

@@ -82,6 +82,7 @@ class ExecutionV0(BaseExecution):
                     message=memo.error.message,
                     name=memo.error.name,
                     stack=memo.error.stack,
+                    data=memo.error.data,
                 )
             elif not isinstance(memo.data, types.EmptySentinel):
                 step.output = memo.data
@@ -230,6 +231,7 @@ class ExecutionV0Sync(BaseExecutionSync):
                     message=memo.error.message,
                     name=memo.error.name,
                     stack=memo.error.stack,
+                    data=memo.error.data,
                 )
             elif not isinstance(memo.data, types.EmptySentinel):
                 step.output = memo.data

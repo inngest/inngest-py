@@ -21,6 +21,7 @@ from inngest._internal import (
     middleware_lib,
     net,
     run_context,
+    sandbox_lib,
     scores,
     serializer_lib,
     server_lib,
@@ -43,6 +44,8 @@ RETRY_BASE_DELAY = 0.1  # 100ms in seconds
 
 class Inngest:
     middleware: list[middleware_lib.UninitializedMiddleware]
+    _sandboxes: sandbox_lib.Sandboxes | None
+    _sandboxes_sync: sandbox_lib.SandboxesSync | None
 
     @property
     def api_origin(self) -> str:
@@ -71,6 +74,32 @@ class Inngest:
     @property
     def app_version(self) -> str | None:
         return self._app_version
+
+    @property
+    def sandboxes(self) -> sandbox_lib.Sandboxes:
+        """
+        EXPERIMENTAL: Direct, non-durable access to sandboxes. Use
+        ctx.step.sandbox inside a function to run each operation as a durable
+        step.
+        """
+
+        if self._sandboxes is None:
+            self._sandboxes = sandbox_lib.Sandboxes(
+                sandbox_lib.SandboxTransport(self)
+            )
+        return self._sandboxes
+
+    @property
+    def sandboxes_sync(self) -> sandbox_lib.SandboxesSync:
+        """
+        EXPERIMENTAL: Synchronous version of sandboxes.
+        """
+
+        if self._sandboxes_sync is None:
+            self._sandboxes_sync = sandbox_lib.SandboxesSync(
+                sandbox_lib.SandboxTransportSync(self)
+            )
+        return self._sandboxes_sync
 
     def __init__(
         self,
@@ -152,6 +181,8 @@ class Inngest:
         self._event_api_origin = maybe_str
 
         self._serializer = serializer
+        self._sandboxes = None
+        self._sandboxes_sync = None
         self._http_client = net.AuthenticatedHTTPClient(
             env=self._env,
             signing_key=self._signing_key,

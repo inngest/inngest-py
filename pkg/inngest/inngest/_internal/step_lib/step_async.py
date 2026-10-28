@@ -10,6 +10,7 @@ from inngest._internal import (
     client_lib,
     errors,
     run_context,
+    sandbox_lib,
     server_lib,
     sessions,
     transforms,
@@ -42,6 +43,7 @@ class Step(base.StepBase):
         )
 
         self.ai = AI(self)
+        self.sandbox = sandbox_lib.DurableSandboxTools(self)
         self._execution = exe
 
     async def invoke(
@@ -196,15 +198,25 @@ class Step(base.StepBase):
         *handler_args: typing_extensions.Unpack[types.TTuple],
         output_type: object = types.EmptySentinel,
         step_type: str | None = None,
+        display_name: str | None = None,
+        origin: str | None = None,
     ) -> types.T:
         parsed_step_id = self._parse_step_id(step_id)
 
+        opts: dict[str, object] = {}
+        if step_type is not None:
+            opts["type"] = step_type
+        if origin is not None:
+            # The library that ran this step for the user, like
+            # "inngest-py@1.0.0". The Inngest UI de-emphasizes such steps.
+            opts["origin"] = origin
+
         step_info = base.StepInfo(
-            display_name=parsed_step_id.user_facing,
+            display_name=display_name or parsed_step_id.user_facing,
             id=parsed_step_id.hashed,
             name=parsed_step_id.user_facing,
             op=server_lib.Opcode.STEP_RUN,
-            opts={"type": step_type} if step_type is not None else None,
+            opts=opts or None,
             userland=parsed_step_id.userland_info(),
         )
 
@@ -242,7 +254,12 @@ class Step(base.StepBase):
                 transforms.remove_first_traceback_frame(err)
 
                 max_attempts = self._execution._request.ctx.max_attempts
-                if (
+                if not errors.is_retriable(err) and isinstance(
+                    err, errors.StepFailureError
+                ):
+                    # Fail now, even with retries left.
+                    step_info.op = server_lib.Opcode.STEP_FAILED
+                elif (
                     max_attempts is not None
                     and self._execution._request.ctx.attempt + 1 >= max_attempts
                 ):

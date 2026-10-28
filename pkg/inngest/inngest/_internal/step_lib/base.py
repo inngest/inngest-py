@@ -21,6 +21,9 @@ class MemoizedError(types.BaseModel):
     name: str
     stack: str | None = None
 
+    # SDK-defined data sent with the error by StepFailureError.
+    data: object = None
+
     @classmethod
     def from_error(cls, err: Exception) -> MemoizedError:
         return cls(
@@ -157,6 +160,15 @@ class StepIDCounter:
 
             self._counts[hashed_id] += 1
             return self._counts[hashed_id]
+
+    def peek(self, step_id: str) -> str:
+        """
+        The deduplicated ID that the next use of step_id will get.
+        """
+
+        with self._mutex:
+            count = self._counts.get(step_id, 0)
+        return step_id if count == 0 else f"{step_id}:{count}"
 
 
 class ResponseInterrupt(BaseException):
