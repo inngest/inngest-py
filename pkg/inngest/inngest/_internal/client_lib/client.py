@@ -414,8 +414,8 @@ class Inngest:
         scores.validate_score(name, value, run_id, step_id)
         await scores.write(
             self,
-            kind="inngest.score",
-            values={name: {"value": value}},
+            kind=f"inngest.score.{name}",
+            values={"value": value},
             run_id=run_id,
             step_id=step_id,
         )
@@ -432,8 +432,8 @@ class Inngest:
         scores.validate_score(name, value, run_id, step_id)
         scores.write_sync(
             self,
-            kind="inngest.score",
-            values={name: {"value": value}},
+            kind=f"inngest.score.{name}",
+            values={"value": value},
             run_id=run_id,
             step_id=step_id,
         )
