@@ -146,9 +146,11 @@ def create(
             metadata = {
                 item["kind"]: item for item in data["run"]["trace"]["metadata"]
             }
-            assert metadata["inngest.score"]["values"] == {
-                "turns": {"value": 7},
-                "approved": {"value": True},
+            # The server stores each score under its own inngest.score.<name>
+            # kind.
+            assert metadata["inngest.score.turns"]["values"] == {"value": 7}
+            assert metadata["inngest.score.approved"]["values"] == {
+                "value": True
             }
             assert metadata["inngest.experiment"]["scope"] == "run"
             assert metadata["inngest.experiment"]["values"] == {

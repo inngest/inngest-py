@@ -109,9 +109,8 @@ class TestSend(unittest.IsolatedAsyncioTestCase):
 
     async def test_partial_send_error(self) -> None:
         """
-        Sending bulk events can result in a partial error. For example, sending
-        a valid event and an invalid event will result in 1 successfully sent
-        event and 1 error
+        Sending bulk events can result in a partial error. Every event is
+        handled, and ids has an empty string for each one that failed
         """
 
         client = inngest.Inngest(
@@ -126,12 +125,15 @@ class TestSend(unittest.IsolatedAsyncioTestCase):
                 [
                     inngest.Event(name="foo"),
                     inngest.Event(name=""),
-                    # This event will not be processed since the previous event
-                    # is invalid
-                    inngest.Event(name=""),
+                    inngest.Event(name="bar"),
                 ]
             )
-        assert len(ctx.exception.ids) == 1
+        ids = ctx.exception.ids
+        assert len(ids) == 3
+        assert ids[0] != ""
+        assert ids[1] == ""
+        # An invalid event doesn't stop the events after it.
+        assert ids[2] != ""
 
     async def test_client_send_retry(self) -> None:
         """
