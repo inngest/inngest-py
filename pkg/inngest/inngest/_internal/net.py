@@ -7,6 +7,7 @@ import hmac
 import http
 import threading
 import time
+import typing
 import urllib.parse
 
 import httpx
@@ -250,10 +251,48 @@ class ThreadAwareAsyncHTTPClient(httpx.AsyncClient):
     """
     Thin wrapper around httpx.AsyncClient. It keeps track of the thread it was
     created in, which is critical since asyncio is not thread safe: calling an
-    async method in a different thread will raise an exception
+    async method in a different thread will raise an exception.
+
+    Its pooled connections also belong to the event loop that opened them, so
+    each other event loop gets its own client (see for_running_loop).
     """
 
     _creation_thread_id: int | None = None
+
+    def __init__(self, **kwargs: typing.Any) -> None:
+        super().__init__(**kwargs)
+        self._kwargs = kwargs
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._loop_clients: dict[
+            asyncio.AbstractEventLoop, httpx.AsyncClient
+        ] = {}
+        self._loop_lock = threading.Lock()
+
+    def for_running_loop(self) -> httpx.AsyncClient:
+        """
+        The client to use in the running event loop: this one in the first
+        loop that sends with it, and a separate client in every other loop.
+        Reusing a connection opened in a loop that has since closed fails
+        with "Event loop is closed", which happens when each request runs in
+        its own asyncio.run().
+        """
+
+        loop = asyncio.get_running_loop()
+        with self._loop_lock:
+            if self._loop is None:
+                self._loop = loop
+            if loop is self._loop:
+                return self
+
+            # A client references its loop, so drop clients whose loop has
+            # closed rather than keeping them forever.
+            for closed in [k for k in self._loop_clients if k.is_closed()]:
+                del self._loop_clients[closed]
+            client = self._loop_clients.get(loop)
+            if client is None:
+                client = httpx.AsyncClient(**self._kwargs)
+                self._loop_clients[loop] = client
+            return client
 
     def is_same_thread(self) -> bool:
         if self._creation_thread_id is None:
@@ -488,7 +527,7 @@ async def fetch_with_thready_safety(
         # Python freaks out if you call httpx.AsyncClient's methods in multiple
         # threads. So we'll only use it if we're in the same thread as its first
         # method call
-        return await client.send(request)
+        return await client.for_running_loop().send(request)
 
     loop = async_lib.get_event_loop()
     if loop is None:
