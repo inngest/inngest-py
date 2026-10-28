@@ -238,8 +238,11 @@ def _create_sync_message(
     apps: list[connect_pb2.AppConfiguration] = []
     for app_id, config in app_configs.items():
         try:
+            # Connect hashes this array. Discovery order must not create a new
+            # worker group for otherwise identical function configurations.
             functions_bytes = pydantic_core.to_json(
-                config.functions, exclude_none=True
+                sorted(config.functions, key=lambda fn: fn.id),
+                exclude_none=True,
             )
         except Exception as err:
             return err
