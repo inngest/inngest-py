@@ -538,6 +538,23 @@ def test_error_without_group_sandbox_stays_retriable() -> None:
     assert h.fake.count("DELETE /v2/sandboxes/{id}") == 0
 
 
+def test_other_errors_with_is_retriable_still_retry() -> None:
+    # Only sandbox errors opt out of retries through is_retriable, not any
+    # error from another library that happens to have the attribute.
+    class OtherError(Exception):
+        is_retriable = False
+
+    h = Harness()
+
+    async def async_fn(ctx: inngest.Context) -> None:
+        raise OtherError("boom")
+
+    fn = h.function(async_fn, lambda ctx: None, is_sync=False)
+    response, _ = h.request(fn, attempt=0, max_attempts=4)
+    assert response.status_code == 500
+    assert server_lib.HeaderKey.NO_RETRY.value not in response.headers
+
+
 @pytest.mark.parametrize(
     "options",
     [
