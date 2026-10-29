@@ -1,7 +1,11 @@
+import asyncio
+import gc
 import hashlib
 import hmac
+import http.server
 import json
 import os
+import threading
 import time
 import typing
 import unittest
@@ -444,6 +448,43 @@ class Test_fetch_with_auth_fallback(unittest.IsolatedAsyncioTestCase):
         assert not isinstance(res, Exception)
         assert res.status_code == 200
         assert req_count == 1
+
+
+class Test_AuthenticatedHTTPClient(unittest.TestCase):
+    def test_reused_across_event_loops(self) -> None:
+        """
+        A keep-alive connection opened in one event loop can't be reused in
+        another, as when each request runs in its own asyncio.run()
+        """
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            protocol_version = "HTTP/1.1"  # Keep connections open.
+
+            def do_POST(self) -> None:
+                self.rfile.read(int(self.headers["Content-Length"]))
+                self.send_response(204)
+                self.end_headers()
+
+            def log_message(self, format: str, *args: object) -> None:
+                pass
+
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            client = net.AuthenticatedHTTPClient(
+                env=None, signing_key=None, signing_key_fallback=None
+            )
+            url = f"http://127.0.0.1:{server.server_address[1]}/"
+            for _ in range(3):
+                res = asyncio.run(client.post(url, {}))
+                assert not isinstance(res, Exception), res
+                assert res.status_code == 204
+            gc.collect()
+            # Clients for closed loops aren't kept.
+            assert len(client._http_client._loop_clients) <= 1
+        finally:
+            server.shutdown()
+            server.server_close()
 
 
 class Test_parse_url(unittest.TestCase):
