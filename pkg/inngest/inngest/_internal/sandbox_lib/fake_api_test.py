@@ -17,7 +17,7 @@ import uuid
 import httpx
 
 import inngest
-from inngest._internal import sandbox_lib, transforms
+from inngest._internal import net, transforms
 from inngest._internal.sandbox_lib import ops
 
 NOW: typing.Final = "2026-10-14T12:00:00Z"
@@ -89,12 +89,12 @@ class FakeAPI:
             is_production=is_production,
             signing_key=signing_key,
         )
-        client._sandboxes = sandbox_lib.Sandboxes(
-            sandbox_lib.SandboxTransport(client, self.transport)
+        client._http_client._http_client_sync = httpx.Client(
+            transport=self.transport
         )
-        client._sandboxes_sync = sandbox_lib.SandboxesSync(
-            sandbox_lib.SandboxTransportSync(client, self.transport)
-        )
+        client._http_client._http_client = net.ThreadAwareAsyncHTTPClient(
+            transport=self.transport
+        ).initialize()
         return client
 
     def count(self, key: str) -> int:

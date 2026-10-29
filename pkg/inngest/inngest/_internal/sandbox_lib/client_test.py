@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import asyncio
 import datetime
-import gc
 import http.server
 import inspect
 import io
@@ -655,10 +654,14 @@ def test_async_upload_reads_sync_files_in_chunks(
     assert reads == [4, 4, 4, 4]
 
 
-def test_async_client_does_not_keep_closed_loops() -> None:
-    # Over real sockets, an HTTP client references its event loop. Async
-    # functions served by a sync framework run each request in a new loop.
+def test_async_client_works_across_event_loops() -> None:
+    # Over real sockets, pooled connections belong to the event loop that
+    # opened them. Async functions served by a sync framework run each
+    # request in a new loop.
     class Handler(http.server.BaseHTTPRequestHandler):
+        # Keep connections open so the next loop could reuse one.
+        protocol_version = "HTTP/1.1"
+
         def do_GET(self) -> None:
             body = b'{"page":{"limit":50},"metadata":{"fetchedAt":"x"}}'
             self.send_response(200)
@@ -680,8 +683,6 @@ def test_async_client_does_not_keep_closed_loops() -> None:
         )
         for _ in range(3):
             asyncio.run(client.sandboxes.list())
-        gc.collect()
-        assert len(client.sandboxes._transport._clients) == 1
     finally:
         server.shutdown()
         server.server_close()

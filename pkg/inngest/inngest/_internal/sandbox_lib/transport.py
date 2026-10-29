@@ -13,7 +13,6 @@ import asyncio
 import contextlib
 import http
 import json
-import threading
 import time
 import typing
 import urllib.parse
@@ -324,34 +323,9 @@ def _file_query(path: str, mode: str | None) -> dict[str, str]:
 
 class SandboxTransport(_Base):
     """
-    Async transport. Keeps one HTTP client per event loop, since an
-    httpx.AsyncClient can't be shared across loops.
+    Async transport. Sends with the client's HTTP client for the running event
+    loop, since an httpx.AsyncClient can't be shared across loops.
     """
-
-    def __init__(
-        self,
-        client: client_lib.Inngest,
-        http_transport: httpx.AsyncBaseTransport | None = None,
-    ) -> None:
-        super().__init__(client)
-        self._http_transport = http_transport
-        self._clients: dict[asyncio.AbstractEventLoop, httpx.AsyncClient] = {}
-        self._lock = threading.Lock()
-
-    def _http(self) -> httpx.AsyncClient:
-        loop = asyncio.get_running_loop()
-        with self._lock:
-            # A client references its loop, so a weak mapping would never drop
-            # it. Drop clients whose loop has closed, like each asyncio.run's.
-            for closed in [k for k in self._clients if k.is_closed()]:
-                del self._clients[closed]
-            http_client = self._clients.get(loop)
-            if http_client is None or http_client.is_closed:
-                http_client = httpx.AsyncClient(
-                    transport=self._http_transport, timeout=_TIMEOUT
-                )
-                self._clients[loop] = http_client
-            return http_client
 
     async def run(self, op: ops.Op[T]) -> T:
         """
@@ -388,7 +362,7 @@ class SandboxTransport(_Base):
         stream: bool = False,
     ) -> httpx.Response:
         key, fallback = self._keys()
-        http_client = self._http()
+        http_client = self._client._http_client._http_client.for_running_loop()
 
         def build(auth: str | None) -> httpx.Request:
             return http_client.build_request(
@@ -550,18 +524,8 @@ class SandboxTransport(_Base):
 
 class SandboxTransportSync(_Base):
     """
-    Sync transport.
+    Sync transport. Sends with the client's sync HTTP client.
     """
-
-    def __init__(
-        self,
-        client: client_lib.Inngest,
-        http_transport: httpx.BaseTransport | None = None,
-    ) -> None:
-        super().__init__(client)
-        self._http_client = httpx.Client(
-            transport=http_transport, timeout=_TIMEOUT
-        )
 
     def run(self, op: ops.Op[T]) -> T:
         """
@@ -598,9 +562,10 @@ class SandboxTransportSync(_Base):
         stream: bool = False,
     ) -> httpx.Response:
         key, fallback = self._keys()
+        http_client = self._client._http_client._http_client_sync
 
         def build(auth: str | None) -> httpx.Request:
-            return self._http_client.build_request(
+            return http_client.build_request(
                 method,
                 self._url(path),
                 params=query,
@@ -610,7 +575,7 @@ class SandboxTransportSync(_Base):
             )
 
         try:
-            res = self._http_client.send(build(key), stream=stream)
+            res = http_client.send(build(key), stream=stream)
             replayable = content is None or isinstance(content, bytes)
             if (
                 res.status_code in _AUTH_FAILED
@@ -618,7 +583,7 @@ class SandboxTransportSync(_Base):
                 and replayable
             ):
                 res.close()
-                res = self._http_client.send(build(fallback), stream=stream)
+                res = http_client.send(build(fallback), stream=stream)
             return res
         except httpx.RequestError as err:
             raise _request_failure(action, err, ids) from err
