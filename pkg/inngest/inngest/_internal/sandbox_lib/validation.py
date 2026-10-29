@@ -103,7 +103,7 @@ def _validate_secret_name(name: object) -> str:
 
 
 def validate_uuid(value: object, field: str) -> str:
-    if not isinstance(value, str) or _UUID.match(value) is None:
+    if not isinstance(value, str) or _UUID.fullmatch(value) is None:
         raise SandboxValidationError(
             f"{field} must be a canonical lowercase UUID"
         )
@@ -264,10 +264,10 @@ def process_spec(
 def validate_image(image: object) -> str:
     ref = image.ref if isinstance(image, SandboxImage) else image
     if not isinstance(ref, str) or not (
-        _IMAGE_DIGEST.match(ref)
+        _IMAGE_DIGEST.fullmatch(ref)
         if ref.startswith("sha256:")
         # "default" is a legacy alias, not an image you can select.
-        else _IMAGE_REF.match(ref) and re.split("[:@]", ref)[0] != "default"
+        else _IMAGE_REF.fullmatch(ref) and re.split("[:@]", ref)[0] != "default"
     ):
         raise SandboxValidationError(
             "image must be a published image name[:tag], name@sha256:<hex>, or sha256:<hex>"

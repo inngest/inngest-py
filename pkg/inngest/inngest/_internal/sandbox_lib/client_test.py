@@ -593,12 +593,16 @@ def test_short_download_is_retryable() -> None:
     assert caught.value.retryable is True
 
 
-def test_get_validates_ids_before_sending() -> None:
+@pytest.mark.parametrize(
+    "sandbox_id",
+    ["NOT-A-UUID", "0b9a5c3e-6d2f-4c1a-9e8b-7f6a5d4c3b2a\n"],
+)
+def test_get_validates_ids_before_sending(sandbox_id: str) -> None:
     fake = FakeAPI()
     with pytest.raises(
         SandboxValidationError, match="canonical lowercase UUID"
     ):
-        fake.client().sandboxes_sync.get("NOT-A-UUID")
+        fake.client().sandboxes_sync.get(sandbox_id)
     assert fake.calls == []
 
 

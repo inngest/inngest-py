@@ -127,6 +127,8 @@ def test_create_body_image(value: object, ref: str) -> None:
         "",
         " my-image",
         "my-image ",
+        "my-image\n",
+        "sha256:" + "a" * 64 + "\n",
         "My-Image",
         "-image",
         "my/image",
