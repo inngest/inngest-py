@@ -193,7 +193,7 @@ class CommResponse:
 
         if call_res.error is not None:
             status_code = http.HTTPStatus.INTERNAL_SERVER_ERROR.value
-            if errors.is_retriable(call_res.error) is False:
+            if call_res.final or errors.is_retriable(call_res.error) is False:
                 headers[server_lib.HeaderKey.NO_RETRY.value] = "true"
 
             if isinstance(call_res.error, errors.RetryAfterError):
@@ -382,13 +382,28 @@ class ErrorData(types.BaseModel):
     name: str
     stack: str | None
 
+    # Stored by the Executor and returned with the memoized step error.
+    data: object = None
+
+    @pydantic.model_serializer(mode="wrap")
+    def _serialize(
+        self, handler: pydantic.SerializerFunctionWrapHandler
+    ) -> dict[str, object]:
+        dumped: dict[str, object] = handler(self)
+        if self.data is None:
+            dumped.pop("data", None)
+        return dumped
+
     @classmethod
     def from_error(cls, err: Exception) -> ErrorData:
+        data: object = None
         if isinstance(err, errors.Error):
             code = err.code
             message = err.message
             name = err.name
             stack = err.stack
+            if isinstance(err, errors.StepFailureError):
+                data = err.data
         else:
             code = server_lib.ErrorCode.UNKNOWN
             message = str(err)
@@ -400,4 +415,5 @@ class ErrorData(types.BaseModel):
             message=message,
             name=name,
             stack=stack,
+            data=data,
         )

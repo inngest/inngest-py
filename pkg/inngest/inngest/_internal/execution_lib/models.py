@@ -36,6 +36,9 @@ class CallResult:
     # Step metadata (e.g. user-specified ID)
     step: step_lib.StepInfo | None = None
 
+    # The function's error must not be retried, whatever the error is.
+    final: bool = False
+
     @property
     def is_empty(self) -> bool:
         return all(

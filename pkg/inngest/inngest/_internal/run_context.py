@@ -50,6 +50,51 @@ current_experiment = contextvars.ContextVar[ExperimentContext | None](
 )
 
 
+@dataclasses.dataclass(frozen=True)
+class Span:
+    """
+    A trace group that steps discovered inside it belong to.
+
+    origin is the library that created the span for the user, like
+    "inngest-py@1.0.0". Steps inherit the innermost span's origin.
+    """
+
+    id: str
+    name: str
+    kind: str | None = None
+    origin: str | None = None
+
+    def to_dict(self) -> dict[str, str]:
+        d = {"id": self.id, "name": self.name}
+        if self.kind is not None:
+            d["kind"] = self.kind
+        if self.origin is not None:
+            d["origin"] = self.origin
+        return d
+
+
+current_span = contextvars.ContextVar[tuple[Span, ...]](
+    "inngest_span", default=()
+)
+
+
+@contextlib.contextmanager
+def use_span(span: Span) -> typing.Iterator[None]:
+    """
+    Group steps discovered inside the block under span, nested in any
+    enclosing span.
+    """
+
+    path = current_span.get()
+    if span.origin is None and len(path) > 0:
+        span = dataclasses.replace(span, origin=path[-1].origin)
+    token = current_span.set((*path, span))
+    try:
+        yield
+    finally:
+        current_span.reset(token)
+
+
 @contextlib.contextmanager
 def use_run(
     ctx: execution_lib.Context | execution_lib.ContextSync,
@@ -83,8 +128,19 @@ def get_sessions(
 
 
 def prepare_step(step: step_lib.StepInfo) -> None:
-    """Attach experiment attribution during discovery, including replay."""
+    """
+    Attach experiment attribution and trace spans during discovery, including
+    replay.
+    """
     experiment = current_experiment.get()
     if experiment is not None:
         experiment.found_step = True
         step.opts = {**(step.opts or {}), **experiment.opts}
+
+    path = current_span.get()
+    if len(path) > 0:
+        opts = {**(step.opts or {}), "span": [s.to_dict() for s in path]}
+        # The step's own origin wins, then the innermost span's.
+        if "origin" not in opts and path[-1].origin is not None:
+            opts["origin"] = path[-1].origin
+        step.opts = opts

@@ -40,6 +40,14 @@ class BaseExecution(typing.Protocol):
         output_type: object = types.EmptySentinel,
     ) -> CallResult: ...
 
+    def fail_finally(self) -> None:
+        """
+        Make every error the function body raises from now on final. For code
+        that has destroyed something the body needs, such as a sandbox, so a
+        retry can't run against it. A step's own failure still retries.
+        """
+        ...
+
 
 class BaseExecutionSync(typing.Protocol):
     version: str
@@ -58,3 +66,11 @@ class BaseExecutionSync(typing.Protocol):
         fn: function.Function[typing.Any],
         output_type: object = types.EmptySentinel,
     ) -> CallResult: ...
+
+    def fail_finally(self) -> None:
+        """
+        Make every error the function body raises from now on final. For code
+        that has destroyed something the body needs, such as a sandbox, so a
+        retry can't run against it. A step's own failure still retries.
+        """
+        ...
