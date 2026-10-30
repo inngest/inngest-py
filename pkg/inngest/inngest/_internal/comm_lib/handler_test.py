@@ -5,11 +5,13 @@ import json
 import logging
 import unittest
 
+import httpx
+
 import inngest
-from inngest._internal import comm_lib, errors, server_lib
+from inngest._internal import comm_lib, errors, server_lib, types
 from inngest.experimental import create_defer
 
-from .handler import get_function_configs
+from .handler import Syncer, get_function_configs
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -223,3 +225,70 @@ class TestCommHandlerRequestIDs(unittest.TestCase):
 
         assert res.status_code == 200
         assert seen == {"job_id": None, "request_id": None}
+
+
+class Test_parse_out_of_band_response(unittest.TestCase):
+    def _parse(
+        self,
+        status_code: int,
+        body: object,
+    ) -> types.MaybeError[comm_lib.CommResponse]:
+        logger = logging.getLogger(f"{__name__}.oob")
+        client = inngest.Inngest(
+            api_base_url="http://foo.bar",
+            app_id="test",
+            is_production=False,
+            logger=logger,
+        )
+        handler = comm_lib.CommHandler(
+            client=client,
+            enable_unauthed_sync=None,
+            framework=server_lib.Framework.FAST_API,
+            functions=[],
+            streaming=None,
+        )
+        syncer = Syncer(logger=logger)
+        return syncer._parse_out_of_band_response(
+            handler,
+            httpx.Response(status_code, json=body),
+        )
+
+    def test_registration_400_returns_error(self) -> None:
+        res = self._parse(400, {"error": "bad function"})
+
+        assert not isinstance(res, Exception), f"Unexpected error: {res}"
+        assert res.status_code == 400
+        assert isinstance(res.body, dict)
+        assert res.body["message"] == "bad function"
+
+    def test_registration_500_returns_error(self) -> None:
+        res = self._parse(500, {"error": "server exploded"})
+
+        assert not isinstance(res, Exception), f"Unexpected error: {res}"
+        assert res.status_code == 500
+        assert isinstance(res.body, dict)
+        assert res.body["message"] == "server exploded"
+
+    def test_registration_400_without_error_message(self) -> None:
+        res = self._parse(400, {})
+
+        assert not isinstance(res, Exception), f"Unexpected error: {res}"
+        assert res.status_code == 400
+        assert isinstance(res.body, dict)
+        assert res.body["message"] == "registration failed"
+
+    def test_success(self) -> None:
+        res = self._parse(200, {"ok": True})
+
+        assert not isinstance(res, Exception), f"Unexpected error: {res}"
+        assert res.status_code == 200
+        assert res.body == {"ok": True}
+        assert (
+            res.headers.get(server_lib.HeaderKey.SYNC_KIND.value)
+            == server_lib.SyncKind.OUT_OF_BAND.value
+        )
+
+    def test_non_object_body(self) -> None:
+        res = self._parse(200, ["not", "an", "object"])
+
+        assert isinstance(res, errors.RegistrationFailedError)
