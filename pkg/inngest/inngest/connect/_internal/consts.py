@@ -24,9 +24,6 @@ PROTOCOL = websockets.Subprotocol("v0.connect.inngest.com")
 # Interval between heartbeat messages sent to the server (seconds)
 HEARTBEAT_INTERVAL_SEC = 10
 
-# Maximum number of attempts for the initial connection start request
-MAX_CONN_INIT_ATTEMPTS = 5
-
 # Delay between connection start request retries (seconds)
 CONN_INIT_RETRY_INTERVAL_SEC = 5
 
