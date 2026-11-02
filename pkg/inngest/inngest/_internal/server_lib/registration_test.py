@@ -69,6 +69,7 @@ def test_serialization() -> None:
             key="foo",
             limit=1,
             period=datetime.timedelta(seconds=60),
+            scope="account",
         ),
         timeouts=Timeouts(
             start=datetime.timedelta(minutes=5),
@@ -139,6 +140,7 @@ def test_serialization() -> None:
             "limit": 1,
             "burst": 1,
             "period": "1m",
+            "scope": "account",
         },
         "timeouts": {
             "start": "5m",
@@ -155,6 +157,23 @@ def test_serialization() -> None:
                 "expression": "foo",
             },
         ],
+    }
+
+
+def test_throttle_serialization_omits_scope_when_unset() -> None:
+    data = Throttle(
+        key="foo",
+        limit=1,
+        period=datetime.timedelta(seconds=60),
+    ).to_dict()
+    if isinstance(data, Exception):
+        raise data
+
+    assert data == {
+        "key": "foo",
+        "limit": 1,
+        "burst": 1,
+        "period": "1m",
     }
 
 
