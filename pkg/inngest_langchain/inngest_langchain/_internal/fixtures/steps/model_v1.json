@@ -1,0 +1,70 @@
+{
+  "v": 1,
+  "messages": [
+    {
+      "content": [
+        {
+          "type": "thinking",
+          "thinking": "The user wants the weather in Paris. I should call the weather tool.",
+          "signature": "EqQBCgIYAhIM1gbcDa9GJwZA2b3hGgxBdjrkzLoky3dl1pkiMOYds"
+        },
+        {
+          "type": "text",
+          "text": "Let me check the weather in Paris."
+        },
+        {
+          "type": "tool_use",
+          "id": "toolu_01A09q90qw90lq917835lq9",
+          "name": "weather",
+          "input": {
+            "city": "Paris"
+          }
+        }
+      ],
+      "additional_kwargs": {},
+      "response_metadata": {
+        "id": "msg_01XFDUDYJgAACzvnptvVoYEL",
+        "model": "claude-sonnet-4-5-20250929",
+        "model_name": "claude-sonnet-4-5-20250929",
+        "model_provider": "anthropic",
+        "stop_reason": "tool_use",
+        "stop_sequence": null,
+        "usage": {
+          "input_tokens": 412,
+          "output_tokens": 96,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 0
+        }
+      },
+      "type": "ai",
+      "name": null,
+      "id": "msg_01XFDUDYJgAACzvnptvVoYEL",
+      "tool_calls": [
+        {
+          "name": "weather",
+          "args": {
+            "city": "Paris"
+          },
+          "id": "toolu_01A09q90qw90lq917835lq9",
+          "type": "tool_call"
+        }
+      ],
+      "invalid_tool_calls": [],
+      "usage_metadata": {
+        "input_tokens": 412,
+        "output_tokens": 96,
+        "total_tokens": 508,
+        "input_token_details": {
+          "cache_creation": 0,
+          "cache_read": 0
+        }
+      }
+    }
+  ],
+  "structured": {
+    "variant": "Out",
+    "value": {
+      "text": "hi"
+    }
+  }
+}

@@ -32,6 +32,14 @@ ended_statuses = set(
 class _Step(types.BaseModel):
     name: str
     output_id: str | None = pydantic.Field(alias="outputID")
+    children: list[_Step] = pydantic.Field(
+        alias="childrenSpans", default_factory=list
+    )
+
+    def flatten(self) -> list[_Step]:
+        """This span, then the spans nested in it (e.g. group._span)."""
+
+        return [self, *(s for c in self.children for s in c.flatten())]
 
 
 class _Client:
@@ -49,6 +57,14 @@ class _Client:
                     childrenSpans {
                         name
                         outputID
+                        childrenSpans {
+                            name
+                            outputID
+                            childrenSpans {
+                                name
+                                outputID
+                            }
+                        }
                     }
                 }
             }
@@ -70,7 +86,11 @@ class _Client:
         if not isinstance(children_spans, list):
             raise Exception("unexpected response")
 
-        return [_Step.model_validate(span) for span in children_spans]
+        return [
+            step
+            for span in children_spans
+            for step in _Step.model_validate(span).flatten()
+        ]
 
     async def get_step_output(
         self,

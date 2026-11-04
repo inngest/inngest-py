@@ -1,4 +1,4 @@
-export MYPYPATH=../pkg/inngest:../pkg/inngest_encryption:../pkg/test_core
+export MYPYPATH=../pkg/inngest:../pkg/inngest_encryption:../pkg/inngest_langchain:../pkg/test_core
 
 .PHONY: lint
 lint:

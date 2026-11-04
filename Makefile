@@ -10,6 +10,7 @@ install:
 itest:
 	@cd pkg/inngest && make itest
 	@cd pkg/inngest_encryption && make itest
+	@cd pkg/inngest_langchain && make itest
 
 pre-commit: format-check lint type-check utest
 
@@ -17,6 +18,7 @@ lint:
 	@cd examples && make lint
 	@cd pkg/inngest && make lint
 	@cd pkg/inngest_encryption && make lint
+	@cd pkg/inngest_langchain && make lint
 	@cd pkg/test_core && make lint
 	@cd tests && make lint
 
@@ -24,6 +26,7 @@ type-check:
 	@cd examples && make type-check
 	@cd pkg/inngest && make type-check
 	@cd pkg/inngest_encryption && make type-check
+	@cd pkg/inngest_langchain && make type-check
 	@cd pkg/test_core && make type-check
 	@cd tests && make type-check
 
@@ -34,3 +37,4 @@ utest:
 	@uv run pytest -v tests/test_repo
 	@cd pkg/inngest && make utest
 	@cd pkg/inngest_encryption && make utest
+	@cd pkg/inngest_langchain && make utest

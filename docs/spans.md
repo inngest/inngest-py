@@ -22,3 +22,5 @@ Each step inside a span reports `opts.span`, the span path outermost-first, and 
 ## Implementation notes
 
 `Group._span` and `GroupSync._span` return a `run_context.SpanScope`. `run_context.prepare_step` stamps the path onto each step during discovery. Sandboxes use `SpanScope` directly.
+
+`inngest_langchain` uses `_span` for its agent, model and tool spans, and sets `origin` on the model and tool spans.

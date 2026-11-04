@@ -4,11 +4,11 @@ import asyncio
 import datetime
 
 import pytest
+from test_core.harness import Harness
 
 import inngest
 from inngest.experimental.ai import openai
 
-from .experiment_test import Harness
 from .run_context import Span, SpanScope, current_span
 
 

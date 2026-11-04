@@ -59,6 +59,7 @@ For grouping steps under a span in the run's trace, see [Spans](docs/spans.md).
 - `pkg/` - Packages. Subdirectories are for each package
   - `inngest/` - Core SDK (published to PyPI)
   - `inngest_encryption/` - Encryption middleware (published to PyPI)
+  - `inngest_langchain/` - Durable LangChain agent middleware (published to PyPI)
   - `test_core/` - Test utilities (not published to PyPI)
 - `tests/` - Integration tests using case-based organization. Subdirectories are for each package
 
