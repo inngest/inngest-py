@@ -1,7 +1,8 @@
 """
 Test that middleware classes are called in the correct order.
 
-TODO: In v0.5, we should reverse middleware order for the "after" hooks.
+"after" hooks (after_*, transform_output) run in reverse order; "before"
+hooks, including before_response, run in registration order (#232).
 """
 
 import inspect

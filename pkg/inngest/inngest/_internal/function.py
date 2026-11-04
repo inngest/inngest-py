@@ -171,26 +171,35 @@ class Function(typing.Generic[types.T]):
         if not execution_lib.is_function_handler_async(handler):
             raise errors.UnreachableError("handler is not async")
 
-        with (
-            execution_lib.set_step_context(ctx.step),
-            # Bind for execution and its hooks, but not the response hooks below.
-            run_context.use_run(ctx, client),
+        try:
+            with (
+                execution_lib.set_step_context(ctx.step),
+                # Bind for execution and its hooks, but not the response hooks below.
+                run_context.use_run(ctx, client),
+            ):
+                call_res = await ctx.step._execution.run(
+                    client,
+                    ctx,
+                    handler,
+                    self,
+                    output_type,
+                )
+
+            err = await middleware.transform_output(call_res)
+        finally:
+            # Finalize in the same task so middleware can reset context tokens.
+            response_err = await middleware.before_response()
+
+        if isinstance(err, Exception):
+            return deferred.attach(ctx, execution_lib.CallResult(err))
+
+        # Cleanup must not replace an execution failure or its retry policy.
+        if (
+            isinstance(response_err, Exception)
+            and call_res.error is None
+            and not any(item.error is not None for item in call_res.multi or [])
         ):
-            call_res = await ctx.step._execution.run(
-                client,
-                ctx,
-                handler,
-                self,
-                output_type,
-            )
-
-        err = await middleware.transform_output(call_res)
-        if isinstance(err, Exception):
-            return deferred.attach(ctx, execution_lib.CallResult(err))
-
-        err = await middleware.before_response()
-        if isinstance(err, Exception):
-            return deferred.attach(ctx, execution_lib.CallResult(err))
+            return deferred.attach(ctx, execution_lib.CallResult(response_err))
 
         return deferred.attach(ctx, call_res)
 
@@ -226,28 +235,36 @@ class Function(typing.Generic[types.T]):
         if not execution_lib.is_function_handler_sync(handler):
             raise errors.UnreachableError("handler is not sync")
 
-        with (
-            execution_lib.set_step_context(ctx.step),
-            # Bind for execution and its hooks, but not the response hooks below.
-            run_context.use_run(ctx, client),
+        try:
+            with (
+                execution_lib.set_step_context(ctx.step),
+                # Bind for execution and its hooks, but not the response hooks below.
+                run_context.use_run(ctx, client),
+            ):
+                # We don't need to pass a thread pool here because the sync handler
+                # is not used by Connect.
+                call_res = ctx.step._execution.run(
+                    client,
+                    ctx,
+                    handler,
+                    self,
+                    output_type,
+                )
+
+            err = middleware.transform_output_sync(call_res)
+        finally:
+            response_err = middleware.before_response_sync()
+
+        if isinstance(err, Exception):
+            return deferred.attach(ctx, execution_lib.CallResult(err))
+
+        # Cleanup must not replace an execution failure or its retry policy.
+        if (
+            isinstance(response_err, Exception)
+            and call_res.error is None
+            and not any(item.error is not None for item in call_res.multi or [])
         ):
-            # We don't need to pass a thread pool here because the sync handler
-            # is not used by Connect.
-            call_res = ctx.step._execution.run(
-                client,
-                ctx,
-                handler,
-                self,
-                output_type,
-            )
-
-        err = middleware.transform_output_sync(call_res)
-        if isinstance(err, Exception):
-            return deferred.attach(ctx, execution_lib.CallResult(err))
-
-        err = middleware.before_response_sync()
-        if isinstance(err, Exception):
-            return deferred.attach(ctx, execution_lib.CallResult(err))
+            return deferred.attach(ctx, execution_lib.CallResult(response_err))
 
         return deferred.attach(ctx, call_res)
 

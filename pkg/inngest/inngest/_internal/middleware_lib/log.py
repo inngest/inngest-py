@@ -16,8 +16,6 @@ from .middleware import MiddlewareSync
 class LoggerMiddleware(MiddlewareSync):
     def __init__(self, client: client_lib.Inngest, raw_request: object) -> None:
         super().__init__(client, raw_request)
-        # Start with logging disabled (during step replay)
-        log.disable_logging()
         self._filtered_logger: log.FilteredLogger | None = None
 
     def before_execution(self) -> None:
@@ -30,6 +28,10 @@ class LoggerMiddleware(MiddlewareSync):
         function: function.Function[typing.Any],
         steps: step_lib.StepMemos,
     ) -> None:
+        # Disable replay logs in the execution context, not during construction:
+        # standalone sends also construct middleware in the caller's context.
+        # This also resets logging left enabled by an earlier run on a pooled thread.
+        log.disable_logging()
         if self._filtered_logger is None:
             self._filtered_logger = log.FilteredLogger(ctx.logger)
         ctx.logger = self._filtered_logger  # type: ignore
