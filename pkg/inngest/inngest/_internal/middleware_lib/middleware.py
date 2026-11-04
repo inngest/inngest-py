@@ -52,10 +52,15 @@ class Middleware:
 
     async def before_response(self) -> None:
         """
-        After the output has been set and before the response is sent
-        back to Inngest. This is where you can perform any final actions before
-        the response is sent back to Inngest. Called multiple times per run when
-        using steps.
+        Final cleanup as an invocation unwinds, once execution has started
+        (including transform_input). Attempted once per invocation, in registration
+        order, even if execution or another middleware hook fails. Cleanup errors
+        are logged and do not replace existing execution errors.
+
+        Async task cancellation also attempts cleanup in the same task. A further
+        cancellation interrupts only the hook running at that moment; remaining
+        hooks still run, then cancellation propagates. Process termination can
+        prevent cleanup. A run using steps invokes this hook multiple times.
         """
         return None
 
@@ -125,10 +130,14 @@ class MiddlewareSync:
 
     def before_response(self) -> None:
         """
-        After the output has been set and before the response is sent
-        back to Inngest. This is where you can perform any final actions before
-        the response is sent back to Inngest. Called multiple times per run when
-        using steps.
+        Final cleanup as an invocation unwinds, once execution has started
+        (including transform_input). Attempted once per invocation, in registration
+        order, even if execution or another middleware hook fails. Cleanup errors
+        are logged and do not replace existing execution errors.
+
+        Cancelling a task awaiting a sync worker does not interrupt that worker;
+        cleanup runs when its execution unwinds. Process termination can prevent
+        cleanup. A run using steps invokes this hook multiple times.
         """
         return None
 

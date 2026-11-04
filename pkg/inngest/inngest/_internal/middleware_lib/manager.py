@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import inspect
 import typing
 
@@ -132,7 +134,7 @@ class MiddlewareManager:
         try:
             # Reverse order because this is an "after" hook.
             for m in reversed(self._middleware):
-                if inspect.iscoroutinefunction(m.after_execution):
+                if inspect.iscoroutinefunction(m.after_send_events):
                     return _mismatched_sync
                 m.after_send_events(result)
             return None
@@ -174,22 +176,49 @@ class MiddlewareManager:
         return None
 
     async def before_response(self) -> types.MaybeError[None]:
-        try:
-            for m in self._middleware:
+        first_err: Exception | None = None
+        cancellation: asyncio.CancelledError | None = None
+        for m in self._middleware:
+            try:
                 await transforms.maybe_await(m.before_response())
-            return None
-        except Exception as err:
-            return err
+            except asyncio.CancelledError as err:
+                # Finish the remaining hooks before propagating cancellation.
+                if cancellation is None:
+                    cancellation = err
+            except Exception as err:
+                self._log_before_response_error(err)
+                if first_err is None:
+                    first_err = err
+
+        if cancellation is not None:
+            raise cancellation
+        return first_err
 
     def before_response_sync(self) -> types.MaybeError[None]:
-        try:
-            for m in self._middleware:
+        first_err: Exception | None = None
+        for m in self._middleware:
+            try:
                 if inspect.iscoroutinefunction(m.before_response):
-                    return _mismatched_sync
+                    self._log_before_response_error(_mismatched_sync)
+                    if first_err is None:
+                        first_err = _mismatched_sync
+                    continue
                 m.before_response()
-            return None
-        except Exception as err:
-            return err
+            except Exception as err:
+                self._log_before_response_error(err)
+                if first_err is None:
+                    first_err = err
+        return first_err
+
+    def _log_before_response_error(self, err: Exception) -> None:
+        # Log at the source: execution errors or cancellation may take precedence
+        # over this error, and only the first cleanup error can be returned.
+        # A custom logger must not prevent subsequent middleware from cleaning up.
+        with contextlib.suppress(Exception):
+            self.client.logger.error(
+                f"before_response middleware failed: {err}",
+                exc_info=(type(err), err, err.__traceback__),
+            )
 
     async def before_send_events(
         self,
