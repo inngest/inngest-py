@@ -103,7 +103,7 @@ Requests use the client's signing key and branch environment, and retry with `IN
 
 ## Implementation notes
 
-The package lives in `inngest/_internal/sandbox_lib`, with public names in `inngest.experimental.sandbox`. Each REST operation in `ops.py` is a generator that yields requests and sleeps, so the async and sync transports drive the same logic. Durable steps are ordinary `step.run` calls whose results match the TypeScript SDK's protocol version 1, and they attach `inngest.sandbox` trace metadata. Two core changes support them: `errors.StepFailureError` fails a step immediately and stores `data` that replays read from `StepError.data`, and `run_context.use_span` groups steps in the trace.
+The package lives in `inngest/_internal/sandbox_lib`, with public names in `inngest.experimental.sandbox`. Each REST operation in `ops.py` is a generator that yields requests and sleeps, so the async and sync transports drive the same logic. Durable steps are ordinary `step.run` calls whose results match the TypeScript SDK's protocol version 1, and they attach `inngest.sandbox` trace metadata. Two core changes support them: `errors.StepFailureError` fails a step immediately and stores `data` that replays read from `StepError.data`, and `run_context.SpanScope` (behind `ctx.group._span`, see [Spans](spans.md)) groups steps in the trace.
 
 Unit tests run against an in-memory API in `fake_api_test.py`. The `sandbox_login_required` integration case checks the step error round trip against a real Dev Server:
 

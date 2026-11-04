@@ -8,7 +8,6 @@ the recorded result instead of calling the API again.
 
 from __future__ import annotations
 
-import contextlib
 import datetime
 import hashlib
 import signal as signal_lib
@@ -381,9 +380,7 @@ class DurableSandboxSync(_Info):
             maximum_ms=validation.MAX_LIFECYCLE_TIMEOUT_MS,
             default_ms=validation.MAX_LIFECYCLE_TIMEOUT_MS,
         )
-        with run_context.use_span(
-            run_context.Span(id=step_id, name=step_id, kind="snapshot")
-        ):
+        with run_context.SpanScope(step_id, kind="snapshot"):
             created = common.parse_snapshot(
                 _run(
                     self._step,
@@ -755,7 +752,7 @@ class GroupSandboxSync:
         self._snapshot_id = snapshot_id
         self._running_timeout = running_timeout
         self._sandbox: DurableSandboxSync | None = None
-        self._span: contextlib.AbstractContextManager[None] | None = None
+        self._span: run_context.SpanScope | None = None
 
     def __enter__(self) -> DurableSandboxSync:
         # The ID the create step will get, so a reused group ID still gets
@@ -772,10 +769,8 @@ class GroupSandboxSync:
             vcpu = _DEFAULT_VCPU if vcpu is None else vcpu
             memory_mb = _DEFAULT_MEMORY_MB if memory_mb is None else memory_mb
 
-        span = run_context.use_span(
-            run_context.Span(
-                id=step_id, name=f"Sandbox {self._id}", kind="sandbox"
-            )
+        span = run_context.SpanScope(
+            step_id, name=f"Sandbox {self._id}", kind="sandbox"
         )
         span.__enter__()
         self._span = span
