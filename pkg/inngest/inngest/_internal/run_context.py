@@ -17,6 +17,8 @@ import dataclasses
 import typing
 
 if typing.TYPE_CHECKING:
+    import types as builtin_types
+
     from inngest._internal import client_lib, execution_lib, step_lib
 
 
@@ -78,21 +80,43 @@ current_span = contextvars.ContextVar[tuple[Span, ...]](
 )
 
 
-@contextlib.contextmanager
-def use_span(span: Span) -> typing.Iterator[None]:
+class SpanScope:
     """
-    Group steps discovered inside the block under span, nested in any
+    Group steps discovered inside a `with` block under span, nested in any
     enclosing span.
+
+    Reusable and reentrant. The path lives in current_span rather than on the
+    instance, so concurrent tasks and threads each have their own.
+
+    Meant to be used through `with`, properly nested.
     """
 
-    path = current_span.get()
-    if span.origin is None and len(path) > 0:
-        span = dataclasses.replace(span, origin=path[-1].origin)
-    token = current_span.set((*path, span))
-    try:
-        yield
-    finally:
-        current_span.reset(token)
+    def __init__(
+        self,
+        span_id: str,
+        *,
+        name: str | None = None,
+        kind: str | None = None,
+        origin: str | None = None,
+    ) -> None:
+        self._span = Span(
+            span_id, span_id if name is None else name, kind, origin
+        )
+
+    def __enter__(self) -> None:
+        path = current_span.get()
+        span = self._span
+        if span.origin is None and len(path) > 0:
+            span = dataclasses.replace(span, origin=path[-1].origin)
+        current_span.set((*path, span))
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: builtin_types.TracebackType | None,
+    ) -> None:
+        current_span.set(current_span.get()[:-1])
 
 
 @contextlib.contextmanager

@@ -4,7 +4,7 @@ import contextvars
 import datetime
 import typing
 
-from inngest._internal import sandbox_lib, server_lib, types
+from inngest._internal import run_context, sandbox_lib, server_lib, types
 
 from .base import ResponseInterrupt, SkipInterrupt, StepResponse
 
@@ -29,6 +29,40 @@ class Group:
         from inngest.experimental import experiment
 
         return await experiment._run(experiment_id, variants, select)
+
+    def _span(
+        self,
+        span_id: str,
+        *,
+        name: str | None = None,
+        kind: str | None = None,
+        origin: str | None = None,
+    ) -> run_context.SpanScope:
+        """
+        EXPERIMENTAL: Group the steps discovered inside a `with` block under
+        one span in the run's trace, nested in any enclosing span.
+
+        ```py
+        with ctx.group._span("agent", name="Research agent", kind="agent"):
+            await ctx.step.run("model", call_model)
+        ```
+
+        Use a plain `with`, not `async with`: entering a span does no I/O.
+        Steps are stamped on every execution, including replays, so enter the
+        block deterministically: the same spans around the same steps each
+        time. The returned scope is reusable.
+
+        Args:
+        ----
+            span_id: Span ID. Blocks that share an ID under the same parent report the same span, so their steps are grouped together.
+            name: Display name. Defaults to span_id.
+            kind: Free-form category, like "agent", "llm" or "tool".
+            origin: Only for libraries that run steps on the user's behalf, as "<package>@<version>". Steps and spans inside inherit it. Leave unset for your own code.
+        """
+
+        return run_context.SpanScope(
+            span_id, name=name, kind=kind, origin=origin
+        )
 
     def sandbox(
         self,
@@ -70,7 +104,6 @@ class Group:
             running_timeout: How long to wait for RUNNING. Defaults to 120 seconds.
         """
 
-        from inngest._internal import run_context
         from inngest._internal.step_lib.step_async import Step
 
         run = run_context.current_run.get()
@@ -146,6 +179,39 @@ class GroupSync:
 
         return experiment._run_sync(experiment_id, variants, select)
 
+    def _span(
+        self,
+        span_id: str,
+        *,
+        name: str | None = None,
+        kind: str | None = None,
+        origin: str | None = None,
+    ) -> run_context.SpanScope:
+        """
+        EXPERIMENTAL: Group the steps discovered inside a `with` block under
+        one span in the run's trace, nested in any enclosing span.
+
+        ```py
+        with ctx.group._span("agent", name="Research agent", kind="agent"):
+            ctx.step.run("model", call_model)
+        ```
+
+        Steps are stamped on every execution, including replays, so enter the
+        block deterministically: the same spans around the same steps each
+        time. The returned scope is reusable.
+
+        Args:
+        ----
+            span_id: Span ID. Blocks that share an ID under the same parent report the same span, so their steps are grouped together.
+            name: Display name. Defaults to span_id.
+            kind: Free-form category, like "agent", "llm" or "tool".
+            origin: Only for libraries that run steps on the user's behalf, as "<package>@<version>". Steps and spans inside inherit it. Leave unset for your own code.
+        """
+
+        return run_context.SpanScope(
+            span_id, name=name, kind=kind, origin=origin
+        )
+
     def sandbox(
         self,
         group_id: str,
@@ -186,7 +252,6 @@ class GroupSync:
             running_timeout: How long to wait for RUNNING. Defaults to 120 seconds.
         """
 
-        from inngest._internal import run_context
         from inngest._internal.step_lib.step_sync import StepSync
 
         run = run_context.current_run.get()
