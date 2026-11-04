@@ -1,0 +1,26 @@
+{
+  "v": 1,
+  "kind": "update",
+  "messages": [
+    {
+      "content": "ok",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "tool",
+      "name": "cmd",
+      "id": null,
+      "tool_call_id": "call_1",
+      "artifact": null,
+      "status": "success"
+    }
+  ],
+  "state": {
+    "extra_key": 123,
+    "notes": {
+      "a": [
+        1,
+        2
+      ]
+    }
+  }
+}

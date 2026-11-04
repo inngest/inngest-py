@@ -1,0 +1,142 @@
+name: "inngest_langchain"
+
+on:
+  push:
+    branches:
+      - "main"
+    tags:
+      - "*"
+  pull_request:
+    paths:
+      - "!examples/**"
+      - "**/*.py"
+      - "**/Makefile"
+      - "**/pyproject.toml"
+      - ".github/**"
+      - "mypy.ini"
+      - "pyrightconfig.json"
+      - "pytest.ini"
+      - "ruff.toml"
+      - "uv.lock"
+
+env:
+  DEV_SERVER_LOGS: "1"
+  DEV_SERVER_VERSION: "latest"
+
+jobs:
+  itest:
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.13"]
+    timeout-minutes: 2
+    steps:
+      - uses: "actions/checkout@v4"
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@v4
+      - name: "Install"
+        run: "make install"
+      - name: "Integration test"
+        run: "make itest"
+        working-directory: "./pkg/inngest_langchain"
+      - name: Upload Dev Server logs
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: dev-server-logs
+          path: "./artifacts/dev_server.log"
+
+  lint:
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.13"]
+    steps:
+      - uses: "actions/checkout@v4"
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@v4
+      - name: "Install"
+        run: "make install"
+      - name: "Lint"
+        run: "make lint"
+        working-directory: "./pkg/inngest_langchain"
+
+  publish-pypi:
+    runs-on: "ubuntu-latest"
+    needs:
+      - "itest"
+      - "lint"
+      - "type-check"
+      - "utest"
+      - "utest-latest-inngest"
+
+    # Only publish tagged versions.
+    # TODO: Add a check to ensure that the git tag matches the version.
+    if: "startsWith(github.ref, 'refs/tags/inngest_langchain@')"
+    permissions:
+      id-token: write
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+    steps:
+      - uses: "actions/checkout@v4"
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@v4
+      - name: "Install"
+        run: "make install"
+      - name: "Build"
+        run: "make build"
+        working-directory: "./pkg/inngest_langchain"
+      - name: "Upload package to PyPI"
+        uses: "pypa/gh-action-pypi-publish@release/v1"
+        with:
+          packages-dir: "./pkg/inngest_langchain/dist"
+
+  type-check:
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.13"]
+    steps:
+      - uses: "actions/checkout@v4"
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@v4
+      - name: "Install"
+        run: "make install"
+      - name: "Type check"
+        run: "make type-check"
+        working-directory: "./pkg/inngest_langchain"
+
+  utest:
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.13"]
+    steps:
+      - uses: "actions/checkout@v4"
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@v4
+      - name: "Install"
+        run: "make install"
+      - name: "Unit test"
+        run: "make utest"
+        working-directory: "./pkg/inngest_langchain"
+
+  # inngest_langchain has no upper bound on inngest and uses its private
+  # ctx.group._span, so test against the latest release too.
+  utest-latest-inngest:
+    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        python-version: ["3.13"]
+    steps:
+      - uses: "actions/checkout@v4"
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@v4
+      - name: "Install"
+        run: "make install"
+      - name: "Install the latest inngest release"
+        run: "uv pip install --no-sources --reinstall-package inngest --upgrade-package inngest inngest"
+      - name: "Unit test"
+        run: "uv run --no-sync pytest -v inngest_langchain"
+        working-directory: "./pkg/inngest_langchain"

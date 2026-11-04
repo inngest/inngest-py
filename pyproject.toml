@@ -1,5 +1,10 @@
 [tool.uv.workspace]
-members = ["pkg/inngest", "pkg/inngest_encryption", "pkg/test_core"]
+members = [
+    "pkg/inngest",
+    "pkg/inngest_encryption",
+    "pkg/inngest_langchain",
+    "pkg/test_core",
+]
 
 [project]
 name = "inngest-py"
@@ -21,6 +26,7 @@ dev = [
     "fastapi==0.110.0",
     "inngest[connect]",
     "inngest_encryption",
+    "inngest_langchain",
     "moto[s3,server]==5.0.18",
     "mypy==1.10.0",
     "pynacl==1.5.0",
@@ -46,6 +52,7 @@ dev = [
 test_core = { workspace = true }
 inngest = { workspace = true }
 inngest_encryption = { workspace = true }
+inngest_langchain = { workspace = true }
 
 [project.urls]
 "Homepage" = "https://github.com/inngest/inngest-py"
@@ -61,6 +68,9 @@ constraint-dependencies = [
     "flask==3.0.0",
     "httpx==0.26.0",
     "jcs==0.2.1",
+    "langchain==1.4.0",
+    "langchain-core==1.6.0",
+    "langgraph==1.2.11",
     "protobuf==5.29.4",
     "psutil==6.0.0",
     "pydantic==2.11.0",

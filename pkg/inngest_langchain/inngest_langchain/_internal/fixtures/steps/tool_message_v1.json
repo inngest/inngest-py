@@ -1,0 +1,21 @@
+{
+  "v": 1,
+  "kind": "message",
+  "message": {
+    "content": "Paris: sunny, 21C",
+    "additional_kwargs": {},
+    "response_metadata": {},
+    "type": "tool",
+    "name": "weather",
+    "id": null,
+    "tool_call_id": "toolu_01A09q90qw90lq917835lq9",
+    "artifact": {
+      "city": "Paris",
+      "temp_c": 21,
+      "conditions": [
+        "sunny"
+      ]
+    },
+    "status": "success"
+  }
+}

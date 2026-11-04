@@ -4,8 +4,15 @@ from pathlib import Path
 
 import pydantic
 import toml
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
 
-workspace_deps = ["inngest", "test_core", "inngest_encryption"]
+workspace_deps = [
+    "inngest",
+    "test_core",
+    "inngest_encryption",
+    "inngest_langchain",
+]
 
 
 def test_constraint_dependencies_match_minimum_versions() -> None:
@@ -27,48 +34,22 @@ def test_constraint_dependencies_match_minimum_versions() -> None:
         with open(root_path / member / "pyproject.toml") as f:
             workspace_config = WorkspaceConfig.model_validate(toml.load(f))
 
-        # Parse dependencies
-        for dep_name in workspace_config.project.dependencies:
-            assert isinstance(dep_name, str)
-
-            if dep_name in workspace_deps:
-                continue
-
-            assert ">=" in dep_name, (
-                f"Dependency '{dep_name}' in {member} has no version constraint"
-            )
-
-            parts = dep_name.split(">=")
-            assert len(parts) == 2
-            existing_min = dep_mins.get(parts[0])
-            if existing_min:
-                dep_mins[parts[0]] = _use_min_version(existing_min, parts[1])
-            else:
-                dep_mins[parts[0]] = parts[1]
-
+        deps = list(workspace_config.project.dependencies)
         for (
             group_deps
         ) in workspace_config.project.optional_dependencies.values():
-            assert isinstance(group_deps, list)
-            for dep_name in group_deps:
-                assert isinstance(dep_name, str)
+            deps.extend(group_deps)
 
-                if dep_name in workspace_deps:
-                    continue
+        for dep in deps:
+            name, min_version = _parse_min_version(dep, member)
+            if name is None:
+                continue
 
-                assert ">=" in dep_name, (
-                    f"Dependency '{dep_name}' in {member} has no version constraint"
-                )
-
-                parts = dep_name.split(">=")
-                assert len(parts) == 2
-                existing_min = dep_mins.get(parts[0])
-                if existing_min:
-                    dep_mins[parts[0]] = _use_min_version(
-                        existing_min, parts[1]
-                    )
-                else:
-                    dep_mins[parts[0]] = parts[1]
+            existing_min = dep_mins.get(name)
+            if existing_min:
+                dep_mins[name] = _use_min_version(existing_min, min_version)
+            else:
+                dep_mins[name] = min_version
 
     # Ensure constraint versions match minimum versions in workspaces
     for dep_name, min_version in dep_mins.items():
@@ -131,8 +112,25 @@ def _get_constraint_dependencies(
         parts = dep.split("==")
         assert len(parts) == 2, f"Invalid constraint format: {dep}"
         package, version = parts
-        constraints[package] = version
+        constraints[canonicalize_name(package)] = version
     return constraints
+
+
+def _parse_min_version(dep: str, member: str) -> tuple[str | None, str]:
+    """
+    Name and ">=" version of a dependency. The name is None for workspace
+    dependencies, whose versions come from the workspace
+    """
+
+    req = Requirement(dep)
+    if req.name in workspace_deps:
+        return None, ""
+
+    mins = [s.version for s in req.specifier if s.operator == ">="]
+    assert len(mins) == 1, (
+        f"Dependency '{dep}' in {member} needs exactly one '>=' constraint"
+    )
+    return canonicalize_name(req.name), mins[0]
 
 
 def _use_min_version(a: str, b: str) -> str:

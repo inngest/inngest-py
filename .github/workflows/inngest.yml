@@ -11,6 +11,8 @@ on:
       - "!examples/**"
       - "!pkg/inngest_encryption/**"
       - "!tests/inngest_encryption/**"
+      - "!pkg/inngest_langchain/**"
+      - "!tests/test_inngest_langchain/**"
       - "**/*.py"
       - "**/Makefile"
       - "**/pyproject.toml"
