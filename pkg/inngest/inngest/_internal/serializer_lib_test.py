@@ -1,3 +1,4 @@
+import collections.abc
 import datetime
 import typing
 import unittest
@@ -277,3 +278,18 @@ class TestUnionOrder(unittest.TestCase):
         assert first is not second
         assert len(cache) == 1
         assert cache.get(float | int) is second
+
+
+class TestCallableCacheReuse(unittest.TestCase):
+    def test_repeated_callable_lookups_reuse_adapter(self) -> None:
+        OptionalCallable: typing.TypeAlias = typing.Callable[[int], str] | None
+        for typ in [
+            typing.Callable[[int], str],
+            collections.abc.Callable[[int], str],
+            OptionalCallable,
+        ]:
+            with self.subTest(typ=typ):
+                cache = serializer_lib._PydanticTypeAdapterCache(32)
+                adapters = [cache.get(typ) for _ in range(20)]
+                assert all(adapter is adapters[0] for adapter in adapters)
+                assert len(cache) == 1
