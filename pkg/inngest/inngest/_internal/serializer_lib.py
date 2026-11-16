@@ -95,6 +95,9 @@ class _PydanticTypeAdapterCache:
             return item.adapter
 
     def _get_key(self, typ: object) -> typing.Hashable:
+        if isinstance(typ, list):
+            # Callable parameter types are returned as a fresh list by get_args.
+            return tuple(self._get_key(arg) for arg in typ)
         try:
             # Ensure that typ is hashable
             hash(typ)
