@@ -98,6 +98,11 @@ class _PydanticTypeAdapterCache:
         try:
             # Ensure that typ is hashable
             hash(typ)
+            args = typing.get_args(typ)
+            if args:
+                # Union equality ignores member order, including inside generics,
+                # but Pydantic uses that order when choosing a matching branch.
+                return (typ, tuple(self._get_key(arg) for arg in args))
             return typing.cast(typing.Hashable, typ)
         except TypeError:
             # This is reachable for typing objects that include unhashable
