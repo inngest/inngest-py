@@ -1,3 +1,4 @@
+import collections.abc
 import datetime
 import typing
 import unittest
@@ -238,3 +239,57 @@ class TestPydanticSerializer_RoundTrip(unittest.TestCase):
         serialized = self.s.serialize(original, object)
         deserialized = self.s.deserialize(serialized, dict[str, object])
         assert deserialized == original
+
+
+class TestUnionOrder(unittest.TestCase):
+    def test_union_order_is_preserved(self) -> None:
+        for first, second, value in [
+            (int | float, float | int, "1"),
+            (float | int, int | float, "1"),
+            (list[int | float], list[float | int], ["1"]),
+            (dict[str, int | float], dict[str, float | int], {"x": "1"}),
+            (tuple[int | float, ...], tuple[float | int, ...], ("1",)),
+            (
+                typing.Annotated[list[int | float], "tag"],
+                typing.Annotated[list[float | int], "tag"],
+                ["1"],
+            ),
+        ]:
+            with self.subTest(first=first, second=second):
+                serializer = PydanticSerializer()
+                serializer.deserialize(value, first)
+                actual = serializer.deserialize(value, second)
+                expected = pydantic.TypeAdapter[object](second).validate_python(
+                    value
+                )
+                assert repr(actual) == repr(expected)
+                assert serializer._get_adapter(
+                    second
+                ) is serializer._get_adapter(second)
+
+    def test_equivalent_ordered_generics_share_adapter(self) -> None:
+        cache = serializer_lib._PydanticTypeAdapterCache(2)
+        assert cache.get(list[int | float]) is cache.get(list[int | float])
+
+    def test_reordered_union_entries_remain_bounded(self) -> None:
+        cache = serializer_lib._PydanticTypeAdapterCache(1)
+        first = cache.get(int | float)
+        second = cache.get(float | int)
+        assert first is not second
+        assert len(cache) == 1
+        assert cache.get(float | int) is second
+
+
+class TestCallableCacheReuse(unittest.TestCase):
+    def test_repeated_callable_lookups_reuse_adapter(self) -> None:
+        OptionalCallable: typing.TypeAlias = typing.Callable[[int], str] | None
+        for typ in [
+            typing.Callable[[int], str],
+            collections.abc.Callable[[int], str],
+            OptionalCallable,
+        ]:
+            with self.subTest(typ=typ):
+                cache = serializer_lib._PydanticTypeAdapterCache(32)
+                adapters = [cache.get(typ) for _ in range(20)]
+                assert all(adapter is adapters[0] for adapter in adapters)
+                assert len(cache) == 1
