@@ -5,11 +5,13 @@ import json
 import logging
 import unittest
 
+import httpx
+
 import inngest
 from inngest._internal import comm_lib, errors, server_lib
 from inngest.experimental import create_defer
 
-from .handler import get_function_configs
+from .handler import Syncer, get_function_configs
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -223,3 +225,57 @@ class TestCommHandlerRequestIDs(unittest.TestCase):
 
         assert res.status_code == 200
         assert seen == {"job_id": None, "request_id": None}
+
+
+class TestSyncerOutOfBandResponse(unittest.TestCase):
+    def test_error_status_returns_error_response(self) -> None:
+        @client.create_function(
+            fn_id="fn",
+            trigger=inngest.TriggerEvent(event="test/event"),
+        )
+        def fn(ctx: inngest.ContextSync) -> None:
+            pass
+
+        handler = comm_lib.CommHandler(
+            client=client,
+            enable_unauthed_sync=None,
+            framework=server_lib.Framework.FAST_API,
+            functions=[fn],
+            streaming=None,
+        )
+        try:
+            syncer = Syncer(logger=logger)
+
+            err_res = httpx.Response(
+                status_code=500,
+                json={"error": "  app unreachable  "},
+            )
+            parsed = syncer._parse_out_of_band_response(handler, err_res)
+            assert isinstance(parsed, comm_lib.CommResponse)
+            assert parsed.status_code == 500
+            assert parsed.body == {
+                "code": server_lib.ErrorCode.REGISTRATION_FAILED.value,
+                "message": "app unreachable",
+                "name": "RegistrationFailedError",
+            }
+
+            fallback_res = httpx.Response(status_code=403, json={})
+            parsed_fallback = syncer._parse_out_of_band_response(
+                handler, fallback_res
+            )
+            assert isinstance(parsed_fallback, comm_lib.CommResponse)
+            assert parsed_fallback.status_code == 403
+            assert parsed_fallback.body == {
+                "code": server_lib.ErrorCode.REGISTRATION_FAILED.value,
+                "message": "registration failed",
+                "name": "RegistrationFailedError",
+            }
+
+            ok_res = httpx.Response(status_code=200, json={"ok": True})
+            parsed_ok = syncer._parse_out_of_band_response(handler, ok_res)
+            assert isinstance(parsed_ok, comm_lib.CommResponse)
+            assert parsed_ok.status_code == 200
+            assert parsed_ok.body == {"ok": True}
+        finally:
+            if handler._thread_pool is not None:
+                handler._thread_pool.shutdown()
