@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-import inspect
 import typing
 import urllib.parse
 
@@ -80,7 +79,7 @@ class Function(typing.Generic[types.T]):
     @property
     def is_handler_async(self) -> bool:
         """Whether the main handler is async."""
-        return inspect.iscoroutinefunction(self._handler)
+        return execution_lib.is_function_handler_async(self._handler)
 
     @property
     def is_on_failure_handler_async(self) -> bool | None:
@@ -90,7 +89,7 @@ class Function(typing.Generic[types.T]):
         """
         if self._opts.on_failure is None:
             return None
-        return inspect.iscoroutinefunction(self._opts.on_failure)
+        return execution_lib.is_function_handler_async(self._opts.on_failure)
 
     @property
     def local_id(self) -> str:

@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import inspect
 
 import typing_extensions
@@ -10,14 +11,23 @@ def is_function_handler_async(
     value: execution_lib.FunctionHandlerAsync[types.T]
     | execution_lib.FunctionHandlerSync[types.T],
 ) -> typing_extensions.TypeGuard[execution_lib.FunctionHandlerAsync[types.T]]:
-    return inspect.iscoroutinefunction(value)
+    handler: object = value
+    while isinstance(handler, functools.partial):
+        call = getattr(type(handler), "__call__", None)
+        if call is not functools.partial.__call__:
+            return inspect.iscoroutinefunction(call)
+        handler = handler.func
+    # Python resolves special methods on the type, not the instance.
+    return inspect.iscoroutinefunction(handler) or inspect.iscoroutinefunction(
+        getattr(type(handler), "__call__", None)
+    )
 
 
 def is_function_handler_sync(
     value: execution_lib.FunctionHandlerAsync[types.T]
     | execution_lib.FunctionHandlerSync[types.T],
 ) -> typing_extensions.TypeGuard[execution_lib.FunctionHandlerSync[types.T]]:
-    return not inspect.iscoroutinefunction(value)
+    return not is_function_handler_async(value)
 
 
 async def wait_for_next_loop() -> None:
