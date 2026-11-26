@@ -64,6 +64,58 @@ def test_async_callable_handler_returns_result(use_partial: bool) -> None:
 
 
 @pytest.mark.parametrize("use_partial", [False, True])
+def test_async_function_handler_returns_result(use_partial: bool) -> None:
+    client = inngest.Inngest(app_id="test", is_production=False)
+
+    async def handler(ctx: inngest.Context) -> str:
+        await asyncio.sleep(0)
+        return "processed:input"
+
+    fn = client.create_function(
+        fn_id="callable", trigger=inngest.TriggerEvent(event="test")
+    )(functools.partial(handler) if use_partial else handler)
+
+    response = _post_function(client, fn)
+    assert response.status_code == 200
+    assert response.json() == "processed:input"
+
+
+@pytest.mark.parametrize("is_async", [False, True])
+@pytest.mark.parametrize("use_partial", [False, True])
+def test_partial_subclass_uses_its_call_override(
+    is_async: bool,
+    use_partial: bool,
+) -> None:
+    client = inngest.Inngest(app_id="test", is_production=False)
+
+    def unused_sync(ctx: inngest.ContextSync) -> str:
+        return "unused"
+
+    async def unused_async(ctx: inngest.Context) -> str:
+        return "unused"
+
+    class AsyncPartial(functools.partial[object]):
+        async def __call__(self, ctx: inngest.Context) -> str:
+            await asyncio.sleep(0)
+            return "processed:input"
+
+    class SyncPartial(functools.partial[object]):
+        def __call__(self, ctx: inngest.ContextSync) -> str:
+            return "processed:input"
+
+    callback = (
+        AsyncPartial(unused_sync) if is_async else SyncPartial(unused_async)
+    )
+    fn = client.create_function(
+        fn_id="callable", trigger=inngest.TriggerEvent(event="test")
+    )(functools.partial(callback) if use_partial else callback)
+
+    response = _post_function(client, fn)
+    assert response.status_code == 200
+    assert response.json() == "processed:input"
+
+
+@pytest.mark.parametrize("use_partial", [False, True])
 def test_async_callable_on_failure_returns_result(use_partial: bool) -> None:
     client = inngest.Inngest(app_id="test", is_production=False)
 
@@ -132,10 +184,41 @@ def test_async_callable_handler_replays_step_result(output: object) -> None:
     assert response.status_code == 206
     step = response.json()[0]
     assert step["data"] == output
+    assert type(step["data"]) is type(output)
     response = _post_function(client, fn, steps={step["id"]: step["data"]})
     assert response.status_code == 200
     assert response.json() == output
+    assert type(response.json()) is type(output)
     assert calls == ["work"]
+
+
+@pytest.mark.parametrize("use_constructor", [False, True])
+@pytest.mark.parametrize("use_partial", [False, True])
+def test_sync_handlers_ignore_unrelated_call_attributes(
+    use_constructor: bool,
+    use_partial: bool,
+) -> None:
+    client = inngest.Inngest(app_id="test", is_production=False)
+
+    class Result(str):
+        def __new__(cls, ctx: inngest.ContextSync) -> "Result":
+            return super().__new__(cls, "processed:input")
+
+        async def __call__(self) -> str:
+            return "unrelated"
+
+    def handler(ctx: inngest.ContextSync) -> str:
+        return "processed:input"
+
+    setattr(handler, "__call__", Result.__call__)
+    callback = Result if use_constructor else handler
+    fn = client.create_function(
+        fn_id="callable", trigger=inngest.TriggerEvent(event="test")
+    )(functools.partial(callback) if use_partial else callback)
+
+    response = _post_function(client, fn)
+    assert response.status_code == 200
+    assert response.json() == "processed:input"
 
 
 @pytest.mark.parametrize("use_partial", [False, True])
